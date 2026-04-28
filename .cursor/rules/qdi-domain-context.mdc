@@ -1,0 +1,103 @@
+---
+description: Contexto de domínio do QDI — Reforma Tributária + ABNT NBR 17301
+globs: src/domain/**, src/application/**, docs/**
+alwaysApply: true
+---
+
+# QDI — Contexto de Domínio Tributário
+
+## Objetivo do produto
+
+Diagnóstico tributário automatizado que avalia em 12-15 minutos a prontidão de uma empresa brasileira para a **Reforma Tributária do Consumo** (EC 132/2023, LC 214/2025, transição 2026-2033).
+
+## As 7 dimensões avaliadas
+
+```python
+class Dimensao(Enum):
+    FISCAL = "fiscal"                          # peso 1.5 (mais crítico)
+    ESTRATEGICA = "estrategica"                # peso 1.0
+    CONTABIL = "contabil"                      # peso 1.0
+    FINANCEIRA = "financeira"                  # peso 1.0
+    OPERACIONAL = "operacional"                # peso 1.0
+    TECNOLOGICA = "tecnologica"                # peso 1.3
+    COMPLIANCE_ABNT = "compliance_abnt_17301"  # peso 1.2 (DIFERENCIAL EXCLUSIVO)
+```
+
+A **dimensão Compliance ABNT** é o diferencial competitivo #1 — ninguém no mercado ancora na ABNT NBR 17301:2026.
+
+## Score 0-100 + Níveis de Maturidade
+
+```python
+class NivelMaturidade(Enum):
+    CRITICO = "critico"          # 0-20
+    INICIAL = "inicial"          # 21-40
+    INTERMEDIARIO = "intermediario"  # 41-60
+    AVANCADO = "avancado"        # 61-80
+    EXEMPLAR = "exemplar"        # 81-100
+```
+
+## Banco de 35 perguntas (vide docs/refs/05_QUESTIONARIO_v1.md)
+
+- 21 perguntas núcleo (todos respondem)
+- 9 perguntas setoriais condicionais (varejo/indústria/serviços/agro)
+- 5 perguntas avançadas Lucro Real
+
+Cada pergunta tem:
+- Código (Q-XXX-NNN)
+- Texto PT-BR
+- Tipo (BINARIA, TERNARIA, ESCALA_1_5, MULTIPLA_ESCOLHA, NUMERICA, CHECKLIST)
+- Peso (0.0-10.0)
+- Condicional (segmento, regime, porte, UF)
+- Base legal (LC 214/2025 art. X, NT Y)
+- Trigger Plus/Pro (texto motivacional para upgrade)
+
+## Tiers do produto
+
+- **Free** — diagnóstico self-service gratuito (lead magnet)
+- **Plus** — R$ 297/mês — adiciona simulação numérica + IA + benchmark
+- **Pro** — R$ 997/mês — adiciona ERP Winthor + pré-auditoria ABNT
+- **Enterprise** — sob consulta — white-label + API + multi-empresa
+
+## Fora de escopo do QDI
+
+- Apuração CBS/IBS contínua → **QAI** (QualiApuraIQ)
+- Split payment orquestrador → **QFC** (QualiFinCredIQ)
+- Auditoria contínua de motores → **QMI** (QualiMixIQ)
+- Defesa de autos de infração → fora do ecossistema
+- Recuperação créditos pré-CBS → **RestituIQ** (fora do Reforma)
+
+## Base legal de referência
+
+Sempre cite dispositivos:
+- **EC 132/2023** — Constitucional (define IBS, CBS, IS)
+- **LC 214/2025** — Lei Complementar (regulamenta a Reforma)
+- **LC 225/2026** — Lei Complementar adicional (em construção)
+- **NT 2025.002** — Nota Técnica NF-e (cClassTrib, cCredPres)
+- **NTs 003-007 CGNFS-e** — NFS-e RTC
+- **ABNT NBR 17301:2026** — Compliance Tributário (norma-mãe ISO 37301:2021)
+- **ABNT NBR ISO 37000:2022** — Governança
+- **Programa Confia (RFB)** — modelo cooperativo fisco-contribuinte
+
+## Termos críticos
+
+| Termo | Significado |
+|-------|-------------|
+| **CBS** | Contribuição sobre Bens e Serviços (federal — substitui PIS+COFINS) |
+| **IBS** | Imposto sobre Bens e Serviços (estadual+municipal — substitui ICMS+ISS) |
+| **IS** | Imposto Seletivo (combustíveis, bebidas alcoólicas, fumo, veículos) |
+| **cClassTrib** | Código de Classificação Tributária (NT 2025.002) |
+| **cCredPres** | Código de Crédito Presumido |
+| **CST** | Código de Situação Tributária |
+| **Split payment** | Recolhimento simultâneo no momento da liquidação |
+| **PDCA** | Plan-Do-Check-Act (ciclo ABNT NBR 17301) |
+| **Lexiq** | Base legal versionada do Tributiq (RAG-ready) |
+
+## Princípios não-negociáveis
+
+1. **Multi-tenant desde o dia 1** — RLS no PostgreSQL em TODAS as tabelas
+2. **Versionamento normativo** — `vigencia_inicio`, `vigencia_fim` em regras; nunca hardcode
+3. **Imutabilidade de evidências** — append-only + hash + WORM
+4. **RAG com guardrails** — sem citação válida da Lexiq, resposta é rejeitada
+5. **Idempotência** — Idempotency-Key em APIs públicas
+6. **Observabilidade** — OpenTelemetry, trace_id em logs
+7. **Independência de ERP** — núcleo canônico + conectores isolados (ACL pattern)

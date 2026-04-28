@@ -1,0 +1,132 @@
+---
+description: Padrões Python + Clean Architecture obrigatórios no QDI
+globs: src/**/*.py, tests/**/*.py
+alwaysApply: true
+---
+
+# Python + Clean Architecture — QDI
+
+## Estrutura de pastas (estrita)
+
+```
+src/
+├── domain/          ← entidades, value objects, ports — Python puro, ZERO deps externas
+├── application/     ← casos de uso — depende SÓ de domain
+├── infrastructure/  ← adapters, repos Supabase, Anthropic, WeasyPrint
+└── presentation/    ← FastAPI routes, schemas Pydantic v2
+```
+
+**Regra de ouro:** dependências apontam só para dentro. Domain não pode importar `pydantic`, `fastapi`, `supabase`, `anthropic`, etc.
+
+## Padrões de código
+
+### Domain layer (puro)
+
+```python
+from __future__ import annotations
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from uuid import UUID, uuid4
+
+@dataclass(frozen=True, slots=True)
+class ScoreNumerico:
+    """Value object imutável com invariantes."""
+    valor: float
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.valor <= 100.0:
+            raise ValueError(f"Score inválido: {self.valor}")
+```
+
+### Application layer (use cases)
+
+```python
+from dataclasses import dataclass
+from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+
+@dataclass(frozen=True)
+class ComandoRealizarDiagnostico:
+    """DTO de entrada (Command Pattern)."""
+    tenant_id: UUID
+    # ...
+
+class RealizarDiagnostico:
+    def __init__(self, repo: DiagnosticoRepository) -> None:
+        self.repo = repo
+
+    async def execute(self, comando: ComandoRealizarDiagnostico) -> Diagnostico:
+        # orquestração apenas — regras vão em domain
+        pass
+```
+
+### Presentation layer (FastAPI)
+
+```python
+from pydantic import BaseModel  # OK aqui — não em domain!
+
+class DiagnosticoResponse(BaseModel):
+    """Schema HTTP — separado das entities de domain."""
+    id: str
+    score_geral: float
+```
+
+### Infrastructure layer (adapters)
+
+```python
+class SupabaseDiagnosticoRepository(DiagnosticoRepository):
+    """Implementa o port do domain."""
+    def __init__(self, client: AsyncClient) -> None:
+        self.client = client
+```
+
+## Tipagem obrigatória
+
+- Use `from __future__ import annotations` em todos os arquivos
+- Type hints **sempre** (mypy strict)
+- `list[T]`, `dict[K, V]` (não `List`, `Dict`)
+- `T | None` (não `Optional[T]`)
+- `Awaitable[T]` para async
+
+## Async-first
+
+Tudo I/O-bound em async (FastAPI, Supabase, Anthropic, OpenTelemetry).
+Use `pytest-asyncio` (já configurado em pyproject.toml).
+
+## Imports
+
+Use ruff `organize-imports` no save.
+Order:
+1. `from __future__ import annotations`
+2. stdlib
+3. third-party
+4. `src.*` (project)
+
+## Testes
+
+```python
+# tests/unit/domain/test_score.py
+import pytest
+from src.domain.value_objects.score import ScoreNumerico
+
+class TestScoreNumerico:
+    @pytest.mark.parametrize("valor", [0.0, 50.0, 100.0])
+    def test_aceita_valores_validos(self, valor: float) -> None:
+        score = ScoreNumerico(valor=valor)
+        assert score.valor == valor
+
+    @pytest.mark.parametrize("invalido", [-1, 101, -0.1, 100.1])
+    def test_rejeita_valores_invalidos(self, invalido: float) -> None:
+        with pytest.raises(ValueError):
+            ScoreNumerico(valor=invalido)
+```
+
+## Anti-patterns (PROIBIDOS)
+
+- ❌ `from datetime import datetime` em domain → use `from datetime import datetime` (OK em qualquer camada — datetime é stdlib)
+- ❌ `pydantic.BaseModel` em domain → use `dataclass(frozen=True, slots=True)`
+- ❌ `print()` → use `logger`
+- ❌ `Optional[T]` → use `T | None`
+- ❌ Repositórios concretos importados em domain → use só os ports (interfaces)
+- ❌ FastAPI deps em use cases → use cases não conhecem HTTP
+- ❌ Hardcode de regras tributárias → tudo versionado em DB com `vigencia_inicio`/`vigencia_fim`

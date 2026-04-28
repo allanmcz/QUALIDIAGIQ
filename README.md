@@ -1,0 +1,207 @@
+# 018-QUALIDIAGIQ — Sandbox de Desenvolvimento
+
+> **Diagnóstico Tributário Automatizado para a Reforma Tributária do Consumo**
+> Módulo do ecossistema **Tributiq** · 6 produtos Quali*IQ · `014-SAAS_REFORMA`
+> **Sigla:** QDI
+> **Status:** MVP em planejamento — Sprint 1 a iniciar
+
+---
+
+## 🚀 Quickstart
+
+```bash
+# 1. Instalar dependências Python
+make install
+
+# 2. Subir ambiente Docker (DB + API + Web)
+make dev
+
+# 3. Rodar testes
+make test
+
+# 4. Abrir interfaces
+# → API: http://localhost:8000/docs (Swagger)
+# → Web: http://localhost:3000 (Next.js — após inicializar)
+# → DB:  postgres://postgres:postgres@localhost:54322/postgres
+```
+
+## 📂 Estrutura do Projeto
+
+```
+018-QUALIDIAGIQ/
+├── .cursorrules                ← Regras Cursor (todas as camadas)
+├── .cursor/
+│   └── rules/                  ← Rules MDC específicas
+│       ├── python-clean-architecture.mdc
+│       ├── qdi-domain-context.mdc
+│       └── communication-style.mdc
+├── .claude/
+│   ├── CLAUDE.md               ← Contexto persistente (Claude Code)
+│   ├── PROMPT_DIA_1.md         ← Prompt acionável Sprint 1 Dia 1
+│   └── settings.json
+├── .vscode/                    ← Config VS Code
+├── docs/
+│   ├── 01_arquitetura.md       ← Clean Architecture + Mermaid
+│   ├── 02_dominio_qdi.md       ← Entidades, value objects
+│   ├── 03_roadmap_sprint_1.md  ← Plano dia-a-dia (30 dias)
+│   └── refs/                   ← 7 documentos da Discovery (snapshot)
+│       ├── 01_PRD_BASE.md
+│       ├── 02_MOSCOW_FEATURES.md
+│       ├── 03_GAP_ANALYSIS.md
+│       ├── 04_METODOLOGIA.md
+│       ├── 05_QUESTIONARIO_v1.md   ⭐ banco de 35 perguntas
+│       ├── 06_MATRIZ_COMPETITIVA.md
+│       └── 07_ESTRATEGIA_GERAL.md
+├── src/                        ← Backend Python (Clean Architecture)
+│   ├── domain/                 ← Regras de negócio puras
+│   ├── application/            ← Casos de uso
+│   ├── infrastructure/         ← Adapters (Supabase, Anthropic, WeasyPrint)
+│   └── presentation/           ← API FastAPI
+├── tests/                      ← pytest (unit + integration + e2e)
+├── frontend/                   ← Next.js 14 (a inicializar no Sprint 2)
+├── pyproject.toml              ← Dependências Python + tooling
+├── Dockerfile                  ← Multi-stage build
+├── docker-compose.yml          ← DB + API + Web
+└── Makefile                    ← Atalhos (make help)
+```
+
+## 🛠️ Stack
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Backend | Python 3.12 + FastAPI 0.115 + Pydantic v2 |
+| Frontend | Next.js 14 + Tailwind + shadcn/ui |
+| DB | Supabase (PostgreSQL 16 + RLS + pgvector) |
+| IA / LLM | Anthropic Claude (Sonnet 4.6) + LangChain + LangGraph |
+| PDF | WeasyPrint |
+| Container | Docker + OrbStack (M2 Max) |
+| Test | pytest + pytest-asyncio + Playwright |
+| Lint/Format | ruff + black + mypy strict |
+
+## 🎯 Diferenciais Competitivos
+
+1. **Profundidade quantitativa real** — simulador CBS+IBS+IS por SKU
+2. **IA / LLM com RAG** sobre Lexiq versionada
+3. **Integração ERP nativa** (Winthor → TOTVS → SAP) — único do mercado
+4. **Aderência ABNT NBR 17301:2026** — janela exclusiva (~12 meses)
+5. **Benchmark setorial anônimo** — vantagem multi-tenant SaaS
+
+## 💼 Tiers do Produto
+
+| Tier | Preço | Para quem |
+|------|-------|-----------|
+| **Free** | R$ 0 | Lead magnet — toda PME |
+| **Plus** | R$ 297/mês | CFO de PME (R$ 5M-R$ 100M) |
+| **Pro** | R$ 997/mês | Empresa média (R$ 100M-R$ 500M) com ERP |
+| **Enterprise** | Sob consulta | Escritórios contábeis, consultorias, ICs |
+
+## 🤖 Como Iniciar com Cursor
+
+O Cursor lê **automaticamente** `.cursorrules` + `.cursor/rules/*.mdc` ao abrir o projeto. Você só precisa:
+
+1. Abrir o projeto: `cursor .`
+2. Confirmar instalação das extensões recomendadas (popup automático)
+3. Iniciar conversa: *"Vamos começar o Sprint 1 Dia 1 conforme docs/03_roadmap_sprint_1.md"*
+
+O Cursor já tem contexto completo de:
+- Persona dual (Mentor + Arquiteto + Pair Programmer + Instrutor)
+- Stack obrigatória (Python 3.12 + FastAPI + Pydantic v2 + Supabase)
+- Clean Architecture (4 camadas estritas)
+- Padrões editoriais (PT-BR + base legal citada)
+- Domínio (Reforma Tributária + ABNT NBR 17301)
+- Fora de escopo (QAI, QFC, QMI, RestituIQ — outros módulos)
+
+## 🤖 Como Iniciar com Claude Code
+
+```bash
+claude
+# Cole o conteúdo de .claude/PROMPT_DIA_1.md na primeira mensagem
+```
+
+O Claude Code lê automaticamente `.claude/CLAUDE.md` ao abrir o projeto.
+
+## 📅 Roadmap Sprint 1 (30 dias × 3h/dia)
+
+| Semana | Foco | Features (MoSCoW) |
+|--------|------|--------------------|
+| **S1** | Setup + Domain | M02 (motor de score) |
+| **S2** | Application + Infra | M01 (wizard) + M11 (eixos ABNT) |
+| **S3** | Presentation | M07 (recomendações) + M03 (pesos transparentes) |
+| **S4** | Output + Lead | M04 (PDF) + M09 (lead magnet) |
+
+**Saída esperada:** API funcional com fluxo questionário → score → relatório PDF.
+
+Detalhes em [`docs/03_roadmap_sprint_1.md`](docs/03_roadmap_sprint_1.md).
+
+## ⚙️ Comandos `make`
+
+```bash
+make help            # lista todos os comandos
+make install         # cria .venv + instala deps
+make dev             # sobe Docker (DB + API + Web)
+make test            # roda testes com cobertura
+make lint            # lint com ruff
+make format          # black + ruff format
+make type-check      # mypy strict
+make migrate         # migrações Supabase (TODO)
+make down            # para Docker
+make clean           # limpa .pyc, caches
+make frontend-init   # inicializa Next.js (uma vez)
+```
+
+## 🔐 Variáveis de Ambiente
+
+Copie `.env.example` para `.env` e preencha:
+
+```bash
+cp .env.example .env
+# Edite .env com:
+# - ANTHROPIC_API_KEY (https://console.anthropic.com/)
+# - SUPABASE_URL + chaves (se usar Cloud)
+# - SMTP_* para envio de e-mails
+```
+
+## 📚 Documentação
+
+| Doc | Tempo de leitura | Quando consultar |
+|-----|-------------------|--------------------|
+| [`docs/refs/01_PRD_BASE.md`](docs/refs/01_PRD_BASE.md) | 15 min | Antes de redigir PRD oficial |
+| [`docs/refs/02_MOSCOW_FEATURES.md`](docs/refs/02_MOSCOW_FEATURES.md) | 10 min | Para validar escopo |
+| [`docs/refs/05_QUESTIONARIO_v1.md`](docs/refs/05_QUESTIONARIO_v1.md) | 20 min | **Essencial** para wizard |
+| [`docs/refs/04_METODOLOGIA.md`](docs/refs/04_METODOLOGIA.md) | 15 min | Para implementar use case |
+| [`docs/01_arquitetura.md`](docs/01_arquitetura.md) | 10 min | Entender Clean Architecture |
+| [`docs/02_dominio_qdi.md`](docs/02_dominio_qdi.md) | 10 min | Entender entidades |
+| [`docs/03_roadmap_sprint_1.md`](docs/03_roadmap_sprint_1.md) | 10 min | Plano dia-a-dia |
+
+## 🚫 Fora de Escopo
+
+Estas funcionalidades pertencem a **outros módulos** do ecossistema Tributiq — não implementar aqui:
+
+- Apuração CBS/IBS contínua → **QAI** (QualiApuraIQ)
+- Split payment orquestrador → **QFC** (QualiFinCredIQ)
+- Auditoria contínua de motores tributários → **QMI** (QualiMixIQ)
+- Defesa de autos de infração → fora do ecossistema
+- Recuperação ativa de créditos pré-CBS → **RestituIQ** (fora do escopo Reforma)
+
+## 📜 Licença
+
+Proprietary © 2026 Tributiq. Todos os direitos reservados.
+
+## 👤 Mantenedor
+
+**Allan Marcio** — `allanmcz@gmail.com`
+Analista de Sistemas + Contador
+20+ anos em Delphi + Oracle + ERP Winthor (PC Sistemas/TOTVS)
+
+---
+
+**Próximo passo imediato:**
+
+```bash
+# Abrir no Cursor
+cursor /Users/allan/GD_TRIBUTOLAB/018-QUALIDIAGIQ
+# Ou no VS Code
+code /Users/allan/GD_TRIBUTOLAB/018-QUALIDIAGIQ
+```
+
+E iniciar o Sprint 1 Dia 1 com pair programming via Cursor (regras carregadas automaticamente) ou Claude Code (cole `PROMPT_DIA_1.md`).

@@ -1,0 +1,18 @@
+{
+  "_comment": "Configuracao Claude Code para o sandbox 018-QUALIDIAGIQ",
+  "model": "claude-sonnet-4-6",
+  "behavior": {
+    "always_use_clean_architecture": true,
+    "always_write_tests_for_new_code": true,
+    "always_comment_in_pt_br": true,
+    "always_cite_legal_basis_when_relevant": true,
+    "always_use_pydantic_v2": true
+  },
+  "tributiq_context": {
+    "ecosystem": "Tributiq",
+    "module": "QualiDiagIQ (QDI)",
+    "module_codename": "qdi",
+    "stack_owner": "allan_marcio",
+    "stack_target": ["python_3.12", "fastapi", "pydantic_v2", "supabase", "anthropic_claude", "langchain", "langgraph", "weasyprint", "nextjs_14"]
+  }
+}

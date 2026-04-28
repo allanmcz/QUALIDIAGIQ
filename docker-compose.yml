@@ -1,0 +1,68 @@
+# docker-compose.yml — Ambiente de desenvolvimento local QDI
+# Stack: PostgreSQL (Supabase-compatible) + FastAPI + Next.js
+# Use: make dev  ou  docker compose up -d
+
+services:
+  db:
+    image: supabase/postgres:15.6.1.146
+    container_name: qdi-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "60322:5432"
+    volumes:
+      - qdi-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - qdi-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qdi-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      APP_RELOAD: "true"
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "60000:8000"
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    networks:
+      - qdi-network
+    command: ["uvicorn", "src.presentation.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  web:
+    image: node:20-alpine
+    container_name: qdi-web
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "60001:3000"
+    volumes:
+      - ./frontend:/app
+    networks:
+      - qdi-network
+    command: ["sh", "-c", "if [ -f package.json ]; then npm install && npm run dev; else echo 'frontend ainda nao inicializado — rode: cd frontend && npx create-next-app@14 . --ts --tailwind --app'; tail -f /dev/null; fi"]
+
+volumes:
+  qdi-db-data:
+
+networks:
+  qdi-network:
+    driver: bridge
