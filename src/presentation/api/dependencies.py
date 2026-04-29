@@ -61,9 +61,40 @@ def get_calcular_score_use_case() -> CalcularScoreUseCase:
     return CalcularScoreUseCase()
 
 
+from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
+from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
+from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
+
+
+def get_pdf_generator() -> WeasyPrintPdfGenerator:
+    """Injeta o gerador de PDF."""
+    return WeasyPrintPdfGenerator()
+
+
+def get_storage_service(
+    client: Annotated[Client, Depends(get_supabase_client)],
+) -> SupabaseStorageAdapter:
+    """Injeta o serviço de storage do Supabase."""
+    return SupabaseStorageAdapter(client=client)
+
+
+def get_email_service() -> SmtpEmailAdapter:
+    """Injeta o serviço de envio de e-mails."""
+    return SmtpEmailAdapter()
+
+
 def get_realizar_diagnostico_use_case(
     repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
     score_use_case: Annotated[CalcularScoreUseCase, Depends(get_calcular_score_use_case)],
+    pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
+    storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],
+    email_service: Annotated[SmtpEmailAdapter, Depends(get_email_service)],
 ) -> RealizarDiagnostico:
     """Orquestrador principal."""
-    return RealizarDiagnostico(repo=repo, calcular_score_use_case=score_use_case)
+    return RealizarDiagnostico(
+        repo=repo, 
+        calcular_score_use_case=score_use_case,
+        pdf_generator=pdf_generator,
+        storage_service=storage_service,
+        email_service=email_service,
+    )

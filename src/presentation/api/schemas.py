@@ -9,7 +9,7 @@ Responsabilidade:
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from src.domain.entities.diagnostico import PorteEmpresa, RegimeTributario, SetorMacro
 
@@ -25,13 +25,38 @@ class RespondenteSchema(BaseModel):
 
 
 class EmpresaSchema(BaseModel):
-    cnpj: str = Field(..., description="CNPJ com exatos 14 dígitos", min_length=14, max_length=14)
+    cnpj: str = Field(..., description="CNPJ com exatos 14 dígitos numéricos", min_length=14, max_length=14)
     razao_social: str
     porte: PorteEmpresa
     regime: RegimeTributario
-    cnae_principal: str = Field(..., description="CNAE principal", min_length=7)
-    uf: str = Field(..., min_length=2, max_length=2)
+    cnae_principal: str = Field(..., description="CNAE principal com 7 dígitos", min_length=7, max_length=7)
+    uf: str = Field(..., description="Sigla da UF com 2 letras", min_length=2, max_length=2)
     setor_macro: SetorMacro
+
+    @field_validator("cnpj")
+    @classmethod
+    def validar_cnpj(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("CNPJ deve conter apenas números")
+        if len(v) != 14:
+            raise ValueError("CNPJ deve conter exatos 14 dígitos")
+        # Validação simplificada para o MVP. Em produção, incluir cálculo dos dígitos verificadores.
+        if len(set(v)) == 1:
+            raise ValueError("CNPJ não pode conter todos os dígitos iguais")
+        return v
+
+    @field_validator("uf")
+    @classmethod
+    def validar_uf(cls, v: str) -> str:
+        ufs_validas = {
+            "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+            "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+            "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+        }
+        v_upper = v.upper()
+        if v_upper not in ufs_validas:
+            raise ValueError(f"UF inválida: {v}")
+        return v_upper
 
 
 class RespostaRequestSchema(BaseModel):

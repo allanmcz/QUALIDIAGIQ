@@ -25,10 +25,31 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     """Factory de criação da API com injeção de rotas."""
+    tags_metadata = [
+        {
+            "name": "Diagnósticos",
+            "description": "Criação, consulta e geração de relatórios de diagnósticos tributários (ABNT NBR 17301).",
+        },
+        {
+            "name": "Infra",
+            "description": "Endpoints de infraestrutura e healthchecks.",
+        },
+    ]
+
     app = FastAPI(
         title="QualiDiagIQ API",
-        description="Motor de Diagnóstico Tributário para a Reforma do Consumo.",
+        description="""
+        Motor de Diagnóstico Tributário Automatizado para a Reforma do Consumo.
+        
+        Parte do ecossistema Tributiq. Fornece análise de maturidade e conformidade
+        com base na EC 132/2023, LC 214/2025 e ABNT NBR 17301:2026.
+        """,
         version="0.1.0",
+        contact={
+            "name": "Equipe Tributiq",
+            "email": "contato@tributiq.com.br",
+        },
+        openapi_tags=tags_metadata,
         lifespan=lifespan,
     )
 

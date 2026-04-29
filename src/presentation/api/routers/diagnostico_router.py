@@ -150,6 +150,27 @@ async def criar_diagnostico(
     )
 
 
+@router.get("/metodologia")
+async def obter_metodologia() -> dict:
+    """Retorna os pesos e a metodologia do motor de cálculo (Transparência)."""
+    return {
+        "versao_normativa": "ABNT NBR 17301:2026",
+        "pesos_por_dimensao": {
+            Dimensao.FISCAL.value: 1.5,
+            Dimensao.ESTRATEGICA.value: 1.2,
+            Dimensao.CONTABIL.value: 1.3,
+            Dimensao.FINANCEIRA.value: 1.1,
+            Dimensao.OPERACIONAL.value: 1.0,
+            Dimensao.TECNOLOGICA.value: 1.4,
+            Dimensao.COMPLIANCE_ABNT.value: 1.5,
+        },
+        "recomendacoes_gaps_criticos": [
+            "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
+            "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado."
+        ]
+    }
+
+
 @router.get("/{diagnostico_id}", response_model=DiagnosticoResponse)
 async def obter_diagnostico(
     diagnostico_id: UUID,

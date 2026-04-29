@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório QualiDiagIQ</title>
+</head>
+<body>
+
+    <h1>Relatório de Diagnóstico Tributário</h1>
+    
+    <div class="header-info">
+        <p><strong>Empresa:</strong> {{ diagnostico.empresa.razao_social }} (CNPJ: {{ diagnostico.empresa.cnpj }})</p>
+        <p><strong>Setor:</strong> {{ diagnostico.empresa.setor_macro.value }} | <strong>Porte:</strong> {{ diagnostico.empresa.porte.value }} | <strong>Regime:</strong> {{ diagnostico.empresa.regime.value }}</p>
+        <p><strong>Respondente:</strong> {{ diagnostico.respondente.nome or 'Não informado' }} ({{ diagnostico.respondente.email }})</p>
+        <p><strong>Data da Geração:</strong> {{ data_geracao }}</p>
+    </div>
+
+    <div class="score-geral">
+        <h2>Score de Maturidade Tributária</h2>
+        <div class="score-value">{{ "%.1f"|format(score_geral.valor) }}/100</div>
+        <p>Nível: <span class="badge badge-{{ nivel_geral|lower }}">{{ nivel_geral }}</span></p>
+    </div>
+
+    <h2>Detalhamento por Dimensão (ABNT NBR 17301)</h2>
+    <p>Abaixo apresentamos o detalhamento do seu score em relação aos 7 eixos normativos da ABNT NBR 17301:2026.</p>
+
+    <table class="dimensoes-table">
+        <thead>
+            <tr>
+                <th>Dimensão</th>
+                <th>Score Alcançado</th>
+                <th>Peso Aplicado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dimensao, sc in dimensoes.items() %}
+            <tr>
+                <td><strong>{{ dimensao|capitalize }}</strong></td>
+                <td>{{ "%.1f"|format(sc.valor) }} / 100</td>
+                <td>{{ "%.1f"|format(sc.peso_total_aplicado) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="page-break-before: always;"></div>
+
+    <h2>Gaps Identificados e Recomendações</h2>
+    <p>Com base no diagnóstico realizado, identificamos as seguintes oportunidades de melhoria (Gaps) na sua operação:</p>
+
+    <ul>
+        <li><strong>Políticas Internas (Fiscal):</strong> As rotinas fiscais estão pouco alinhadas às novas resoluções da EC 132/2023.</li>
+        <li><strong>Automação (Tecnológica):</strong> Sugerimos a adoção de um sistema ERP atualizado ou módulo fiscal específico para mitigar riscos de cálculos de CBS/IBS.</li>
+        <li><strong>Conformidade (Compliance ABNT):</strong> Iniciar processo de auditoria interna para alinhamento mínimo com a ABNT NBR 17301.</li>
+    </ul>
+
+    <div class="footer-note">
+        <p>Este relatório foi gerado automaticamente pelo motor QualiDiagIQ, com base nas respostas fornecidas pelo usuário. Os resultados são uma estimativa de conformidade e maturidade baseada em metodologia própria amparada pela EC 132/2023, LC 214/2025 e ABNT NBR 17301:2026. Para uma auditoria completa e emissão de pareceres contábeis/fiscais vinculantes, consulte um especialista Tributiq.</p>
+    </div>
+
+</body>
+</html>

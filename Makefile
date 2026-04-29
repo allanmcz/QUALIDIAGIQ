@@ -33,10 +33,10 @@ logs: ## Acompanha logs em tempo real
 	docker compose logs -f
 
 test: ## Roda todos os testes com cobertura
-	$(VENV)/bin/pytest
+	PYTHONPATH=. $(VENV)/bin/pytest
 
 test-watch: ## Roda testes em modo watch (precisa pytest-watch)
-	$(VENV)/bin/pytest -f
+	PYTHONPATH=. $(VENV)/bin/pytest -f
 
 lint: ## Lint com ruff
 	$(VENV)/bin/ruff check src/ tests/

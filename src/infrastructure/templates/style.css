@@ -1,0 +1,114 @@
+@page {
+    size: A4;
+    margin: 2cm;
+    @top-right {
+        content: "QualiDiagIQ - Diagnóstico Tributário";
+        font-size: 9pt;
+        color: #7f8c8d;
+    }
+    @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 9pt;
+        color: #7f8c8d;
+    }
+}
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #333333;
+    line-height: 1.5;
+    font-size: 11pt;
+}
+
+h1 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+    font-size: 24pt;
+    margin-top: 0;
+}
+
+h2 {
+    color: #2980b9;
+    font-size: 18pt;
+    margin-top: 30px;
+}
+
+h3 {
+    color: #34495e;
+    font-size: 14pt;
+}
+
+.header-info {
+    margin-bottom: 30px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-left: 4px solid #2980b9;
+    border-radius: 4px;
+}
+
+.header-info p {
+    margin: 5px 0;
+}
+
+.score-geral {
+    text-align: center;
+    margin: 40px 0;
+    padding: 20px;
+    background-color: #ecf0f1;
+    border-radius: 8px;
+}
+
+.score-geral h2 {
+    margin: 0 0 10px 0;
+}
+
+.score-value {
+    font-size: 36pt;
+    font-weight: bold;
+    color: #27ae60;
+}
+
+.dimensoes-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.dimensoes-table th, .dimensoes-table td {
+    border: 1px solid #bdc3c7;
+    padding: 10px;
+    text-align: left;
+}
+
+.dimensoes-table th {
+    background-color: #34495e;
+    color: #ffffff;
+}
+
+.dimensoes-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 9pt;
+}
+
+.badge-critico { background-color: #e74c3c; color: white; }
+.badge-inicial { background-color: #e67e22; color: white; }
+.badge-intermediario { background-color: #f1c40f; color: black; }
+.badge-avancado { background-color: #3498db; color: white; }
+.badge-exemplar { background-color: #2ecc71; color: white; }
+
+.footer-note {
+    margin-top: 50px;
+    font-size: 9pt;
+    color: #7f8c8d;
+    text-align: justify;
+    border-top: 1px solid #bdc3c7;
+    padding-top: 10px;
+}
