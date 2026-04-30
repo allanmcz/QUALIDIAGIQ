@@ -91,5 +91,6 @@ class DiagnosticoResponse(BaseModel):
     empresa_razao_social: str
     score: ScoreCompletoSchema | None = None
     relatorio_pdf_url: str | None = None
+    recomendacao_ia: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

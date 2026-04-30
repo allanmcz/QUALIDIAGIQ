@@ -35,25 +35,32 @@ from src.presentation.api.schemas import (
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
 
 
-# Simulador do Banco de Perguntas (Em um sistema real, viria de um BD)
 def _get_banco_perguntas() -> list[Pergunta]:
     from uuid import UUID
 
     return [
         Pergunta(
-            id=UUID("00000000-0000-0000-0000-000000000001"),
+            id=UUID("11111111-1111-4111-a111-111111111111"),
             codigo="Q-FISC-001",
             dimensao=Dimensao.FISCAL,
-            texto="Você paga impostos em dia?",
+            texto="Sua empresa possui um departamento ou pessoa exclusivamente dedicada ao Compliance Tributário?",
             peso=1.5,
-            tipo=TipoPergunta.TERNARIA,
+            tipo=TipoPergunta.ESCALA_1_5,
         ),
         Pergunta(
-            id=UUID("00000000-0000-0000-0000-000000000002"),
+            id=UUID("22222222-2222-4222-a222-222222222222"),
             codigo="Q-TEC-001",
             dimensao=Dimensao.TECNOLOGICA,
-            texto="Qual o nível de automação fiscal?",
+            texto="Como é feita a apuração dos tributos hoje?",
             peso=1.3,
+            tipo=TipoPergunta.ESCALA_1_5,
+        ),
+        Pergunta(
+            id=UUID("33333333-3333-4333-a333-333333333333"),
+            codigo="Q-EST-001",
+            dimensao=Dimensao.ESTRATEGICA,
+            texto="A empresa já iniciou o mapeamento dos impactos da EC 132/2023 (Reforma Tributária)?",
+            peso=1.2,
             tipo=TipoPergunta.ESCALA_1_5,
         ),
     ]
@@ -147,6 +154,7 @@ async def criar_diagnostico(
         empresa_razao_social=resultado.diagnostico.empresa.razao_social,
         score=score_completo_schema,
         relatorio_pdf_url=resultado.relatorio_pdf_url,
+        recomendacao_ia=resultado.recomendacao_ia,
     )
 
 
@@ -190,4 +198,5 @@ async def obter_diagnostico(
         empresa_razao_social=diagnostico.empresa.razao_social,
         score=None,  # Para o MVP da Sprint 1 o GET retorna apenas metadados
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
+        recomendacao_ia=None,
     )

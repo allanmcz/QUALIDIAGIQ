@@ -83,12 +83,20 @@ def get_email_service() -> SmtpEmailAdapter:
     return SmtpEmailAdapter()
 
 
+from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
+
+def get_llm_service() -> OllamaLlmAdapter:
+    """Injeta o serviço de IA."""
+    return OllamaLlmAdapter()
+
+
 def get_realizar_diagnostico_use_case(
     repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
     score_use_case: Annotated[CalcularScoreUseCase, Depends(get_calcular_score_use_case)],
     pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
     storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],
     email_service: Annotated[SmtpEmailAdapter, Depends(get_email_service)],
+    llm_service: Annotated[OllamaLlmAdapter, Depends(get_llm_service)],
 ) -> RealizarDiagnostico:
     """Orquestrador principal."""
     return RealizarDiagnostico(
@@ -97,4 +105,5 @@ def get_realizar_diagnostico_use_case(
         pdf_generator=pdf_generator,
         storage_service=storage_service,
         email_service=email_service,
+        llm_service=llm_service,
     )

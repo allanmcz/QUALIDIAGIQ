@@ -19,7 +19,7 @@ const TOTAL_STEPS = 3;
 // Mock questions according to ABNT NBR 17301
 const MOCK_QUESTIONS = [
   {
-    id: "00000000-0000-0000-0000-000000000001",
+    id: "11111111-1111-4111-a111-111111111111",
     label: "Sua empresa possui um departamento ou pessoa exclusivamente dedicada ao Compliance Tributário?",
     options: [
       { label: "Não possui", value: "1" },
@@ -28,7 +28,7 @@ const MOCK_QUESTIONS = [
     ]
   },
   {
-    id: "00000000-0000-0000-0000-000000000002",
+    id: "22222222-2222-4222-a222-222222222222",
     label: "Como é feita a apuração dos tributos hoje?",
     options: [
       { label: "Totalmente manual (Planilhas)", value: "1" },
@@ -37,7 +37,7 @@ const MOCK_QUESTIONS = [
     ]
   },
   {
-    id: "00000000-0000-0000-0000-000000000003",
+    id: "33333333-3333-4333-a333-333333333333",
     label: "A empresa já iniciou o mapeamento dos impactos da EC 132/2023 (Reforma Tributária)?",
     options: [
       { label: "Não iniciamos", value: "1" },
@@ -104,7 +104,7 @@ export function WizardForm() {
       setStep((s) => Math.min(s + 1, TOTAL_STEPS));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      console.log("Validation Failed:", form.formState.errors);
+      console.log("Validation Failed:", JSON.stringify(form.formState.errors, null, 2));
     }
   };
 
@@ -116,6 +116,7 @@ export function WizardForm() {
   const onSubmit = async () => {
     const isValid = await trigger();
     if (!isValid) {
+      console.log("Validation Failed on Submit:", JSON.stringify(form.formState.errors, null, 2));
       return;
     }
     
