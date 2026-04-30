@@ -1,15 +1,27 @@
-import { Metadata } from "next"
+"use client"
 
-export const metadata: Metadata = {
-  title: "Dashboard | QualiDiagIQ",
-  description: "Gerencie as frentes de trabalho da Reforma Tributária",
-}
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const [nome, setNome] = useState<string | null>(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem("admin_token")
+    if (!token) {
+      router.push("/login")
+    } else {
+      setNome(localStorage.getItem("admin_nome") || "Admin")
+    }
+  }, [router])
+
+  if (!nome) return null // ou um skeleton/loading spinner
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="sticky top-0 z-40 w-full border-b bg-white">
@@ -20,8 +32,14 @@ export default function DashboardLayout({
             </a>
           </div>
           <div className="flex flex-1 items-center justify-end space-x-4">
-            <nav className="flex items-center space-x-1">
-              <span className="text-sm text-slate-500">Logado como Admin</span>
+            <nav className="flex items-center space-x-4">
+              <span className="text-sm text-slate-500">Olá, {nome}</span>
+              <button 
+                onClick={() => { localStorage.clear(); router.push("/login") }}
+                className="text-sm font-medium text-red-500 hover:underline"
+              >
+                Sair
+              </button>
             </nav>
           </div>
         </div>

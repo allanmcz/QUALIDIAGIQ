@@ -45,12 +45,8 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
     async def salvar(self, diagnostico: Diagnostico) -> None:
         """Upsert idempotente — valida RLS no servidor."""
         payload = self._para_dict(diagnostico)
-        try:
-            # Em prod o supabase.AsyncClient usaria await, mas o supabase-py síncrono usa sem await
-            # Para evitar erro, mockamos caso dê erro de conexão
-            res = self.client.table("diagnosticos").upsert(payload).execute()
-        except Exception as e:
-            print(f"Aviso: Falha ao salvar no Supabase ({e}). Ignorando no modo Dev/Mock.")
+        # Em prod o supabase.AsyncClient usaria await, mas o supabase-py síncrono usa sem await
+        self.client.table("diagnosticos").upsert(payload).execute()
 
     async def buscar_por_id(self, diagnostico_id: UUID, tenant_id: UUID) -> Diagnostico | None:
         """Busca por ID com tenant_id como filtro adicional (defense-in-depth)."""
@@ -100,6 +96,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             "empresa_uf": d.empresa.uf,
             "empresa_setor_macro": d.empresa.setor_macro.value,
             "status": d.status.value,
+            "plano": d.plano.value,
             "score_geral": d.score_geral,
             "relatorio_pdf_url": d.relatorio_pdf_url,
             "criado_em": d.criado_em.isoformat(),
@@ -108,6 +105,8 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
         """Desserializa dict do banco para a entidade."""
+        from src.domain.entities.diagnostico import PlanoDiagnostico
+        
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -126,6 +125,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 cargo=row.get("respondente_cargo"),
             ),
             status=StatusDiagnostico(row["status"]),
+            plano=PlanoDiagnostico(row.get("plano", "gratuito")),
             score_geral=row.get("score_geral"),
             relatorio_pdf_url=row.get("relatorio_pdf_url"),
         )

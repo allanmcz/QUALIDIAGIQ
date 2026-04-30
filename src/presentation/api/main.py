@@ -68,7 +68,9 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "qualidiagiq"}
 
     # Registrar os Routers do Domínio
+    from src.presentation.api.routers import auth_router
     app.include_router(diagnostico_router.router)
+    app.include_router(auth_router.router)
 
     return app
 
