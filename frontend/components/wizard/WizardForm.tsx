@@ -103,6 +103,8 @@ export function WizardForm() {
     if (isStepValid) {
       setStep((s) => Math.min(s + 1, TOTAL_STEPS));
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      console.log("Validation Failed:", form.formState.errors);
     }
   };
 

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('Wizard E2E Flow', async ({ page }) => {
+  page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
   console.log("Navigating to Wizard...");
   await page.goto('http://localhost:3000/wizard');
 
@@ -12,6 +13,10 @@ test('Wizard E2E Flow', async ({ page }) => {
   await page.fill('input[id="email"]', 'test@e2e.com');
   
   await page.getByRole('button', { name: 'Próxima Etapa' }).click();
+
+  // Wait a bit and take screenshot to see errors
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: 'step1-error.png' });
 
   // Step 2
   console.log("Filling Step 2...");
