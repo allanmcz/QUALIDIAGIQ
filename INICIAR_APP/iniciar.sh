@@ -25,21 +25,18 @@ trap cleanup SIGINT
 
 # 1. Iniciar o Backend (FastAPI)
 echo -e "${BLUE}[BACKEND]${NC} Iniciando a API (FastAPI) na porta 8000..."
-cd ..
 make dev &
 BACKEND_PID=$!
-# Volta para INICIAR_APP
-cd INICIAR_APP
 
 # Aguarda 3 segundos para o backend respirar
 sleep 3
 
 # 2. Iniciar o Frontend (Next.js)
 echo -e "${YELLOW}[FRONTEND]${NC} Iniciando a Interface Web (Next.js) na porta 3000..."
-cd ../frontend
+cd frontend
 npm run dev &
 FRONTEND_PID=$!
-cd ../INICIAR_APP
+cd ..
 
 echo -e "\n${GREEN}=================================================${NC}"
 echo -e "${GREEN} Tudo pronto! A aplicação está rodando.${NC}"
