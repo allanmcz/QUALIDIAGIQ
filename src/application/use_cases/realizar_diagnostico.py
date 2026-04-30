@@ -33,6 +33,7 @@ from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
     Respondente,
+    PlanoDiagnostico,
 )
 from src.domain.entities.questionario import Pergunta, Resposta
 
@@ -46,6 +47,7 @@ class ComandoRealizarDiagnostico:
     respondente: Respondente
     respostas: list[Resposta]
     perguntas_aplicadas: list[Pergunta]
+    plano: str = "gratuito"
 
 
 from src.application.ports.llm_service import LlmServicePort
@@ -58,6 +60,8 @@ class ResultadoDiagnostico:
     score: ScoreCompleto
     relatorio_pdf_url: str | None
     recomendacao_ia: str | None = None
+    checklist: list | None = None
+    matriz_impacto: list | None = None
 
 
 class RealizarDiagnostico:
@@ -84,10 +88,16 @@ class RealizarDiagnostico:
     async def execute(self, comando: ComandoRealizarDiagnostico) -> ResultadoDiagnostico:
         """Executa o pipeline completo do diagnóstico."""
         # 1. Cria a entidade no estado inicial
+        try:
+            plano_enum = PlanoDiagnostico(comando.plano.lower())
+        except ValueError:
+            plano_enum = PlanoDiagnostico.GRATUITO
+
         diagnostico = Diagnostico(
             tenant_id=comando.tenant_id,
             empresa=comando.empresa,
             respondente=comando.respondente,
+            plano=plano_enum
         )
 
         # 2. Calcula o Score usando o motor matemático determinístico
@@ -98,9 +108,9 @@ class RealizarDiagnostico:
         # 3. Finaliza o diagnóstico injetando o score geral consolidado
         diagnostico.finalizar(score_geral=score_completo.score_geral.valor)
 
-        # 4. Geração de Recomendações por IA (LLM)
+        # 4. Geração de Recomendações por IA (LLM) apenas se AVANÇADO
         recomendacao_ia = None
-        if self.llm_service:
+        if self.llm_service and diagnostico.plano == PlanoDiagnostico.AVANCADO:
             contexto_empresa = (
                 f"Empresa: {diagnostico.empresa.razao_social}\\n"
                 f"Porte: {diagnostico.empresa.porte.value}\\n"
@@ -148,10 +158,24 @@ class RealizarDiagnostico:
                 pdf_url=pdf_url
             )
 
-        # 8. Retorna o DTO estruturado
+        # 8. Geração de Consultoria (Checklist e Matriz)
+        checklist_data = None
+        matriz_data = None
+        
+        if diagnostico.plano == PlanoDiagnostico.AVANCADO:
+            from src.application.services.consultoria_service import ConsultoriaService
+            from dataclasses import asdict
+            checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+            matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+            checklist_data = [asdict(f) for f in checklist_entities]
+            matriz_data = [asdict(m) for m in matriz_entities]
+
+        # 9. Retorna o DTO estruturado
         return ResultadoDiagnostico(
             diagnostico=diagnostico,
             score=score_completo,
             relatorio_pdf_url=pdf_url,
-            recomendacao_ia=recomendacao_ia
+            recomendacao_ia=recomendacao_ia,
+            checklist=checklist_data,
+            matriz_impacto=matriz_data
         )

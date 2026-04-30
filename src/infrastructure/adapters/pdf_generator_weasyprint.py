@@ -42,9 +42,14 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         }
         
         from src.application.services.consultoria_service import ConsultoriaService
+        from src.domain.entities.diagnostico import PlanoDiagnostico
         
-        checklist = ConsultoriaService.gerar_checklist(diagnostico)
-        matriz_impacto = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+        checklist = []
+        matriz_impacto = []
+        
+        if diagnostico.plano == PlanoDiagnostico.AVANCADO:
+            checklist = ConsultoriaService.gerar_checklist(diagnostico)
+            matriz_impacto = ConsultoriaService.gerar_matriz_impacto(diagnostico)
 
         html_out = template.render(
             diagnostico=diagnostico,

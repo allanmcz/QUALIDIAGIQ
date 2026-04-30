@@ -38,6 +38,13 @@ class StatusDiagnostico(Enum):
     CANCELADO = "cancelado"
 
 
+class PlanoDiagnostico(Enum):
+    """Nível do serviço escolhido."""
+    
+    GRATUITO = "gratuito"
+    AVANCADO = "avancado"
+
+
 class RegimeTributario(Enum):
     """Regime tributário declarado pela empresa-cliente."""
 
@@ -118,6 +125,7 @@ class Diagnostico:
     tenant_id: UUID
     empresa: EmpresaInfo
     respondente: Respondente
+    plano: PlanoDiagnostico = PlanoDiagnostico.GRATUITO
     id: UUID = field(default_factory=uuid4)
     status: StatusDiagnostico = StatusDiagnostico.EM_ANDAMENTO
     criado_em: datetime = field(default_factory=lambda: datetime.now(UTC))

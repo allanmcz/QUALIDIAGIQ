@@ -68,6 +68,7 @@ class IniciarDiagnosticoRequest(BaseModel):
     empresa: EmpresaSchema
     respondente: RespondenteSchema
     respostas: list[RespostaRequestSchema]
+    plano: str = "gratuito"
 
 
 # =====================================================================
@@ -88,9 +89,12 @@ class ScoreCompletoSchema(BaseModel):
 class DiagnosticoResponse(BaseModel):
     id: UUID
     status: str
+    plano: str
     empresa_razao_social: str
     score: ScoreCompletoSchema | None = None
     relatorio_pdf_url: str | None = None
     recomendacao_ia: str | None = None
+    checklist: list[dict] | None = None
+    matriz_impacto: list[dict] | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -64,6 +64,7 @@
     </div>
     {% endif %}
 
+    {% if matriz_impacto|length > 0 %}
     <div style="page-break-before: always;"></div>
 
     <h2>Matriz de Impacto por Departamento (Decreto 12.955/2026)</h2>
@@ -86,7 +87,9 @@
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
 
+    {% if checklist|length > 0 %}
     <div style="page-break-before: always;"></div>
 
     <h2>Plano de Ação Sugerido (Checklist de Implantação)</h2>
@@ -117,6 +120,11 @@
         </table>
     </div>
     {% endfor %}
+    {% else %}
+    <div style="page-break-before: always;"></div>
+    <h2>Plano de Ação Avançado (Bloqueado)</h2>
+    <p>O seu plano atual é o <strong>Gratuito</strong>. Para acessar o Checklist de Implantação e a Matriz de Impacto departamental, faça o upgrade para o plano <strong>Avançado</strong>.</p>
+    {% endif %}
 
     <div class="footer-note">
         <p>Este relatório foi gerado automaticamente pelo motor QualiDiagIQ, com base nas respostas fornecidas pelo usuário. Os resultados são uma estimativa de conformidade e maturidade baseada em metodologia própria amparada pela EC 132/2023, LC 214/2025 e ABNT NBR 17301:2026. Para uma auditoria completa e emissão de pareceres contábeis/fiscais vinculantes, consulte um especialista Tributiq.</p>

@@ -126,6 +126,7 @@ async def criar_diagnostico(
         respondente=respondente_domain,
         respostas=respostas_domain,
         perguntas_aplicadas=perguntas_aplicadas,
+        plano=payload.plano,
     )
 
     # 4. Executar Use Case
@@ -151,10 +152,13 @@ async def criar_diagnostico(
     return DiagnosticoResponse(
         id=resultado.diagnostico.id,
         status=resultado.diagnostico.status.value,
+        plano=resultado.diagnostico.plano.value,
         empresa_razao_social=resultado.diagnostico.empresa.razao_social,
         score=score_completo_schema,
         relatorio_pdf_url=resultado.relatorio_pdf_url,
         recomendacao_ia=resultado.recomendacao_ia,
+        checklist=resultado.checklist,
+        matriz_impacto=resultado.matriz_impacto,
     )
 
 
@@ -192,11 +196,25 @@ async def obter_diagnostico(
 
     # Obs: Como o Repositório do MVP (Supabase) ainda só salva score_geral numérico
     # e não o ScoreCompleto expandido, a serialização de GET devolverá o score parcial ou nulo.
+    checklist_data = None
+    matriz_data = None
+    
+    if diagnostico.plano.value == "avancado":
+        from src.application.services.consultoria_service import ConsultoriaService
+        from dataclasses import asdict
+        checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+        matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+        checklist_data = [asdict(f) for f in checklist_entities]
+        matriz_data = [asdict(m) for m in matriz_entities]
+
     return DiagnosticoResponse(
         id=diagnostico.id,
         status=diagnostico.status.value,
+        plano=diagnostico.plano.value,
         empresa_razao_social=diagnostico.empresa.razao_social,
         score=None,  # Para o MVP da Sprint 1 o GET retorna apenas metadados
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
-        recomendacao_ia=None,
+        recomendacao_ia=None, # IA não persistida no db do MVP ainda
+        checklist=checklist_data,
+        matriz_impacto=matriz_data
     )
