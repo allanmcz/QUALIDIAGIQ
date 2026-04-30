@@ -108,9 +108,9 @@ class RealizarDiagnostico:
         # 3. Finaliza o diagnóstico injetando o score geral consolidado
         diagnostico.finalizar(score_geral=score_completo.score_geral.valor)
 
-        # 4. Geração de Recomendações por IA (LLM) apenas se AVANÇADO
+        # 4. Geração de Recomendações por IA (LLM) liberada temporariamente para todos
         recomendacao_ia = None
-        if self.llm_service and diagnostico.plano == PlanoDiagnostico.AVANCADO:
+        if self.llm_service:
             contexto_empresa = (
                 f"Empresa: {diagnostico.empresa.razao_social}\\n"
                 f"Porte: {diagnostico.empresa.porte.value}\\n"
@@ -158,17 +158,16 @@ class RealizarDiagnostico:
                 pdf_url=pdf_url
             )
 
-        # 8. Geração de Consultoria (Checklist e Matriz)
+        # 8. Geração de Consultoria (Checklist e Matriz) liberada temporariamente para todos
         checklist_data = None
         matriz_data = None
         
-        if diagnostico.plano == PlanoDiagnostico.AVANCADO:
-            from src.application.services.consultoria_service import ConsultoriaService
-            from dataclasses import asdict
-            checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
-            matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
-            checklist_data = [asdict(f) for f in checklist_entities]
-            matriz_data = [asdict(m) for m in matriz_entities]
+        from src.application.services.consultoria_service import ConsultoriaService
+        from dataclasses import asdict
+        checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+        matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+        checklist_data = [asdict(f) for f in checklist_entities]
+        matriz_data = [asdict(m) for m in matriz_entities]
 
         # 9. Retorna o DTO estruturado
         return ResultadoDiagnostico(

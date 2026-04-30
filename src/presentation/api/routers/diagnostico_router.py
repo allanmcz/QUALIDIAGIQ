@@ -199,13 +199,12 @@ async def obter_diagnostico(
     checklist_data = None
     matriz_data = None
     
-    if diagnostico.plano.value == "avancado":
-        from src.application.services.consultoria_service import ConsultoriaService
-        from dataclasses import asdict
-        checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
-        matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
-        checklist_data = [asdict(f) for f in checklist_entities]
-        matriz_data = [asdict(m) for m in matriz_entities]
+    from src.application.services.consultoria_service import ConsultoriaService
+    from dataclasses import asdict
+    checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+    matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+    checklist_data = [asdict(f) for f in checklist_entities]
+    matriz_data = [asdict(m) for m in matriz_entities]
 
     return DiagnosticoResponse(
         id=diagnostico.id,
