@@ -57,7 +57,7 @@ Call log:
                 - generic [ref=e40]: CNPJ *
                 - textbox "CNPJ *" [ref=e41]:
                   - /placeholder: 00.000.000/0000-00
-                  - text: "12345678000195"
+                  - text: "33000167000101"
                 - paragraph [ref=e42]: "Invalid input: expected string, received undefined"
               - generic [ref=e43]:
                 - generic [ref=e44]: Razão Social *
@@ -103,7 +103,7 @@ Call log:
   6  | 
   7  |   // Step 1
   8  |   console.log("Filling Step 1...");
-  9  |   await page.fill('input[id="cnpj"]', '12345678000195');
+  9  |   await page.fill('input[id="cnpj"]', '33000167000101');
   10 |   await page.fill('input[id="razao_social"]', 'Empresa E2E Test SA');
   11 |   await page.fill('input[id="nome"]', 'Test Lead');
   12 |   await page.fill('input[id="email"]', 'test@e2e.com');

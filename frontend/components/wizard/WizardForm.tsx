@@ -164,7 +164,7 @@ export function WizardForm() {
         </CardHeader>
         
         <CardContent className="pt-6">
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
             
             {/* STEP 1 */}
             {step === 1 && (
@@ -312,6 +312,7 @@ export function WizardForm() {
 
         <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
           <Button 
+            type="button"
             variant="outline" 
             onClick={prevStep} 
             disabled={step === 1 || isSubmitting}
@@ -320,9 +321,10 @@ export function WizardForm() {
           </Button>
           
           {step < TOTAL_STEPS ? (
-            <Button onClick={nextStep}>Próxima Etapa</Button>
+            <Button type="button" onClick={nextStep}>Próxima Etapa</Button>
           ) : (
             <Button 
+              type="button"
               onClick={onSubmit} 
               disabled={isSubmitting}
               className="bg-accent text-accent-foreground hover:bg-accent/90"

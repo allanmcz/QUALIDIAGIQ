@@ -6,7 +6,7 @@ test('Wizard E2E Flow', async ({ page }) => {
 
   // Step 1
   console.log("Filling Step 1...");
-  await page.fill('input[id="cnpj"]', '12345678000195');
+  await page.fill('input[id="cnpj"]', '33000167000101');
   await page.fill('input[id="razao_social"]', 'Empresa E2E Test SA');
   await page.fill('input[id="nome"]', 'Test Lead');
   await page.fill('input[id="email"]', 'test@e2e.com');
