@@ -20,6 +20,9 @@ export function Footer() {
           <Link href="/privacidade" className="hover:underline">
             Política de Privacidade
           </Link>
+          <Link href="/avaliacao-contador" className="hover:underline">
+            Avaliação (contador)
+          </Link>
         </nav>
       </div>
     </footer>

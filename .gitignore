@@ -63,7 +63,10 @@ docs/api/openapi.generated.json
 
 # Documentação e notas internas (não versionadas)
 _DEVELOPER/
-docs/
+docs/*
+# Guias contábeis auditáveis (exceção — versionados)
+!docs/contabilidade/
+!docs/contabilidade/**
 
 # Cursor IDE caches
 .cursor/cache/

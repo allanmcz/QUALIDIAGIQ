@@ -36,4 +36,11 @@ test.describe("Smoke QDI", () => {
     await page.goto("/privacidade");
     await expect(page.getByRole("heading", { name: /Política de privacidade/i })).toBeVisible();
   });
+
+  test("/avaliacao-contador exibe guia para contadores", async ({ page }) => {
+    await page.goto("/avaliacao-contador");
+    await expect(
+      page.getByRole("heading", { name: /Avaliação para contadores e fiscalistas/i }),
+    ).toBeVisible();
+  });
 });
