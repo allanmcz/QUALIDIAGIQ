@@ -114,6 +114,21 @@ class PatchRelatorioPdfRequest(BaseModel):
     relatorio_pdf_url: str = Field(..., min_length=1, max_length=4096)
 
 
+class PatchChecklistM12AutoconfRequest(BaseModel):
+    """
+    Corpo do PATCH M12 — espelho dos 10 controles ABNT (booleanos).
+
+    Exige `If-Match` com `versao_otimista` atual (mesmo contrato do PATCH de relatório).
+    """
+
+    checklist_m12_autoconf: list[bool] = Field(
+        ...,
+        min_length=10,
+        max_length=10,
+        description="Exatamente 10 valores — mesma ordem das ações da frente ABNT no relatório.",
+    )
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 
@@ -317,6 +332,8 @@ class DiagnosticoResponse(BaseModel):
     checklist: list[dict[str, Any]] | None = None
     matriz_impacto: list[dict[str, Any]] | None = None
     cronograma: list[dict[str, Any]] | None = None
+    # M12 — estado persistido da autoconf (JSONB `checklist_m12_estado`)
+    checklist_m12_autoconf: list[bool] | None = None
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
     hash_evidencia: str | None = None
     versao_otimista: int | None = None

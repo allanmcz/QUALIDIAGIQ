@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -53,6 +53,8 @@ export type DiagnosticoDetalheApi = {
   checklist: FrenteChecklist[] | null;
   matriz_impacto: MatrizLinha[] | null;
   cronograma: CronogramaFase[] | null;
+  checklist_m12_autoconf: boolean[] | null;
+  versao_otimista: number | null;
   score: {
     score_geral: { valor: number };
     score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;
@@ -82,6 +84,8 @@ function mockDiagnostico(id: string): DiagnosticoDetalheApi {
         base_legal: "LC 214/2025",
       },
     ],
+    checklist_m12_autoconf: null,
+    versao_otimista: 1,
     score: {
       score_geral: { valor: 62 },
       score_por_dimensao: {
@@ -118,6 +122,8 @@ function corHeat(valor: number): string {
 export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const versaoOtimistaRef = useRef<number | null>(null);
+  const lastSyncedM12Ref = useRef<string | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -141,6 +147,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
         }
         const json = (await res.json()) as DiagnosticoDetalheApi;
         if (!cancel) {
+          if (json.versao_otimista != null) {
+            versaoOtimistaRef.current = json.versao_otimista;
+          }
           setData(json);
           setError(null);
         }
@@ -182,10 +191,89 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   }, [data?.checklist]);
 
   const [abntChecks, setAbntChecks] = useState<boolean[]>([]);
+
   useEffect(() => {
-    const n = frenteAbnt10?.acoes.length ?? 0;
-    setAbntChecks(Array.from({ length: n }, () => false));
-  }, [frenteAbnt10]);
+    if (!frenteAbnt10 || frenteAbnt10.acoes.length === 0) return;
+    const n = frenteAbnt10.acoes.length;
+    const fromApi = data?.checklist_m12_autoconf;
+    if (fromApi && fromApi.length === n) {
+      setAbntChecks(fromApi);
+      lastSyncedM12Ref.current = JSON.stringify(fromApi);
+      return;
+    }
+    const zeros = Array.from({ length: n }, () => false);
+    setAbntChecks(zeros);
+    lastSyncedM12Ref.current = JSON.stringify(zeros);
+  }, [data?.checklist_m12_autoconf, frenteAbnt10]);
+
+  useEffect(() => {
+    if (data?.versao_otimista != null) {
+      versaoOtimistaRef.current = data.versao_otimista;
+    }
+  }, [data?.versao_otimista]);
+
+  const refetchDetalhe = useCallback(async () => {
+    const token = getAccessToken();
+    const base = getApiUrl().replace(/\/$/, "");
+    const res = await fetch(`${base}/diagnosticos/${id}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return;
+    const json = (await res.json()) as DiagnosticoDetalheApi;
+    if (json.versao_otimista != null) {
+      versaoOtimistaRef.current = json.versao_otimista;
+    }
+    setData(json);
+  }, [id]);
+
+  useEffect(() => {
+    if (!data || data.status !== "finalizado") return;
+    if (abntChecks.length !== 10) return;
+    const serialized = JSON.stringify(abntChecks);
+    if (serialized === lastSyncedM12Ref.current) return;
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        const v = versaoOtimistaRef.current;
+        if (v == null) return;
+        const base = getApiUrl().replace(/\/$/, "");
+        const res = await fetch(`${base}/diagnosticos/${id}/checklist-m12-autoconf`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "If-Match": String(v),
+          },
+          body: JSON.stringify({ checklist_m12_autoconf: abntChecks }),
+        });
+        if (res.ok) {
+          const json = (await res.json()) as DiagnosticoDetalheApi;
+          if (json.versao_otimista != null) {
+            versaoOtimistaRef.current = json.versao_otimista;
+          }
+          const m12 = json.checklist_m12_autoconf;
+          lastSyncedM12Ref.current = JSON.stringify(
+            m12 && m12.length === 10 ? m12 : abntChecks,
+          );
+          setData(json);
+          return;
+        }
+        if (res.status === 412) {
+          await refetchDetalhe();
+        }
+      })();
+    }, 480);
+
+    return () => window.clearTimeout(handle);
+  }, [abntChecks, data, id, refetchDetalhe]);
 
   const barGapColors = ["#b91c1c", "#ea580c", "#ca8a04", "#65a30d", "#16a34a"];
 
@@ -356,8 +444,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <CardHeader>
             <CardTitle>Autoconferência ABNT — 10 controles (M12)</CardTitle>
             <p className="text-sm font-normal text-muted-foreground">
-              Réplica espelho do checklist do relatório PDF. Para oficinas internas; marcas ficam apenas no
-              navegador neste MVP.
+              Réplica espelho do checklist do relatório PDF. Alterações são salvas no servidor com
+              concorrência otimista (<code className="text-xs">If-Match</code> /{" "}
+              <code className="text-xs">versao_otimista</code>), alinhado à ABNT NBR 17301:2026 e LC 214/2025.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">

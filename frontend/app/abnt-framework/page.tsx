@@ -71,7 +71,11 @@ export default function AbntFrameworkPage() {
           </li>
           <li>
             <strong>Do</strong>: coleta ponderada pelo manifesto público (<strong>M03</strong>,
-            endpoints <strong>/manifesto-pesos</strong> e <strong>/metodologia</strong> na API FastAPI).
+            endpoints <strong>/manifesto-pesos</strong> e <strong>/metodologia</strong> na API FastAPI — ou o painel{" "}
+            <Link href="/metodologia" className="text-primary underline font-medium">
+              Metodologia e pesos
+            </Link>{" "}
+            no site).
           </li>
           <li>
             <strong>Check</strong>: gera radar, heatmap e ranking (<strong>M05</strong>) + PDF executivo sintético (<strong>M04</strong>).

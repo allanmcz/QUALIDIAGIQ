@@ -7,6 +7,7 @@ Variável opcional: QDI_POSTGRES_TEST_URL (default postgres@127.0.0.1:60322).
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from pathlib import Path
@@ -41,7 +42,12 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
         Path(__file__).resolve().parents[2]
         / "src/infrastructure/db/migrations/0006_worm_column_granular.sql"
     )
+    mig_0011 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0011_checklist_m12_autoconf.sql"
+    )
     await pg_conn.execute(mig_0006.read_text(encoding="utf-8"))
+    await pg_conn.execute(mig_0011.read_text(encoding="utf-8"))
 
     tid = uuid.uuid4()
     did = uuid.uuid4()
@@ -89,5 +95,26 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
     assert row is not None
     assert row["versao_otimista"] == 2
     assert row["relatorio_pdf_url"] == "https://exemplo/qdi-rel.pdf"
+
+    m12_esperado = [True] + [False] * 9
+    await pg_conn.execute(
+        """
+        UPDATE diagnosticos
+        SET checklist_m12_estado = $2::jsonb, versao_otimista = 3
+        WHERE id = $1 AND versao_otimista = 2
+        """,
+        did,
+        json.dumps(m12_esperado),
+    )
+    row_m12 = await pg_conn.fetchrow(
+        "SELECT checklist_m12_estado, versao_otimista FROM diagnosticos WHERE id = $1",
+        did,
+    )
+    assert row_m12 is not None
+    assert row_m12["versao_otimista"] == 3
+    raw_m12 = row_m12["checklist_m12_estado"]
+    if isinstance(raw_m12, str):
+        raw_m12 = json.loads(raw_m12)
+    assert raw_m12 == m12_esperado
 
     await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)

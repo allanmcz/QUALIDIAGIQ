@@ -189,3 +189,70 @@ async def test_atualizar_relatorio_pdf_com_versao_none_quando_sem_linha(diagnost
     )
 
     assert out is None
+
+
+@pytest.mark.asyncio
+async def test_atualizar_checklist_m12_com_versao_retorna_entidade(diagnostico_mock):
+    mock_client = MagicMock()
+    mock_table = MagicMock()
+    mock_update = MagicMock()
+    mock_eq1 = MagicMock()
+    mock_eq2 = MagicMock()
+    mock_eq3 = MagicMock()
+    mock_select = MagicMock()
+
+    mock_client.table.return_value = mock_table
+    mock_table.update.return_value = mock_update
+    mock_update.eq.return_value = mock_eq1
+    mock_eq1.eq.return_value = mock_eq2
+    mock_eq2.eq.return_value = mock_eq3
+    mock_eq3.select.return_value = mock_select
+
+    repo = SupabaseDiagnosticoRepository(client=mock_client)
+    diagnostico_mock.finalizar(score_geral=80.0)
+    diagnostico_mock.definir_checklist_m12_autoconf([True] + [False] * 9)
+    payload_pos_update = repo._para_dict(diagnostico_mock)
+    payload_pos_update["versao_otimista"] = 2
+    mock_select.execute = MagicMock(return_value=MagicMock(data=[payload_pos_update]))
+
+    out = await repo.atualizar_checklist_m12_com_versao(
+        diagnostico_mock.id,
+        diagnostico_mock.tenant_id,
+        [True] + [False] * 9,
+        versao_esperada=1,
+    )
+
+    assert out is not None
+    assert out.checklist_m12_estado == [True] + [False] * 9
+    assert out.versao_otimista == 2
+    mock_table.update.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_atualizar_checklist_m12_com_versao_none_quando_sem_linha(diagnostico_mock):
+    mock_client = MagicMock()
+    mock_table = MagicMock()
+    mock_update = MagicMock()
+    mock_eq1 = MagicMock()
+    mock_eq2 = MagicMock()
+    mock_eq3 = MagicMock()
+    mock_select = MagicMock()
+
+    mock_client.table.return_value = mock_table
+    mock_table.update.return_value = mock_update
+    mock_update.eq.return_value = mock_eq1
+    mock_eq1.eq.return_value = mock_eq2
+    mock_eq2.eq.return_value = mock_eq3
+    mock_eq3.select.return_value = mock_select
+    mock_select.execute = MagicMock(return_value=MagicMock(data=[]))
+
+    repo = SupabaseDiagnosticoRepository(client=mock_client)
+
+    out = await repo.atualizar_checklist_m12_com_versao(
+        diagnostico_mock.id,
+        diagnostico_mock.tenant_id,
+        [False] * 10,
+        versao_esperada=9,
+    )
+
+    assert out is None

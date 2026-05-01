@@ -16,6 +16,7 @@ from src.domain.entities.diagnostico import (
 )
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
+    get_atualizar_checklist_m12_autoconf_use_case,
     get_current_user_tenant,
     get_realizar_diagnostico_use_case,
 )
@@ -277,6 +278,82 @@ def test_patch_relatorio_sucesso():
     body = response.json()
     assert body["relatorio_pdf_url"] == "https://storage/rel.pdf"
     assert body["versao_otimista"] == 2
+
+
+def test_patch_checklist_m12_sem_if_match_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}/checklist-m12-autoconf",
+        json={"checklist_m12_autoconf": [False] * 10},
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "If-Match" in response.json()["detail"]
+    mock_uc.execute.assert_not_called()
+
+
+def test_patch_checklist_m12_conflito_412():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ConflitoVersaoOtimistaError("versão obsoleta")
+    app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}/checklist-m12-autoconf",
+        json={"checklist_m12_autoconf": [True] * 10},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": "1",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 412
+
+
+def test_patch_checklist_m12_sucesso():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_in = _diag_finalizado_micro()
+    d_in.tenant_id = tid
+    d_out = copy.deepcopy(d_in)
+    d_out.definir_checklist_m12_autoconf([True] + [False] * 9)
+    d_out.versao_otimista = 2
+
+    mock_uc = AsyncMock()
+    mock_uc.execute.return_value = d_out
+
+    app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    payload = {"checklist_m12_autoconf": [True] + [False] * 9}
+    response = client.patch(
+        f"/diagnosticos/{d_in.id}/checklist-m12-autoconf",
+        json=payload,
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["versao_otimista"] == 2
+    assert body["checklist_m12_autoconf"] == [True] + [False] * 9
 
 
 def test_listar_diagnosticos_resumo():

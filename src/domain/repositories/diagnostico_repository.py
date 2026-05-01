@@ -69,3 +69,19 @@ class DiagnosticoRepository(ABC):
             Diagnóstico atualizado se uma linha foi afetada; None se a versão não coincidir.
         """
         ...
+
+    @abstractmethod
+    async def atualizar_checklist_m12_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        checklist_m12_estado: list[bool],
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        """
+        Persiste os 10 booleanos M12 com lock otimista (incrementa `versao_otimista`).
+
+        Retorna:
+            Diagnóstico atualizado se o UPDATE afetou uma linha; None em conflito de versão.
+        """
+        ...

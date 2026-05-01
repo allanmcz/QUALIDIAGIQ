@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="border-t py-6 md:py-0">
@@ -5,10 +7,20 @@ export function Footer() {
         <p>
           &copy; {new Date().getFullYear()} Tributiq. Todos os direitos reservados.
         </p>
-        <div className="flex gap-4">
-          <a href="#" className="hover:underline">Termos de Uso</a>
-          <a href="#" className="hover:underline">Política de Privacidade</a>
-        </div>
+        <nav className="flex flex-wrap justify-center gap-x-4 gap-y-2" aria-label="Links institucionais">
+          <Link href="/metodologia" className="hover:underline">
+            Metodologia e pesos
+          </Link>
+          <Link href="/abnt-framework" className="hover:underline">
+            Framework ABNT
+          </Link>
+          <Link href="/termos" className="hover:underline">
+            Termos de Uso
+          </Link>
+          <Link href="/privacidade" className="hover:underline">
+            Política de Privacidade
+          </Link>
+        </nav>
       </div>
     </footer>
   );

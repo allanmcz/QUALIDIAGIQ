@@ -132,6 +132,37 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             return None
         return self._para_entity(data[0])
 
+    async def atualizar_checklist_m12_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        checklist_m12_estado: list[bool],
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        """UPDATE condicional do JSONB M12 + incremento de `versao_otimista`."""
+        sid, stid = str(diagnostico_id), str(tenant_id)
+
+        def _update() -> Any:
+            q: Any = (
+                self._client.table("diagnosticos")
+                .update(
+                    {
+                        "checklist_m12_estado": checklist_m12_estado,
+                        "versao_otimista": versao_esperada + 1,
+                    }
+                )
+                .eq("id", sid)
+                .eq("tenant_id", stid)
+                .eq("versao_otimista", versao_esperada)
+            )
+            return q.select("*").execute()
+
+        response = await asyncio.to_thread(_update)
+        data = response.data
+        if not data:
+            return None
+        return self._para_entity(data[0])
+
     # ============================================================
     # Tradução entity ↔ dict
     # ============================================================
@@ -166,6 +197,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             "hash_sha256": d.hash_evidencia,
             "score_completo": score_blob,
             "versao_otimista": d.versao_otimista,
+            "checklist_m12_estado": d.checklist_m12_estado,
         }
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
@@ -190,6 +222,14 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 snap = None
 
         email_resp = row.get("respondente_email") or "nao-informado@placeholder.qdi"
+
+        m12_raw = row.get("checklist_m12_estado")
+        checklist_m12: list[bool] | None = None
+        if isinstance(m12_raw, list):
+            try:
+                checklist_m12 = [bool(x) for x in m12_raw]
+            except (TypeError, ValueError):
+                checklist_m12 = None
 
         return Diagnostico(
             id=UUID(row["id"]),
@@ -218,4 +258,5 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             score_completo_snapshot=snap,
             hash_evidencia=row.get("hash_sha256"),
             versao_otimista=int(row.get("versao_otimista") or 1),
+            checklist_m12_estado=checklist_m12,
         )

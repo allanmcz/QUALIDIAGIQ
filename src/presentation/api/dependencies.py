@@ -16,6 +16,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
+from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
@@ -134,6 +135,13 @@ def get_anexar_relatorio_otimista_use_case(
 ) -> AnexarRelatorioOtimista:
     """PATCH de relatório com versão otimista."""
     return AnexarRelatorioOtimista(repo=repo)
+
+
+def get_atualizar_checklist_m12_autoconf_use_case(
+    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> AtualizarChecklistM12Autoconf:
+    """PATCH M12 (autoconf ABNT) com versão otimista."""
+    return AtualizarChecklistM12Autoconf(repo=repo)
 
 
 def get_calcular_score_use_case() -> CalcularScoreUseCase:

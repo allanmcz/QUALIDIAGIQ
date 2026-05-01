@@ -23,8 +23,8 @@ export default function Home() {
               <ArrowRight className="w-5 h-5" />
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="text-md px-8 h-12">
-            Conhecer a Metodologia
+          <Button size="lg" variant="outline" className="text-md px-8 h-12" asChild>
+            <Link href="/metodologia">Conhecer a Metodologia</Link>
           </Button>
         </div>
 

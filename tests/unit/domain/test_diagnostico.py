@@ -224,3 +224,30 @@ class TestDiagnostico:
         assert diag.score_geral == 72.0
         assert diag.score_completo_snapshot is sc
         assert diag.hash_evidencia is not None
+
+    def test_definir_m12_autoconf_dez_itens(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(score_geral=50.0)
+        itens = [True, False] * 5
+        diag.definir_checklist_m12_autoconf(itens)
+        assert diag.checklist_m12_estado == itens
+
+    def test_definir_m12_rejeita_tamanho_invalido(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(score_geral=50.0)
+        with pytest.raises(ValueError, match=r"exatamente 10"):
+            diag.definir_checklist_m12_autoconf([True] * 9)
+
+    def test_definir_m12_rejeita_se_nao_finalizado(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        with pytest.raises(
+            DiagnosticoNaoFinalizavelError,
+            match=r"autoconf M12",
+        ):
+            diag.definir_checklist_m12_autoconf([False] * 10)

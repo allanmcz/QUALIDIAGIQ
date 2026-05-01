@@ -40,6 +40,13 @@ export default function PrivacidadePage() {
           e portabilidade, nos limites da lei — canal a definir em produção.
         </li>
       </ul>
+      <p className="text-sm text-muted-foreground pt-2">
+        Condições gerais de uso:{" "}
+        <Link href="/termos" className="text-primary underline font-medium">
+          Termos de uso (MVP)
+        </Link>
+        .
+      </p>
     </div>
   );
 }

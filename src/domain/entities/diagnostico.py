@@ -137,6 +137,8 @@ class Diagnostico:
     score_completo_snapshot: ScoreCompleto | None = None
     hash_evidencia: str | None = None  # SHA-256 hex (64 caracteres)
     versao_otimista: int = 1
+    # M12 — autoconf ABNT (10 booleanos); mutável após finalizado com versao_otimista (vide PATCH dedicado).
+    checklist_m12_estado: list[bool] | None = None
 
     def finalizar(self, score_geral: float) -> None:
         """
@@ -205,6 +207,20 @@ class Diagnostico:
                 "Só é possível anexar relatório a um diagnóstico finalizado."
             )
         self.relatorio_pdf_url = url
+
+    def definir_checklist_m12_autoconf(self, itens: list[bool]) -> None:
+        """
+        Persistência lógica da autoconf ABNT — 10 controles binários (M12).
+
+        Base normativa: ABNT NBR 17301:2026 (autoconferência operacional).
+        """
+        if self.status != StatusDiagnostico.FINALIZADO:
+            raise DiagnosticoNaoFinalizavelError(
+                "Só é possível atualizar a autoconf M12 em diagnóstico finalizado."
+            )
+        if len(itens) != 10:
+            raise ValueError("Autoconf M12 exige exatamente 10 itens booleanos.")
+        self.checklist_m12_estado = list(itens)
 
 
 # ============================================================

@@ -10,4 +10,6 @@
 \i /docker-entrypoint-initdb.d/migrations/0007_idempotency_responses.sql
 \i /docker-entrypoint-initdb.d/migrations/0008_idempotency_comentarios_operacao.sql
 \i /docker-entrypoint-initdb.d/migrations/0009_respondente_telefone_m10.sql
+\i /docker-entrypoint-initdb.d/migrations/0010_rls_comentarios_documentacao_m10.sql
+\i /docker-entrypoint-initdb.d/migrations/0011_checklist_m12_autoconf.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

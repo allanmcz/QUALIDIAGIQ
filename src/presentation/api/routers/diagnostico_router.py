@@ -15,6 +15,10 @@ from src.application.use_cases.anexar_relatorio_otimista import (
     AnexarRelatorioOtimista,
     ComandoAnexarRelatorioOtimista,
 )
+from src.application.use_cases.atualizar_checklist_m12_autoconf import (
+    AtualizarChecklistM12Autoconf,
+    ComandoAtualizarChecklistM12Autoconf,
+)
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
@@ -34,6 +38,7 @@ from src.infrastructure.repositories.supabase_diagnostico_repository import (
 )
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
+    get_atualizar_checklist_m12_autoconf_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
     get_gerar_questionario_adaptativo_use_case,
@@ -48,6 +53,7 @@ from src.presentation.api.schemas import (
     ManifestoPesoPerguntaSchema,
     ManifestoPesosResponse,
     MetodologiaResponse,
+    PatchChecklistM12AutoconfRequest,
     PatchRelatorioPdfRequest,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
@@ -91,6 +97,16 @@ def _parse_if_match_versao(raw: str | None) -> int:
     return v
 
 
+def _checklist_m12_para_http(diagnostico: Diagnostico) -> list[bool] | None:
+    """Extrai lista persistida para o contrato HTTP (evita `MagicMock` nos testes)."""
+    raw = getattr(diagnostico, "checklist_m12_estado", None)
+    if not isinstance(raw, list) or len(raw) != 10:
+        return None
+    if not all(isinstance(x, bool) for x in raw):
+        return None
+    return list(raw)
+
+
 def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
     """Monta linha da listagem B2B (P7 — sem recomputar checklist/matriz)."""
     return DiagnosticoResumoSchema(
@@ -132,6 +148,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         checklist=checklist_data,
         matriz_impacto=matriz_data,
         cronograma=cronograma_data,
+        checklist_m12_autoconf=_checklist_m12_para_http(diagnostico),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
     )
@@ -267,6 +284,7 @@ async def criar_diagnostico(
         checklist=resultado.checklist,
         matriz_impacto=resultado.matriz_impacto,
         cronograma=resultado.cronograma,
+        checklist_m12_autoconf=_checklist_m12_para_http(d),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
     )
@@ -388,6 +406,53 @@ async def obter_diagnostico(
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
 
     return _montar_diagnostico_response(diagnostico)
+
+
+@router.patch(
+    "/{diagnostico_id}/checklist-m12-autoconf",
+    response_model=DiagnosticoResponse,
+    summary="Atualizar autoconf ABNT M12",
+    description=(
+        "Persiste os 10 booleanos da autoconferência (ABNT NBR 17301). "
+        "Exige diagnóstico **finalizado** e header **If-Match** com `versao_otimista` atual."
+    ),
+)
+async def atualizar_checklist_m12_autoconf(
+    diagnostico_id: UUID,
+    payload: PatchChecklistM12AutoconfRequest,
+    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AtualizarChecklistM12Autoconf,
+        Depends(get_atualizar_checklist_m12_autoconf_use_case),
+    ],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> DiagnosticoResponse:
+    """PATCH M12 — lock otimista alinhado ao PATCH de relatório PDF."""
+    _, tenant_id = current
+    try:
+        versao = _parse_if_match_versao(if_match)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    comando = ComandoAtualizarChecklistM12Autoconf(
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        checklist_m12_autoconf=list(payload.checklist_m12_autoconf),
+        versao_esperada=versao,
+    )
+    try:
+        atualizado = await use_case.execute(comando)
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except ConflitoVersaoOtimistaError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail=str(e),
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return _montar_diagnostico_response(atualizado)
 
 
 @router.patch("/{diagnostico_id}", response_model=DiagnosticoResponse)

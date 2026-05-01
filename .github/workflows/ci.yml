@@ -73,6 +73,8 @@ jobs:
       - run: npm ci
       - name: ESLint (Next.js)
         run: npm run lint
+      - name: Build Next.js (tipagem e páginas estáticas)
+        run: npm run build
       - name: Playwright (Chromium apenas)
         run: npx playwright install --with-deps chromium
       - name: E2E
