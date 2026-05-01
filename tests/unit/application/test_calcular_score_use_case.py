@@ -84,3 +84,25 @@ class TestCalcularScoreUseCase:
         ]
         with pytest.raises(ValueError, match=r"não encontrada no banco"):
             use_case.execute(perguntas=perguntas_mock, respostas=respostas)
+
+    def test_nao_se_aplica_exclui_da_media_dimensao(self, perguntas_mock):
+        """Doc 05_QUESTIONARIO §11.1 — excluir da média ponderada."""
+        use_case = CalcularScoreUseCase()
+        diag_id = uuid.uuid4()
+        respostas = [
+            Resposta(
+                diagnostico_id=diag_id,
+                pergunta_id=perguntas_mock[0].id,
+                pergunta_tipo=perguntas_mock[0].tipo,
+                valor_bruto="nao_se_aplica",
+            ),
+            Resposta(
+                diagnostico_id=diag_id,
+                pergunta_id=perguntas_mock[1].id,
+                pergunta_tipo=perguntas_mock[1].tipo,
+                valor_bruto=5,
+            ),
+        ]
+        score = use_case.execute(perguntas=perguntas_mock, respostas=respostas)
+        assert Dimensao.FISCAL not in score.score_por_dimensao
+        assert score.score_por_dimensao[Dimensao.TECNOLOGICA].valor == 100.0

@@ -6,19 +6,25 @@ Base normativa (operações previsíveis ao contribuinte):
 
 Camada: Presentation
 Analogia Winthor: equivale a impedir INSERT duplicado pela mesma chave única de negócio.
+
+Persistência: quando `app.state.idempotency_engine` existe (SQLAlchemy), usa Postgres;
+caso contrário, TTL em memória (`cachetools`).
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
+from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
+
 if TYPE_CHECKING:
     from cachetools import TTLCache
+    from sqlalchemy.engine import Engine
     from starlette.middleware.base import RequestResponseEndpoint
     from starlette.requests import Request
     from starlette.types import ASGIApp
@@ -26,13 +32,6 @@ if TYPE_CHECKING:
 # Limite para não armazenar PDF/base64 acidentalmente no cache MVP
 _MAX_BODY_BYTES = 512 * 1024
 _MAX_KEY_LEN = 128
-
-
-@dataclass(frozen=True, slots=True)
-class CorpoCacheadoIdempotencia:
-    status_code: int
-    body: bytes
-    headers: tuple[tuple[str, str], ...]
 
 
 def _exige_idempotencia(request: Request) -> bool:
@@ -76,8 +75,18 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             )
 
         composta = _chave_composta(request, idem_key)
-        if composta in self._cache:
+        engine = getattr(request.app.state, "idempotency_engine", None)
+        ttl_sec = int(getattr(request.app.state, "idempotency_ttl_seconds", 3600))
+
+        hit: CorpoCacheadoIdempotencia | None = None
+        if engine is not None:
+            from src.infrastructure.idempotency.postgres_backend import idempotency_get
+
+            hit = await asyncio.to_thread(idempotency_get, cast("Engine", engine), composta)
+        elif composta in self._cache:
             hit = self._cache[composta]
+
+        if hit is not None:
             h = dict(hit.headers)
             h["X-Idempotent-Replay"] = "true"
             content_type = next(
@@ -116,15 +125,23 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             media_type=response.media_type,
         )
 
-        if (
-            200 <= response.status_code < 300
-            and len(body) <= _MAX_BODY_BYTES
-            and composta not in self._cache
-        ):
-            self._cache[composta] = CorpoCacheadoIdempotencia(
+        if 200 <= response.status_code < 300 and len(body) <= _MAX_BODY_BYTES:
+            cached = CorpoCacheadoIdempotencia(
                 status_code=response.status_code,
                 body=body,
                 headers=tuple(passthrough),
             )
+            if engine is not None:
+                from src.infrastructure.idempotency.postgres_backend import idempotency_put
+
+                await asyncio.to_thread(
+                    idempotency_put,
+                    cast("Engine", engine),
+                    composta,
+                    cached,
+                    ttl_sec,
+                )
+            elif composta not in self._cache:
+                self._cache[composta] = cached
 
         return out

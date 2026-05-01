@@ -74,7 +74,7 @@ def test_criar_diagnostico_sem_token_falha():
             "setor_macro": "comercio",
         },
         "respondente": {"email": "teste@teste.com"},
-        "respostas": [{"pergunta_id": "11111111-1111-4111-a111-111111111111", "valor": 4}],
+        "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
     }
 
     response = client.post(
@@ -133,7 +133,7 @@ def test_criar_diagnostico_com_sucesso():
             "setor_macro": "comercio",
         },
         "respondente": {"email": "teste@teste.com"},
-        "respostas": [{"pergunta_id": "11111111-1111-4111-a111-111111111111", "valor": 4}],
+        "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
     }
 
     response = client.post("/diagnosticos/", json=payload, headers=cabecalho_post_diagnostico())
@@ -160,7 +160,7 @@ def test_criar_diagnostico_com_token_invalido():
             "setor_macro": "comercio",
         },
         "respondente": {"email": "teste@teste.com"},
-        "respostas": [{"pergunta_id": "11111111-1111-4111-a111-111111111111", "valor": 4}],
+        "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
     }
     headers = {
         "Authorization": "Bearer token-invalido",

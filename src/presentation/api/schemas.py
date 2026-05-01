@@ -106,6 +106,26 @@ class PatchRelatorioPdfRequest(BaseModel):
     relatorio_pdf_url: str = Field(..., min_length=1, max_length=4096)
 
 
+class QuestionarioPerguntaItemSchema(BaseModel):
+    """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
+
+    id: UUID
+    codigo: str
+    texto: str
+    tipo: str
+    peso: float
+    dimensao: str
+    base_legal: str | None = None
+
+
+class QuestionarioDisponivelResponse(BaseModel):
+    """Resposta do GET /diagnosticos/questionario."""
+
+    versao_catalogo: str
+    total: int
+    perguntas: list[QuestionarioPerguntaItemSchema]
+
+
 # =====================================================================
 # Response Schemas (Saída)
 # =====================================================================

@@ -15,14 +15,20 @@ from src.application.use_cases.anexar_relatorio_otimista import (
     AnexarRelatorioOtimista,
     ComandoAnexarRelatorioOtimista,
 )
+from src.application.use_cases.gerar_questionario_adaptativo import (
+    GerarQuestionarioAdaptativoUseCase,
+)
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
     RealizarDiagnostico,
 )
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
-from src.domain.entities.questionario import Pergunta, Resposta
+from src.domain.entities.questionario import Resposta
 from src.domain.value_objects.score import Dimensao, ScoreCompleto
-from src.infrastructure.questionario.json_banco_loader import carregar_banco_mvp
+from src.infrastructure.questionario.banco_cache import (
+    get_banco_perguntas_cached,
+    versao_catalogo_lida,
+)
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
@@ -30,20 +36,21 @@ from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
+    get_gerar_questionario_adaptativo_use_case,
     get_realizar_diagnostico_use_case,
+    perfil_empresa_para_questionario,
 )
 from src.presentation.api.schemas import (
     DiagnosticoResponse,
     IniciarDiagnosticoRequest,
     PatchRelatorioPdfRequest,
+    QuestionarioDisponivelResponse,
+    QuestionarioPerguntaItemSchema,
     ScoreCompletoSchema,
     ScoreDimensaoSchema,
 )
 
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
-
-# Cache por processo — catálogo vem de JSON versionado (infra).
-_BANCO_PERGUNTAS_CACHE: list[Pergunta] | None = None
 
 
 def _campos_auditoria_http(entity: object) -> tuple[str | None, int | None]:
@@ -62,9 +69,7 @@ def _parse_if_match_versao(raw: str | None) -> int:
     Aceita formas comuns: `3`, `"3"`, `W/"3"` (usa apenas o primeiro valor se houver lista).
     """
     if raw is None or not str(raw).strip():
-        raise ValueError(
-            "Header If-Match obrigatório com a versão otimista atual (ex.: 1 ou \"1\")."
-        )
+        raise ValueError('Header If-Match obrigatório com a versão otimista atual (ex.: 1 ou "1").')
     s = str(raw).strip()
     if "," in s:
         s = s.split(",", 1)[0].strip()
@@ -126,13 +131,6 @@ def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema |
     )
 
 
-def _get_banco_perguntas() -> list[Pergunta]:
-    global _BANCO_PERGUNTAS_CACHE
-    if _BANCO_PERGUNTAS_CACHE is None:
-        _BANCO_PERGUNTAS_CACHE = carregar_banco_mvp()
-    return _BANCO_PERGUNTAS_CACHE
-
-
 @router.post("/", response_model=DiagnosticoResponse, status_code=status.HTTP_201_CREATED)
 async def criar_diagnostico(
     payload: IniciarDiagnosticoRequest,
@@ -160,7 +158,7 @@ async def criar_diagnostico(
     )
 
     # 2. Match de Respostas com as Perguntas
-    banco = _get_banco_perguntas()
+    banco = get_banco_perguntas_cached()
     mapa_perguntas = {p.id: p for p in banco}
 
     respostas_domain = []
@@ -253,6 +251,44 @@ async def obter_metodologia() -> dict[str, Any]:
             "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado.",
         ],
     }
+
+
+@router.get("/questionario", response_model=QuestionarioDisponivelResponse)
+async def obter_questionario_adaptativo(
+    empresa: Annotated[EmpresaInfo, Depends(perfil_empresa_para_questionario)],
+    _auth: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        GerarQuestionarioAdaptativoUseCase,
+        Depends(get_gerar_questionario_adaptativo_use_case),
+    ],
+) -> QuestionarioDisponivelResponse:
+    """
+    Lista perguntas aplicáveis ao perfil declarado (motor adaptativo).
+
+    LC 214/2025 — transparência e previsibilidade na coleta de informações do contribuinte.
+    """
+    try:
+        lista = use_case.execute(empresa)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    itens = [
+        QuestionarioPerguntaItemSchema(
+            id=p.id,
+            codigo=p.codigo,
+            texto=p.texto,
+            tipo=p.tipo.value,
+            peso=p.peso,
+            dimensao=p.dimensao.value,
+            base_legal=p.base_legal,
+        )
+        for p in lista
+    ]
+    return QuestionarioDisponivelResponse(
+        versao_catalogo=versao_catalogo_lida(),
+        total=len(itens),
+        perguntas=itens,
+    )
 
 
 @router.get("/{diagnostico_id}", response_model=DiagnosticoResponse)

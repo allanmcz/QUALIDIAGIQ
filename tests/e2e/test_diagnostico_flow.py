@@ -96,8 +96,8 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
         },
         "respondente": {"email": "lead@empresa.com", "nome": "João Diretor"},
         "respostas": [
-            {"pergunta_id": "11111111-1111-4111-a111-111111111111", "valor": 4},
-            {"pergunta_id": "22222222-2222-4222-a222-222222222222", "valor": 3},
+            {"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4},
+            {"pergunta_id": "5bd89013-2b3f-5c73-8a73-9351e114f14c", "valor": 3},
         ],
     }
 

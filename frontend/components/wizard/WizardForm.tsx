@@ -17,34 +17,36 @@ import { postDiagnostico } from "@/lib/api/diagnostico";
 const TOTAL_STEPS = 3;
 
 // Mock questions according to ABNT NBR 17301
+/** IDs alinhados ao catálogo `perguntas_mvp.json` (ABNT NBR 17301 — escala 1–5). */
 const MOCK_QUESTIONS = [
   {
-    id: "11111111-1111-4111-a111-111111111111",
-    label: "Sua empresa possui um departamento ou pessoa exclusivamente dedicada ao Compliance Tributário?",
+    id: "1f74e164-195d-5fde-ba27-8ae08b8e011e",
+    label:
+      "Sua empresa possui política interna formal de Compliance Tributário (escrita, aprovada e divulgada)?",
     options: [
-      { label: "Não possui", value: "1" },
-      { label: "Possui, mas divide com outras tarefas", value: "3" },
-      { label: "Sim, equipe/pessoa exclusiva", value: "5" }
-    ]
+      { label: "Não possui / não formalizada", value: "1" },
+      { label: "Em elaboração ou parcial", value: "3" },
+      { label: "Sim, formalizada e divulgada", value: "5" },
+    ],
   },
   {
-    id: "22222222-2222-4222-a222-222222222222",
-    label: "Como é feita a apuração dos tributos hoje?",
+    id: "5bd89013-2b3f-5c73-8a73-9351e114f14c",
+    label: "A empresa identifica e avalia periodicamente os riscos fiscais?",
     options: [
-      { label: "Totalmente manual (Planilhas)", value: "1" },
-      { label: "Sistemas básicos com muita intervenção manual", value: "3" },
-      { label: "ERP integrado e automatizado", value: "5" }
-    ]
+      { label: "Não identifica", value: "1" },
+      { label: "Identifica de forma eventual", value: "3" },
+      { label: "Sim, processo periódico estruturado", value: "5" },
+    ],
   },
   {
-    id: "33333333-3333-4333-a333-333333333333",
-    label: "A empresa já iniciou o mapeamento dos impactos da EC 132/2023 (Reforma Tributária)?",
+    id: "9c1e9918-4856-5798-8797-37efacde4ff7",
+    label: "Os controles sobre obrigações tributárias estão documentados (ITs, fluxos)?",
     options: [
-      { label: "Não iniciamos", value: "1" },
-      { label: "Em fase de estudo preliminar", value: "3" },
-      { label: "Sim, já temos um plano de transição", value: "5" }
-    ]
-  }
+      { label: "Não documentados", value: "1" },
+      { label: "Parcialmente documentados", value: "3" },
+      { label: "Sim, documentação atualizada", value: "5" },
+    ],
+  },
 ];
 
 export function WizardForm() {

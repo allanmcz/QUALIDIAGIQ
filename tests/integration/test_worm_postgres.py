@@ -25,9 +25,7 @@ async def pg_conn():
     try:
         conn = await asyncpg.connect(POSTGRES_URL, timeout=3)
     except Exception:
-        pytest.skip(
-            "PostgreSQL indisponível — suba `make dev` ou defina QDI_POSTGRES_TEST_URL"
-        )
+        pytest.skip("PostgreSQL indisponível — suba `make dev` ou defina QDI_POSTGRES_TEST_URL")
     try:
         yield conn
     finally:

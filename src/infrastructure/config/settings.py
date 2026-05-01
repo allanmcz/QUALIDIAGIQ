@@ -42,6 +42,21 @@ class Settings(BaseSettings):
         default=480, validation_alias=AliasChoices("JWT_EXPIRE_MINUTES")
     )
 
+    database_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABASE_URL"),
+        description="PostgreSQL (ex.: postgresql+asyncpg://...). Usado para idempotência sync.",
+    )
+
+    otel_tracing_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("OTEL_TRACING_ENABLED"),
+    )
+    otel_service_name: str = Field(
+        default="qualidiagiq-api",
+        validation_alias=AliasChoices("OTEL_SERVICE_NAME"),
+    )
+
     cors_allowed_origins: str = Field(
         default="http://localhost:3000,http://127.0.0.1:3000",
         validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS"),
@@ -75,6 +90,18 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         partes = [p.strip() for p in self.cors_allowed_origins.split(",") if p.strip()]
         return partes if partes else ["http://localhost:3000"]
+
+    @property
+    def sync_database_url(self) -> str | None:
+        """URL para SQLAlchemy sync (middleware idempotência)."""
+        if not self.database_url or not str(self.database_url).strip():
+            return None
+        u = str(self.database_url).strip()
+        if "+asyncpg" in u:
+            return u.replace("postgresql+asyncpg://", "postgresql://", 1)
+        if u.startswith("postgresql://"):
+            return u
+        return None
 
 
 @lru_cache

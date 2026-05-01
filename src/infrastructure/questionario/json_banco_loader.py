@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-from src.domain.entities.diagnostico import RegimeTributario, SetorMacro
+from src.domain.entities.diagnostico import PorteEmpresa, RegimeTributario, SetorMacro
 from src.domain.entities.questionario import CondicaoExibicao, Pergunta, TipoPergunta
 from src.domain.value_objects.score import Dimensao
 
@@ -28,6 +28,8 @@ def _parse_condicao(raw: object) -> CondicaoExibicao | None:
 
     regimes_raw = raw.get("regimes_permitidos")
     setores_raw = raw.get("setores_permitidos")
+    setores_excl_raw = raw.get("setores_excluidos")
+    portes_raw = raw.get("portes_permitidos")
 
     regimes: tuple[RegimeTributario, ...] | None = None
     if regimes_raw is not None:
@@ -41,7 +43,24 @@ def _parse_condicao(raw: object) -> CondicaoExibicao | None:
             raise ValueError("setores_permitidos deve ser lista de strings.")
         setores = tuple(SetorMacro(str(x)) for x in setores_raw)
 
-    return CondicaoExibicao(regimes_permitidos=regimes, setores_permitidos=setores)
+    setores_excl: tuple[SetorMacro, ...] | None = None
+    if setores_excl_raw is not None:
+        if not isinstance(setores_excl_raw, list):
+            raise ValueError("setores_excluidos deve ser lista de strings.")
+        setores_excl = tuple(SetorMacro(str(x)) for x in setores_excl_raw)
+
+    portes: tuple[PorteEmpresa, ...] | None = None
+    if portes_raw is not None:
+        if not isinstance(portes_raw, list):
+            raise ValueError("portes_permitidos deve ser lista de strings.")
+        portes = tuple(PorteEmpresa(str(x)) for x in portes_raw)
+
+    return CondicaoExibicao(
+        regimes_permitidos=regimes,
+        setores_permitidos=setores,
+        setores_excluidos=setores_excl,
+        portes_permitidos=portes,
+    )
 
 
 def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
@@ -68,6 +87,8 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
         base_legal = item.get("base_legal")
         bl_out: str | None = str(base_legal) if base_legal is not None else None
         condicao = _parse_condicao(item.get("condicao"))
+        multipla_raw = item.get("multipla_total")
+        multipla_total = int(multipla_raw) if multipla_raw is not None else None
 
         resultado.append(
             Pergunta(
@@ -79,6 +100,7 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
                 tipo=tipo,
                 base_legal=bl_out,
                 condicao=condicao,
+                multipla_total=multipla_total,
             )
         )
     return resultado

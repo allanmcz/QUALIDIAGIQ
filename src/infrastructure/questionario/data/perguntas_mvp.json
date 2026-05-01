@@ -1,35 +1,481 @@
 {
-  "versao_catalogo": "mvp-1",
+  "versao_catalogo": "v1-doc-05-full-37",
+  "namespace_uuid": "01800000-baad-4217-8000-000000000001",
   "perguntas": [
     {
-      "id": "11111111-1111-4111-a111-111111111111",
-      "codigo": "Q-FISC-001",
-      "dimensao": "fiscal",
-      "texto": "Sua empresa possui um departamento ou pessoa exclusivamente dedicada ao Compliance Tributário?",
-      "peso": 1.5,
-      "tipo": "escala_1_5",
-      "base_legal": "LC 214/2025 (adequação ao novo sistema tributário); ABNT NBR 17301:2026 — governança de compliance",
-      "condicao": null
-    },
-    {
-      "id": "22222222-2222-4222-a222-222222222222",
-      "codigo": "Q-TEC-001",
-      "dimensao": "tecnologica",
-      "texto": "Como é feita a apuração dos tributos hoje?",
-      "peso": 1.3,
-      "tipo": "escala_1_5",
-      "base_legal": "EC 132/2023 — transição e sistema de cobrança",
-      "condicao": null
-    },
-    {
-      "id": "33333333-3333-4333-a333-333333333333",
+      "id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
       "codigo": "Q-EST-001",
       "dimensao": "estrategica",
-      "texto": "A empresa já iniciou o mapeamento dos impactos da EC 132/2023 (Reforma Tributária)?",
-      "peso": 1.2,
-      "tipo": "escala_1_5",
-      "base_legal": "EC 132/2023 art. 156-A — IBS; LC 214/2025 — CBS/IBS",
+      "texto": "Sua empresa já iniciou um plano estruturado de transição para a Reforma Tributária?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "EC 132/2023; LC 214/2025",
       "condicao": null
+    },
+    {
+      "id": "684ac0c4-06d4-5b5d-b0b3-c65505104aff",
+      "codigo": "Q-EST-002",
+      "dimensao": "estrategica",
+      "texto": "O time fiscal e contábil já mapeou como o novo modelo de créditos e débitos pode afetar o resultado financeiro e a formação de preços?",
+      "peso": 8.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 28-32",
+      "condicao": null
+    },
+    {
+      "id": "7046c1d0-a6db-502f-93fe-fa7e1db22fad",
+      "codigo": "Q-EST-003",
+      "dimensao": "estrategica",
+      "texto": "Sua empresa já revisou suas margens e políticas de preço considerando a tributação no destino e preços diferenciados por região?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 5º",
+      "condicao": null
+    },
+    {
+      "id": "d8dca8fc-e638-588f-8aa4-b4009cfc13a1",
+      "codigo": "Q-EST-004",
+      "dimensao": "estrategica",
+      "texto": "Os contratos comerciais e de prestação de serviços já foram revisados para tributos na transição?",
+      "peso": 7.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 415; CC art. 478",
+      "condicao": null
+    },
+    {
+      "id": "1d2093fb-5dcf-5f81-8512-8563d910fd53",
+      "codigo": "Q-TEC-001",
+      "dimensao": "tecnologica",
+      "texto": "Seu ERP e sistemas fiscais já estão sendo adaptados para o novo modelo de apuração do IBS e da CBS?",
+      "peso": 9.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 12-15; NT 2025.002",
+      "condicao": null
+    },
+    {
+      "id": "2b5293f9-d64d-5d3a-9ee9-70ea40346c07",
+      "codigo": "Q-TEC-002",
+      "dimensao": "tecnologica",
+      "texto": "Seu sistema fiscal está pronto para os novos campos da NF-e (cClassTrib, cCredPres) e validações da NT 2025.002?",
+      "peso": 9.0,
+      "tipo": "ternaria",
+      "base_legal": "NT 2025.002",
+      "condicao": null
+    },
+    {
+      "id": "d967c3e6-68dd-5c81-9e13-0ecb8f53c686",
+      "codigo": "Q-TEC-003",
+      "dimensao": "tecnologica",
+      "texto": "Sua equipe financeira/TI já estimou o impacto da mudança na forma de recolhimento (split payment, retenções)?",
+      "peso": 8.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 200-220",
+      "condicao": null
+    },
+    {
+      "id": "1a1d8be2-99ad-560d-b5de-fa6512341d04",
+      "codigo": "Q-TEC-004",
+      "dimensao": "tecnologica",
+      "texto": "Sua empresa monitora NTs e cronogramas do CGNFS-e e CGSEFAZ para a transição?",
+      "peso": 7.0,
+      "tipo": "ternaria",
+      "base_legal": "NTs CGNFS-e; NT 2025.002",
+      "condicao": null
+    },
+    {
+      "id": "83cd9dcd-d2d5-5c25-a5bb-e9e64a4bb252",
+      "codigo": "Q-FISC-001",
+      "dimensao": "fiscal",
+      "texto": "A empresa já avaliou como benefícios fiscais e regimes especiais podem ser afetados na transição até 2033?",
+      "peso": 8.5,
+      "tipo": "ternaria",
+      "base_legal": "EC 132/2023 ADCT; LC 214/2025 art. 384-410",
+      "condicao": null
+    },
+    {
+      "id": "afeb2b00-8551-53ce-b67d-85dcb0861b08",
+      "codigo": "Q-FISC-002",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa já avaliou o impacto da extinção de regimes especiais (Reporto, Recap, crédito presumido)?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "Lei 11.196/05; Lei 11.488/07; LC 214/2025 art. 392",
+      "condicao": null
+    },
+    {
+      "id": "55b3d77d-a86d-5479-9ef5-5bcdb2b2780b",
+      "codigo": "Q-FISC-003",
+      "dimensao": "fiscal",
+      "texto": "A gestão de créditos de ICMS, PIS e COFINS acumulados está sendo monitorada para evitar perdas?",
+      "peso": 8.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 130-145",
+      "condicao": null
+    },
+    {
+      "id": "68705c96-6b23-56ab-af4f-97d396d8f568",
+      "codigo": "Q-FISC-004",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa identifica produtos sujeitos ao Imposto Seletivo no mix (combustíveis, bebidas, fumo, veículos, minerais)?",
+      "peso": 6.5,
+      "tipo": "ternaria",
+      "base_legal": "EC 132/2023 art. 153, VIII; LC 214/2025 art. 432-450",
+      "condicao": {
+        "setores_permitidos": [
+          "comercio",
+          "industria",
+          "agro"
+        ]
+      }
+    },
+    {
+      "id": "0b93e1db-97b2-56dc-983a-a4e0b22c2504",
+      "codigo": "Q-FIN-001",
+      "dimensao": "financeira",
+      "texto": "A gestão de estoques e regimes de reposição foi avaliada para evitar perda de créditos na transição?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 130-135",
+      "condicao": {
+        "setores_excluidos": [
+          "servicos"
+        ]
+      }
+    },
+    {
+      "id": "0b61141f-2d23-582e-bd6a-260258a618d6",
+      "codigo": "Q-OPER-001",
+      "dimensao": "operacional",
+      "texto": "A empresa possui processos claros para rastrear e controlar créditos tributários entre compras, vendas e serviços?",
+      "peso": 8.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 28",
+      "condicao": null
+    },
+    {
+      "id": "23d21c15-4a98-54bf-8968-97c57ab510e8",
+      "codigo": "Q-OPER-002",
+      "dimensao": "operacional",
+      "texto": "As operações entre filiais/fornecedores/clientes foram simuladas considerando tributação no destino?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 5º; art. 415",
+      "condicao": {
+        "portes_permitidos": [
+          "medio",
+          "grande",
+          "enterprise"
+        ]
+      }
+    },
+    {
+      "id": "07c753d1-10e4-5f50-88cc-cadd91e16c20",
+      "codigo": "Q-OPER-003",
+      "dimensao": "operacional",
+      "texto": "Sua empresa já iniciou treinamentos sobre IBS, CBS, IS e efeitos operacionais e financeiros?",
+      "peso": 6.5,
+      "tipo": "ternaria",
+      "base_legal": "Referência mercado / melhores práticas",
+      "condicao": null
+    },
+    {
+      "id": "1f74e164-195d-5fde-ba27-8ae08b8e011e",
+      "codigo": "Q-ABNT-001",
+      "dimensao": "compliance_abnt_17301",
+      "texto": "Sua empresa possui política interna formal de Compliance Tributário (escrita, aprovada e divulgada)?",
+      "peso": 8.5,
+      "tipo": "escala_1_5",
+      "base_legal": "ABNT NBR 17301:2026 cap. 5.1",
+      "condicao": null
+    },
+    {
+      "id": "5bd89013-2b3f-5c73-8a73-9351e114f14c",
+      "codigo": "Q-ABNT-002",
+      "dimensao": "compliance_abnt_17301",
+      "texto": "A empresa identifica e avalia periodicamente os riscos fiscais?",
+      "peso": 8.5,
+      "tipo": "escala_1_5",
+      "base_legal": "ABNT NBR 17301:2026 cap. 6.1",
+      "condicao": null
+    },
+    {
+      "id": "9c1e9918-4856-5798-8797-37efacde4ff7",
+      "codigo": "Q-ABNT-003",
+      "dimensao": "compliance_abnt_17301",
+      "texto": "Os controles sobre obrigações tributárias estão documentados (ITs, fluxos)?",
+      "peso": 9.0,
+      "tipo": "escala_1_5",
+      "base_legal": "ABNT NBR 17301:2026 cap. 7.1",
+      "condicao": null
+    },
+    {
+      "id": "4c00b243-fd49-5402-8163-b2613d2c987e",
+      "codigo": "Q-ABNT-004",
+      "dimensao": "compliance_abnt_17301",
+      "texto": "A empresa monitora obrigações tributárias de forma contínua (não só no fechamento)?",
+      "peso": 8.0,
+      "tipo": "escala_1_5",
+      "base_legal": "ABNT NBR 17301:2026 cap. 9",
+      "condicao": null
+    },
+    {
+      "id": "62589a5f-b918-5ee3-baaa-b636023dcb2c",
+      "codigo": "Q-ABNT-005",
+      "dimensao": "compliance_abnt_17301",
+      "texto": "Existe mecanismo formal de melhoria contínua dos processos tributários?",
+      "peso": 7.5,
+      "tipo": "escala_1_5",
+      "base_legal": "ABNT NBR 17301:2026 cap. 10",
+      "condicao": null
+    },
+    {
+      "id": "3203f8ac-ba35-560d-bf95-1a1952b534ec",
+      "codigo": "Q-VAREJO-001",
+      "dimensao": "fiscal",
+      "texto": "No varejo/atacado, a empresa já analisou impacto de créditos e débitos na margem e precificação?",
+      "peso": 8.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 28",
+      "condicao": {
+        "setores_permitidos": [
+          "comercio"
+        ]
+      }
+    },
+    {
+      "id": "a8a6d1f7-ccfc-59cb-82f6-b914f44b7e65",
+      "codigo": "Q-VAREJO-002",
+      "dimensao": "fiscal",
+      "texto": "Sua operação tem alto volume sob ICMS-ST e já avaliou o impacto do fim desse regime?",
+      "peso": 9.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 60-65",
+      "condicao": {
+        "setores_permitidos": [
+          "comercio"
+        ]
+      }
+    },
+    {
+      "id": "53a2aca1-377d-5299-898e-db6e606a47d0",
+      "codigo": "Q-VAREJO-003",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa avaliou impacto na cesta básica e produtos com alíquota reduzida (saúde, educação, agro)?",
+      "peso": 6.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 9º; art. 137; art. 145",
+      "condicao": {
+        "setores_permitidos": [
+          "comercio"
+        ]
+      }
+    },
+    {
+      "id": "21beac4d-1ff5-5fd3-9ee8-103126d626c6",
+      "codigo": "Q-IND-001",
+      "dimensao": "fiscal",
+      "texto": "Sua indústria já avaliou impacto na cadeia com tributação no destino (fornecedores, CDs, filiais)?",
+      "peso": 8.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 5º; art. 50",
+      "condicao": {
+        "setores_permitidos": [
+          "industria"
+        ]
+      }
+    },
+    {
+      "id": "6f8cb188-3f35-5857-bc78-4a5a18a1dd8f",
+      "codigo": "Q-IND-002",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa monitora impactos da extinção do IPI (exceto ZFM) sobre o mix de produtos?",
+      "peso": 7.0,
+      "tipo": "ternaria",
+      "base_legal": "EC 132/2023 art. 153, IV; LC 214/2025 art. 451-460",
+      "condicao": {
+        "setores_permitidos": [
+          "industria"
+        ]
+      }
+    },
+    {
+      "id": "0ea84a42-ddfd-51e5-b7ca-6737e5dd3ccf",
+      "codigo": "Q-IND-003",
+      "dimensao": "fiscal",
+      "texto": "Sua indústria já avaliou impactos da CBS na cadeia (insumos, energia, créditos)?",
+      "peso": 8.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 12-15",
+      "condicao": {
+        "setores_permitidos": [
+          "industria"
+        ]
+      }
+    },
+    {
+      "id": "9359f3ac-4a88-53fc-86eb-27d28b115dcf",
+      "codigo": "Q-SERV-001",
+      "dimensao": "fiscal",
+      "texto": "Sua emissão de NFS-e está sendo adequada ao layout RTC (NTs 003 a 007 CGNFS-e)?",
+      "peso": 9.0,
+      "tipo": "ternaria",
+      "base_legal": "NTs 003-007 CGNFS-e",
+      "condicao": {
+        "setores_permitidos": [
+          "servicos"
+        ]
+      }
+    },
+    {
+      "id": "ba824228-1922-5b82-a04c-472714822a76",
+      "codigo": "Q-SERV-002",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa já avaliou o impacto da nova alíquota IBS+CBS sobre serviços?",
+      "peso": 8.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 12-15",
+      "condicao": {
+        "setores_permitidos": [
+          "servicos"
+        ]
+      }
+    },
+    {
+      "id": "95014a2f-1046-5135-a9e0-edb107f1caf9",
+      "codigo": "Q-SERV-003",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa atua em setor com alíquota diferenciada (saúde, educação, transporte) e já avaliou benefícios?",
+      "peso": 6.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 137; 145; 156",
+      "condicao": {
+        "setores_permitidos": [
+          "servicos"
+        ]
+      }
+    },
+    {
+      "id": "4e8a8feb-e51d-5ec6-b103-c6dcaf2fcf7d",
+      "codigo": "Q-AGRO-001",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa do agro já avaliou impactos da redução de alíquota de 60% sobre produtos agropecuários?",
+      "peso": 8.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 138-141",
+      "condicao": {
+        "setores_permitidos": [
+          "agro"
+        ]
+      }
+    },
+    {
+      "id": "8eded888-9312-54f2-9ddc-6d50b5012701",
+      "codigo": "Q-AGRO-002",
+      "dimensao": "fiscal",
+      "texto": "Sua empresa avalia impactos do crédito presumido ao produtor rural PF e da apropriação por agroindústrias?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 165-170",
+      "condicao": {
+        "setores_permitidos": [
+          "agro"
+        ]
+      }
+    },
+    {
+      "id": "1cbd5afa-65f5-5c9b-b62a-b36fd243600a",
+      "codigo": "Q-REAL-001",
+      "dimensao": "contabil",
+      "texto": "Sua empresa avaliou reestruturações societárias (filiais, holding, fusões) na transição tributária?",
+      "peso": 7.5,
+      "tipo": "ternaria",
+      "base_legal": "Lei 6.404/76 art. 226",
+      "condicao": {
+        "regimes_permitidos": [
+          "lucro_real"
+        ],
+        "portes_permitidos": [
+          "medio",
+          "grande",
+          "enterprise"
+        ]
+      }
+    },
+    {
+      "id": "c411df79-a423-5d0c-a1bf-511201c62072",
+      "codigo": "Q-REAL-002",
+      "dimensao": "contabil",
+      "texto": "Sua empresa atua como substituto tributário no modelo CBS/IBS e já preparou os controles?",
+      "peso": 7.0,
+      "tipo": "ternaria",
+      "base_legal": "LC 214/2025 art. 60-65",
+      "condicao": {
+        "regimes_permitidos": [
+          "lucro_real"
+        ],
+        "portes_permitidos": [
+          "medio",
+          "grande",
+          "enterprise"
+        ]
+      }
+    },
+    {
+      "id": "3ea95973-e4ba-56f6-bc22-d84c9fa1e38a",
+      "codigo": "Q-REAL-003",
+      "dimensao": "financeira",
+      "texto": "Sua tesouraria projetou cenários de fluxo de caixa 2026-2033 com sensibilidade às alíquotas?",
+      "peso": 8.0,
+      "tipo": "ternaria",
+      "base_legal": "EC 132/2023; LC 214/2025 art. 384-410",
+      "condicao": {
+        "regimes_permitidos": [
+          "lucro_real"
+        ],
+        "portes_permitidos": [
+          "medio",
+          "grande",
+          "enterprise"
+        ]
+      }
+    },
+    {
+      "id": "da84eb70-98fa-51cf-9237-0aacaafc6188",
+      "codigo": "Q-REAL-004",
+      "dimensao": "contabil",
+      "texto": "Sua empresa avaliou impactos da Reforma sobre IRPJ e CSLL?",
+      "peso": 6.5,
+      "tipo": "ternaria",
+      "base_legal": "Lei 9.430/96; CPC 32",
+      "condicao": {
+        "regimes_permitidos": [
+          "lucro_real"
+        ],
+        "portes_permitidos": [
+          "medio",
+          "grande",
+          "enterprise"
+        ]
+      }
+    },
+    {
+      "id": "b430b052-1ece-51db-8dfc-3db6e6d69692",
+      "codigo": "Q-REAL-005",
+      "dimensao": "contabil",
+      "texto": "A empresa tem governança contratual para Cláusulas de Repactuação Tributária em contratos longos (> 12 meses)?",
+      "peso": 7.0,
+      "tipo": "ternaria",
+      "base_legal": "CC art. 478",
+      "condicao": {
+        "regimes_permitidos": [
+          "lucro_real"
+        ],
+        "portes_permitidos": [
+          "medio",
+          "grande",
+          "enterprise"
+        ]
+      }
     }
   ]
 }

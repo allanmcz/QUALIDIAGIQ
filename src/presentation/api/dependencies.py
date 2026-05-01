@@ -11,20 +11,57 @@ from uuid import UUID
 
 import jwt
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
+from src.application.use_cases.gerar_questionario_adaptativo import (
+    GerarQuestionarioAdaptativoUseCase,
+)
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
+from src.domain.entities.diagnostico import EmpresaInfo, PorteEmpresa, RegimeTributario, SetorMacro
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
+from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
+)
+
+_UFS_VALIDAS_QUERY = frozenset(
+    {
+        "AC",
+        "AL",
+        "AP",
+        "AM",
+        "BA",
+        "CE",
+        "DF",
+        "ES",
+        "GO",
+        "MA",
+        "MT",
+        "MS",
+        "MG",
+        "PA",
+        "PB",
+        "PR",
+        "PE",
+        "PI",
+        "RJ",
+        "RN",
+        "RS",
+        "RO",
+        "RR",
+        "SC",
+        "SP",
+        "SE",
+        "TO",
+    }
 )
 
 logger = structlog.get_logger(__name__)
@@ -102,6 +139,57 @@ def get_anexar_relatorio_otimista_use_case(
 def get_calcular_score_use_case() -> CalcularScoreUseCase:
     """Injeta o motor matemático de Score."""
     return CalcularScoreUseCase()
+
+
+def get_gerar_questionario_adaptativo_use_case() -> GerarQuestionarioAdaptativoUseCase:
+    """Motor adaptativo sobre o catálogo JSON em cache."""
+    return GerarQuestionarioAdaptativoUseCase(get_banco_perguntas_cached())
+
+
+def perfil_empresa_para_questionario(
+    cnpj: Annotated[str, Query(min_length=14, max_length=14)],
+    razao_social: Annotated[str, Query(min_length=1, max_length=255)],
+    porte: Annotated[PorteEmpresa, Query()],
+    regime: Annotated[RegimeTributario, Query()],
+    cnae_principal: Annotated[str, Query(min_length=7, max_length=7)],
+    uf: Annotated[str, Query(min_length=2, max_length=2)],
+    setor_macro: Annotated[SetorMacro, Query()],
+) -> EmpresaInfo:
+    """
+    Monta `EmpresaInfo` a partir de query params (mesmas regras do POST, sem máscara).
+
+    Base: docs/refs/05_QUESTIONARIO_v1.md — perfil para filtro condicional.
+    """
+    if not cnpj.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CNPJ deve conter apenas dígitos",
+        )
+    if len(set(cnpj)) == 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CNPJ inválido",
+        )
+    ufu = uf.upper()
+    if ufu not in _UFS_VALIDAS_QUERY:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"UF inválida: {uf}",
+        )
+    if not cnae_principal.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CNAE principal deve conter 7 dígitos",
+        )
+    return EmpresaInfo(
+        cnpj=cnpj,
+        razao_social=razao_social.strip(),
+        porte=porte,
+        regime=regime,
+        cnae_principal=cnae_principal,
+        uf=ufu,
+        setor_macro=setor_macro,
+    )
 
 
 def get_pdf_generator() -> WeasyPrintPdfGenerator:

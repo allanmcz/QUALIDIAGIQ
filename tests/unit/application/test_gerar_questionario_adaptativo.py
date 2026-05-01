@@ -45,7 +45,7 @@ class TestGerarQuestionarioAdaptativoUseCase:
             razao_social="Loja",
             porte=PorteEmpresa.MICRO,
             regime=RegimeTributario.SIMPLES_NACIONAL,
-            cnae_principal="123",
+            cnae_principal="1234567",
             uf="SP",
             setor_macro=SetorMacro.COMERCIO,
         )
@@ -61,7 +61,7 @@ class TestGerarQuestionarioAdaptativoUseCase:
             razao_social="Fábrica",
             porte=PorteEmpresa.PEQUENO,
             regime=RegimeTributario.SIMPLES_NACIONAL,
-            cnae_principal="123",
+            cnae_principal="1234567",
             uf="SP",
             setor_macro=SetorMacro.INDUSTRIA,
         )
@@ -79,7 +79,7 @@ class TestGerarQuestionarioAdaptativoUseCase:
             razao_social="Mega Fábrica",
             porte=PorteEmpresa.GRANDE,
             regime=RegimeTributario.LUCRO_REAL,
-            cnae_principal="123",
+            cnae_principal="1234567",
             uf="SP",
             setor_macro=SetorMacro.INDUSTRIA,
         )

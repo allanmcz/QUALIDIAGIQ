@@ -54,7 +54,10 @@ class CalcularScoreUseCase:
             if not pergunta:
                 raise ValueError(f"Pergunta com ID {resposta.pergunta_id} não encontrada no banco.")
 
-            pontuacao_normalizada = resposta.calcular_pontuacao()  # 0 a 100
+            pontuacao_normalizada = resposta.calcular_pontuacao(pergunta)
+            if pontuacao_normalizada is None:
+                # Doc 05_QUESTIONARIO §11.1 — "Não se aplica" excluído da média
+                continue
 
             # Matemática da Média Ponderada Interna da Dimensão
             pontos_por_dimensao[pergunta.dimensao] += pontuacao_normalizada * pergunta.peso

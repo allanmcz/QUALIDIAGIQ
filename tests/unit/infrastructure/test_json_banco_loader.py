@@ -15,15 +15,15 @@ from src.infrastructure.questionario.json_banco_loader import (
 )
 
 
-def test_carregar_banco_mvp_tres_perguntas_ids_estaveis() -> None:
+def test_carregar_banco_mvp_catalogo_doc_ids_estaveis() -> None:
     lista = carregar_banco_mvp()
-    assert len(lista) == 3
-    assert lista[0].id == UUID("11111111-1111-4111-a111-111111111111")
-    assert lista[0].codigo == "Q-FISC-001"
-    assert lista[0].dimensao == Dimensao.FISCAL
-    assert lista[0].tipo == TipoPergunta.ESCALA_1_5
+    assert len(lista) == 37
+    assert lista[0].id == UUID("df52b20e-dab8-5ce5-a89d-4fb235016cbe")
+    assert lista[0].codigo == "Q-EST-001"
+    assert lista[0].dimensao == Dimensao.ESTRATEGICA
+    assert lista[0].tipo == TipoPergunta.TERNARIA
     assert lista[0].base_legal is not None
-    assert "LC 214" in lista[0].base_legal
+    assert "EC 132" in lista[0].base_legal or "LC 214" in lista[0].base_legal
 
 
 def test_carregar_perguntas_condicional(tmp_path) -> None:
