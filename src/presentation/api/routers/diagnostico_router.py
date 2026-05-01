@@ -20,8 +20,9 @@ from src.application.use_cases.realizar_diagnostico import (
     RealizarDiagnostico,
 )
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
-from src.domain.entities.questionario import Pergunta, Resposta, TipoPergunta
+from src.domain.entities.questionario import Pergunta, Resposta
 from src.domain.value_objects.score import Dimensao, ScoreCompleto
+from src.infrastructure.questionario.json_banco_loader import carregar_banco_mvp
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
@@ -40,6 +41,9 @@ from src.presentation.api.schemas import (
 )
 
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
+
+# Cache por processo — catálogo vem de JSON versionado (infra).
+_BANCO_PERGUNTAS_CACHE: list[Pergunta] | None = None
 
 
 def _campos_auditoria_http(entity: object) -> tuple[str | None, int | None]:
@@ -123,34 +127,10 @@ def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema |
 
 
 def _get_banco_perguntas() -> list[Pergunta]:
-    from uuid import UUID
-
-    return [
-        Pergunta(
-            id=UUID("11111111-1111-4111-a111-111111111111"),
-            codigo="Q-FISC-001",
-            dimensao=Dimensao.FISCAL,
-            texto="Sua empresa possui um departamento ou pessoa exclusivamente dedicada ao Compliance Tributário?",
-            peso=1.5,
-            tipo=TipoPergunta.ESCALA_1_5,
-        ),
-        Pergunta(
-            id=UUID("22222222-2222-4222-a222-222222222222"),
-            codigo="Q-TEC-001",
-            dimensao=Dimensao.TECNOLOGICA,
-            texto="Como é feita a apuração dos tributos hoje?",
-            peso=1.3,
-            tipo=TipoPergunta.ESCALA_1_5,
-        ),
-        Pergunta(
-            id=UUID("33333333-3333-4333-a333-333333333333"),
-            codigo="Q-EST-001",
-            dimensao=Dimensao.ESTRATEGICA,
-            texto="A empresa já iniciou o mapeamento dos impactos da EC 132/2023 (Reforma Tributária)?",
-            peso=1.2,
-            tipo=TipoPergunta.ESCALA_1_5,
-        ),
-    ]
+    global _BANCO_PERGUNTAS_CACHE
+    if _BANCO_PERGUNTAS_CACHE is None:
+        _BANCO_PERGUNTAS_CACHE = carregar_banco_mvp()
+    return _BANCO_PERGUNTAS_CACHE
 
 
 @router.post("/", response_model=DiagnosticoResponse, status_code=status.HTTP_201_CREATED)
