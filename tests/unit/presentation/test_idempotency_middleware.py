@@ -28,6 +28,7 @@ _PAYLOAD_BASE = {
     },
     "respondente": {"email": "teste@teste.com"},
     "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+    "aceite_termos_privacidade": True,
 }
 
 

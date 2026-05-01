@@ -12,4 +12,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0009_respondente_telefone_m10.sql
 \i /docker-entrypoint-initdb.d/migrations/0010_rls_comentarios_documentacao_m10.sql
 \i /docker-entrypoint-initdb.d/migrations/0011_checklist_m12_autoconf.sql
+\i /docker-entrypoint-initdb.d/migrations/0012_aceite_lgpd_e_worm.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

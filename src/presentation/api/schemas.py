@@ -106,6 +106,22 @@ class IniciarDiagnosticoRequest(BaseModel):
     respondente: RespondenteSchema
     respostas: list[RespostaRequestSchema]
     plano: str = "gratuito"
+    aceite_termos_privacidade: bool = Field(
+        ...,
+        description=(
+            "Ciência explícita dos termos de uso e desta política de privacidade (LGPD Lei 13.709/2018)."
+        ),
+    )
+
+    @field_validator("aceite_termos_privacidade")
+    @classmethod
+    def aceite_obrigatorio_true(cls, v: bool) -> bool:
+        """Somente `true` aceita — coerente com o checkbox obrigatório do wizard."""
+        if v is not True:
+            raise ValueError(
+                "É obrigatório aceitar o tratamento dos dados conforme a política de privacidade."
+            )
+        return v
 
 
 class PatchRelatorioPdfRequest(BaseModel):
@@ -334,6 +350,8 @@ class DiagnosticoResponse(BaseModel):
     cronograma: list[dict[str, Any]] | None = None
     # M12 — estado persistido da autoconf (JSONB `checklist_m12_estado`)
     checklist_m12_autoconf: list[bool] | None = None
+    # LGPD — instante registrado pelo servidor no POST (coluna `aceite_termos_privacidade_em`)
+    aceite_termos_privacidade_em: datetime | None = None
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
     hash_evidencia: str | None = None
     versao_otimista: int | None = None

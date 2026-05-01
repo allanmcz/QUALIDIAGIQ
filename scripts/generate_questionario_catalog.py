@@ -325,7 +325,10 @@ def main() -> None:
         {"setores_permitidos": ["agro"]},
     )
     # --- Lucro real avançado (proxy: porte médio+ — doc original cita faturamento > 100M) ---
-    lr_cond = {"regimes_permitidos": ["lucro_real"], "portes_permitidos": ["medio", "grande", "enterprise"]}
+    lr_cond = {
+        "regimes_permitidos": ["lucro_real"],
+        "portes_permitidos": ["medio", "grande", "enterprise"],
+    }
     add(
         "Q-REAL-001",
         "contabil",

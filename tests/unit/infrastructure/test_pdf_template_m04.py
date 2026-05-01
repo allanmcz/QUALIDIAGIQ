@@ -87,6 +87,7 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
 
     assert "M04_SECAO: capa_identificacao" in html
     assert "M04_SECAO: sintese_executiva" in html
+    assert "M04_SECAO: tecnico_detalhamento_dimensoes" in html
     assert "M04_SECAO: tecnico_gaps_recomendacoes" in html
     assert "Síntese executiva" in html
     assert "Cronograma em cinco horizontes" in html

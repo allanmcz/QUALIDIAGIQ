@@ -1,16 +1,9 @@
 import type { DiagnosticoPayload } from "../schemas/wizard";
 import { getAccessToken, getApiUrl } from "./config";
 
-type PayloadApi = Omit<DiagnosticoPayload, "aceite_termos_privacidade">;
-
-function stripLeadFields(payload: DiagnosticoPayload): PayloadApi {
-  const { aceite_termos_privacidade: _aceite, ...rest } = payload;
-  void _aceite;
-  return rest;
-}
-
 /**
  * Cria diagnóstico. Exige JWT (login `/login`) + header Idempotency-Key (contrato API).
+ * Envia `aceite_termos_privacidade` para persistência do instante LGPD no servidor (migração 0012).
  */
 export async function postDiagnostico(payload: DiagnosticoPayload) {
   const token = getAccessToken();
@@ -26,7 +19,6 @@ export async function postDiagnostico(payload: DiagnosticoPayload) {
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const base = getApiUrl().replace(/\/$/, "");
-  const body = stripLeadFields(payload);
 
   try {
     const res = await fetch(`${base}/diagnosticos/`, {
@@ -36,7 +28,7 @@ export async function postDiagnostico(payload: DiagnosticoPayload) {
         Authorization: `Bearer ${token}`,
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {

@@ -129,6 +129,7 @@ async def test_criar_diagnostico_sem_tenant(async_client):
         },
         "respondente": {"email": "teste@teste.com"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+        "aceite_termos_privacidade": True,
     }
     headers = {"Idempotency-Key": str(uuid.uuid4())}
     response = await async_client.post("/diagnosticos/", json=payload, headers=headers)

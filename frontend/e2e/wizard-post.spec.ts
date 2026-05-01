@@ -138,5 +138,7 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
     expect(headersCapturados.idempotency || "").toMatch(/[0-9a-f-]{36}/i);
     expect(postJson).toContain(PID_TERNARIA);
     expect(postJson).toContain(PID_ESCALA);
+    const posted = JSON.parse(postJson) as { aceite_termos_privacidade?: boolean };
+    expect(posted.aceite_termos_privacidade).toBe(true);
   });
 });

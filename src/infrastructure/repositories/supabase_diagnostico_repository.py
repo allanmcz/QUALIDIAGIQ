@@ -198,6 +198,11 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             "score_completo": score_blob,
             "versao_otimista": d.versao_otimista,
             "checklist_m12_estado": d.checklist_m12_estado,
+            "aceite_termos_privacidade_em": (
+                d.aceite_termos_privacidade_em.isoformat()
+                if d.aceite_termos_privacidade_em is not None
+                else None
+            ),
         }
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
@@ -231,6 +236,11 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             except (TypeError, ValueError):
                 checklist_m12 = None
 
+        aceite_raw = row.get("aceite_termos_privacidade_em")
+        aceite_em: datetime | None = None
+        if aceite_raw is not None:
+            aceite_em = datetime.fromisoformat(str(aceite_raw).replace("Z", "+00:00"))
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -259,4 +269,5 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             hash_evidencia=row.get("hash_sha256"),
             versao_otimista=int(row.get("versao_otimista") or 1),
             checklist_m12_estado=checklist_m12,
+            aceite_termos_privacidade_em=aceite_em,
         )

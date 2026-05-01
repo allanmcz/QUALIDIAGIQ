@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export
+.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp
 
 PYTHON := python3.12
 VENV := .venv
@@ -39,19 +39,26 @@ test-watch: ## Roda testes em modo watch (precisa pytest-watch)
 	PYTHONPATH=. $(VENV)/bin/pytest -f
 
 lint: ## Lint com ruff
-	$(VENV)/bin/ruff check src/ tests/
+	$(VENV)/bin/ruff check src/ tests/ scripts/
 
 format: ## Formata código com black + ruff
-	$(VENV)/bin/black src/ tests/
-	$(VENV)/bin/ruff check --fix src/ tests/
+	$(VENV)/bin/black src/ tests/ scripts/
+	$(VENV)/bin/ruff check --fix src/ tests/ scripts/
 
 type-check: ## Type checking com mypy
 	$(VENV)/bin/mypy src/
 
 qa-backend: ## Gate backend: ruff + mypy + pytest (equiv. Seção 5.1 do PLANO_COMPLETO_HANDOFF)
-	$(VENV)/bin/ruff check src/ tests/
+	$(VENV)/bin/ruff check src/ tests/ scripts/
 	$(VENV)/bin/mypy src/
 	PYTHONPATH=. $(VENV)/bin/pytest
+
+mvp-gate: ## Subconjunto checklist MVP: smoke API + schema 0012 + RLS dois tenants (precisa Postgres)
+	PYTHONPATH=. $(VENV)/bin/pytest tests/integration/test_smoke_mvp_fechado_api.py tests/integration/test_mvp_gate_postgres.py -q --no-cov
+
+verify-schema-mvp: ## Verifica 0012/M11 + RLS no Postgres (DATABASE_URL ou QDI_POSTGRES_TEST_URL; default local :60322)
+	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
+	$(VENV)/bin/python scripts/verify_mvp_schema.py
 
 openapi-export: ## Gera docs/api/openapi.generated.json a partir do schema FastAPI (gitignored)
 	PYTHONPATH=. $(VENV)/bin/python scripts/export_openapi_json.py

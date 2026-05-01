@@ -18,6 +18,7 @@ Sequência orquestrada:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from src.domain.entities.diagnostico import (
@@ -57,6 +58,7 @@ class ComandoRealizarDiagnostico:
     respondente: Respondente
     entradas_resposta: list[EntradaRespostaDiagnostico]
     plano: str = "gratuito"
+    aceite_termos_privacidade: bool = False
 
 
 @dataclass(frozen=True)
@@ -107,6 +109,12 @@ class RealizarDiagnostico:
             respondente=comando.respondente,
             plano=plano_enum,
         )
+
+        if not comando.aceite_termos_privacidade:
+            raise ValueError(
+                "É obrigatório declarar aceite dos termos de uso e da política de privacidade (LGPD)."
+            )
+        diagnostico.registrar_aceite_termos_privacidade(datetime.now(UTC))
 
         perguntas_aplicadas = [e.pergunta for e in comando.entradas_resposta]
         respostas = [

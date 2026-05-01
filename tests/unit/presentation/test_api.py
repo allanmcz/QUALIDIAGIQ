@@ -1,5 +1,6 @@
 import copy
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -61,6 +62,13 @@ def test_healthcheck():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "service": "qualidiagiq"}
+    assert response.headers.get("X-Trace-Id")
+
+
+def test_healthcheck_repasse_x_trace_id():
+    response = client.get("/health", headers={"X-Trace-Id": "trace-fixo-e2e"})
+    assert response.status_code == 200
+    assert response.headers.get("X-Trace-Id") == "trace-fixo-e2e"
 
 
 def test_criar_diagnostico_sem_token_falha():
@@ -76,6 +84,7 @@ def test_criar_diagnostico_sem_token_falha():
         },
         "respondente": {"email": "teste@teste.com"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+        "aceite_termos_privacidade": True,
     }
 
     response = client.post(
@@ -115,6 +124,7 @@ def test_criar_diagnostico_com_sucesso():
     mock_resultado.cronograma = None
     mock_resultado.diagnostico.hash_evidencia = "a" * 64
     mock_resultado.diagnostico.versao_otimista = 1
+    mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
 
     mock_use_case.execute.return_value = mock_resultado
 
@@ -136,6 +146,7 @@ def test_criar_diagnostico_com_sucesso():
         },
         "respondente": {"email": "teste@teste.com"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+        "aceite_termos_privacidade": True,
     }
 
     response = client.post("/diagnosticos/", json=payload, headers=cabecalho_post_diagnostico())
@@ -148,9 +159,10 @@ def test_criar_diagnostico_com_sucesso():
     assert data["score"]["score_geral"]["valor"] == 100.0
     assert data["hash_evidencia"] == "a" * 64
     assert data["versao_otimista"] == 1
+    assert data.get("aceite_termos_privacidade_em") is not None
 
 
-def test_criar_diagnostico_com_token_invalido():
+def test_criar_diagnostico_sem_aceite_lgpd_422():
     payload = {
         "empresa": {
             "cnpj": "12345678000199",
@@ -163,12 +175,42 @@ def test_criar_diagnostico_com_token_invalido():
         },
         "respondente": {"email": "teste@teste.com"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+        "aceite_termos_privacidade": False,
+    }
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    response = client.post("/diagnosticos/", json=payload, headers=cabecalho_post_diagnostico())
+    app.dependency_overrides.clear()
+    assert response.status_code == 422
+    mock_uc.execute.assert_not_called()
+
+
+def test_criar_diagnostico_com_token_invalido():
+    mock_uc = AsyncMock()
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    payload = {
+        "empresa": {
+            "cnpj": "12345678000199",
+            "razao_social": "Teste",
+            "porte": "micro",
+            "regime": "simples_nacional",
+            "cnae_principal": "1234567",
+            "uf": "SP",
+            "setor_macro": "comercio",
+        },
+        "respondente": {"email": "teste@teste.com"},
+        "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+        "aceite_termos_privacidade": True,
     }
     headers = {
         "Authorization": "Bearer token-invalido",
         "Idempotency-Key": str(uuid.uuid4()),
     }
     response = client.post("/diagnosticos/", json=payload, headers=headers)
+    app.dependency_overrides.clear()
     assert response.status_code == 401
     assert "inválido" in response.json()["detail"] or "expirado" in response.json()["detail"]
 

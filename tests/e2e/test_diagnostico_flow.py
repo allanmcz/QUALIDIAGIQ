@@ -46,7 +46,23 @@ class MockRepository:
         self.db[diagnostico.id] = diagnostico
 
     async def buscar_por_id(self, diagnostico_id: uuid.UUID, tenant_id: uuid.UUID):
-        return self.db.get(diagnostico_id)
+        row = self.db.get(diagnostico_id)
+        if row is None or row.tenant_id != tenant_id:
+            return None
+        return row
+
+    async def listar_por_tenant(
+        self, tenant_id: uuid.UUID, limit: int = 100, offset: int = 0
+    ) -> list:
+        items = [d for d in self.db.values() if d.tenant_id == tenant_id]
+        items.sort(key=lambda d: d.criado_em, reverse=True)
+        return items[offset : offset + limit]
+
+    async def atualizar_relatorio_pdf_com_versao(self, *args, **kwargs):
+        return None
+
+    async def atualizar_checklist_m12_com_versao(self, *args, **kwargs):
+        return None
 
 
 @pytest.fixture
@@ -99,6 +115,7 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
             {"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4},
             {"pergunta_id": "5bd89013-2b3f-5c73-8a73-9351e114f14c", "valor": 3},
         ],
+        "aceite_termos_privacidade": True,
     }
 
     # 1. Criação do Diagnóstico
@@ -112,6 +129,7 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
     assert data.get("hash_evidencia") is not None
     assert len(data["hash_evidencia"]) == 64
     assert data.get("versao_otimista") == 1
+    assert data.get("aceite_termos_privacidade_em") is not None
 
     # 2. Valida URL do PDF (resultado do MockStorageService)
     assert data["relatorio_pdf_url"] is not None

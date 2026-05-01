@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 
@@ -251,3 +252,27 @@ class TestDiagnostico:
             match=r"autoconf M12",
         ):
             diag.definir_checklist_m12_autoconf([False] * 10)
+
+    def test_registrar_aceite_lgpd_em_andamento(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        agora = datetime.now(UTC)
+        diag.registrar_aceite_termos_privacidade(agora)
+        assert diag.aceite_termos_privacidade_em == agora
+
+    def test_registrar_aceite_rejeita_sem_timezone(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        naive = datetime(2026, 5, 1, 12, 0, 0)
+        with pytest.raises(ValueError, match=r"timezone-aware"):
+            diag.registrar_aceite_termos_privacidade(naive)
+
+    def test_registrar_aceite_rejeita_apos_finalizar(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(50.0)
+        with pytest.raises(DiagnosticoNaoFinalizavelError, match=r"Aceite LGPD"):
+            diag.registrar_aceite_termos_privacidade(datetime.now(UTC))

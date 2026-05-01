@@ -46,8 +46,13 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
         Path(__file__).resolve().parents[2]
         / "src/infrastructure/db/migrations/0011_checklist_m12_autoconf.sql"
     )
+    mig_0012 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0012_aceite_lgpd_e_worm.sql"
+    )
     await pg_conn.execute(mig_0006.read_text(encoding="utf-8"))
     await pg_conn.execute(mig_0011.read_text(encoding="utf-8"))
+    await pg_conn.execute(mig_0012.read_text(encoding="utf-8"))
 
     tid = uuid.uuid4()
     did = uuid.uuid4()
@@ -116,5 +121,13 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
     if isinstance(raw_m12, str):
         raw_m12 = json.loads(raw_m12)
     assert raw_m12 == m12_esperado
+
+    with pytest.raises(asyncpg.PostgresError) as exc_aceite:
+        await pg_conn.execute(
+            "UPDATE diagnosticos SET aceite_termos_privacidade_em = now() WHERE id = $1",
+            did,
+        )
+    msg_aceite = str(exc_aceite.value).lower()
+    assert "worm" in msg_aceite or "evidência" in msg_aceite or "imutável" in msg_aceite
 
     await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)

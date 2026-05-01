@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 
 from src.infrastructure.config.settings import get_settings
 from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
+from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 from src.presentation.api.routers import diagnostico_router
 
 if TYPE_CHECKING:
@@ -105,10 +106,17 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "If-Match"],
-        expose_headers=["X-Idempotent-Replay"],
+        allow_headers=[
+            "Content-Type",
+            "Authorization",
+            "Idempotency-Key",
+            "If-Match",
+            "X-Trace-Id",
+        ],
+        expose_headers=["X-Idempotent-Replay", "X-Trace-Id"],
     )
     app.add_middleware(IdempotencyMiddleware, cache=idempotency_cache)
+    app.add_middleware(TraceContextMiddleware)
 
     # Healthcheck simples
     @app.get("/health", tags=["Infra"])

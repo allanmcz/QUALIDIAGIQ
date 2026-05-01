@@ -51,30 +51,28 @@ def _render_markdown(
     inter: set[str],
 ) -> str:
     lines = [
-        "# Auditoria catálogo JSON × PRD do questionário (P4)",
+        "# Auditoria catálogo JSON x PRD do questionário (P4)",
         "",
         "> **Gerado por:** `scripts/auditoria_questionario_vs_catalogo.py`",
-        "> **Catálogo:** `versao_catalogo = "
-        + versao
-        + "` (`perguntas_mvp.json`).",
+        "> **Catálogo:** `versao_catalogo = " + versao + "` (`perguntas_mvp.json`).",
         "> **PRD:** `docs/refs/05_QUESTIONARIO_v1.md` (códigos extraídos por regex `Q-SEG-NNN`).",
         "",
         "## Contagens",
         "",
-        f"| Fonte | Quantidade de códigos únicos |",
-        f"|---|---:|",
+        "| Fonte | Quantidade de códigos únicos |",
+        "|---|---:|",
         f"| JSON (catálogo completo) | {n_json} |",
         f"| Markdown PRD (ocorrências de código) | {n_md} |",
         f"| Interseção | {len(inter)} |",
         "",
         (
-            "## Nota 35 × 37\n\n"
+            "## Nota 35 x 37\n\n"
             "O PRD descreve **21 núcleo + 9 setoriais + 5 avançadas Lucro Real = 35** perguntas "
             "no desenho pedagógico. O catálogo runtime **`"
             + versao
             + "`** contém **37** perguntas (inclui ramificações setoriais/versionamento MVP). "
             "Não é inconsistência de código — é **escopo documental** vs **catálogo materializado**. "
-            "Ver também `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` — auditoria formal **37×35**.\n"
+            "Ver também `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` — auditoria formal **37x35**.\n"
         ),
         "",
         "## Divergências",
@@ -99,9 +97,13 @@ def _render_markdown(
         lines.append("")
 
     if only_json or only_md:
-        lines.append("**Ação sugerida:** alinhar doc ou catálogo numa sprint dedicada (não automático).")
+        lines.append(
+            "**Ação sugerida:** alinhar doc ou catálogo numa sprint dedicada (não automático)."
+        )
     else:
-        lines.append("**Resultado:** conjuntos de códigos **idênticos** entre JSON e extração do PRD.")
+        lines.append(
+            "**Resultado:** conjuntos de códigos **idênticos** entre JSON e extração do PRD."
+        )
     lines.append("")
     return "\n".join(lines)
 
@@ -129,7 +131,9 @@ def main() -> int:
     only_md = md_codes - json_codes
 
     print(f"versao_catalogo: {versao}")
-    print(f"JSON: {len(json_codes)} códigos | MD: {len(md_codes)} códigos | interseção: {len(inter)}")
+    print(
+        f"JSON: {len(json_codes)} códigos | MD: {len(md_codes)} códigos | interseção: {len(inter)}"
+    )
     if only_json:
         print("Só JSON:", ", ".join(sorted(only_json)))
     if only_md:

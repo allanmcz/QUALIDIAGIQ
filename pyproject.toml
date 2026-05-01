@@ -91,6 +91,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 markers = [
     "postgres: integração com PostgreSQL (QDI_POSTGRES_TEST_URL ou postgres@127.0.0.1:60322)",
+    "mvp_gate: evidências automatizadas checklist MVP fechado (smoke API + Postgres schema/RLS)",
 ]
 
 [tool.coverage.run]

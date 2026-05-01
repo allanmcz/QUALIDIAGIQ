@@ -139,6 +139,8 @@ class Diagnostico:
     versao_otimista: int = 1
     # M12 — autoconf ABNT (10 booleanos); mutável após finalizado com versao_otimista (vide PATCH dedicado).
     checklist_m12_estado: list[bool] | None = None
+    # LGPD — instante do aceite declarado no POST (persistido pelo servidor; imutável após finalizado via WORM).
+    aceite_termos_privacidade_em: datetime | None = None
 
     def finalizar(self, score_geral: float) -> None:
         """
@@ -221,6 +223,22 @@ class Diagnostico:
         if len(itens) != 10:
             raise ValueError("Autoconf M12 exige exatamente 10 itens booleanos.")
         self.checklist_m12_estado = list(itens)
+
+    def registrar_aceite_termos_privacidade(self, instante_utc: datetime) -> None:
+        """
+        Associa o instante do aceite LGPD antes da finalização.
+
+        Raises:
+            DiagnosticoNaoFinalizavelError: se já finalizado (evidência em formação inconsistente).
+            ValueError: se instante inválido.
+        """
+        if self.status != StatusDiagnostico.EM_ANDAMENTO:
+            raise DiagnosticoNaoFinalizavelError(
+                "Aceite LGPD só pode ser registrado enquanto o diagnóstico está em andamento."
+            )
+        if instante_utc.tzinfo is None:
+            raise ValueError("Instante de aceite deve ser timezone-aware (UTC).")
+        self.aceite_termos_privacidade_em = instante_utc
 
 
 # ============================================================

@@ -36,6 +36,7 @@ OPENAPI_EXAMPLES_POST_DIAGNOSTICO: dict[str, dict[str, Any]] = {
             },
             "respostas": [{"pergunta_id": _EXEMPLO_PERGUNTA_UUID, "valor": 4}],
             "plano": "gratuito",
+            "aceite_termos_privacidade": True,
         },
     },
 }

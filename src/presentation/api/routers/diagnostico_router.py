@@ -5,6 +5,7 @@ Camada: Presentation
 Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 """
 
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -107,6 +108,12 @@ def _checklist_m12_para_http(diagnostico: Diagnostico) -> list[bool] | None:
     return list(raw)
 
 
+def _aceite_lgpd_para_http(diagnostico: Diagnostico) -> datetime | None:
+    """Instante do aceite LGPD persistido (somente `datetime` real)."""
+    raw = getattr(diagnostico, "aceite_termos_privacidade_em", None)
+    return raw if isinstance(raw, datetime) else None
+
+
 def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
     """Monta linha da listagem B2B (P7 — sem recomputar checklist/matriz)."""
     return DiagnosticoResumoSchema(
@@ -149,6 +156,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         matriz_impacto=matriz_data,
         cronograma=cronograma_data,
         checklist_m12_autoconf=_checklist_m12_para_http(diagnostico),
+        aceite_termos_privacidade_em=_aceite_lgpd_para_http(diagnostico),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
     )
@@ -195,7 +203,9 @@ async def listar_diagnosticos(
         "Calcula o score e persiste o diagnóstico no tenant do JWT.\n\n"
         "**Headers obrigatórios:** `Authorization: Bearer <JWT>` (claim `tenant_id`) e "
         "`Idempotency-Key` (UUID v4 recomendado). Reexecução com a mesma chave devolve a mesma "
-        "resposta 2xx em cache (middleware de idempotência)."
+        "resposta 2xx em cache (middleware de idempotência).\n\n"
+        "**Corpo:** incluir `aceite_termos_privacidade: true` (LGPD); o servidor persiste "
+        "`aceite_termos_privacidade_em` (UTC) na linha do diagnóstico."
     ),
 )
 async def criar_diagnostico(
@@ -249,6 +259,7 @@ async def criar_diagnostico(
         respondente=respondente_domain,
         entradas_resposta=entradas_resposta,
         plano=payload.plano,
+        aceite_termos_privacidade=payload.aceite_termos_privacidade,
     )
 
     # 4. Executar Use Case
@@ -285,6 +296,7 @@ async def criar_diagnostico(
         matriz_impacto=resultado.matriz_impacto,
         cronograma=resultado.cronograma,
         checklist_m12_autoconf=_checklist_m12_para_http(d),
+        aceite_termos_privacidade_em=_aceite_lgpd_para_http(d),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
     )

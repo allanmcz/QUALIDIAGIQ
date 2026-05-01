@@ -28,6 +28,11 @@ export default function PrivacidadePage() {
           formulário; respostas ao questionário; métricas de uso técnico (logs), quando aplicável.
         </li>
         <li>
+          <strong>Telefone do respondente (opcional):</strong> quando informado, utilizado para contato
+          comercial B2B relacionado ao diagnóstico; mantido pelo mesmo período de retenção do registro do
+          diagnóstico no PostgreSQL (Supabase); exclusão e titularidade conforme canal definido em produção.
+        </li>
+        <li>
           <strong>Base legal:</strong> execução de procedimentos preliminares a pedido do titular e
           medidas de segurança (LGPD art. 7º e 11º).
         </li>
