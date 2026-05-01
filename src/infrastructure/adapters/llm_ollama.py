@@ -3,6 +3,10 @@ import logging
 import httpx
 
 from src.application.ports.llm_service import LlmServicePort
+from src.application.services.lexiq_guardrail import (
+    mensagem_rejeicao_guardrail,
+    texto_tem_ancora_normativa,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +31,8 @@ Baseado exclusivamente no resumo do Decreto nº 12.955/2026 abaixo, faça uma re
 --- CONTEXTO DA EMPRESA ---
 {contexto_empresa}
 
-Recomendação:
+Recomendação (obrigatório citar no texto pelo menos uma referência explícita dentre:
+LC 214/2025, EC 132/2023 ou ABNT NBR 17301:2026):
 """
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -43,7 +48,11 @@ Recomendação:
                 response.raise_for_status()
                 data: dict[str, object] = response.json()
                 texto = data.get("response", "Recomendação não gerada pelo modelo.")
-                return str(texto)
+                out = str(texto).strip()
+                if not texto_tem_ancora_normativa(out):
+                    logger.info("Guardrail Lexiq: resposta sem âncora normativa reconhecível.")
+                    return mensagem_rejeicao_guardrail()
+                return out
         except httpx.RequestError as exc:
             logger.warning(f"Erro de comunicação com o Ollama local: {exc}")
             return "Devido a indisponibilidade temporária do serviço de IA, a recomendação personalizada não pôde ser gerada no momento."

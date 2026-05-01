@@ -68,6 +68,31 @@ async def test_get_questionario_publico_sem_jwt_200(async_client):
 
 
 @pytest.mark.asyncio
+async def test_normativa_validar_ancora_positivo(async_client):
+    """Protótipo Lexiq (N7): texto com LC 214/2025 é aceito."""
+    response = await async_client.post(
+        "/normativa/validar-ancora",
+        json={"texto": "Conforme LC 214/2025 art. 5º."},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valido"] is True
+    assert body["motivo_rejeicao"] is None
+
+
+@pytest.mark.asyncio
+async def test_normativa_validar_ancora_negativo(async_client):
+    response = await async_client.post(
+        "/normativa/validar-ancora",
+        json={"texto": "Melhore a governança tributária da empresa."},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valido"] is False
+    assert body["motivo_rejeicao"]
+
+
+@pytest.mark.asyncio
 async def test_criar_diagnostico_sem_tenant(async_client):
     """Barra requisições sem Bearer JWT (Idempotency-Key exigido antes da auth)."""
     payload = {

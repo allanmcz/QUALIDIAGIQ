@@ -8,4 +8,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0005_worm_evidencia_audit.sql
 \i /docker-entrypoint-initdb.d/migrations/0006_worm_column_granular.sql
 \i /docker-entrypoint-initdb.d/migrations/0007_idempotency_responses.sql
+\i /docker-entrypoint-initdb.d/migrations/0008_idempotency_comentarios_operacao.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

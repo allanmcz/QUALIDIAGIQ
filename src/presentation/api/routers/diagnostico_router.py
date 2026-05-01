@@ -286,6 +286,8 @@ async def obter_questionario_adaptativo(
             peso=p.peso,
             dimensao=p.dimensao.value,
             base_legal=p.base_legal,
+            multipla_total=p.multipla_total,
+            opcoes=list(p.opcoes) if p.opcoes else None,
         )
         for p in lista
     ]

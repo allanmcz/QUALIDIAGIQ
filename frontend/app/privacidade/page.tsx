@@ -1,0 +1,45 @@
+import Link from "next/link";
+
+export const metadata = {
+  title: "Política de Privacidade | QualiDiagIQ",
+};
+
+export default function PrivacidadePage() {
+  return (
+    <div className="container max-w-3xl py-12 space-y-6">
+      <Link href="/wizard" className="text-sm text-primary hover:underline">
+        Voltar ao diagnóstico
+      </Link>
+      <h1 className="text-3xl font-bold tracking-tight">Política de privacidade (MVP QDI)</h1>
+      <p className="text-muted-foreground">
+        Este texto é uma versão MVP para atendimento à LGPD (Lei 13.709/2018) no fluxo do wizard.
+        Revise com assessoria jurídica antes de produção.
+      </p>
+      <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
+        <li>
+          <strong>Controlador:</strong> Tributiq / QualiDiagIQ — contato pelo canal oficial do produto.
+        </li>
+        <li>
+          <strong>Finalidade:</strong> elaboração do diagnóstico tributário e comunicações relacionadas ao
+          serviço solicitado.
+        </li>
+        <li>
+          <strong>Dados tratados:</strong> dados cadastrais da empresa e do respondente informados no
+          formulário; respostas ao questionário; métricas de uso técnico (logs), quando aplicável.
+        </li>
+        <li>
+          <strong>Base legal:</strong> execução de procedimentos preliminares a pedido do titular e
+          medidas de segurança (LGPD art. 7º e 11º).
+        </li>
+        <li>
+          <strong>Retenção:</strong> pelo tempo necessário ao relatório e obrigações legais; política de
+          backup conforme infraestrutura Supabase/PostgreSQL do projeto.
+        </li>
+        <li>
+          <strong>Direitos do titular:</strong> confirmação, acesso, correção, anonimização, eliminação
+          e portabilidade, nos limites da lei — canal a definir em produção.
+        </li>
+      </ul>
+    </div>
+  );
+}

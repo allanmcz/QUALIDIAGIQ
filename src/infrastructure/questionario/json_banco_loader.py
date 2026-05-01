@@ -89,6 +89,10 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
         condicao = _parse_condicao(item.get("condicao"))
         multipla_raw = item.get("multipla_total")
         multipla_total = int(multipla_raw) if multipla_raw is not None else None
+        opcoes_raw = item.get("opcoes")
+        opcoes: tuple[str, ...] | None = None
+        if isinstance(opcoes_raw, list) and opcoes_raw:
+            opcoes = tuple(str(x) for x in opcoes_raw)
 
         resultado.append(
             Pergunta(
@@ -101,6 +105,7 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
                 base_legal=bl_out,
                 condicao=condicao,
                 multipla_total=multipla_total,
+                opcoes=opcoes,
             )
         )
     return resultado

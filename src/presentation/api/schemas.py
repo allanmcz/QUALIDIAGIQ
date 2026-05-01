@@ -90,7 +90,7 @@ class EmpresaSchema(BaseModel):
 
 class RespostaRequestSchema(BaseModel):
     pergunta_id: UUID
-    valor: str | int  # Ex: "sim", "nao", 1, 5
+    valor: str | int | list[str]  # ternária/binária: str; escala/número: int; múltipla/checklist: lista
 
 
 class IniciarDiagnosticoRequest(BaseModel):
@@ -116,6 +116,8 @@ class QuestionarioPerguntaItemSchema(BaseModel):
     peso: float
     dimensao: str
     base_legal: str | None = None
+    multipla_total: int | None = None
+    opcoes: list[str] | None = None
 
 
 class QuestionarioDisponivelResponse(BaseModel):
@@ -124,6 +126,19 @@ class QuestionarioDisponivelResponse(BaseModel):
     versao_catalogo: str
     total: int
     perguntas: list[QuestionarioPerguntaItemSchema]
+
+
+class ValidarAncoraNormativaRequest(BaseModel):
+    """Corpo do protótipo Lexiq / guardrail (S02 mínimo)."""
+
+    texto: str = Field(..., min_length=1, max_length=50_000)
+
+
+class ValidarAncoraNormativaResponse(BaseModel):
+    """Resultado da verificação heurística de citação normativa."""
+
+    valido: bool
+    motivo_rejeicao: str | None = None
 
 
 # =====================================================================

@@ -71,31 +71,119 @@ export function WizardForm() {
     reset,
   } = form;
 
+  const valorInicialPorTipo = (tipo: string): string | number | string[] => {
+    if (tipo === "multipla_escolha" || tipo === "checklist") return [];
+    return "";
+  };
+
   const renderPerguntaInput = (p: PerguntaCatalogo, index: number) => {
     const base = `respostas.${index}.valor` as const;
+    const rowClass =
+      "flex items-center space-x-3 cursor-pointer p-3 rounded border bg-background hover:bg-muted/50 transition-colors";
 
     if (p.tipo === "escala_1_5") {
       return (
         <div className="flex flex-col space-y-2 pt-2">
           {[1, 2, 3, 4, 5].map((n) => (
-            <Label
-              key={n}
-              className="flex items-center space-x-3 cursor-pointer p-3 rounded border bg-background hover:bg-muted/50 transition-colors"
-            >
+            <Label key={n} className={rowClass}>
               <input
                 type="radio"
                 value={String(n)}
                 className="w-4 h-4 text-primary focus:ring-primary"
                 {...register(base)}
               />
-              <span className="font-normal text-sm">{n} — escala (1 menor … 5 maior aderência)</span>
+              <span className="font-normal text-sm">
+                {n} - escala (1 menor a 5 maior aderencia)
+              </span>
             </Label>
           ))}
         </div>
       );
     }
 
-    /* ternária e demais: mesmo conjunto de opções MVP alinhado ao domínio */
+    if (p.tipo === "binaria") {
+      const opts = [
+        { v: "sim", l: "Sim" },
+        { v: "nao", l: "Não" },
+      ];
+      return (
+        <div className="flex flex-col space-y-2 pt-2">
+          {opts.map((o) => (
+            <Label key={o.v} className={rowClass}>
+              <input
+                type="radio"
+                value={o.v}
+                className="w-4 h-4 text-primary focus:ring-primary"
+                {...register(base)}
+              />
+              <span className="font-normal text-sm">{o.l}</span>
+            </Label>
+          ))}
+        </div>
+      );
+    }
+
+    if (p.tipo === "numerica") {
+      return (
+        <Input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          placeholder="Informe um numero de 0 a 100"
+          className="max-w-xs mt-2"
+          {...register(base)}
+        />
+      );
+    }
+
+    if (p.tipo === "multipla_escolha" || p.tipo === "checklist") {
+      const total = p.multipla_total ?? 0;
+      const baseLabels =
+        p.opcoes && p.opcoes.length > 0 ? p.opcoes : [];
+      const rowLabels = Array.from({ length: total }, (_, i) => baseLabels[i] ?? `Item ${i + 1}`);
+      if (total < 1) {
+        return (
+          <p className="text-sm text-destructive pt-2">
+            Catálogo incompleto: multipla_total ausente para {p.codigo}.
+          </p>
+        );
+      }
+      return (
+        <Controller
+          name={base}
+          control={control}
+          render={({ field }) => {
+            const selected = Array.isArray(field.value) ? field.value : [];
+            return (
+              <div className="flex flex-col space-y-2 pt-2">
+                {rowLabels.map((label, i) => {
+                  const key = `opt_${i + 1}`;
+                  const checked = selected.includes(key);
+                  return (
+                    <Label key={key} className={rowClass}>
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-input text-primary"
+                        checked={checked}
+                        onChange={(e) => {
+                          const cur = Array.isArray(field.value) ? [...field.value] : [];
+                          if (e.target.checked) field.onChange([...cur, key]);
+                          else field.onChange(cur.filter((x) => x !== key));
+                        }}
+                      />
+                      <span className="font-normal text-sm">{label}</span>
+                    </Label>
+                  );
+                })}
+              </div>
+            );
+          }}
+        />
+      );
+    }
+
+    /* ternaria */
     const opts = [
       { v: "sim", l: "Sim" },
       { v: "parcialmente", l: "Parcialmente" },
@@ -105,10 +193,7 @@ export function WizardForm() {
     return (
       <div className="flex flex-col space-y-2 pt-2">
         {opts.map((o) => (
-          <Label
-            key={o.v}
-            className="flex items-center space-x-3 cursor-pointer p-3 rounded border bg-background hover:bg-muted/50 transition-colors"
-          >
+          <Label key={o.v} className={rowClass}>
             <input
               type="radio"
               value={o.v}
@@ -156,7 +241,7 @@ export function WizardForm() {
           ...getValues(),
           respostas: q.perguntas.map((pg) => ({
             pergunta_id: pg.id,
-            valor: "",
+            valor: valorInicialPorTipo(pg.tipo),
           })),
         });
         setStep(3);
@@ -183,16 +268,50 @@ export function WizardForm() {
     const isValid = await trigger();
     if (!isValid) return;
 
-    const respostas = getValues("respostas");
-    if (respostas.some((r) => r.valor === "" || r.valor === undefined || r.valor === null)) {
+    const raw = getValues();
+    const respostas = raw.respostas;
+
+    const incompleto = respostas.some((r, i) => {
+      const tipo = perguntas[i]?.tipo;
+      const v = r.valor;
+      if (tipo === "multipla_escolha" || tipo === "checklist") {
+        return !Array.isArray(v) || v.length === 0;
+      }
+      if (tipo === "numerica") {
+        const s = v === undefined || v === null ? "" : String(v).trim();
+        return s === "";
+      }
+      return v === "" || v === undefined || v === null;
+    });
+    if (incompleto) {
       setApiError("Por favor, responda a todas as perguntas do questionário.");
       return;
+    }
+
+    const respostasNorm = respostas.map((r, i) => {
+      const tipo = perguntas[i]?.tipo;
+      const v = r.valor;
+      if (tipo === "numerica") {
+        const n = typeof v === "string" ? parseFloat(v) : Number(v);
+        return { ...r, valor: n };
+      }
+      return r;
+    });
+
+    for (let i = 0; i < perguntas.length; i++) {
+      if (perguntas[i]?.tipo === "numerica") {
+        const v = respostasNorm[i].valor as number;
+        if (!Number.isFinite(v) || v < 0 || v > 100) {
+          setApiError("Valores numericos devem estar entre 0 e 100.");
+          return;
+        }
+      }
     }
 
     try {
       setIsSubmitting(true);
       setApiError(null);
-      await postDiagnostico(getValues());
+      await postDiagnostico({ ...raw, respostas: respostasNorm });
       router.push("/sucesso");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Ocorreu um erro ao enviar o diagnóstico.";
@@ -308,8 +427,11 @@ export function WizardForm() {
                     />
                     <Label htmlFor="lgpd" className="font-normal text-sm leading-snug cursor-pointer">
                       Declaro que li e aceito o tratamento dos dados informados para elaboração do
-                      diagnóstico, nos termos da LGPD (Lei 13.709/2018). Política de privacidade em
-                      construção — uso interno Tributiq/QDI.
+                      diagnóstico, nos termos da LGPD (Lei 13.709/2018). Consulte a{" "}
+                      <Link href="/privacidade" className="text-primary underline">
+                        política de privacidade (QDI)
+                      </Link>
+                      .
                     </Label>
                   </div>
                   {errors.aceite_termos_privacidade && (

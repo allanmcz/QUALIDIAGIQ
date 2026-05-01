@@ -9,6 +9,8 @@ export type PerguntaCatalogo = {
   peso: number;
   dimensao: string;
   base_legal: string | null;
+  multipla_total?: number | null;
+  opcoes?: string[] | null;
 };
 
 export type QuestionarioDisponivel = {

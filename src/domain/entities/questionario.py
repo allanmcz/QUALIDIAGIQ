@@ -63,6 +63,8 @@ class Pergunta:
     condicao: CondicaoExibicao | None = None
     # Para MULTIPLA_ESCOLHA / CHECKLIST: quantidade máxima de itens selecionáveis (denominador do score)
     multipla_total: int | None = None
+    # Rótulos opcionais vindos do catálogo JSON (Lexiq / editorial).
+    opcoes: tuple[str, ...] | None = None
     id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self) -> None:

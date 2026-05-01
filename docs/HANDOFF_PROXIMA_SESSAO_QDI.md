@@ -2,7 +2,7 @@
 
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
 > **Local canônico (versionado):** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`  
-> **Última atualização:** 2026-04-30  
+> **Última atualização:** 2026-04-30 (handoff regenerado pós-blocos F/G/H/J/K/L parciais)
 
 ---
 
@@ -14,12 +14,12 @@
 4. [O que já está implementado (snapshot técnico)](#4-o-que-já-está-implementado-snapshot-técnico)  
 5. [MoSCoW MUST (M01–M12) — status e lacunas](#5-moscow-must-m01m12--status-e-lacunas)  
 6. [MoSCoW SHOULD / COULD / WONT — backlog](#6-moscow-should--could--wont--backlog)  
-7. [Front-end Next.js — pendências críticas](#7-front-end-nextjs--pendências-críticas)  
+7. [Front-end Next.js — pendências (próximo ciclo)](#7-front-end-nextjs--pendências-próximo-ciclo)  
 8. [Back-end / infra / dados](#8-back-end--infra--dados)  
 9. [Testes, qualidade e observabilidade](#9-testes-qualidade-e-observabilidade)  
 10. [Conformidade, LGPD e critérios de lançamento](#10-conformidade-lgpd-e-critérios-de-lançamento)  
 11. [Decisões de produto pendentes](#11-decisões-de-produto-pendentes)  
-12. [Blocos sugeridos para próximas sessões (F em diante)](#12-blocos-sugeridos-para-próximas-sessões-f-em-diante)  
+12. [Blocos sugeridos para próximas sessões](#12-blocos-sugeridos-para-próximas-sessões)  
 13. [Prompt modelo para agente](#13-prompt-modelo-para-agente)  
 14. [Checklist pós-sessão (Allan)](#14-checklist-pós-sessão-allan)  
 15. [Documentos de referência obrigatórios](#15-documentos-de-referência-obrigatórios)  
@@ -32,11 +32,12 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 
 **Situação atual (macro):**
 
-- O **núcleo de API FastAPI** está avançado: diagnóstico (POST/GET/PATCH), motor de score 7 dimensões, questionário adaptativo via **GET `/diagnosticos/questionario`**, catálogo JSON versionado (**37** perguntas), idempotência **persistente** opcional (Postgres), WORM/hash/versão otimista, OTEL opcional.
-- O **front-end** ainda **não está alinhado** ao contrato real da API em pontos críticos: falta **Bearer JWT**, falta **Idempotency-Key** no POST, URLs de API podem divergir do Docker (**porta 60000** vs `localhost:8000`), wizard ainda usa **perguntas mock** em vez do GET adaptativo.
-- O **MVP MoSCoW (12 MUST)** **não** está fechado: faltam entregas fortes em **relatório PDF completo (M04)**, **visualizações (M05)**, **cronograma 5 fases (M06)**, **recomendações determinísticas ricas + ancoragem legal por bullet (M07/M08)**, **lead magnet / fluxo Free conforme doc (M09)**, **hardening multi-tenant Supabase/RLS em produção (M10)**, **checklist 10 itens explícito (M12)**, além de **fechar M01 no front**.
+- **API FastAPI:** diagnóstico (POST/GET/PATCH), motor de score em **7 dimensões**, **GET `/diagnosticos/questionario` público** (sem JWT), catálogo JSON **37** perguntas (`versao_catalogo` **v1-doc-05-full-37**), idempotência persistida (Postgres + fallback), WORM/hash/versão otimista, OTEL opcional.
+- **Consultoria / contrato enriquecido:** `ConsultoriaService` com **cronograma em 5 fases**, checklist com **`prioridade`** + **`base_legal`** por ação, bloco **10 controles ABNT NBR 17301**; **`DiagnosticoResponse.cronograma`** no JSON; PDF WeasyPrint com **síntese executiva**, cronograma, checklist com coluna de base legal (ver `src/infrastructure/templates/relatorio_diagnostico.html`).
+- **Front-end:** alinhamento **substantivo** ao contrato HTTP: **`getApiUrl()`** (default `http://localhost:60000`), **Bearer + `Idempotency-Key`** no POST (`frontend/lib/api/diagnostico.ts`), **GET questionário sem token** após perfil (`frontend/lib/api/questionario.ts` + `WizardForm`), login usa **`getApiUrl()`**, wizard com **consentimento LGPD** (`aceite_termos_privacidade`, não enviado no corpo do POST). Dashboard detalhe usa **Bearer** no GET e **radar Recharts** quando há `score`.
+- **MVP MoSCoW (12 MUST):** ainda **não fechado**; maiores gaps: **M01** (UI por todos os `tipo` de pergunta), **M04** (validação editorial “1 exec + N técnicas” / homologação contábil), **M05** (heatmap + ranking de gaps no produto), **M09** (jornada Free vs B2B e campos lead), **M10** (RLS/prod Supabase), **M11** (PDCA/7 pilares explícitos na UI), **Playwright E2E** além do smoke.
 
-**Próximo marco recomendado:** **Bloco F — integração front ↔ API (auth + idempotência + GET questionário)** — desbloqueia demo ponta a ponta sem mentir no contrato HTTP.
+**Próximo marco recomendado:** **Bloco N1** — dashboard consome **`cronograma` + matriz + checklist** tipados da API; **Bloco N2** — wizard com componentes por **`tipo`** (`binaria`, `multipla`, `checklist`, `numerica`, …) coerentes com o domínio.
 
 ---
 
@@ -45,10 +46,10 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 | Área | Escolha do projeto |
 |------|-------------------|
 | Backend | Python 3.12+, FastAPI 0.115+, Pydantic v2, Clean Architecture (`src/domain`, `application`, `infrastructure`, `presentation`) |
-| DB local | PostgreSQL (imagem Supabase-compatible) via Docker; migrações em `src/infrastructure/db/migrations/` + `init.sql` |
-| Front | Next.js 14 App Router, Tailwind, shadcn/ui |
-| PDF | WeasyPrint (Python) |
-| Testes | pytest, pytest-asyncio; Playwright citado no PRD — **ainda sem suíte Playwright no repo** |
+| DB local | PostgreSQL via Docker; migrações em `src/infrastructure/db/migrations/` + `init.sql` |
+| Front | Next.js 14 App Router, Tailwind, shadcn/ui, Recharts |
+| PDF | WeasyPrint (Python) + Jinja2 (`src/infrastructure/adapters/pdf_generator_weasyprint.py`) |
+| Testes | pytest, pytest-asyncio; Playwright (`frontend/e2e/`) |
 | Lint / types | ruff, black, mypy strict |
 
 **Comandos úteis:**
@@ -57,26 +58,32 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 make install      # venv + deps
 make dev          # docker compose up -d
 make down
-make migrate      # aplica todos os *.sql em ordem via `docker compose exec db psql`
+make migrate      # aplica *.sql via docker compose exec db psql
 make lint
 make format
-make test
+make test         # pytest + cobertura (fail_under 80)
 make type-check   # mypy src/
+```
+
+**Front / E2E:**
+
+```bash
+cd frontend && npm install
+cd frontend && npm run test:e2e          # sobe Next na porta PLAYWRIGHT_PORT (default 3333)
+PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWRIGHT_BASE_URL
 ```
 
 **URLs típicas (Docker Compose do repo):**
 
-- API: `http://localhost:60000` (mapeamento `60000:8000` no host)  
+- API: `http://localhost:60000` (host `60000` → container `8000`)  
 - Web: `http://localhost:60001`  
 - Postgres: `localhost:60322`  
-
-O login MVP em `frontend/app/login/page.tsx` hoje aponta para `http://127.0.0.1:8000` — **inconsistente** com o compose acima (pendência).
+- Playwright dev server local: **`http://127.0.0.1:3333`** (evita colisão com outro app em `:3000`)
 
 **Variáveis relevantes:**
 
-- `DATABASE_URL` — na API Docker já existe (`postgresql+asyncpg://...@db:5432/postgres`); `sync_database_url` remove `+asyncpg` para SQLAlchemy sync (idempotência).  
-- `OTEL_TRACING_ENABLED`, `OTEL_SERVICE_NAME` — tracing console quando habilitado.  
-- `JWT_SECRET_KEY`, `SUPABASE_*` — conforme `.env` / ambiente.
+- **`NEXT_PUBLIC_API_URL`** — URL da API no browser (default no código: `http://localhost:60000`). Ver `frontend/.env.example` se existir.  
+- `DATABASE_URL`, `JWT_SECRET_KEY`, `SUPABASE_*`, `OTEL_*` — conforme `.env` / Docker.
 
 ---
 
@@ -84,15 +91,16 @@ O login MVP em `frontend/app/login/page.tsx` hoje aponta para `http://127.0.0.1:
 
 | Caminho | Responsabilidade |
 |---------|------------------|
-| `src/domain/` | Entidades puras (`diagnostico`, `questionario`), VOs de score, ports |
-| `src/application/` | Casos de uso (`realizar_diagnostico`, `calcular_score`, `gerar_questionario_adaptativo`, …), `ConsultoriaService` |
-| `src/infrastructure/` | Supabase repo, PDF WeasyPrint, questionário JSON (`data/perguntas_mvp.json`, `json_banco_loader`, `banco_cache`), idempotência Postgres, settings |
-| `src/presentation/api/` | `main.py`, `dependencies.py`, `schemas.py`, routers, middleware idempotência |
-| `src/infrastructure/db/migrations/` | `0001`…`0007` (inclui `idempotency_responses`) |
-| `init.sql` | Bootstrap + `\i` das migrações no primeiro start do volume DB |
-| `frontend/` | App Router, wizard, dashboard, `lib/api`, `lib/schemas` |
-| `docs/refs/` | PRD-base, MoSCoW, questionário v1, metodologia |
-| `docs/01_arquitetura.md`, `docs/02_dominio_qdi.md` | Arquitetura e domínio |
+| `src/domain/` | Entidades (`diagnostico`, `questionario`), VOs de score, ports |
+| `src/application/` | Use cases, **`ConsultoriaService`** (`cronograma`, checklist ABNT 10, matriz) |
+| `src/infrastructure/` | Supabase repo, **WeasyPrint** + templates HTML/CSS, questionário JSON, idempotência |
+| `src/presentation/api/` | FastAPI, schemas (**`DiagnosticoResponse.cronograma`**), middleware idempotência |
+| `src/infrastructure/db/migrations/` | `0001`…`0007` |
+| `frontend/lib/api/` | **`config.ts`**, **`diagnostico.ts`**, **`questionario.ts`** |
+| `frontend/components/wizard/` | **`WizardForm.tsx`** |
+| `frontend/e2e/` | Smoke Playwright (`smoke.spec.ts`) |
+| `frontend/playwright.config.ts` | Porta **3333**, `npm run dev -- -p …` |
+| `docs/refs/` | PRD, MoSCoW, questionário v1, metodologia |
 
 ---
 
@@ -100,129 +108,86 @@ O login MVP em `frontend/app/login/page.tsx` hoje aponta para `http://127.0.0.1:
 
 ### 4.1 API HTTP
 
-- **POST `/diagnosticos/`** — cria diagnóstico; exige **Bearer JWT** (`sub`, `tenant_id`) e **header `Idempotency-Key`** (middleware).  
-- **GET `/diagnosticos/{id}`** — isolamento por tenant via repositório.  
-- **PATCH `/diagnosticos/{id}`** — anexa URL de PDF com **If-Match** (versão otimista).  
-- **GET `/diagnosticos/metodologia`** — pesos por dimensão (transparência parcial).  
-- **GET `/diagnosticos/questionario`** — query params de perfil (`cnpj`, `razao_social`, `porte`, `regime`, `cnae_principal`, `uf`, `setor_macro`); **sem JWT** (endpoint público). Resposta com `versao_catalogo`, lista filtrada por `GerarQuestionarioAdaptativoUseCase`.  
-- **POST `/auth/login`** — fluxo MVP para token (validar alinhamento com seed de admin).  
-- **GET `/health`**
+- **POST `/diagnosticos/`** — Bearer JWT + **`Idempotency-Key`** obrigatória.  
+- **GET `/diagnosticos/{id}`**, **PATCH** com **If-Match**, **GET `/diagnosticos/metodologia`**, **GET `/health`**, **POST `/auth/login`**.  
+- **GET `/diagnosticos/questionario`** — **público** (query perfil empresa); resposta `versao_catalogo`, `perguntas[]` com `base_legal`, `tipo`, etc.
 
-### 4.2 Domínio e motor
+### 4.2 Resposta de diagnóstico (JSON)
 
-- **Score 0–100** com **7 dimensões** (inclui compliance ABNT como valor de enum).  
-- **Pesos macro** por dimensão no `CalcularScoreUseCase` (Fiscal, Tecnológica, Compliance ABNT reforçados).  
-- **Tipos de pergunta:** ternária (com `nao_se_aplica` excluído da média), binária, escala 1–5, múltipla, checklist, numérica.  
-- **Condicionais:** regime, setor permitido/excluído, portes permitidos.  
-- **Evidência / WORM:** campos de hash, snapshot de score, trigger de imutabilidade pós-finalização (migrações `0005`/`0006`).
+- `score`, `checklist`, `matriz_impacto`, **`cronograma`** (lista `{ fase, foco, referencia_normativa }`), `hash_evidencia`, `versao_otimista`, etc.
 
-### 4.3 Dados
+### 4.3 Domínio e PDF
 
-- Catálogo **`perguntas_mvp.json`**: `versao_catalogo` = **`v1-doc-05-full-37`**, **37** perguntas com UUID estáveis (namespace no JSON).  
-- **Nota de paridade:** o doc `docs/refs/05_QUESTIONARIO_v1.md` fala em **35** perguntas no banco total (21+9+5). Os **37** no JSON precisam ser **reconciliados** com o doc (duplicatas, extras ou doc desatualizado) — pendência explícita de auditoria editorial.
+- Motor 7 dimensões; tipos de pergunta e condicionais no catálogo JSON.  
+- PDF: síntese executiva, dimensões, gaps genéricos, matriz, **cronograma 5 fases**, checklist com **prioridade** e **base legal**, bloco IA opcional.
 
-### 4.4 Idempotência e observabilidade
+### 4.4 Front (contrato)
 
-- Tabela **`idempotency_responses`** (`0007`); replay compatível com hash da chave + Authorization.  
-- Fallback **TTLCache** em memória se não houver engine sync.  
-- **OpenTelemetry:** instrumentação FastAPI + export console quando flag ativa (não é pipeline prod completo).
+- POST diagnóstico: **Authorization Bearer**, **`Idempotency-Key`** (UUID).  
+- GET questionário: **sem** Bearer; query alinhada ao backend.  
+- Login: **`getApiUrl()`** para `/auth/login`.  
+- Wizard: carrega catálogo após step 2; **LGPD** no formulário (campo não vai no POST).  
+- Dashboard `[id]`: GET com Bearer; radar se `score`; fallback mock em erro.
 
 ### 4.5 Testes automatizados
 
-- **Unit + integration ASGI** (httpx) para health, metodologia, questionário, POST sem auth, etc.  
-- **Integração Postgres** para WORM (`tests/integration/test_worm_postgres.py`, marcador `postgres`).  
-- **Testes** para backend idempotência com mocks SQLAlchemy.  
-- **Cobertura global** configurada com `fail_under = 80` — última meta atingida com suíte verde.
+- pytest: unit + integração ASGI (inclui **GET questionário sem JWT → 200**), idempotência, WORM (marcador postgres onde aplicável).  
+- **`tests/unit/application/test_consultoria_service.py`** — cronograma, ABNT×10, portes.  
+- Playwright: **2 testes smoke** (`/wizard`, `/login`) na porta dedicada.
+
+### 4.6 Paridade documental
+
+- Catálogo **37** vs doc **35** em `docs/refs/05_QUESTIONARIO_v1.md` — **auditoria editorial pendente**.
 
 ---
 
 ## 5. MoSCoW MUST (M01–M12) — status e lacunas
 
-Legenda: **OK** = atende o espírito da feature no código atual; **PARCIAL**; **NÃO** = não atende ou só no papel.
-
 | ID | Feature | Status | Comentário / pendência |
 |----|---------|--------|-------------------------|
-| **M01** | Wizard adaptativo (segmento × regime × porte × UF) | **PARCIAL** | Backend: GET + filtro **OK**. Front: ainda **MOCK_QUESTIONS** (3 itens), não chama GET; fluxo não guia 12–15 min nem todos os tipos de pergunta. |
-| **M02** | Motor score 0–100, 6+ dimensões | **OK** (refinar) | 7 dimensões; calibração contra cases reais (MoSCoW §8) **não feita**. |
-| **M03** | Pesos transparentes + ponderação | **PARCIAL** | `/metodologia` e PRD; falta **manifesto público** único (peso por pergunta exportado / OpenAPI rico / página legal). |
-| **M04** | PDF executivo (1p exec + 6p técnicas) | **PARCIAL** | WeasyPrint gera PDF; estrutura **não** validada como 1+6 páginas nem “executivo” vs técnico; revisão contador **pendente**. |
-| **M05** | Heatmap + radar + ranking gaps | **NÃO** | `ConsultoriaService` gera checklist/matriz **textuais**; sem visualizações acordadas no front (Recharts instalável mas não fechado). |
-| **M06** | Cronograma 5 fases temporais | **PARCIAL** | `ConsultoriaService.gerar_cronograma_cinco_fases()` + PDF + campo `cronograma` no `DiagnosticoResponse`; UI dashboard ainda sem timeline dedicada. |
-| **M07** | Recomendações priorizadas (determinísticas) | **PARCIAL** | Campo `prioridade` numérica por ação + ordenação por frente; scoring dinâmico por gaps das respostas ainda não. |
-| **M08** | Ancoragem legal por bullet | **PARCIAL** | Checklist/PDF com coluna **Base legal** por ação; matriz departamental ainda sem dispositivo por linha. |
-| **M09** | Lead magnet self-service | **PARCIAL** | Wizard público existe; doc pede campos (segmento detalhado, faturamento, CNPJ opcional Free) **não** todos no schema; fluxo **login B2B** misturado ao lead self-service — definir jornada. |
-| **M10** | Multi-tenant Supabase + RLS | **PARCIAL** | RLS em migrações para `diagnosticos`; produção Supabase **não** é o único caminho no dev; políticas para **`idempotency_responses`** (não multi-tenant por linha — chave hash global) **avaliar risco**. JWT é fonte de verdade do tenant. |
-| **M11** | Eixos ABNT como espinha | **PARCIAL** | Bloco ABNT no JSON; aderência PDCA/7 pilares **não** mapeada explicitamente na UI nem no relatório. |
-| **M12** | Checklist final 10 itens binários | **PARCIAL** | Bloco explícito “10 controles” ABNT NBR 17301 no `ConsultoriaService` + PDF; formato pergunta sim/não na UI de conferência ainda não dedicado. |
+| **M01** | Wizard adaptativo | **PARCIAL** | Backend + fetch catálogo **OK**. UI: ramo explícito só **`escala_1_5`**; demais tipos caem no mesmo controle — falta paridade com `TipoPergunta` (multipla, checklist, numerica, binaria). |
+| **M02** | Motor score 0–100, 6+ dimensões | **OK** (refinar) | 7 dimensões; calibração com cases reais **não feita**. |
+| **M03** | Pesos transparentes | **PARCIAL** | `/metodologia`; manifesto único (peso por pergunta exportado / página legal) **aberto**. |
+| **M04** | PDF executivo | **PARCIAL** | Há síntese + seções técnicas + cronograma; **não** validado como “1p + Np” nem homologado por contadores. |
+| **M05** | Heatmap + radar + ranking gaps | **PARCIAL** | Radar no **detalhe** do diagnóstico; sem heatmap nem ranking explícito de gaps na UI. |
+| **M06** | Cronograma 5 fases | **PARCIAL** | API + PDF **OK**; **sem** timeline dedicada no dashboard. |
+| **M07** | Recomendações priorizadas | **PARCIAL** | `prioridade` + ordenação; ligação dinâmica com gaps das **respostas** **não**. |
+| **M08** | Ancoragem legal por bullet | **PARCIAL** | Checklist/PDF com base legal; matriz departamental **sem** dispositivo por linha. |
+| **M09** | Lead magnet self-service | **PARCIAL** | Consentimento LGPD no wizard; jornada Free vs login B2B, campos lead (faturamento, etc.) **em aberto**. |
+| **M10** | Multi-tenant Supabase + RLS | **PARCIAL** | RLS em migrações; hardening prod + políticas auxiliares (**ex. idempotency**) **avaliar**. |
+| **M11** | Eixos ABNT como espinha | **PARCIAL** | Conteúdo parcial no PDF/catálogo; PDCA/7 pilares **não** mapeados na UI. |
+| **M12** | Checklist 10 itens binários | **PARCIAL** | Bloco ABNT 10 no serviço + PDF; **sem** tela dedicada “sim/não” para conferência. |
 
 ---
 
 ## 6. MoSCoW SHOULD / COULD / WONT — backlog
 
-### SHOULD (Beta) — S01–S11
+*(Sem mudança estrutural — ver `docs/refs/02_MOSCOW_FEATURES.md`.)*
 
-Nenhum item SHOULD está **fechado** como produto. Destaques:
-
-- **S01** LLM plano de ação — adapter Ollama existe; guardrails Lexiq **não**.  
-- **S02** RAG Lexiq no wizard — **não**.  
-- **S03–S06** Simulador, R$, benchmark, ICMS-ST — **fora** do código atual (grandes esforços).  
-- **S07–S11** Templates, setorial profundo, microlearning, gating ABNT, cross-sell — **não**.
-
-### COULD (GA) — C01–C10
-
-Winthor, Protheus, white-label, API pública, etc. — **backlog longo**; ver `docs/refs/02_MOSCOW_FEATURES.md`.
-
-### WONT (ecossistema)
-
-Apuração contínua **QAI**, split **QFC**, auditoria motor **QMI**, defesa auto, RestituIQ — **não implementar no QDI** (regra de escopo).
+- **SHOULD:** LLM com guardrail Lexiq (**não**), RAG wizard (**não**), simulador R$ (**não**), etc.  
+- **COULD:** Winthor, white-label, API pública documentada — backlog longo.  
+- **WONT:** QAI, QFC, QMI, defesa auto, RestituIQ — **fora do QDI**.
 
 ---
 
-## 7. Front-end Next.js — pendências críticas
+## 7. Front-end Next.js — pendências (próximo ciclo)
 
-Estes itens bloqueiam **demo honesta** “wizard → API → relatório”:
-
-1. **Autenticação no POST diagnóstico**  
-   - API exige `Authorization: Bearer <jwt>`.  
-   - `frontend/lib/api/diagnostico.ts` **não** envia Bearer; envia `X-Tenant-ID` que **não** é usado pelo backend de diagnóstico (JWT é o contrato; ver `.cursor/rules/fastapi-presentation.mdc`).  
-
-2. **Idempotency-Key**  
-   - Obrigatório em POST `/diagnosticos/`.  
-   - Front **não** envia — receberá **400**.  
-
-3. **Base URL da API**  
-   - Hardcode `127.0.0.1:8000` no login vs `NEXT_PUBLIC_API_URL` parcial no diagnóstico vs Docker **60000**.  
-   - Padronizar env e documentar no README do front.  
-
-4. **GET `/diagnosticos/questionario`**  
-   - Substituir `MOCK_QUESTIONS` por fetch após perfil (step 2) com token; renderizar tipos: ternária, escala, binária, múltipla, checklist, numérica (componentes por tipo).  
-
-5. **Dashboard `/dashboard/diagnosticos/[id]`**  
-   - Fetch com header legado `X-Tenant-ID` — alinhar a Bearer + URL correta.  
-
-6. **Playwright / E2E front**  
-   - PRD pede Playwright; **não há** testes e2e de browser no repositório (apenas testes Python httpx).  
-
-7. **LGPD / termos**  
-   - MoSCoW §8 exige consentimento e políticas — **não** vistos no fluxo UI.  
+1. **Tipos de pergunta no wizard** — implementar UX por `tipo` alinhado ao backend (múltipla escolha, checklist, numérica, binária explícita).  
+2. **Dashboard detalhe** — tipar e exibir **`cronograma`**; enriquecer checklist com **`prioridade`** (já pode vir no JSON aninhado); matriz e links para PDF quando existir `relatorio_pdf_url`.  
+3. **M05 visual** — heatmap simples ou lista “top gaps” derivada de `score_por_dimensao`.  
+4. **Playwright** — fluxo **login → wizard → POST** contra API (Docker ou mock), não só smoke de página estática.  
+5. **LGPD produto** — URL real de política de privacidade / termos (hoje texto + checkbox).  
+6. **CI** — job opcional `npm run test:e2e` com cache Playwright (decisão Allan).
 
 ---
 
 ## 8. Back-end / infra / dados
 
-### 8.1 Pendentes técnicos
-
-- **Reconciliação catálogo vs `05_QUESTIONARIO_v1.md`:** 37 vs 35; revisar códigos Q-xxx e condicionais setoriais (varejo/indústria/serviços/agro) e bloco Lucro Real.  
-- **Normas vigência:** regras versionadas por `vigencia_inicio`/`vigencia_fim` em DB — **não** implementado; hoje catálogo é JSON estático.  
-- **Idempotência:** tabela sem RLS por `tenant_id`; mitigação atual é hash que inclui `Authorization`. Documentar ameaça e se na Supabase haverá separação física por schema/tenant.  
-- **OpenTelemetry prod:** exporter OTLP/Jaeger, sampling, correlação com `trace_id` em logs structlog — **pendente**.  
-- **API pública / Idempotency-Key no OpenAPI:** garantir documentação Swagger clara para clientes geradores.  
-- **Seed admin / tenant:** alinhar UUIDs usados em testes e qualquer mock front legado (`11111111-…`).  
-
-### 8.2 Integrações
-
-- **Anthropic / LangChain / LangGraph:** dependências no projeto; fluxo principal ainda não é “LangGraph obrigatório” para MVP diagnóstico.  
-- **Lexiq / RAG:** **não** implementado — respostas IA sem citação devem ser rejeitadas (princípio Tributiq).  
+- Reconciliar **37 vs 35** perguntas com `05_QUESTIONARIO_v1.md`.  
+- Versionamento normativo em DB (`vigencia_*`) — **não** implementado (JSON estático).  
+- OTEL produção (OTLP, correlação logs) — **pendente**.  
+- OpenAPI: documentar **Idempotency-Key** e exemplos de **`cronograma`**.  
+- Anthropic/LangGraph no fluxo principal — **não** obrigatório ao MVP diagnóstico.
 
 ---
 
@@ -230,25 +195,17 @@ Estes itens bloqueiam **demo honesta** “wizard → API → relatório”:
 
 | Item | Estado |
 |------|--------|
-| pytest + cobertura ≥ 80% global | **OK** (última verificação na entrega A–E) |
-| mypy strict em `src/` | **OK** |
+| pytest, cobertura ≥ 80% | **OK** (última rodada verde + `consultoria_service` 100% linhas) |
+| mypy `src` | **OK** |
 | ruff + black | **OK** |
-| Teste integração idempotência **com Postgres real** (subir docker, duplicar POST, replay) | **opcional / não obrigatório** na suíte CI |
-| Playwright (fluxo login + wizard + POST) | **PARCIAL** — smoke `/wizard` + `/login` (`frontend/e2e/smoke.spec.ts`; `npm run test:e2e`) |
-| Casos de calibração score (5 segmentos) | **NÃO** (MoSCoW §8) |
+| Playwright | **Smoke** 2 cenários; **sem** E2E de POST |
+| Calibração score (5 segmentos) | **NÃO** |
 
 ---
 
 ## 10. Conformidade, LGPD e critérios de lançamento
 
-Extrato de `docs/refs/02_MOSCOW_FEATURES.md` §8 — **checklist de produto**, quase tudo **aberto**:
-
-- [ ] 12 MUST implementados e testados (cobertura ≥ 80% **global** — domain ≥ 85% para código novo de domain, regra interna QDI).  
-- [ ] Score calibrado contra **5 cases** de referência.  
-- [ ] PDF aprovado por **3 contadores**.  
-- [ ] Manifesto de pesos revisado por **advogado tributarista**.  
-- [ ] Aderência ABNT **declarada e auditável** na entrega.  
-- [ ] LGPD: consentimento + termos + política de privacidade.  
+Checklist produto (extrato MoSCoW §8) — majoritariamente **aberto**: 12 MUST fechados, calibração, PDF homologado, manifesto pesos, parecer jurídico, LGPD completa (política publicada).
 
 ---
 
@@ -256,28 +213,32 @@ Extrato de `docs/refs/02_MOSCOW_FEATURES.md` §8 — **checklist de produto**, q
 
 | # | Tema | Observação |
 |---|------|------------|
-| D1 | Jornada **Free self-service** vs **B2B logado** | Wizard em `/wizard` parece lead; dashboard exige login — unificar narrativa. |
-| D2 | CNPJ obrigatório ou opcional no Free | Doc questionário sugere opcional Free / obrigatório Plus. |
-| D3 | Campo “faturamento” / “setor detalhado” | No doc §3; no Pydantic atual pode faltar — alinhar schema API + front. |
-| D4 | URL canônica da API em dev/staging/prod | Evitar hardcode. |
-| D5 | Tier Plus/Pro | Gatilhos “Trigger Plus” no texto das perguntas — sem billing no código observado. |
+| D1 | Free self-service vs B2B logado | Unificar narrativa (wizard público vs token para POST). |
+| D2 | CNPJ opcional no Free | API hoje exige CNPJ 14 dígitos no schema — alinhar produto. |
+| D3 | Faturamento / setor detalhado | Schema API + front. |
+| D4 | URL canônica dev/stage/prod | `NEXT_PUBLIC_API_URL` + documentação. |
+| D5 | Billing Plus/Pro | Triggers nas perguntas sem cobrança no código. |
 
 ---
 
-## 12. Blocos sugeridos para próximas sessões (F em diante)
+## 12. Blocos sugeridos para próximas sessões
 
 | ID | Escopo | Pronto quando |
 |----|--------|----------------|
-| **F** | Front: Bearer + Idempotency-Key + `NEXT_PUBLIC_API_URL`; opcional `crypto.randomUUID()` por submit | POST diagnóstico 201 no browser contra API Docker |
-| **G** | Front: substituir mock por **GET questionário**; UI por `tipo` | Lista de perguntas = resposta da API para o perfil |
-| **H** | PDF M04: estrutura 1 exec + N técnicas; sumário executivo | PDF revisável + teste snapshot ou golden parcial |
-| **I** | M05/M06: componentes dashboard (radar, heatmap simples, timeline 5 fases) | Dados derivados do `DiagnosticoResponse` ou novo endpoint |
-| **J** | M07/M08: enriquecer `ConsultoriaService` com prioridade + `base_legal` por ação | Contrato JSON estável para front/PDF |
-| **K** | M12: checklist 10 itens binários | Contagem e regras testadas |
-| **L** | Playwright: smoke crítico | 1 spec verde no CI |
-| **M** | S02 protótipo RAG Lexiq (guardrail mínimo) | Resposta sem fonte = erro controlado |
+| **N1** | Dashboard: `cronograma`, checklist completo (prioridade + base_legal), matriz a partir do JSON real | Paridade com `DiagnosticoResponse` sem mock quando API OK |
+| **N2** | Wizard: componentes por `tipo` de pergunta | Catálogo completo respondível sem atalhos inadequados |
+| **N3** | Playwright: jornada POST diagnóstico (Docker ou mock MSW) | 1 spec verde que falha se contrato HTTP quebrar |
+| **N4** | M04 PDF: revisão páginação + teste snapshot/HTML golden opcional | Critérios “1 exec + N técnicas” definidos e validados |
+| **N5** | M05: heatmap ou ranking gaps na UI | Visual derivado de `score_por_dimensao` + texto consultoria |
+| **N6** | M10 + docs operação idempotency / RLS | Decisão escrita + migração se necessário |
+| **N7** | Protótipo Lexiq / guardrail mínimo | Resposta sem fonte = erro controlado (S02) |
 
-**Blocos históricos A–E:** concluídos (GET questionário, catálogo 37, domínio tipos/pontuação, OTEL mínimo, idempotência Postgres + migração).
+**Histórico de blocos entregues (visão macro):**
+
+- **A–E:** núcleo API, catálogo 37, score, OTEL mínimo, idempotência Postgres.  
+- **F/G (parcial):** Bearer, Idempotency-Key, `NEXT_PUBLIC_API_URL`, GET questionário no wizard, LGPD no form.  
+- **H/J/K (parcial):** PDF síntese + cronograma + checklist normativo; `ConsultoriaService` enriquecido; ABNT 10 itens.  
+- **L (parcial):** smoke Playwright na porta **3333**.
 
 ---
 
@@ -286,13 +247,13 @@ Extrato de `docs/refs/02_MOSCOW_FEATURES.md` §8 — **checklist de produto**, q
 ```
 Branch local: feat/qdi-<nome>.
 
-Leia docs/HANDOFF_PROXIMA_SESSAO_QDI.md (índice + bloco escolhido).
+Leia docs/HANDOFF_PROXIMA_SESSAO_QDI.md (§1, §7, §12 e bloco escolhido).
 
-Escopo: apenas o bloco <F|M|...> — não expandir para RAG completo, Winthor ou QAI/QFC/QMI.
+Escopo: apenas o bloco N<n> acordado — não expandir para QAI/QFC/QMI, Winthor completo ou RAG Lexiq total sem pedido explícito.
 
-Não fazer: git push/rebase sem confirmação do Allan; refactors amplos fora do escopo.
+Não fazer: git push/rebase sem confirmação do Allan.
 
-Ao terminar: make lint; make format; make test; mypy src; listar arquivos alterados e critérios "pronto quando".
+Ao terminar: make lint; make format; make test; mypy src; se tocar no front E2E: npm run test:e2e (frontend).
 ```
 
 ---
@@ -300,8 +261,8 @@ Ao terminar: make lint; make format; make test; mypy src; listar arquivos altera
 ## 14. Checklist pós-sessão (Allan)
 
 - [ ] Diff revisado  
-- [ ] `make test` + `mypy src` locais  
-- [ ] Atualizar **§1 e §4–§7** deste handoff se algo mudou materialmente  
+- [ ] `make test` + `mypy src`  
+- [ ] Atualizar este handoff se mudança material em §4–§7 ou MoSCoW  
 - [ ] Commit Conventional em **pt-BR** quando satisfeito  
 
 ---
@@ -317,4 +278,4 @@ Ao terminar: make lint; make format; make test; mypy src; listar arquivos altera
 
 ---
 
-*Fim do handoff estendido. Para sessões curtas, priorizar **§7 + bloco F** até o fluxo web bater na API com contrato correto.*
+*Fim do handoff. Prioridade imediata sugerida: **§12 N1 + N2** (dashboard completo + wizard por tipo).*

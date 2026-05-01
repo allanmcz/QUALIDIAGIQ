@@ -5,6 +5,8 @@
     <title>Relatório QualiDiagIQ</title>
 </head>
 <body>
+    {# M04: capa + identificação #}
+    <!-- M04_SECAO: capa_identificacao -->
 
     <h1>Relatório de Diagnóstico Tributário</h1>
     
@@ -15,6 +17,7 @@
         <p><strong>Data da Geração:</strong> {{ data_geracao }}</p>
     </div>
 
+    <!-- M04_SECAO: sintese_executiva (alvo ~1 página impressa) -->
     <div class="sintese-executiva" style="border: 1px solid #dee2e6; padding: 16px; margin: 20px 0; background: #fafafa;">
         <h2>Síntese executiva</h2>
         <p><strong>Score geral:</strong> {{ "%.1f"|format(score_geral.valor) }}/100 — <strong>Nível:</strong> {{ nivel_geral }}.</p>
@@ -35,6 +38,7 @@
         <p>Nível: <span class="badge badge-{{ nivel_geral|lower }}">{{ nivel_geral }}</span></p>
     </div>
 
+    <!-- M04_SECAO: tecnico_detalhamento_dimensoes -->
     <h2>Detalhamento por Dimensão (ABNT NBR 17301)</h2>
     <p>Abaixo apresentamos o detalhamento do seu score em relação aos 7 eixos normativos da ABNT NBR 17301:2026.</p>
 
@@ -113,6 +117,7 @@
                 <th>Departamento</th>
                 <th>Impacto / Ação Necessária</th>
                 <th>Criticidade</th>
+                <th>Base legal (referência)</th>
             </tr>
         </thead>
         <tbody>
@@ -121,6 +126,7 @@
                 <td><strong>{{ impacto.departamento }}</strong></td>
                 <td>{{ impacto.impacto_resumo }}</td>
                 <td><span class="badge badge-{{ impacto.criticidade|lower|replace('í', 'i') }}">{{ impacto.criticidade }}</span></td>
+                <td>{% if impacto.base_legal %}<em>{{ impacto.base_legal }}</em>{% else %}—{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>

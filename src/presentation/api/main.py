@@ -66,6 +66,10 @@ def create_app() -> FastAPI:
             "name": "Infra",
             "description": "Endpoints de infraestrutura e healthchecks.",
         },
+        {
+            "name": "Lexiq / guardrails",
+            "description": "Validação mínima de âncoras normativas (protótipo S02).",
+        },
     ]
 
     app = FastAPI(
@@ -108,10 +112,11 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "qualidiagiq"}
 
     # Registrar os Routers do Domínio
-    from src.presentation.api.routers import auth_router
+    from src.presentation.api.routers import auth_router, normativa_router
 
     app.include_router(diagnostico_router.router)
     app.include_router(auth_router.router)
+    app.include_router(normativa_router.router)
 
     if settings.otel_tracing_enabled:
         _instrumentar_otel(app, settings.otel_service_name)

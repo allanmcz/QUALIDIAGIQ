@@ -35,6 +35,7 @@ class ImpactoDepartamento:
     departamento: str
     impacto_resumo: str
     criticidade: str
+    base_legal: str | None = None
 
 
 class ConsultoriaService:
@@ -284,19 +285,27 @@ class ConsultoriaService:
         _ = diagnostico
         return [
             ImpactoDepartamento(
-                "Fiscal", "Apuração paralela PIS/COFINS e CBS ao longo de 2026", "Crítica"
+                "Fiscal",
+                "Apuração paralela PIS/COFINS e CBS ao longo de 2026",
+                "Crítica",
+                "LC 214/2025 arts. 130-145 (transição)",
             ),
             ImpactoDepartamento(
                 "Comercial",
                 "Recalibragem de pricing com novas alíquotas e créditos",
                 "Alta",
+                "EC 132/2023 (IBS/CBS); LC 214/2025",
             ),
             ImpactoDepartamento(
                 "TI",
                 "Adequação ERP e NF-e (layout CBS / campos NT 2025.002)",
                 "Crítica",
+                "NT 2025.002",
             ),
             ImpactoDepartamento(
-                "Jurídico", "Revisão e aditivo de contratos vigentes", "Média"
+                "Jurídico",
+                "Revisão e aditivo de contratos vigentes",
+                "Média",
+                "LC 214/2025 art. 415; CC art. 478",
             ),
         ]
