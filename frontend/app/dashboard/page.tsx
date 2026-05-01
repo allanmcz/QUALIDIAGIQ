@@ -48,6 +48,21 @@ export default function DashboardPage() {
                   <div className="flex flex-col gap-1 mt-2">
                     <span className="text-sm font-medium text-muted-foreground">Score Geral</span>
                     <span className="text-2xl font-bold">{diag.score.toFixed(1)}/100</span>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden mt-3" aria-hidden="true">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, diag.score))}%`,
+                          backgroundColor:
+                            diag.score >= 72
+                              ? "rgb(22 163 74)"
+                              : diag.score >= 48
+                                ? "rgb(234 179 8)"
+                                : "rgb(220 38 38)",
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground mt-1">M05 — prévia rápida de gap</span>
                   </div>
                 </CardContent>
               </Card>

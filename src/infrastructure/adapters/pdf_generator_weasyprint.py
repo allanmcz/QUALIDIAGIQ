@@ -49,9 +49,7 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             score.score_por_dimensao.items(),
             key=lambda kv: kv[1].valor,
         )[:3]
-        piores_template = [
-            {"codigo": dim.value, "valor": sn.valor} for dim, sn in piores_dimensoes
-        ]
+        piores_template = [{"codigo": dim.value, "valor": sn.valor} for dim, sn in piores_dimensoes]
 
         html_out = template.render(
             diagnostico=diagnostico,

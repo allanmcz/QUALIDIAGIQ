@@ -19,7 +19,9 @@ router = APIRouter(prefix="/normativa", tags=["Lexiq / guardrails"])
 
 
 @router.post("/validar-ancora", response_model=ValidarAncoraNormativaResponse)
-async def validar_ancora_normativa(payload: ValidarAncoraNormativaRequest) -> ValidarAncoraNormativaResponse:
+async def validar_ancora_normativa(
+    payload: ValidarAncoraNormativaRequest,
+) -> ValidarAncoraNormativaResponse:
     """
     Verifica se o texto contém âncora normativa reconhecível (heurística MVP).
 

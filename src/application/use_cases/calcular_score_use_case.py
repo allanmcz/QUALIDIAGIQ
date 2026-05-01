@@ -9,7 +9,12 @@ Responsabilidade:
 """
 
 from src.domain.entities.questionario import Pergunta, Resposta
-from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
+from src.domain.value_objects.score import (
+    PESOS_MACRO_DIMENSAO_SCORE_GERAL,
+    Dimensao,
+    ScoreCompleto,
+    ScoreNumerico,
+)
 
 
 class CalcularScoreUseCase:
@@ -36,17 +41,7 @@ class CalcularScoreUseCase:
         pontos_por_dimensao: dict[Dimensao, float] = dict.fromkeys(Dimensao, 0.0)
         peso_por_dimensao: dict[Dimensao, float] = dict.fromkeys(Dimensao, 0.0)
 
-        # Para Score Geral, consideramos os pesos arbitrários definidos pela regra de negócios
-        # Base: Fiscal (1.5), Tecnológica (1.3), Compliance ABNT (1.2), Resto (1.0)
-        pesos_macro_dimensoes = {
-            Dimensao.FISCAL: 1.5,
-            Dimensao.TECNOLOGICA: 1.3,
-            Dimensao.COMPLIANCE_ABNT: 1.2,
-            Dimensao.ESTRATEGICA: 1.0,
-            Dimensao.CONTABIL: 1.0,
-            Dimensao.FINANCEIRA: 1.0,
-            Dimensao.OPERACIONAL: 1.0,
-        }
+        pesos_macro_dimensoes = PESOS_MACRO_DIMENSAO_SCORE_GERAL
 
         # 1. Acumula pontos ganhos vs pesos possíveis por dimensão
         for resposta in respostas:

@@ -29,8 +29,23 @@ async def test_metodologia_endpoint(async_client):
     response = await async_client.get("/diagnosticos/metodologia")
     assert response.status_code == 200
     data = response.json()
-    assert "pesos_por_dimensao" in data
-    assert "fiscal" in data["pesos_por_dimensao"]
+    assert "pesos_macro_dimensao_score_geral" in data
+    macros = data["pesos_macro_dimensao_score_geral"]
+    assert macros["fiscal"] == 1.5
+    assert macros["tecnologica"] == 1.3
+
+
+@pytest.mark.asyncio
+async def test_manifesto_pesos_publico(async_client):
+    """M03 — manifesto de pesos do catálogo + macrodimensões (público)."""
+    response = await async_client.get("/diagnosticos/manifesto-pesos")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["versao_catalogo"]
+    assert len(body["perguntas"]) >= 1
+    assert body["pesos_macro_dimensao"]["fiscal"] == 1.5
+    assert body["perguntas"][0]["codigo"]
+    assert "M02" in body.get("nota_calibracao_m02", "")
 
 
 @pytest.mark.asyncio

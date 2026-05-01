@@ -66,7 +66,7 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
     }
     nivel_geral = nivel_mapping.get(score.score_geral.nivel.name, "N/A")
 
-    checklist = ConsultoriaService.gerar_checklist(diagnostico)
+    checklist = ConsultoriaService.gerar_checklist(diagnostico, score)
     matriz = ConsultoriaService.gerar_matriz_impacto(diagnostico)
     cronograma = ConsultoriaService.gerar_cronograma_cinco_fases()
     piores = sorted(score.score_por_dimensao.items(), key=lambda kv: kv[1].valor)[:3]
@@ -87,6 +87,7 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
 
     assert "M04_SECAO: capa_identificacao" in html
     assert "M04_SECAO: sintese_executiva" in html
+    assert "M04_SECAO: tecnico_gaps_recomendacoes" in html
     assert "Síntese executiva" in html
     assert "Cronograma em cinco horizontes" in html
     assert "Base legal (referência)" in html

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Final
 
 
 class Dimensao(Enum):
@@ -29,6 +29,23 @@ class Dimensao(Enum):
     OPERACIONAL = "operacional"
     TECNOLOGICA = "tecnologica"
     COMPLIANCE_ABNT = "compliance_abnt_17301"  # diferencial QDI
+
+
+# Agregação do score geral: média ponderada entre dimensões (M03 — mesmo núcleo do CalcularScore).
+PESOS_MACRO_DIMENSAO_SCORE_GERAL: Final[dict[Dimensao, float]] = {
+    Dimensao.FISCAL: 1.5,
+    Dimensao.TECNOLOGICA: 1.3,
+    Dimensao.COMPLIANCE_ABNT: 1.2,
+    Dimensao.ESTRATEGICA: 1.0,
+    Dimensao.CONTABIL: 1.0,
+    Dimensao.FINANCEIRA: 1.0,
+    Dimensao.OPERACIONAL: 1.0,
+}
+
+
+def pesos_macro_dimensao_para_dict_iso() -> dict[str, float]:
+    """Representação estável `{dimensao.value: peso}` para API / manifestos."""
+    return {d.value: float(w) for d, w in PESOS_MACRO_DIMENSAO_SCORE_GERAL.items()}
 
 
 class NivelMaturidade(Enum):

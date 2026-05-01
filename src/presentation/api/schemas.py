@@ -23,6 +23,11 @@ class RespondenteSchema(BaseModel):
     email: EmailStr
     nome: str | None = None
     cargo: str | None = None
+    telefone: str | None = Field(
+        default=None,
+        max_length=32,
+        description="Telefone opcional do respondente (M09 lead B2B; LGPD por finalidade).",
+    )
 
 
 class EmpresaSchema(BaseModel):
@@ -90,7 +95,9 @@ class EmpresaSchema(BaseModel):
 
 class RespostaRequestSchema(BaseModel):
     pergunta_id: UUID
-    valor: str | int | list[str]  # ternária/binária: str; escala/número: int; múltipla/checklist: lista
+    valor: (
+        str | int | list[str]
+    )  # ternária/binária: str; escala/número: int; múltipla/checklist: lista
 
 
 class IniciarDiagnosticoRequest(BaseModel):
@@ -126,6 +133,37 @@ class QuestionarioDisponivelResponse(BaseModel):
     versao_catalogo: str
     total: int
     perguntas: list[QuestionarioPerguntaItemSchema]
+
+
+class ManifestoPesoPerguntaSchema(BaseModel):
+    """Um item do catálogo com peso explícito (transparência M03)."""
+
+    codigo: str
+    dimensao: str
+    tipo: str
+    peso: float
+    base_legal: str | None = None
+
+
+class ManifestoPesosResponse(BaseModel):
+    """
+    Manifesto público — pesos por pergunta + pesos macro do score geral.
+
+    LC 214/2025 art. 5º — previsibilidade; ABNT NBR 17301:2026 — transparência metodológica.
+    """
+
+    versao_manifesto: str = "2026-04-30"
+    versao_catalogo: str
+    formula_score_geral: str = (
+        "Para cada dimensão: média ponderada das respostas pelo peso da pergunta. "
+        "Score geral: média ponderada dos valores por dimensão usando pesos_macro_dimensao."
+    )
+    nota_calibracao_m02: str = (
+        "M02 - Faixas de maturidade 0-100 e pesos sao deterministicos; calibracao "
+        "fina por segmento apos coorte real (Beta)."
+    )
+    pesos_macro_dimensao: dict[str, float]
+    perguntas: list[ManifestoPesoPerguntaSchema]
 
 
 class ValidarAncoraNormativaRequest(BaseModel):

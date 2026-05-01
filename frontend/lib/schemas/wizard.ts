@@ -81,6 +81,14 @@ export const EmpresaSchema = z.object({
 export const RespondenteSchema = z.object({
   nome: z.string().min(2, "Nome é obrigatório"),
   email: z.string().email("E-mail inválido"),
+  /** M09 — lead B2B opcional (API aceita máx. 32 caracteres). */
+  telefone: z.preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === "") return undefined;
+      return typeof v === "string" ? v.trim() : v;
+    },
+    z.string().max(32, "Telefone muito longo").optional(),
+  ),
 });
 
 export const RespostaSchema = z.object({

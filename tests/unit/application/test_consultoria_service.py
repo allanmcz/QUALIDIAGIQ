@@ -13,6 +13,7 @@ from src.domain.entities.diagnostico import (
     Respondente,
     SetorMacro,
 )
+from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 
 
 def _empresa(porte: PorteEmpresa) -> EmpresaInfo:
@@ -77,8 +78,30 @@ def test_acoes_tem_prioridade_e_ancoragem_normativa() -> None:
     assert len(com_ref) >= 8
 
 
+def _score_stub_m07() -> ScoreCompleto:
+    return ScoreCompleto(
+        score_geral=ScoreNumerico(valor=55.0, peso_total_aplicado=7.0),
+        score_por_dimensao={
+            Dimensao.FISCAL: ScoreNumerico(valor=28.0, peso_total_aplicado=3.0),
+            Dimensao.TECNOLOGICA: ScoreNumerico(valor=72.0, peso_total_aplicado=2.0),
+            Dimensao.COMPLIANCE_ABNT: ScoreNumerico(valor=60.0, peso_total_aplicado=2.5),
+        },
+    )
+
+
+def test_m07_prioridade_checklist_por_piores_dimensoes() -> None:
+    d = _diagnostico(PorteEmpresa.MICRO)
+    score = _score_stub_m07()
+    frentes = ConsultoriaService.gerar_checklist(d, score)
+    assert frentes[0].nome.startswith("Prioridade por gaps")
+    assert "Fiscal" in frentes[0].acoes[0].descricao
+    assert frentes[0].acoes[0].prioridade == 1
+
+
 def test_matriz_impacto_quatro_departamentos() -> None:
     d = _diagnostico(PorteEmpresa.PEQUENO)
     m = ConsultoriaService.gerar_matriz_impacto(d)
     assert len(m) == 4
     assert {x.departamento for x in m} == {"Fiscal", "Comercial", "TI", "Jurídico"}
+    jur = next(x for x in m if x.departamento == "Jurídico")
+    assert jur.base_legal and "CGNFS" in jur.base_legal

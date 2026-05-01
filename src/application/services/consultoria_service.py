@@ -10,6 +10,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.domain.entities.diagnostico import Diagnostico, PorteEmpresa
+from src.domain.value_objects.score import Dimensao, ScoreCompleto
+
+_ROTULO_DIMENSAO_PT: dict[Dimensao, str] = {
+    Dimensao.FISCAL: "Fiscal",
+    Dimensao.ESTRATEGICA: "Estratégica",
+    Dimensao.CONTABIL: "Contábil",
+    Dimensao.FINANCEIRA: "Financeira",
+    Dimensao.OPERACIONAL: "Operacional",
+    Dimensao.TECNOLOGICA: "Tecnológica",
+    Dimensao.COMPLIANCE_ABNT: "Compliance ABNT NBR 17301",
+}
 
 
 @dataclass
@@ -42,6 +53,37 @@ class ConsultoriaService:
     """
     Traduz o perfil da empresa (porte, regime) em checklist, matriz e fases temporais.
     """
+
+    @staticmethod
+    def _frente_prioridade_por_gaps_score(score: ScoreCompleto) -> FrenteTrabalho:
+        """
+        Orquestra recomendações iniciais a partir das **piores dimensões** no score (M07).
+
+        Regra determinística: usa só o snapshot quantitative do diagnóstico (sem LLM).
+        """
+        piores = sorted(score.score_por_dimensao.items(), key=lambda kv: kv[1].valor)[:3]
+        acoes: list[AcaoChecklist] = []
+        for idx, (dim, sn) in enumerate(piores, start=1):
+            rotulo = _ROTULO_DIMENSAO_PT.get(dim, dim.value.replace("_", " "))
+            desc = (
+                f"Priorizar plano de ação na dimensão «{rotulo}» (score {sn.valor:.1f}/100). "
+                "Revise respostas e projetos correlatos antes de expansão para outras frentes."
+            )
+            crit = "Crítica" if sn.valor < 45.0 else "Alta"
+            acoes.append(
+                AcaoChecklist(
+                    desc,
+                    "Comitê tributário / sponsor executivo",
+                    "Imediato",
+                    crit,
+                    "LC 214/2025 art. 5º (previsibilidade); ABNT NBR 17301:2026 cap. 9 (indicadores)",
+                    idx,
+                )
+            )
+        return FrenteTrabalho(
+            nome="Prioridade por gaps do score (automático — M07)",
+            acoes=acoes,
+        )
 
     @staticmethod
     def gerar_cronograma_cinco_fases() -> list[dict[str, str]]:
@@ -166,8 +208,15 @@ class ConsultoriaService:
         ]
 
     @staticmethod
-    def gerar_checklist(diagnostico: Diagnostico) -> list[FrenteTrabalho]:
+    def gerar_checklist(
+        diagnostico: Diagnostico,
+        score_completo: ScoreCompleto | None = None,
+    ) -> list[FrenteTrabalho]:
         frentes: list[FrenteTrabalho] = []
+
+        score = score_completo
+        if score is None and diagnostico.score_completo_snapshot is not None:
+            score = diagnostico.score_completo_snapshot
 
         frentes.append(
             FrenteTrabalho(
@@ -276,6 +325,9 @@ class ConsultoriaService:
             )
         )
 
+        if score is not None:
+            frentes.insert(0, ConsultoriaService._frente_prioridade_por_gaps_score(score))
+
         for frente in frentes:
             frente.acoes.sort(key=lambda a: a.prioridade)
         return frentes
@@ -306,6 +358,6 @@ class ConsultoriaService:
                 "Jurídico",
                 "Revisão e aditivo de contratos vigentes",
                 "Média",
-                "LC 214/2025 art. 415; CC art. 478",
+                "LC 214/2025 art. 415; CC art. 478; NT CGNFS-e (série RFB) — documentação e serviços",
             ),
         ]

@@ -171,7 +171,7 @@ class RealizarDiagnostico:
 
         from src.application.services.consultoria_service import ConsultoriaService
 
-        checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+        checklist_entities = ConsultoriaService.gerar_checklist(diagnostico, score_completo)
         matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
         cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
         checklist_data = [asdict(f) for f in checklist_entities]

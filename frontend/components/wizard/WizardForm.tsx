@@ -55,6 +55,7 @@ export function WizardForm() {
       respondente: {
         nome: "",
         email: "",
+        telefone: undefined,
       },
       respostas: [],
       aceite_termos_privacidade: false,
@@ -344,10 +345,12 @@ export function WizardForm() {
             {step === 3 && "Questionário adaptativo (Reforma + ABNT NBR 17301)"}
           </CardTitle>
           <CardDescription>
-            {step === 1 && "Dados para contato e consentimento LGPD (tratamento dos dados informados)."}
-            {step === 2 && "Perfil usado para filtrar as perguntas aplicáveis (motor adaptativo)."}
+            {step === 1 &&
+              "M09 — Captura para lead magnet B2B: faça login após esta etapa para enviar respostas. LGPD: consentimento abaixo."}
+            {step === 2 &&
+              "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas exibidas (LC 214/2025 art. 5º — previsibilidade)."}
             {step === 3 &&
-              "Respostas sinceras geram score e relatório. Envio exige login B2B (JWT) no MVP."}
+              "Respostas sinceras geram score e relatório. Envio exige login B2B (JWT). Transparência: manifesto público na API (/diagnosticos/manifesto-pesos)."}
           </CardDescription>
         </CardHeader>
 
@@ -410,6 +413,26 @@ export function WizardForm() {
                   </div>
                 </div>
 
+                <div className="space-y-2 max-w-md">
+                  <Label htmlFor="telefone">Telefone (opcional)</Label>
+                  <Input
+                    id="telefone"
+                    placeholder="DDI + número (uso operacional)"
+                    {...register("respondente.telefone")}
+                    aria-describedby="hint-telefone"
+                  />
+                  <p id="hint-telefone" className="text-xs text-muted-foreground">
+                    M09 — Facilita recontato pela assessoria B2B; não obrigatório na API MVP.
+                  </p>
+                  {errors.respondente?.telefone != null &&
+                    typeof errors.respondente.telefone === "object" &&
+                    "message" in errors.respondente.telefone && (
+                      <p className="text-sm text-destructive">
+                        {errors.respondente.telefone.message as string}
+                      </p>
+                    )}
+                </div>
+
                 <div className="rounded-md border p-4 space-y-2 bg-muted/20">
                   <div className="flex items-start gap-3">
                     <Controller
@@ -445,6 +468,9 @@ export function WizardForm() {
 
             {step === 2 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <span className="sr-only" aria-live="polite">
+                  {catalogLoading ? "Carregando questionário adaptativo." : ""}
+                </span>
                 {catalogError && (
                   <div className="p-3 text-sm text-destructive border border-destructive/30 rounded-md bg-destructive/10">
                     {catalogError}
@@ -544,6 +570,29 @@ export function WizardForm() {
                     {apiError}
                   </div>
                 )}
+                <p className="text-sm text-muted-foreground">
+                  <Link href="/abnt-framework" className="text-primary underline font-medium">
+                    M11 — PDCA e pilares ABNT (guia rápido)
+                  </Link>
+                  {" · "}
+                  <a
+                    href={`${getApiUrl().replace(/\/$/, "")}/diagnosticos/manifesto-pesos`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline font-medium"
+                  >
+                    Manifesto de pesos (JSON)
+                  </a>
+                  {" · "}
+                  <a
+                    href={`${getApiUrl().replace(/\/$/, "")}/diagnosticos/metodologia`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline font-medium"
+                  >
+                    Metodologia (JSON)
+                  </a>
+                </p>
                 {perguntas.map((p, qIndex) => (
                   <div key={p.id} className="space-y-3 bg-muted/20 p-4 rounded-lg border">
                     <Label className="text-base font-semibold text-foreground/90 leading-tight">

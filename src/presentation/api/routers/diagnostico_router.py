@@ -24,7 +24,7 @@ from src.application.use_cases.realizar_diagnostico import (
 )
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
 from src.domain.entities.questionario import Resposta
-from src.domain.value_objects.score import Dimensao, ScoreCompleto
+from src.domain.value_objects.score import ScoreCompleto, pesos_macro_dimensao_para_dict_iso
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
     versao_catalogo_lida,
@@ -43,6 +43,8 @@ from src.presentation.api.dependencies import (
 from src.presentation.api.schemas import (
     DiagnosticoResponse,
     IniciarDiagnosticoRequest,
+    ManifestoPesoPerguntaSchema,
+    ManifestoPesosResponse,
     PatchRelatorioPdfRequest,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
@@ -92,7 +94,11 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
 
     from src.application.services.consultoria_service import ConsultoriaService
 
-    checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+    snap_chk = getattr(diagnostico, "score_completo_snapshot", None)
+    checklist_entities = ConsultoriaService.gerar_checklist(
+        diagnostico,
+        snap_chk if isinstance(snap_chk, ScoreCompleto) else None,
+    )
     matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
     cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
     checklist_data = [asdict(f) for f in checklist_entities]
@@ -157,6 +163,7 @@ async def criar_diagnostico(
         email=payload.respondente.email,
         nome=payload.respondente.nome,
         cargo=payload.respondente.cargo,
+        telefone=payload.respondente.telefone,
     )
 
     # 2. Match de Respostas com as Perguntas
@@ -240,20 +247,42 @@ async def obter_metodologia() -> dict[str, Any]:
     """Retorna os pesos e a metodologia do motor de cálculo (Transparência)."""
     return {
         "versao_normativa": "ABNT NBR 17301:2026",
-        "pesos_por_dimensao": {
-            Dimensao.FISCAL.value: 1.5,
-            Dimensao.ESTRATEGICA.value: 1.2,
-            Dimensao.CONTABIL.value: 1.3,
-            Dimensao.FINANCEIRA.value: 1.1,
-            Dimensao.OPERACIONAL.value: 1.0,
-            Dimensao.TECNOLOGICA.value: 1.4,
-            Dimensao.COMPLIANCE_ABNT.value: 1.5,
-        },
+        "pesos_macro_dimensao_score_geral": pesos_macro_dimensao_para_dict_iso(),
+        "nota_metodologica": (
+            "pesos_macro_dimensao_score_geral ponderam apenas a agregação do score "
+            "a partir das médias por dimensão; dentro de cada dimensão usam-se os pesos "
+            "do catálogo (ver GET /diagnosticos/manifesto-pesos)."
+        ),
         "recomendacoes_gaps_criticos": [
             "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
             "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado.",
         ],
     }
+
+
+@router.get("/manifesto-pesos", response_model=ManifestoPesosResponse)
+async def obter_manifesto_pesos() -> ManifestoPesosResponse:
+    """
+    Manifesto público de pesos (M03) — catálogo completo + macrodimensões do score geral.
+
+    Endpoint público (sem JWT), coerente com transparência do motor.
+    """
+    banco = get_banco_perguntas_cached()
+    itens = [
+        ManifestoPesoPerguntaSchema(
+            codigo=p.codigo,
+            dimensao=p.dimensao.value,
+            tipo=p.tipo.value,
+            peso=p.peso,
+            base_legal=p.base_legal,
+        )
+        for p in banco
+    ]
+    return ManifestoPesosResponse(
+        versao_catalogo=versao_catalogo_lida(),
+        pesos_macro_dimensao=pesos_macro_dimensao_para_dict_iso(),
+        perguntas=itens,
+    )
 
 
 @router.get("/questionario", response_model=QuestionarioDisponivelResponse)

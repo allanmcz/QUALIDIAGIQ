@@ -174,6 +174,17 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       .sort((a, b) => a.valor - b.valor);
   }, [data]);
 
+  /** M12 — frente checklist ABNT 10 itens (mesmo texto retornado pela API). */
+  const frenteAbnt10 = useMemo(() => {
+    return data.checklist?.find((f) => f.nome.includes("17301") && f.nome.includes("10")) ?? null;
+  }, [data.checklist]);
+
+  const [abntChecks, setAbntChecks] = useState<boolean[]>([]);
+  useEffect(() => {
+    const n = frenteAbnt10?.acoes.length ?? 0;
+    setAbntChecks(Array.from({ length: n }, () => false));
+  }, [frenteAbnt10]);
+
   const barGapColors = ["#b91c1c", "#ea580c", "#ca8a04", "#65a30d", "#16a34a"];
 
   if (!data) {
@@ -187,9 +198,15 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   return (
     <div className="container py-10">
       <div className="mb-8">
-        <Link href="/dashboard" className="text-sm text-primary hover:underline mb-4 inline-block">
-          &larr; Voltar para Dashboard
-        </Link>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mb-4">
+          <Link href="/dashboard" className="text-primary hover:underline">
+            ← Voltar para Dashboard
+          </Link>
+          <span className="text-muted-foreground">·</span>
+          <Link href="/abnt-framework" className="text-primary hover:underline">
+            Guia ABNT / PDCA (M11)
+          </Link>
+        </div>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold">{data.empresa_razao_social}</h1>
@@ -310,6 +327,53 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 ))}
               </tbody>
             </table>
+            <div className="mt-8">
+              <p className="text-sm font-semibold mb-4">Linha do tempo (M06 — visão rápida)</p>
+              <ol className="relative border-l-2 border-primary/35 ml-3 space-y-8 pl-6">
+                {(data.cronograma ?? []).map((linha) => (
+                  <li key={linha.fase} className="relative">
+                    <span className="absolute -left-[21px] top-1.5 flex h-3 w-3 rounded-full bg-primary ring-4 ring-background" />
+                    <p className="font-medium text-sm">{linha.fase}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{linha.foco}</p>
+                    <p className="text-xs text-muted-foreground italic mt-1">{linha.referencia_normativa}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {frenteAbnt10 && frenteAbnt10.acoes.length > 0 && (
+        <Card className="mb-10">
+          <CardHeader>
+            <CardTitle>Autoconferência ABNT — 10 controles (M12)</CardTitle>
+            <p className="text-sm font-normal text-muted-foreground">
+              Réplica espelho do checklist do relatório PDF. Para oficinas internas; marcas ficam apenas no
+              navegador neste MVP.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {frenteAbnt10.acoes.map((a, i) => (
+              <label
+                key={a.descricao + String(i)}
+                className="flex gap-3 items-start rounded-lg border bg-muted/10 p-3 cursor-pointer hover:border-primary/40"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-input"
+                  checked={abntChecks[i] ?? false}
+                  onChange={(e) => {
+                    setAbntChecks((prev) => {
+                      const next = [...prev];
+                      next[i] = e.target.checked;
+                      return next;
+                    });
+                  }}
+                />
+                <span className="text-sm leading-snug">{a.descricao}</span>
+              </label>
+            ))}
           </CardContent>
         </Card>
       )}
