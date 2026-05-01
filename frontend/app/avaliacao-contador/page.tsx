@@ -27,6 +27,36 @@ export default function AvaliacaoContadorPage() {
           <strong>QualiDiagIQ (MVP)</strong>. Não substitui parecer jurídico nem trabalho de auditoria
           independente.
         </p>
+        <nav
+          aria-label="Conferir metodologia e documentação pública"
+          className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:flex-wrap sm:items-center"
+        >
+          <span className="text-sm font-medium text-foreground shrink-0">Conferir agora:</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <Link href="/metodologia" className="text-primary font-semibold underline underline-offset-4">
+              Metodologia e manifesto (site)
+            </Link>
+            <Link href="/abnt-framework" className="text-primary font-semibold underline underline-offset-4">
+              Framework ABNT (contexto)
+            </Link>
+            <a
+              href={`${baseApi}/diagnosticos/manifesto-pesos`}
+              className="text-primary font-semibold underline underline-offset-4 break-all"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              API — manifesto-pesos (JSON)
+            </a>
+            <a
+              href={`${baseApi}/diagnosticos/metodologia`}
+              className="text-primary font-semibold underline underline-offset-4 break-all"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              API — metodologia (JSON)
+            </a>
+          </div>
+        </nav>
       </div>
 
       <section className="space-y-3">

@@ -6,6 +6,26 @@
 
 **Base normativa de referência do produto:** EC 132/2023; LC 214/2025; ABNT NBR 17301:2026 (compliance tributário); LGPD Lei 13.709/2018 (tratamento de dados no fluxo do diagnóstico).
 
+### Links rápidos para conferir a metodologia (M03)
+
+No **site** (substitua o host pelo da sua instalação):
+
+| O quê | Caminho / URL típica (Compose local) |
+|-------|--------------------------------------|
+| Metodologia + tabela de pesos no navegador | `http://localhost:60001/metodologia` |
+| Página de apoio ao contador (sumário + links) | `http://localhost:60001/avaliacao-contador` |
+| Framework ABNT (contexto) | `http://localhost:60001/abnt-framework` |
+
+Na **API FastAPI** (porta host típica **60000**):
+
+| O quê | URL típica |
+|-------|------------|
+| Manifesto público (JSON — pesos por pergunta e macros) | `http://localhost:60000/diagnosticos/manifesto-pesos` |
+| Metodologia espelhada do motor (JSON) | `http://localhost:60000/diagnosticos/metodologia` |
+| Documentação interativa (Swagger) | `http://localhost:60000/docs` |
+
+Em **produção**, troque `localhost` e portas pela URL canónica do ambiente (ex.: `NEXT_PUBLIC_API_URL` no front).
+
 ---
 
 ## 1. O que o QualiDiagIQ é — e o que não é
@@ -129,8 +149,10 @@ Não são substituto do teu julgamento profissional, mas **reduzem custo de due 
 
 ## 10. Referências rápidas no produto
 
-- Front: **`/avaliacao-contador`**, **`/metodologia`**, **`/termos`**, **`/privacidade`**, **`/abnt-framework`**
-- API (base configurável): **`/diagnosticos/manifesto-pesos`**, **`/diagnosticos/metodologia`**, **`/health`**
+Use os mesmos caminhos da secção **Links rápidos** no topo deste documento; em ambiente local Compose:
+
+- Front: `http://localhost:60001/avaliacao-contador`, `http://localhost:60001/metodologia`, `http://localhost:60001/termos`, `http://localhost:60001/privacidade`, `http://localhost:60001/abnt-framework`
+- API: `http://localhost:60000/diagnosticos/manifesto-pesos`, `http://localhost:60000/diagnosticos/metodologia`, `http://localhost:60000/health`, `http://localhost:60000/docs`
 
 ---
 
