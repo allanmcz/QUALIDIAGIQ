@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init
+.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend
 
 PYTHON := python3.12
 VENV := .venv
@@ -19,8 +19,8 @@ dev: ## Sobe ambiente de dev (db + api + web)
 	docker compose up -d
 	@echo ""
 	@echo "✅ Ambiente subindo:"
-	@echo "  → API:  http://localhost:8000/docs"
-	@echo "  → Web:  http://localhost:3000"
+	@echo "  → API:  http://localhost:60000/docs (mapa host 60000 → container 8000)"
+	@echo "  → Web:  http://localhost:60001 (mapa host 60001 → container 3000)"
 	@echo "  → DB:   postgres://postgres:postgres@localhost:60322/postgres"
 	@echo ""
 	@echo "Logs:    make logs"
@@ -47,6 +47,11 @@ format: ## Formata código com black + ruff
 
 type-check: ## Type checking com mypy
 	$(VENV)/bin/mypy src/
+
+qa-backend: ## Gate backend: ruff + mypy + pytest (equiv. Seção 5.1 do PLANO_COMPLETO_HANDOFF)
+	$(VENV)/bin/ruff check src/ tests/
+	$(VENV)/bin/mypy src/
+	PYTHONPATH=. $(VENV)/bin/pytest
 
 clean: ## Limpa arquivos gerados
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

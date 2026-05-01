@@ -3,6 +3,7 @@
 ## Requisitos rápidos
 
 - Python 3.12, `make install`, comandos `.cursorrules` (`make lint`, `make format`, `make test`, `make type-check`).
+- **Bateria de QA em um fluxo:** `make qa-backend` ou `./INICIAR_APP/iniciar-app.sh backend` — ver [INICIAR_APP/README.md](INICIAR_APP/README.md).
 - ADRs novos em [.github/adr/](.github/adr/).
 
 ## Catálogo de perguntas (`perguntas_mvp.json`)

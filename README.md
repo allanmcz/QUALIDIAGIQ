@@ -19,9 +19,9 @@ make dev
 # 3. Rodar testes
 make test
 
-# 4. Abrir interfaces
-# → API: http://localhost:8000/docs (Swagger)
-# → Web: http://localhost:3000 (Next.js — após inicializar)
+# 4. Abrir interfaces (portas do docker-compose)
+# → API: http://localhost:60000/docs (Swagger)
+# → Web: http://localhost:60001 (Next.js)
 # → DB:  postgres://postgres:postgres@localhost:60322/postgres
 ```
 
@@ -140,6 +140,7 @@ make help            # lista todos os comandos
 make install         # cria .venv + instala deps
 make dev             # sobe Docker (DB + API + Web)
 make test            # roda testes com cobertura
+make qa-backend      # lint + mypy + pytest (gate release backend)
 make lint            # lint com ruff
 make format          # black + ruff format
 make type-check      # mypy strict
@@ -148,6 +149,10 @@ make down            # para Docker
 make clean           # limpa .pyc, caches
 make frontend-init   # inicializa Next.js (uma vez)
 ```
+
+### Teste completo local (script)
+
+Ver pasta **[INICIAR_APP/](INICIAR_APP/)** — `./INICIAR_APP/iniciar-app.sh help` (deps, backend, integration, frontend, `full`).
 
 ## 🔐 Variáveis de Ambiente
 

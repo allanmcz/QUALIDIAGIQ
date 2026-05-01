@@ -79,6 +79,11 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Entrando..." : "Entrar no Dashboard"}
             </Button>
+            <p className="text-xs text-muted-foreground leading-relaxed border-t pt-4 mt-4">
+              MVP/desenvolvimento: sessão mantida no navegador (localStorage). Não é o modelo previsto
+              para Enterprise (cookie httpOnly — ver ADR-004). Informações exibidas seguem boa-fé
+              informacional (LC 214/2025); não substituem assessoria jurídica.
+            </p>
           </form>
         </CardContent>
       </Card>
