@@ -106,7 +106,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
         """Desserializa dict do banco para a entidade."""
         from src.domain.entities.diagnostico import PlanoDiagnostico
-        
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),

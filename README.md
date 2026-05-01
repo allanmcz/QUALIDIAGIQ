@@ -22,7 +22,7 @@ make test
 # 4. Abrir interfaces
 # → API: http://localhost:8000/docs (Swagger)
 # → Web: http://localhost:3000 (Next.js — após inicializar)
-# → DB:  postgres://postgres:postgres@localhost:54322/postgres
+# → DB:  postgres://postgres:postgres@localhost:60322/postgres
 ```
 
 ## 📂 Estrutura do Projeto

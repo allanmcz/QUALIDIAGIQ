@@ -18,24 +18,26 @@ Sequência orquestrada:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from uuid import UUID
-    from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+
     from src.application.ports.email_service import EmailServicePort
+    from src.application.ports.llm_service import LlmServicePort
     from src.application.ports.pdf_generator import PdfGeneratorPort
     from src.application.ports.storage_service import StorageServicePort
+    from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
+    from src.domain.entities.questionario import Pergunta, Resposta
+    from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
     from src.domain.value_objects.score import ScoreCompleto
 
-from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
-    Respondente,
     PlanoDiagnostico,
+    Respondente,
 )
-from src.domain.entities.questionario import Pergunta, Resposta
 
 
 @dataclass(frozen=True)
@@ -50,8 +52,6 @@ class ComandoRealizarDiagnostico:
     plano: str = "gratuito"
 
 
-from src.application.ports.llm_service import LlmServicePort
-
 @dataclass(frozen=True)
 class ResultadoDiagnostico:
     """DTO de saída — agrega entidade + outputs derivados."""
@@ -60,8 +60,8 @@ class ResultadoDiagnostico:
     score: ScoreCompleto
     relatorio_pdf_url: str | None
     recomendacao_ia: str | None = None
-    checklist: list | None = None
-    matriz_impacto: list | None = None
+    checklist: list[dict[str, Any]] | None = None
+    matriz_impacto: list[dict[str, Any]] | None = None
 
 
 class RealizarDiagnostico:
@@ -97,7 +97,7 @@ class RealizarDiagnostico:
             tenant_id=comando.tenant_id,
             empresa=comando.empresa,
             respondente=comando.respondente,
-            plano=plano_enum
+            plano=plano_enum,
         )
 
         # 2. Calcula o Score usando o motor matemático determinístico
@@ -117,19 +117,22 @@ class RealizarDiagnostico:
                 f"Regime: {diagnostico.empresa.regime.value}\\n"
                 f"Score Geral: {score_completo.score_geral.valor} (Nível: {score_completo.score_geral.nivel.name})\\n"
             )
-            
+
             # Carregar o texto base normativo (Decreto CBS) para o RAG
             base_normativa = ""
             import os
-            caminho_decreto = os.path.join(os.path.dirname(__file__), "../../../_DEVELOPER/_NOVIDADE/00_RESUMO_EXECUTIVO_Decreto_12955.txt")
+
+            caminho_decreto = os.path.join(
+                os.path.dirname(__file__),
+                "../../../_DEVELOPER/_NOVIDADE/00_RESUMO_EXECUTIVO_Decreto_12955.txt",
+            )
             if os.path.exists(caminho_decreto):
-                with open(caminho_decreto, "r", encoding="utf-8") as f:
+                with open(caminho_decreto, encoding="utf-8") as f:
                     # Limitar o tamanho do contexto para evitar estouro de tokens locais (ex: Llama3 tem 8k contexto)
                     base_normativa = f.read()[:4000]
 
             recomendacao_ia = await self.llm_service.gerar_recomendacao(
-                contexto_empresa=contexto_empresa,
-                base_normativa=base_normativa
+                contexto_empresa=contexto_empresa, base_normativa=base_normativa
             )
 
         # 5. Geração de PDF e Upload (Se configurado)
@@ -137,33 +140,35 @@ class RealizarDiagnostico:
         if self.pdf_generator and self.storage_service:
             # Geração (síncrona por design do WeasyPrint na CPU, mas chamamos via adapter)
             # Passamos a recomendação IA para ser incluída no PDF se necessário
-            pdf_bytes = await self.pdf_generator.gerar_pdf_diagnostico(diagnostico, score_completo, recomendacao_ia)
-            
+            pdf_bytes = await self.pdf_generator.gerar_pdf_diagnostico(
+                diagnostico, score_completo, recomendacao_ia
+            )
+
             # Upload para Storage
             pdf_url = await self.storage_service.upload_pdf(
-                tenant_id=comando.tenant_id,
-                diagnostico_id=diagnostico.id,
-                file_bytes=pdf_bytes
+                tenant_id=comando.tenant_id, diagnostico_id=diagnostico.id, file_bytes=pdf_bytes
             )
             diagnostico.relatorio_pdf_url = pdf_url
 
         # 6. Persiste no banco de dados (Supabase PostgreSQL via RLS)
         await self.repo.salvar(diagnostico)
-        
+
         # 7. Envio de E-mail
         if self.email_service and pdf_url:
             await self.email_service.enviar_email_com_relatorio(
                 destinatario_email=diagnostico.respondente.email,
                 destinatario_nome=diagnostico.respondente.nome or "Gestor",
-                pdf_url=pdf_url
+                pdf_url=pdf_url,
             )
 
         # 8. Geração de Consultoria (Checklist e Matriz) liberada temporariamente para todos
         checklist_data = None
         matriz_data = None
-        
-        from src.application.services.consultoria_service import ConsultoriaService
+
         from dataclasses import asdict
+
+        from src.application.services.consultoria_service import ConsultoriaService
+
         checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
         matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
         checklist_data = [asdict(f) for f in checklist_entities]
@@ -176,5 +181,5 @@ class RealizarDiagnostico:
             relatorio_pdf_url=pdf_url,
             recomendacao_ia=recomendacao_ia,
             checklist=checklist_data,
-            matriz_impacto=matriz_data
+            matriz_impacto=matriz_data,
         )

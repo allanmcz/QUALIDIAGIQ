@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -18,11 +17,14 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         if template_dir is None:
             # Assume que a pasta 'templates' está no mesmo diretório deste arquivo
             template_dir = Path(__file__).parent / "templates"
-            
+
         self.env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
 
     async def gerar_pdf_diagnostico(
-        self, diagnostico: Diagnostico, score: ScoreCompleto
+        self,
+        diagnostico: Diagnostico,
+        score: ScoreCompleto,
+        recomendacao_ia: str | None = None,
     ) -> bytes:
         """
         Renderiza o template HTML e o converte para PDF.
@@ -31,15 +33,16 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         """
         # Carregar template
         template = self.env.get_template("relatorio_base.html")
-        
+
         # Contexto de renderização
         html_str = template.render(
             diagnostico=diagnostico,
             score=score,
+            recomendacao_ia=recomendacao_ia,
         )
-        
+
         # Gerar PDF binário
         # O Weasyprint pode fazer logs warnings caso falte fontes, vamos suprimir opcionalmente.
         pdf_bytes = HTML(string=html_str).write_pdf()
-        
-        return pdf_bytes
+
+        return bytes(pdf_bytes)

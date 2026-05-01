@@ -14,7 +14,9 @@ class SmtpEmailAdapter(EmailServicePort):
     def __init__(self) -> None:
         # Configurações podem vir do ambiente, com fallbacks simulados para MVP
         self.smtp_host = os.environ.get("SMTP_HOST", "localhost")
-        self.smtp_port = int(os.environ.get("SMTP_PORT", 1025))  # 1025 é porta comum para MailHog/Mailpit
+        self.smtp_port = int(
+            os.environ.get("SMTP_PORT", 1025)
+        )  # 1025 é porta comum para MailHog/Mailpit
         self.smtp_user = os.environ.get("SMTP_USER", "")
         self.smtp_pass = os.environ.get("SMTP_PASS", "")
         self.sender_email = os.environ.get("SENDER_EMAIL", "no-reply@tributiq.com.br")
@@ -53,6 +55,7 @@ Equipe Tributiq
                 return True
             except Exception as e:
                 import logging
+
                 logging.error(f"Falha ao enviar e-mail via SMTP: {e}")
                 return False
 

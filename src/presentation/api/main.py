@@ -6,12 +6,18 @@ Camada: Presentation
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator  # noqa: TC003
 from contextlib import asynccontextmanager
 
+from cachetools import TTLCache
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.infrastructure.config.settings import get_settings
+from src.presentation.api.middleware.idempotency import (
+    CorpoCacheadoIdempotencia,
+    IdempotencyMiddleware,
+)
 from src.presentation.api.routers import diagnostico_router
 
 
@@ -53,14 +59,22 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Segurança CORS (MVP)
+    settings = get_settings()
+    idempotency_cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(
+        maxsize=settings.idempotency_max_entries,
+        ttl=settings.idempotency_ttl_seconds,
+    )
+    app.state.idempotency_cache = idempotency_cache
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Em produção: restringir para o domínio do tributiq
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "Idempotency-Key"],
+        expose_headers=["X-Idempotent-Replay"],
     )
+    app.add_middleware(IdempotencyMiddleware, cache=idempotency_cache)
 
     # Healthcheck simples
     @app.get("/health", tags=["Infra"])
@@ -69,6 +83,7 @@ def create_app() -> FastAPI:
 
     # Registrar os Routers do Domínio
     from src.presentation.api.routers import auth_router
+
     app.include_router(diagnostico_router.router)
     app.include_router(auth_router.router)
 

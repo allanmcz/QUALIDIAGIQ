@@ -1,5 +1,6 @@
 from typing import Protocol
 
+
 class LlmServicePort(Protocol):
     """
     Port (Interface) para o serviço de Large Language Models.

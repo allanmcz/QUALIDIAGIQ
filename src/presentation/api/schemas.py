@@ -7,6 +7,7 @@ Responsabilidade:
     - Transformar objetos de Domínio puros em JSON limpo de saída.
 """
 
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -25,11 +26,15 @@ class RespondenteSchema(BaseModel):
 
 
 class EmpresaSchema(BaseModel):
-    cnpj: str = Field(..., description="CNPJ com exatos 14 dígitos numéricos", min_length=14, max_length=14)
+    cnpj: str = Field(
+        ..., description="CNPJ com exatos 14 dígitos numéricos", min_length=14, max_length=14
+    )
     razao_social: str
     porte: PorteEmpresa
     regime: RegimeTributario
-    cnae_principal: str = Field(..., description="CNAE principal com 7 dígitos", min_length=7, max_length=7)
+    cnae_principal: str = Field(
+        ..., description="CNAE principal com 7 dígitos", min_length=7, max_length=7
+    )
     uf: str = Field(..., description="Sigla da UF com 2 letras", min_length=2, max_length=2)
     setor_macro: SetorMacro
 
@@ -49,9 +54,33 @@ class EmpresaSchema(BaseModel):
     @classmethod
     def validar_uf(cls, v: str) -> str:
         ufs_validas = {
-            "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-            "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-            "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+            "AC",
+            "AL",
+            "AP",
+            "AM",
+            "BA",
+            "CE",
+            "DF",
+            "ES",
+            "GO",
+            "MA",
+            "MT",
+            "MS",
+            "MG",
+            "PA",
+            "PB",
+            "PR",
+            "PE",
+            "PI",
+            "RJ",
+            "RN",
+            "RS",
+            "RO",
+            "RR",
+            "SC",
+            "SP",
+            "SE",
+            "TO",
         }
         v_upper = v.upper()
         if v_upper not in ufs_validas:
@@ -94,7 +123,7 @@ class DiagnosticoResponse(BaseModel):
     score: ScoreCompletoSchema | None = None
     relatorio_pdf_url: str | None = None
     recomendacao_ia: str | None = None
-    checklist: list[dict] | None = None
-    matriz_impacto: list[dict] | None = None
+    checklist: list[dict[str, Any]] | None = None
+    matriz_impacto: list[dict[str, Any]] | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -4,49 +4,84 @@ Configuração de Injeção de Dependências e Segurança.
 Camada: Presentation (FastAPI)
 """
 
-import os
+from __future__ import annotations
+
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Header, HTTPException, status
+import jwt
+import structlog
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
+from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
+from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
+from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
+from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
+from src.infrastructure.config.settings import get_settings
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
 
-# Cache global do client Supabase para a API
+logger = structlog.get_logger(__name__)
+
 _supabase_client: Client | None = None
 
-
-def get_tenant_id(
-    x_tenant_id: Annotated[str | None, Header(description="ID do Tenant para isolamento")] = None,
-) -> UUID:
-    """Extrai e valida o cabeçalho X-Tenant-ID."""
-    if not x_tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Header X-Tenant-ID ausente",
-        )
-    try:
-        return UUID(x_tenant_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Header X-Tenant-ID inválido (deve ser UUID)",
-        )
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_supabase_client() -> Client:
-    """Instancia o cliente Supabase."""
+    """Instancia o cliente Supabase (singleton por processo)."""
     global _supabase_client
     if _supabase_client is None:
-        url = os.environ.get("SUPABASE_URL", "http://127.0.0.1:60000")
-        key = os.environ.get("SUPABASE_KEY", "dummy_key")
-        _supabase_client = create_client(url, key)
+        settings = get_settings()
+        _supabase_client = create_client(settings.supabase_url, settings.supabase_key)
     return _supabase_client
+
+
+async def get_current_user_tenant(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
+) -> tuple[UUID, UUID]:
+    """
+    Valida Bearer JWT e retorna (user_id, tenant_id).
+
+    Claims esperadas: `sub` = UUID do admin, `tenant_id` = UUID do tenant.
+    """
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token Bearer ausente ou inválido",
+        )
+
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+        sub = payload.get("sub")
+        tid = payload.get("tenant_id")
+        if not sub or not tid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token sem subject ou tenant_id",
+            )
+        return UUID(str(sub)), UUID(str(tid))
+    except HTTPException:
+        raise
+    except (jwt.PyJWTError, ValueError) as e:
+        logger.warning("jwt_invalido", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+        ) from e
 
 
 def get_diagnostico_repository(
@@ -59,11 +94,6 @@ def get_diagnostico_repository(
 def get_calcular_score_use_case() -> CalcularScoreUseCase:
     """Injeta o motor matemático de Score."""
     return CalcularScoreUseCase()
-
-
-from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
-from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
-from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
 
 
 def get_pdf_generator() -> WeasyPrintPdfGenerator:
@@ -83,8 +113,6 @@ def get_email_service() -> SmtpEmailAdapter:
     return SmtpEmailAdapter()
 
 
-from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
-
 def get_llm_service() -> OllamaLlmAdapter:
     """Injeta o serviço de IA."""
     return OllamaLlmAdapter()
@@ -100,7 +128,7 @@ def get_realizar_diagnostico_use_case(
 ) -> RealizarDiagnostico:
     """Orquestrador principal."""
     return RealizarDiagnostico(
-        repo=repo, 
+        repo=repo,
         calcular_score_use_case=score_use_case,
         pdf_generator=pdf_generator,
         storage_service=storage_service,

@@ -40,6 +40,7 @@ dependencies = [
     "structlog>=24.4.0",
     # Utils
     "httpx>=0.27.0",
+    "cachetools>=5.5.0",
     "tenacity>=9.0.0",
     "python-dateutil>=2.9.0",
     "passlib[bcrypt]>=1.7.4",
@@ -55,6 +56,7 @@ dev = [
     "ruff>=0.6.0",
     "black>=24.8.0",
     "mypy>=1.11.0",
+    "types-cachetools>=5.5.0",
     "ipython>=8.27.0",
     "httpx>=0.27.0",
 ]
@@ -90,7 +92,7 @@ python_files = ["test_*.py", "*_test.py"]
 [tool.coverage.run]
 source = ["src"]
 branch = true
-omit = ["*/migrations/*", "*/__init__.py"]
+omit = ["*/migrations/*", "*/__init__.py", "*/scripts/*"]
 
 [tool.coverage.report]
 fail_under = 80

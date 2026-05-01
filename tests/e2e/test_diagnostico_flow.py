@@ -1,18 +1,29 @@
 import uuid
-from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.presentation.api.dependencies import get_email_service, get_storage_service, get_pdf_generator, get_diagnostico_repository
+from src.presentation.api.dependencies import (
+    get_diagnostico_repository,
+    get_email_service,
+    get_pdf_generator,
+    get_storage_service,
+)
 from src.presentation.api.main import app
+from tests.conftest import cabecalho_post_diagnostico
+
 
 class MockPdfGenerator:
-    async def gerar_pdf_diagnostico(self, diagnostico, score) -> bytes:
+    async def gerar_pdf_diagnostico(
+        self, diagnostico, score_completo, recomendacao_ia: str | None
+    ) -> bytes:
         return b"%PDF-1.4\nmock"
 
+
 class MockStorageService:
-    async def upload_pdf(self, tenant_id: uuid.UUID, diagnostico_id: uuid.UUID, file_bytes: bytes) -> str:
+    async def upload_pdf(
+        self, tenant_id: uuid.UUID, diagnostico_id: uuid.UUID, file_bytes: bytes
+    ) -> str:
         return f"https://mocked-storage.com/{tenant_id}/{diagnostico_id}.pdf"
 
 
@@ -26,29 +37,31 @@ class MockEmailService:
         self.enviado = True
         return True
 
+
 class MockRepository:
     def __init__(self):
         self.db = {}
-        
+
     async def salvar(self, diagnostico):
         self.db[diagnostico.id] = diagnostico
 
-    async def buscar_por_id(self, id: uuid.UUID, tenant_id: uuid.UUID):
-        return self.db.get(id)
+    async def buscar_por_id(self, diagnostico_id: uuid.UUID, tenant_id: uuid.UUID):
+        return self.db.get(diagnostico_id)
+
 
 @pytest.fixture
 def mock_dependencies():
     """Sobrescreve dependências externas para evitar IO real de storage e email nos testes E2E."""
     mock_email = MockEmailService()
     mock_repo = MockRepository()
-    
+
     app.dependency_overrides[get_storage_service] = lambda: MockStorageService()
     app.dependency_overrides[get_email_service] = lambda: mock_email
     app.dependency_overrides[get_pdf_generator] = lambda: MockPdfGenerator()
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    
+
     yield mock_email
-    
+
     app.dependency_overrides = {}
 
 
@@ -68,9 +81,9 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
     3. Valida se o email foi enviado.
     4. Consulta o diagnóstico criado.
     """
-    tenant_id = str(uuid.uuid4())
-    headers = {"X-Tenant-ID": tenant_id}
-    
+    tenant_uuid = uuid.uuid4()
+    headers = cabecalho_post_diagnostico(tenant_id=tenant_uuid)
+
     payload = {
         "empresa": {
             "cnpj": "12345678000195",
@@ -79,46 +92,38 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
             "regime": "lucro_real",
             "cnae_principal": "1234567",
             "uf": "SP",
-            "setor_macro": "industria"
+            "setor_macro": "industria",
         },
-        "respondente": {
-            "email": "lead@empresa.com",
-            "nome": "João Diretor"
-        },
+        "respondente": {"email": "lead@empresa.com", "nome": "João Diretor"},
         "respostas": [
-            {
-                "pergunta_id": "00000000-0000-0000-0000-000000000001",
-                "valor": "sim"
-            },
-            {
-                "pergunta_id": "00000000-0000-0000-0000-000000000002",
-                "valor": 4
-            }
-        ]
+            {"pergunta_id": "11111111-1111-4111-a111-111111111111", "valor": 4},
+            {"pergunta_id": "22222222-2222-4222-a222-222222222222", "valor": 3},
+        ],
     }
-    
+
     # 1. Criação do Diagnóstico
     response = await e2e_client.post("/diagnosticos/", json=payload, headers=headers)
     assert response.status_code == 201
-    
+
     data = response.json()
     assert "id" in data
     assert data["status"] == "finalizado"
     assert data["empresa_razao_social"] == "Empresa E2E SA"
-    
+
     # 2. Valida URL do PDF (resultado do MockStorageService)
     assert data["relatorio_pdf_url"] is not None
     assert "mocked-storage.com" in data["relatorio_pdf_url"]
-    
+
     diagnostico_id = data["id"]
-    
+
     # 3. Valida envio do E-mail
     assert mock_dependencies.enviado is True
-    
+
     # 4. Consulta Diagnóstico
-    get_response = await e2e_client.get(f"/diagnosticos/{diagnostico_id}", headers=headers)
+    get_headers = {k: v for k, v in headers.items() if k == "Authorization"}
+    get_response = await e2e_client.get(f"/diagnosticos/{diagnostico_id}", headers=get_headers)
     assert get_response.status_code == 200
-    
+
     get_data = get_response.json()
     assert get_data["id"] == diagnostico_id
     assert get_data["empresa_razao_social"] == "Empresa E2E SA"

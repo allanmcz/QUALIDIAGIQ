@@ -5,7 +5,7 @@ Camada: Presentation
 Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -21,9 +21,9 @@ from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
 from src.presentation.api.dependencies import (
+    get_current_user_tenant,
     get_diagnostico_repository,
     get_realizar_diagnostico_use_case,
-    get_tenant_id,
 )
 from src.presentation.api.schemas import (
     DiagnosticoResponse,
@@ -69,10 +69,11 @@ def _get_banco_perguntas() -> list[Pergunta]:
 @router.post("/", response_model=DiagnosticoResponse, status_code=status.HTTP_201_CREATED)
 async def criar_diagnostico(
     payload: IniciarDiagnosticoRequest,
-    tenant_id: Annotated[UUID, Depends(get_tenant_id)],
+    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
 ) -> DiagnosticoResponse:
     """Inicia um novo diagnóstico e calcula o score com base nas respostas."""
+    _, tenant_id = current
 
     # 1. Converter Schemas Pydantic para Entidades de Domínio
     empresa_domain = EmpresaInfo(
@@ -133,7 +134,7 @@ async def criar_diagnostico(
     try:
         resultado = await use_case.execute(comando)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     # 5. Mapear Resposta de volta para Schema Pydantic
     score_por_dimensao_schema = {
@@ -163,7 +164,7 @@ async def criar_diagnostico(
 
 
 @router.get("/metodologia")
-async def obter_metodologia() -> dict:
+async def obter_metodologia() -> dict[str, Any]:
     """Retorna os pesos e a metodologia do motor de cálculo (Transparência)."""
     return {
         "versao_normativa": "ABNT NBR 17301:2026",
@@ -178,18 +179,19 @@ async def obter_metodologia() -> dict:
         },
         "recomendacoes_gaps_criticos": [
             "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
-            "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado."
-        ]
+            "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado.",
+        ],
     }
 
 
 @router.get("/{diagnostico_id}", response_model=DiagnosticoResponse)
 async def obter_diagnostico(
     diagnostico_id: UUID,
-    tenant_id: Annotated[UUID, Depends(get_tenant_id)],
+    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
     repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     """Busca um diagnóstico pelo ID, garantindo o isolamento do tenant."""
+    _, tenant_id = current
     diagnostico = await repo.buscar_por_id(diagnostico_id, tenant_id)
     if not diagnostico:
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
@@ -198,9 +200,11 @@ async def obter_diagnostico(
     # e não o ScoreCompleto expandido, a serialização de GET devolverá o score parcial ou nulo.
     checklist_data = None
     matriz_data = None
-    
-    from src.application.services.consultoria_service import ConsultoriaService
+
     from dataclasses import asdict
+
+    from src.application.services.consultoria_service import ConsultoriaService
+
     checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
     matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
     checklist_data = [asdict(f) for f in checklist_entities]
@@ -213,7 +217,7 @@ async def obter_diagnostico(
         empresa_razao_social=diagnostico.empresa.razao_social,
         score=None,  # Para o MVP da Sprint 1 o GET retorna apenas metadados
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
-        recomendacao_ia=None, # IA não persistida no db do MVP ainda
+        recomendacao_ia=None,  # IA não persistida no db do MVP ainda
         checklist=checklist_data,
-        matriz_impacto=matriz_data
+        matriz_impacto=matriz_data,
     )

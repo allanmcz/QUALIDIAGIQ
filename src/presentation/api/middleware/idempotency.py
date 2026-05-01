@@ -1,0 +1,130 @@
+"""
+Middleware de idempotência para POST mutáveis.
+
+Base normativa (operações previsíveis ao contribuinte):
+    - LC 214/2025 — disciplina do sistema tributário nacional (previsibilidade)
+
+Camada: Presentation
+Analogia Winthor: equivale a impedir INSERT duplicado pela mesma chave única de negócio.
+"""
+
+from __future__ import annotations
+
+import hashlib
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse, Response
+
+if TYPE_CHECKING:
+    from cachetools import TTLCache
+    from starlette.middleware.base import RequestResponseEndpoint
+    from starlette.requests import Request
+    from starlette.types import ASGIApp
+
+# Limite para não armazenar PDF/base64 acidentalmente no cache MVP
+_MAX_BODY_BYTES = 512 * 1024
+_MAX_KEY_LEN = 128
+
+
+@dataclass(frozen=True, slots=True)
+class CorpoCacheadoIdempotencia:
+    status_code: int
+    body: bytes
+    headers: tuple[tuple[str, str], ...]
+
+
+def _exige_idempotencia(request: Request) -> bool:
+    """Somente criação de diagnóstico (POST). Login e demais rotas ficam de fora."""
+    if request.method.upper() != "POST":
+        return False
+    path = request.url.path
+    return path == "/diagnosticos" or path == "/diagnosticos/"
+
+
+def _chave_composta(request: Request, idempotency_key: str) -> str:
+    """Isola cache por tenant implícito (Authorization) + chave + caminho."""
+    auth = request.headers.get("authorization", "")
+    material = f"{idempotency_key}|{request.url.path}|{request.method}|{auth}"
+    return hashlib.sha256(material.encode()).hexdigest()
+
+
+class IdempotencyMiddleware(BaseHTTPMiddleware):
+    """Exige Idempotency-Key em POST /diagnosticos/ e replica respostas 2xx cacheadas."""
+
+    def __init__(self, app: ASGIApp, cache: TTLCache[str, CorpoCacheadoIdempotencia]) -> None:
+        super().__init__(app)
+        self._cache = cache
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if not _exige_idempotencia(request):
+            return await call_next(request)
+
+        raw_key = request.headers.get("Idempotency-Key") or request.headers.get("idempotency-key")
+        if not raw_key or not str(raw_key).strip():
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Header Idempotency-Key obrigatório para POST /diagnosticos/"},
+            )
+
+        idem_key = str(raw_key).strip()
+        if len(idem_key) > _MAX_KEY_LEN:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": f"Idempotency-Key deve ter no máximo {_MAX_KEY_LEN} caracteres"},
+            )
+
+        composta = _chave_composta(request, idem_key)
+        if composta in self._cache:
+            hit = self._cache[composta]
+            h = dict(hit.headers)
+            h["X-Idempotent-Replay"] = "true"
+            content_type = next(
+                (v for k, v in hit.headers if k.lower() == "content-type"),
+                None,
+            )
+            return Response(
+                content=hit.body,
+                status_code=hit.status_code,
+                headers=h,
+                media_type=content_type,
+            )
+
+        response = await call_next(request)
+
+        body = b""
+        iterator = getattr(response, "body_iterator", None)
+        if iterator is not None:
+            async for chunk in cast(Any, iterator):  # noqa: TC006
+                body += chunk
+        else:
+            raw = getattr(response, "body", None)
+            if raw is not None:
+                body = raw if isinstance(raw, bytes) else bytes(raw)
+
+        skip_headers = {"content-length", "transfer-encoding", "content-encoding"}
+        passthrough: list[tuple[str, str]] = []
+        for key, value in response.headers.items():
+            if key.lower() not in skip_headers:
+                passthrough.append((key, value))
+
+        out = Response(
+            content=body,
+            status_code=response.status_code,
+            headers=dict(passthrough),
+            media_type=response.media_type,
+        )
+
+        if (
+            200 <= response.status_code < 300
+            and len(body) <= _MAX_BODY_BYTES
+            and composta not in self._cache
+        ):
+            self._cache[composta] = CorpoCacheadoIdempotencia(
+                status_code=response.status_code,
+                body=body,
+                headers=tuple(passthrough),
+            )
+
+        return out

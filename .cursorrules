@@ -50,6 +50,46 @@ src/
 6. Observabilidade end-to-end — OpenTelemetry, trace_id em logs
 7. Independência de ERP — núcleo canônico + conectores isolados
 
+## Critérios auditáveis — 12 itens (auditoria interna 30/04/2026)
+
+Complementam os 7 princípios acima com critérios mínimos verificáveis:
+
+| # | Critério | Aceite mínimo |
+|---|----------|----------------|
+| 1 | Multi-tenant + RLS | Policies em tabelas `qdi.*`; isolamento por `tenant_id` (ideal: claim JWT, não header solto) |
+| 2 | Versionamento normativo | Regras com `vigencia_inicio` / `vigencia_fim`; sem hardcode de alíquota sem fallback versionado |
+| 3 | Idempotência | `Idempotency-Key` em POSTs públicos; replays tratados de forma previsível |
+| 4 | WORM / evidências | Diagnóstico final imutável onde aplicável; hash dos artefatos quando exigido |
+| 5 | Observabilidade | `trace_id` / correlação em logs; preparação para OpenTelemetry |
+| 6 | Recusa controlada (RAG) | Baixa confiança do retriever ⇒ status explícito (ex.: indefinido), não inventar |
+| 7 | Citação Lexiq | Resposta fiscal sem evidência citável ⇒ rejeitar ou 422 conforme desenho da API |
+| 8 | Commits PT-BR | Conventional Commits em português; escopo `qdi-*` quando usar hook |
+| 9 | Pastas Python | Minúsculas em `src/` (PEP 8); divergência vs. doc legado registrada em ADR se existir |
+| 10 | Cobertura domain | ≥ 85% em código novo de `src/domain/` |
+| 11 | Score auditável | Decomposição do 0–100 rastreável (pesos, perguntas consideradas) |
+| 12 | PDF / relatório | Render real em produção (sem “dummy” mascarado como entrega) |
+
+## Anti-padrões de segurança (não repetir)
+
+- `SECRET_KEY` / API keys hardcoded — usar `pydantic-settings` e env
+- Endpoints administrativos sem autenticação/autorização
+- Backdoors em `except` (credenciais fixas)
+- `tenant_id` só em header HTTP sem validação forte — preferir JWT com claim
+- `CORS allow_origins=["*"]` com `allow_credentials=True`
+- `print()` em fluxo de API — usar logging estruturado
+
+## Anti-padrões de Clean Architecture e runtime
+
+- `os.path` / `open()` na camada `application/` — Port + Adapter em `infrastructure/`
+- Mutação direta de entidade sem método de domínio
+- Misturar sem critério `Protocol` e `ABC` em ports — **padronizar em `ABC` + `@abstractmethod`**
+- Lógica de negócio ou SQL “na marra” em router FastAPI
+- Enum com nome errado: **`PorteEmpresa.MEDIA` não existe** — valor correto **`MEDIO`** (validar no código antes de usar)
+
+## Sprint S0.5 (hardening)
+
+Até fechar os P0 da auditoria, seguir o plano em `_DEVELOPER/ORIENTACAO_CURSOR/04_PLANO_EXECUCAO.md` e o checklist em `_DEVELOPER/ANALISE_30042026/04_CHECKLIST_PRINCIPIOS_NAO_NEGOCIAVEIS.md`.
+
 ## Padrões editoriais obrigatórios
 
 ### Idioma
@@ -97,6 +137,8 @@ Antes de codar funcionalidades, consulte:
 4. `docs/refs/04_METODOLOGIA.md` — fluxograma 8 etapas + algoritmo de score
 5. `docs/01_arquitetura.md` — Clean Architecture + diagramas Mermaid
 6. `docs/02_dominio_qdi.md` — entidades, value objects, agregados
+7. `_DEVELOPER/ANALISE_30042026/` — auditoria 30/04/2026 (issues, checklist)
+8. `_DEVELOPER/ORIENTACAO_CURSOR/` — plano S0.5→S4 e prompts operacionais
 
 ## Fora de escopo — NÃO IMPLEMENTAR
 
@@ -119,6 +161,15 @@ Se Allan pedir algo dessa lista, **lembre o escopo e proponha redirecionamento**
 - **Saúde:** se sessão > 45 min, sugira pausa ao Allan
 - **Senioridade:** termos técnicos sem glosa; analogias Delphi/Oracle quando ajudar
 
+## Checklist antes de cada commit
+
+- [ ] `make test` verde
+- [ ] `make lint` sem warnings relevantes
+- [ ] `make format` aplicado
+- [ ] `make type-check` sem erros (quando aplicável ao escopo da mudança)
+- [ ] Domain novo ou alterado: cobertura ≥ 85% onde couber
+- [ ] Sem `print()` esquecido; sem segredos no diff
+
 ## Comandos make essenciais
 
 ```bash
@@ -127,5 +178,6 @@ make dev          # docker compose up -d
 make test         # pytest + cobertura
 make lint         # ruff check
 make format       # black + ruff format
+make type-check   # mypy strict
 make down         # docker compose down
 ```

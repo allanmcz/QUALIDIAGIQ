@@ -1,10 +1,11 @@
-import json
 import logging
+
 import httpx
 
 from src.application.ports.llm_service import LlmServicePort
 
 logger = logging.getLogger(__name__)
+
 
 class OllamaLlmAdapter(LlmServicePort):
     """
@@ -36,14 +37,13 @@ Recomendação:
                         "model": self.model,
                         "prompt": prompt,
                         "stream": False,
-                        "options": {
-                            "temperature": 0.2
-                        }
-                    }
+                        "options": {"temperature": 0.2},
+                    },
                 )
                 response.raise_for_status()
-                data = response.json()
-                return data.get("response", "Recomendação não gerada pelo modelo.")
+                data: dict[str, object] = response.json()
+                texto = data.get("response", "Recomendação não gerada pelo modelo.")
+                return str(texto)
         except httpx.RequestError as exc:
             logger.warning(f"Erro de comunicação com o Ollama local: {exc}")
             return "Devido a indisponibilidade temporária do serviço de IA, a recomendação personalizada não pôde ser gerada no momento."

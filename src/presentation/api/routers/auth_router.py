@@ -1,84 +1,107 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy import text
-from typing import Optional
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-import jwt
+"""
+Rotas de autenticação B2B.
 
-# Mock das configurações de JWT (em dev/MVP, manteremos simplificado)
-SECRET_KEY = "qualidiagiq-super-secret-key-dev"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 dia
+Camada: Presentation
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import Any, cast
+from uuid import UUID
+
+import jwt
+import structlog
+from fastapi import APIRouter, HTTPException, status
+from passlib.context import CryptContext
+from pydantic import BaseModel, Field
+
+from src.infrastructure.config.settings import get_settings
+from src.presentation.api.dependencies import get_supabase_client
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Autenticação B2B"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=1, max_length=256)
+
 
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
-    nome: Optional[str]
+    nome: str | None
 
-class AdminCreate(BaseModel):
-    email: str
-    password: str
-    nome: str
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+def create_access_token(
+    *,
+    subject_user_id: UUID,
+    tenant_id: UUID,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """Gera JWT com `sub` (id do admin) e claim `tenant_id`."""
+    settings = get_settings()
+    expire = datetime.now(UTC) + (
+        expires_delta if expires_delta is not None else timedelta(minutes=15)
+    )
+    payload: dict[str, Any] = {
+        "sub": str(subject_user_id),
+        "tenant_id": str(tenant_id),
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
-    # Por simplicidade no MVP, vamos buscar via banco direto ou validar o admin mockado
-    from src.presentation.api.dependencies import get_supabase_client
+async def login(request: LoginRequest) -> LoginResponse:
+    """Login contra a tabela `admins`; token inclui tenant para RLS futuro."""
     client = get_supabase_client()
-    
-    # Busca usuário no banco. Como usamos o supabase-py sem RLS pro Auth customizado:
+
     try:
-        # IMPORTANTE: No supabase-py, table.select não suporta text() raw do sqlalchemy, 
-        # então fazemos uma consulta na tabela `admins`
-        response = client.table("admins").select("*").eq("email", request.email).execute()
+        response = client.table("admins").select("*").eq("email", str(request.email)).execute()
         users = response.data
         if not users:
-            raise HTTPException(status_code=400, detail="E-mail ou senha incorretos")
-        
-        user = users[0]
-        if not pwd_context.verify(request.password, user["hashed_password"]):
-            raise HTTPException(status_code=400, detail="E-mail ou senha incorretos")
-        
-        access_token = create_access_token(
-            data={"sub": user["email"], "id": user["id"]},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        return LoginResponse(access_token=access_token, token_type="bearer", nome=user["nome"])
-    except Exception as e:
-        # Fallback de segurança se a tabela não tiver rodado no init.sql ainda (mocking mode)
-        if request.email == "allan@tributolab.com.br" and request.password == "admin123":
-            access_token = create_access_token(data={"sub": request.email}, expires_delta=timedelta(minutes=60))
-            return LoginResponse(access_token=access_token, token_type="bearer", nome="Admin Tributiq")
-        raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="E-mail ou senha incorretos",
+            )
 
-@router.post("/create_admin")
-async def create_admin(request: AdminCreate):
-    """Rota para criar usuário admin. Em prod deveria ser protegida!"""
-    from src.presentation.api.dependencies import get_supabase_client
-    client = get_supabase_client()
-    hashed_password = pwd_context.hash(request.password)
-    
-    try:
-        client.table("admins").insert({
-            "email": request.email,
-            "hashed_password": hashed_password,
-            "nome": request.nome
-        }).execute()
-        return {"msg": "Usuário admin criado com sucesso"}
+        user = cast("dict[str, Any]", users[0])
+        if not pwd_context.verify(request.password, str(user["hashed_password"])):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="E-mail ou senha incorretos",
+            )
+
+        raw_tid = user.get("tenant_id")
+        if raw_tid is None:
+            logger.error("admin_sem_tenant_id", email=request.email)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Configuração de tenant ausente para este usuário",
+            )
+
+        tenant_id = UUID(str(raw_tid))
+        user_id = UUID(str(user["id"]))
+
+        settings = get_settings()
+        access_token = create_access_token(
+            subject_user_id=user_id,
+            tenant_id=tenant_id,
+            expires_delta=timedelta(minutes=settings.jwt_expire_minutes),
+        )
+        nome_raw = user.get("nome")
+        nome = str(nome_raw) if nome_raw is not None else None
+        return LoginResponse(access_token=access_token, token_type="bearer", nome=nome)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Erro ao criar usuário (já existe?): {e}")
+        logger.exception("login_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro interno ao autenticar",
+        ) from e

@@ -40,7 +40,7 @@ class StatusDiagnostico(Enum):
 
 class PlanoDiagnostico(Enum):
     """Nível do serviço escolhido."""
-    
+
     GRATUITO = "gratuito"
     AVANCADO = "avancado"
 

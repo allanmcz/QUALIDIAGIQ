@@ -1,0 +1,104 @@
+---
+description: Padrões de segurança obrigatórios pós-auditoria 30/04/2026
+globs: src/**/*.py
+alwaysApply: true
+---
+
+# Segurança — Hardening QDI
+
+## Anti-padrões PROIBIDOS (descobertos na auditoria)
+
+### S-01 · Segredos hardcoded
+
+```python
+# ❌ NUNCA
+SECRET_KEY = "qualidiagiq-super-secret-key-dev"
+
+# ✅ SEMPRE — via pydantic-settings
+from src.infrastructure.config.settings import settings
+chave = settings.jwt_secret_key
+```
+
+### S-02 · Endpoints administrativos públicos
+
+```python
+# ❌ NUNCA
+@router.post("/auth/create_admin")  # sem auth!
+async def create_admin(req: AdminCreate): ...
+
+# ✅ SEMPRE
+@router.post("/auth/create_admin", dependencies=[Depends(verificar_admin)])
+async def create_admin(req: AdminCreate, current: Admin = Depends(get_current_admin)):
+    if not current.has_permission("admin:create"):
+        raise HTTPException(403)
+    ...
+```
+
+### S-03 · Backdoors em fallback
+
+```python
+# ❌ NUNCA
+try: ...
+except Exception:
+    if email == "allan@...." and password == "admin123":
+        return create_token(...)  # backdoor!
+
+# ✅ SEMPRE — falhar limpo
+try: ...
+except Exception as e:
+    logger.error("auth_falhou", erro=str(e), email=email)
+    raise HTTPException(500, "Erro interno de autenticação")
+```
+
+### S-04 · Tenant ID em header cleartext
+
+```python
+# ❌ NUNCA — qualquer cliente forja
+def get_tenant_id(x_tenant_id: Annotated[str, Header()]) -> UUID:
+    return UUID(x_tenant_id)
+
+# ✅ SEMPRE — JWT custom claim
+def get_current_user_tenant(
+    cred: HTTPAuthorizationCredentials = Depends(bearer)
+) -> tuple[UUID, UUID]:
+    payload = jwt.decode(cred.credentials, settings.jwt_secret_key, [settings.jwt_algorithm])
+    return UUID(payload["sub"]), UUID(payload["tenant_id"])
+```
+
+### S-05 · CORS aberto
+
+```python
+# ❌ NUNCA — combinação proibida W3C
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, ...)
+
+# ✅ SEMPRE — lista explícita
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins,  # de env: csv
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "Idempotency-Key"],
+)
+```
+
+### S-06 · Print em produção
+
+```python
+# ❌ NUNCA
+print(f"Erro ao gerar PDF: {e}")
+
+# ✅ SEMPRE
+import structlog
+logger = structlog.get_logger(__name__)
+logger.error("pdf_geracao_falhou", erro=str(e), exc_info=True)
+```
+
+## Checklist de segurança antes de cada PR
+
+- [ ] Sem `SECRET`, `API_KEY`, `password` hardcoded (grep -r)
+- [ ] Todos POST validam `Idempotency-Key`
+- [ ] Tenant_id sempre vem de JWT, nunca de header HTTP
+- [ ] CORS configurado com lista explícita
+- [ ] Sem `print()` — apenas logging estruturado (`structlog` ou equivalente acordado no projeto)
+- [ ] Endpoints administrativos protegidos por `Depends(verificar_admin)`
+- [ ] Sem fallback que aceite credenciais hardcoded

@@ -1,0 +1,95 @@
+---
+description: Padrão Port-Adapter uniforme — sempre ABC + @abstractmethod
+globs: src/application/ports/**/*.py, src/infrastructure/adapters/**/*.py, src/infrastructure/repositories/**/*.py
+alwaysApply: true
+---
+
+# Port-Adapter Pattern — QDI (uniforme)
+
+## Decisão arquitetural (auditoria 30/04)
+
+**Padronizar em ABC + @abstractmethod.** Eliminar mistura com `Protocol` (typing).
+
+## Template de Port
+
+```python
+"""
+Port (interface) de [responsabilidade].
+
+Camada: Application/Domain (interface — Dependency Inversion Principle)
+
+Implementação concreta vive em:
+    src/infrastructure/adapters/[adapter_concreto].py
+
+Princípio: domain define contrato, infrastructure implementa.
+
+Analogia Allan:
+    É como definir uma interface no Delphi
+    (`type IDiagnosticoRepo = interface`)
+    que múltiplas implementações concretas podem honrar.
+"""
+
+from __future__ import annotations
+from abc import ABC, abstractmethod
+
+class [NomeDoServico]Port(ABC):
+    """Port de [responsabilidade]."""
+
+    @abstractmethod
+    async def [metodo](self, [params]) -> [retorno]:
+        """
+        [Descrição do método em PT-BR].
+
+        Args:
+            [param]: [descrição]
+
+        Returns:
+            [tipo]: [descrição]
+
+        Raises:
+            [Exceção]: [quando]
+        """
+        ...
+```
+
+## Template de Adapter
+
+```python
+"""
+Adapter [Tecnologia] para o port [NomeDoServico]Port.
+
+Camada: Infrastructure
+Implementa: src.application.ports.[modulo].[NomeDoServico]Port
+
+Analogia Allan:
+    É como o DataModule do Delphi com TFDQuery —
+    encapsula a "ferida" da tecnologia externa,
+    isolando-a das regras de negócio.
+"""
+
+from __future__ import annotations
+import structlog
+from src.application.ports.[modulo] import [NomeDoServico]Port
+
+logger = structlog.get_logger(__name__)
+
+class [Tecnologia][NomeDoServico]Adapter([NomeDoServico]Port):
+    """Adapter concreto que implementa via [Tecnologia]."""
+
+    def __init__(self, ...) -> None:
+        ...
+
+    async def [metodo](self, ...) -> ...:
+        try:
+            ...
+        except Exception as e:
+            logger.error("[evento]", erro=str(e), exc_info=True)
+            raise
+```
+
+## Anti-padrões
+
+- ❌ Misturar `typing.Protocol` com `ABC` em ports — padronize ABC
+- ❌ Imports tardios dentro de método (`from ... import` no meio do código)
+- ❌ Adapter retornando dados mockados em produção sem distinguir DEV/PROD
+- ❌ `print()` no adapter — sempre logging estruturado

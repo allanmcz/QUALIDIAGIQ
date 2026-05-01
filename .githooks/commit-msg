@@ -1,0 +1,9 @@
+#!/bin/sh
+# Conventional Commits PT-BR — escopo qdi-* (S0.5 hardening)
+PADRAO="^(feat|fix|chore|arch|refactor|test|docs|perf|build|ci)\(qdi(-[a-z]+)?\): .+$"
+if ! grep -qE "$PADRAO" "$1"; then
+  echo "Mensagem de commit nao segue Conventional Commits PT-BR."
+  echo "Formato: feat(qdi-domain): adicionar entidade Recomendacao"
+  echo "Tipos: feat, fix, chore, arch, refactor, test, docs, perf, build, ci"
+  exit 1
+fi

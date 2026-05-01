@@ -1,0 +1,91 @@
+---
+description: Padrões FastAPI — segurança, schemas, idempotência
+globs: src/presentation/**/*.py
+alwaysApply: true
+---
+
+# FastAPI Presentation — QDI
+
+## Estrutura de router
+
+```python
+"""Rotas HTTP para o domínio de [contexto].
+
+Camada: Presentation
+Responsabilidade: Roteamento HTTP, conversão Pydantic ↔ Domain.
+"""
+
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+
+from src.application.use_cases.[caso_de_uso] import [UseCase]
+from src.presentation.api.dependencies import (
+    get_current_user_tenant,
+    get_[caso_de_uso]_use_case,
+)
+from src.presentation.api.schemas import [Request, Response]
+
+router = APIRouter(prefix="/[recurso]", tags=["[Tag]"])
+
+
+@router.post(
+    "/",
+    response_model=[Response],
+    status_code=status.HTTP_201_CREATED,
+    summary="Criar [recurso]",
+    description="...",
+)
+async def criar_[recurso](
+    payload: [Request],
+    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    use_case: Annotated[[UseCase], Depends(get_[caso_de_uso]_use_case)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> [Response]:
+    """[descrição PT-BR]."""
+    user_id, tenant_id = current
+
+    try:
+        resultado = await use_case.execute(...)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return [Response].model_validate(resultado)
+```
+
+## Pontos obrigatórios
+
+1. **Sempre** `tags=["..."]` com nome PT-BR
+2. **Sempre** `summary` e `description` PT-BR (vão para Swagger)
+3. **Sempre** dependência `get_current_user_tenant` em endpoints autenticados
+4. **Sempre** `Idempotency-Key` em POST (header obrigatório)
+5. **Sempre** `response_model` explícito (não confiar em retorno tipado)
+6. **Sempre** tratamento de `ValueError` → 400, `RuntimeError` → 500
+
+## Schemas Pydantic v2
+
+```python
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
+
+class CriarDiagnosticoRequest(BaseModel):
+    """DTO de entrada para POST /diagnosticos/."""
+    empresa: EmpresaSchema
+    respondente: RespondenteSchema
+    respostas: list[RespostaSchema] = Field(min_length=1)
+
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        validate_assignment=True,
+        extra="forbid",
+    )
+```
+
+## Anti-padrões
+
+- ❌ `tenant_id` extraído de header `X-Tenant-ID` cleartext → use JWT
+- ❌ Banco de dados/perguntas hardcoded em router → use Repository injetado
+- ❌ Lógica de cálculo no router → mover para Use Case
+- ❌ POST sem `Idempotency-Key` validado
+- ❌ Retornar `score=None` em GET — persistir e devolver score real
+- ❌ `from src.application.services... import ...` dentro do método (import tardio)

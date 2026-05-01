@@ -1,0 +1,88 @@
+---
+description: Disciplina de testes — pyramid pattern + cobertura
+globs: tests/**/*.py
+alwaysApply: true
+---
+
+# Disciplina de Testes — QDI
+
+## Pirâmide de testes
+
+```
+         /\
+        /e2e\        ~5% (Playwright — wizard completo)
+       /------\
+      /integr. \    ~25% (testcontainers + DB real)
+     /----------\
+    /   unit     \  ~70% (sem I/O, sem rede)
+   /--------------\
+```
+
+## Coverage obrigatório
+
+| Camada | Mínimo |
+|---|---|
+| `src/domain/` | **≥ 85%** (princípio §10) |
+| `src/application/` | ≥ 80% |
+| `src/infrastructure/` | ≥ 70% |
+| `src/presentation/` | ≥ 70% |
+| **Geral** | ≥ 80% |
+
+CI bloqueia merge se < threshold.
+
+## Padrão de teste unitário
+
+```python
+"""Tests for src.domain.value_objects.score (camada DOMAIN)."""
+import pytest
+from src.domain.value_objects.score import ScoreNumerico, NivelMaturidade
+
+
+class TestScoreNumerico:
+    """Testes do value object ScoreNumerico — invariantes 0..100."""
+
+    @pytest.mark.parametrize("valor,peso", [(0.0, 1.0), (50.5, 5.0), (100.0, 10.0)])
+    def test_aceita_valores_validos(self, valor: float, peso: float) -> None:
+        score = ScoreNumerico(valor=valor, peso_total_aplicado=peso)
+        assert score.valor == valor
+
+    @pytest.mark.parametrize("invalido", [-0.1, 100.1, -1.0, 999.0])
+    def test_rejeita_valores_fora_intervalo(self, invalido: float) -> None:
+        with pytest.raises(ValueError, match="entre 0 e 100"):
+            ScoreNumerico(valor=invalido, peso_total_aplicado=1.0)
+```
+
+## Padrão de teste de integração (com testcontainers)
+
+```python
+"""Integration tests para SupabaseDiagnosticoRepository."""
+import pytest
+from testcontainers.postgres import PostgresContainer
+
+@pytest.fixture(scope="module")
+def pg_container():
+    with PostgresContainer("postgres:16-alpine") as pg:
+        yield pg
+
+@pytest.mark.asyncio
+async def test_rls_isola_tenants(pg_container, fixture_diagnosticos):
+    """RLS deve impedir tenant A de ver dados de tenant B."""
+    repo_a = SupabaseDiagnosticoRepository(client=client_with_jwt(tenant_a))
+    repo_b = SupabaseDiagnosticoRepository(client=client_with_jwt(tenant_b))
+
+    # Tenant B salva
+    await repo_b.salvar(diagnostico_b)
+
+    # Tenant A NÃO deve ver
+    resultado = await repo_a.buscar_por_id(diagnostico_b.id, tenant_a)
+    assert resultado is None
+```
+
+## Anti-padrões
+
+- ❌ Mock de DB em integration test → use testcontainers
+- ❌ Teste sem `class Test...` agrupador
+- ❌ Teste sem docstring explicando o objetivo
+- ❌ Magic numbers nos asserts (use constantes ou parametrize)
+- ❌ `assert True` ou `assert response.status_code` (verifique valor exato)
+- ❌ Teste que só roda 1 cenário feliz — sempre incluir 1+ erro

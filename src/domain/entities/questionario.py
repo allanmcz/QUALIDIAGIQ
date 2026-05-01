@@ -9,10 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from src.domain.entities.diagnostico import EmpresaInfo, RegimeTributario, SetorMacro
-from src.domain.value_objects.score import Dimensao
+if TYPE_CHECKING:
+    from src.domain.entities.diagnostico import EmpresaInfo, RegimeTributario, SetorMacro
+    from src.domain.value_objects.score import Dimensao
 
 
 class TipoPergunta(Enum):
@@ -59,15 +61,10 @@ class Pergunta:
         if self.condicao is None:
             return True
 
-        if self.condicao.regimes_permitidos is not None:
-            if empresa.regime not in self.condicao.regimes_permitidos:
-                return False
-
-        if self.condicao.setores_permitidos is not None:
-            if empresa.setor_macro not in self.condicao.setores_permitidos:
-                return False
-
-        return True
+        c = self.condicao
+        regimes_ok = c.regimes_permitidos is None or empresa.regime in c.regimes_permitidos
+        setores_ok = c.setores_permitidos is None or empresa.setor_macro in c.setores_permitidos
+        return regimes_ok and setores_ok
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,11 +82,11 @@ class Resposta:
         if self.pergunta_tipo == TipoPergunta.TERNARIA:
             try:
                 alternativa = AlternativaTernaria(str(self.valor_bruto).lower())
-            except ValueError:
+            except ValueError as e:
                 raise ValueError(
                     f"Valor inválido para pergunta ternária: {self.valor_bruto}. "
                     f"Use 'sim', 'parcialmente' ou 'nao'."
-                )
+                ) from e
             if alternativa == AlternativaTernaria.SIM:
                 return 100.0
             if alternativa == AlternativaTernaria.PARCIALMENTE:
@@ -99,10 +96,10 @@ class Resposta:
         if self.pergunta_tipo == TipoPergunta.ESCALA_1_5:
             try:
                 escala = int(self.valor_bruto)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
                 raise ValueError(
                     f"Valor inválido para escala. Deve ser um número de 1 a 5. Recebido: {self.valor_bruto}"
-                )
+                ) from e
             if not 1 <= escala <= 5:
                 raise ValueError(f"Valor fora do limite da escala (1-5): {escala}")
             # Regra: 1=0, 2=25, 3=50, 4=75, 5=100

@@ -1,0 +1,92 @@
+---
+description: Conventional Commits em PT-BR — escopo qdi-*
+globs: **/*
+alwaysApply: true
+---
+
+# Commits PT-BR — QDI
+
+## Padrão obrigatório
+
+```
+<tipo>(qdi-<escopo>): <descrição em PT-BR no infinitivo>
+
+[corpo opcional explicando o porquê em PT-BR]
+
+[Refs: `_DEVELOPER/ANALISE_30042026/...`]
+```
+
+## Tipos válidos
+
+| Tipo | Quando usar |
+|---|---|
+| `feat` | Nova funcionalidade |
+| `fix` | Correção de bug |
+| `refactor` | Refatoração sem mudança comportamental |
+| `arch` | Decisão arquitetural (publicar ADR junto) |
+| `chore` | Manutenção (deps, config, limpeza) |
+| `test` | Adição/correção de testes |
+| `docs` | Documentação |
+| `perf` | Melhoria de performance |
+| `build` | Build system, Docker, deps |
+| `ci` | CI/CD (GitHub Actions) |
+
+## Escopos QDI
+
+| Escopo | Cobertura |
+|---|---|
+| `qdi-domain` | `src/domain/` |
+| `qdi-app` | `src/application/` |
+| `qdi-infra` | `src/infrastructure/` |
+| `qdi-api` | `src/presentation/` |
+| `qdi-front` | `frontend/` |
+| `qdi-test` | `tests/` |
+| `qdi-docs` | `docs/`, `*.md` |
+| `qdi-build` | `Dockerfile`, `Makefile`, `pyproject.toml` |
+| `qdi-auth` | módulos de autenticação |
+| `qdi-rag` | base de conhecimento, Lexiq |
+| `qdi-pdf` | geração de relatório |
+| `qdi-hardening` | Sprint S0.5 |
+
+## Exemplos válidos
+
+```
+feat(qdi-domain): adicionar entidade Recomendacao com Evidencia
+fix(qdi-app): corrigir PorteEmpresa.MEDIA → MEDIO em consultoria_service
+refactor(qdi-infra): migrar SupabaseDiagnosticoRepository para AsyncClient
+arch(qdi-domain): ADR-002 — pesos de dimensao versionados em tabela
+chore(qdi-build): atualizar pyproject para langchain-anthropic 0.3
+test(qdi-test): adicionar 5 cenários de RLS multi-tenant
+docs(qdi-docs): consolidar fluxograma 8 etapas em 04_METODOLOGIA
+```
+
+## Exemplos REJEITADOS pelo hook
+
+```
+feat: implement B2B authentication                ← inglês
+feat(auth): adiciona login                         ← escopo sem qdi-
+add: nova entidade                                ← tipo inválido
+qdi-domain: nova entidade                         ← falta tipo
+feat (qdi-domain): nova entidade                  ← espaço entre tipo e parênteses
+```
+
+## Hook commit-msg (instalar uma vez)
+
+```bash
+# .githooks/commit-msg
+#!/bin/sh
+PADRAO="^(feat|fix|chore|arch|refactor|test|docs|perf|build|ci)\(qdi(-[a-z]+)?\): .+$"
+if ! grep -qE "$PADRAO" "$1"; then
+    echo "❌ Mensagem de commit não segue Conventional Commits PT-BR"
+    echo "   Formato: feat(qdi-domain): adicionar entidade Recomendacao"
+    echo "   Tipos: feat, fix, chore, arch, refactor, test, docs, perf, build, ci"
+    echo "   Escopos: qdi-domain, qdi-app, qdi-infra, qdi-api, qdi-front, qdi-test, qdi-docs, qdi-build, qdi-auth, qdi-rag, qdi-pdf, qdi-hardening"
+    exit 1
+fi
+```
+
+```bash
+# Ativar
+git config core.hooksPath .githooks
+chmod +x .githooks/commit-msg
+```

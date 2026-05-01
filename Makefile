@@ -21,7 +21,7 @@ dev: ## Sobe ambiente de dev (db + api + web)
 	@echo "✅ Ambiente subindo:"
 	@echo "  → API:  http://localhost:8000/docs"
 	@echo "  → Web:  http://localhost:3000"
-	@echo "  → DB:   postgres://postgres:postgres@localhost:54322/postgres"
+	@echo "  → DB:   postgres://postgres:postgres@localhost:60322/postgres"
 	@echo ""
 	@echo "Logs:    make logs"
 	@echo "Parar:   make down"
@@ -55,8 +55,12 @@ clean: ## Limpa arquivos gerados
 	find . -type d -name .mypy_cache -exec rm -rf {} + 2>/dev/null || true
 	rm -rf htmlcov/ .coverage build/ dist/
 
-migrate: ## Roda migrações Supabase (placeholder)
-	@echo "TODO: configurar supabase migration up quando supabase-cli estiver instalado"
+migrate: ## Aplica SQL em src/infrastructure/db/migrations na instância docker compose (DB já existente)
+	@set -e; for f in $$(ls src/infrastructure/db/migrations/*.sql | sort); do \
+	  echo "migrate: $$f"; \
+	  docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$$f"; \
+	done
+	@echo "✅ Migrações aplicadas."
 
 frontend-init: ## Inicializa o frontend Next.js (executar uma vez)
 	cd frontend && npx create-next-app@14 . --ts --tailwind --app --eslint --no-src-dir

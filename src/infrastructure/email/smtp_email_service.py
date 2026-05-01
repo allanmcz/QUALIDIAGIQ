@@ -19,15 +19,17 @@ class MockEmailService(EmailServicePort):
         Simula o envio do e-mail.
         """
         print(f"\n{'='*50}")
-        print(f"📧 SIMULAÇÃO DE ENVIO DE E-MAIL")
+        print("📧 SIMULAÇÃO DE ENVIO DE E-MAIL")
         print(f"Para: {destinatario_nome} <{destinatario_email}>")
-        print(f"Assunto: Seu Diagnóstico QualiDiagIQ está pronto!")
+        print("Assunto: Seu Diagnóstico QualiDiagIQ está pronto!")
         print(f"\nOlá {destinatario_nome},")
-        print(f"Obrigado por utilizar o QualiDiagIQ. Seu relatório detalhado foi gerado com sucesso.")
-        print(f"Acesse o PDF através do link abaixo:")
+        print(
+            "Obrigado por utilizar o QualiDiagIQ. Seu relatório detalhado foi gerado com sucesso."
+        )
+        print("Acesse o PDF através do link abaixo:")
         print(f"🔗 {pdf_url}")
         print(f"{'='*50}\n")
-        
+
         logger.info(f"E-mail simulado enviado para {destinatario_email}")
-        
+
         return True

@@ -17,9 +17,12 @@ Analogia para o Allan:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from uuid import UUID
+from typing import TYPE_CHECKING
 
-from src.domain.entities.diagnostico import Diagnostico
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from src.domain.entities.diagnostico import Diagnostico
 
 
 class DiagnosticoRepository(ABC):
