@@ -27,9 +27,14 @@ import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/qu
 
 const TOTAL_STEPS = 3;
 
-const NORMA_WIZARD_ATIVO =
-  typeof process.env.NEXT_PUBLIC_WIZARD_NORMATIVA === "string" &&
-  process.env.NEXT_PUBLIC_WIZARD_NORMATIVA === "true";
+function normativaWizardPainelAtivo(): boolean {
+  /**
+   * Painel P8 (POST /normativa/validar-ancora).
+   * Colchetes em `process.env` evitam substituição estática no bundle em `next dev`
+   * quando o Playwright injeta `NEXT_PUBLIC_WIZARD_NORMATIVA` no subprocesso.
+   */
+  return process.env["NEXT_PUBLIC_WIZARD_NORMATIVA"] === "true";
+}
 
 export function WizardForm() {
   const router = useRouter();
@@ -565,8 +570,11 @@ export function WizardForm() {
 
                 {step === 3 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {NORMA_WIZARD_ATIVO && (
-                  <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
+                {normativaWizardPainelAtivo() && (
+                  <div
+                    data-testid="wizard-p8-normativa"
+                    className="rounded-lg border bg-muted/10 p-4 space-y-3"
+                  >
                     <p className="text-sm font-semibold text-foreground">
                       P8 — Protótipo: checagem leve de redação normativa (não é Lexiq / RAG completo)
                     </p>
@@ -640,6 +648,10 @@ export function WizardForm() {
                   >
                     Manifesto de pesos (JSON)
                   </a>
+                  {" · "}
+                  <Link href="/metodologia" className="text-primary underline font-medium">
+                    Metodologia (painel)
+                  </Link>
                   {" · "}
                   <a
                     href={`${getApiUrl().replace(/\/$/, "")}/diagnosticos/metodologia`}

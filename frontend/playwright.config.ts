@@ -7,6 +7,9 @@ const baseURL =
 
 const skipServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
 
+/** P8 — só specs que usam `test.describe.skip` quando ausente; servidor precisa do build-time flag. */
+const wizardNormativaE2E = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -26,5 +29,9 @@ export default defineConfig({
         url: baseURL,
         reuseExistingServer: false,
         timeout: 120_000,
+        env: {
+          ...process.env,
+          ...(wizardNormativaE2E ? { NEXT_PUBLIC_WIZARD_NORMATIVA: "true" } : {}),
+        },
       },
 });

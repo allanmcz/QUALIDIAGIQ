@@ -58,6 +58,9 @@ supabase/.temp/
 output/
 *.pdf
 
+# OpenAPI gerado localmente (regenerar com make openapi-export)
+docs/api/openapi.generated.json
+
 # Documentação e notas internas (não versionadas)
 _DEVELOPER/
 docs/

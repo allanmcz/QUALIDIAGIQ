@@ -16,4 +16,9 @@ test.describe("Smoke QDI", () => {
       page.getByRole("button", { name: /Entrar no Dashboard/i }),
     ).toBeVisible();
   });
+
+  test("/metodologia exibe título (API opcional no CI)", async ({ page }) => {
+    await page.goto("/metodologia");
+    await expect(page.getByRole("heading", { name: /Metodologia e manifesto de pesos/i })).toBeVisible();
+  });
 });

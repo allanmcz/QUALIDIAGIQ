@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend
+.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export
 
 PYTHON := python3.12
 VENV := .venv
@@ -52,6 +52,9 @@ qa-backend: ## Gate backend: ruff + mypy + pytest (equiv. Seção 5.1 do PLANO_C
 	$(VENV)/bin/ruff check src/ tests/
 	$(VENV)/bin/mypy src/
 	PYTHONPATH=. $(VENV)/bin/pytest
+
+openapi-export: ## Gera docs/api/openapi.generated.json a partir do schema FastAPI (gitignored)
+	PYTHONPATH=. $(VENV)/bin/python scripts/export_openapi_json.py
 
 clean: ## Limpa arquivos gerados
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

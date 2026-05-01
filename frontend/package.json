@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:wizard-normativa": "PLAYWRIGHT_WIZARD_NORMATIVA=1 playwright test e2e/wizard-normativa.spec.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
