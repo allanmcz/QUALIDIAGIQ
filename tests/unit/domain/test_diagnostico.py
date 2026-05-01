@@ -12,6 +12,7 @@ from src.domain.entities.diagnostico import (
     SetorMacro,
     StatusDiagnostico,
 )
+from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 
 
 class TestEmpresaInfo:
@@ -173,3 +174,36 @@ class TestDiagnostico:
             match=r"Só é possível anexar relatório a um diagnóstico finalizado",
         ):
             diag.anexar_relatorio(url)
+
+    def test_registrar_score_completo_define_hash_e_snapshot(
+        self, empresa_fixture, respondente_fixture
+    ):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(score_geral=70.0)
+        sc = ScoreCompleto(
+            score_geral=ScoreNumerico(valor=70.0, peso_total_aplicado=12.0),
+            score_por_dimensao={
+                Dimensao.FISCAL: ScoreNumerico(valor=70.0, peso_total_aplicado=12.0),
+            },
+        )
+        diag.registrar_score_completo_para_evidencia(sc)
+        assert diag.score_completo_snapshot is sc
+        assert diag.hash_evidencia is not None
+        assert len(diag.hash_evidencia) == 64
+
+    def test_registrar_evidencia_rejeita_se_nao_finalizado(
+        self, empresa_fixture, respondente_fixture
+    ):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        sc = ScoreCompleto(
+            score_geral=ScoreNumerico(valor=1.0, peso_total_aplicado=1.0),
+            score_por_dimensao={
+                Dimensao.FISCAL: ScoreNumerico(valor=1.0, peso_total_aplicado=1.0),
+            },
+        )
+        with pytest.raises(DiagnosticoNaoFinalizavelError):
+            diag.registrar_score_completo_para_evidencia(sc)

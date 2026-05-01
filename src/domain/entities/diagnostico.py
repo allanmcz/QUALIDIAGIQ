@@ -17,10 +17,16 @@ Analogia para o Allan:
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
+
+if TYPE_CHECKING:
+    from src.domain.value_objects.score import ScoreCompleto
 
 # ============================================================
 # Value Objects (importados do package value_objects)
@@ -132,6 +138,10 @@ class Diagnostico:
     finalizado_em: datetime | None = None
     score_geral: float | None = None  # 0-100, só preenchido após finalização
     relatorio_pdf_url: str | None = None
+    # Evidência auditável (persistência: hash_sha256, score_completo JSONB, versao_otimista)
+    score_completo_snapshot: ScoreCompleto | None = None
+    hash_evidencia: str | None = None  # SHA-256 hex (64 caracteres)
+    versao_otimista: int = 1
 
     def finalizar(self, score_geral: float) -> None:
         """
@@ -156,6 +166,32 @@ class Diagnostico:
         self.score_geral = score_geral
         self.status = StatusDiagnostico.FINALIZADO
         self.finalizado_em = datetime.now(UTC)
+
+    def registrar_score_completo_para_evidencia(self, score_completo: ScoreCompleto) -> None:
+        """
+        Congela o score completo e calcula hash de integridade para trilha de auditoria.
+
+        Deve ser chamado imediatamente após `finalizar`, antes da primeira persistência
+        definitiva (imutabilidade alinhada ao trigger WORM no PostgreSQL).
+        """
+        if self.status != StatusDiagnostico.FINALIZADO:
+            raise DiagnosticoNaoFinalizavelError(
+                "Score completo para evidência só pode ser registrado após finalização."
+            )
+        if self.score_geral is None:
+            raise ValueError("Score geral ausente — inconsistência de estado.")
+
+        self.score_completo_snapshot = score_completo
+        payload = {
+            "diagnostico_id": str(self.id),
+            "tenant_id": str(self.tenant_id),
+            "score_geral": self.score_geral,
+            "status": self.status.value,
+            "finalizado_em": self.finalizado_em.isoformat() if self.finalizado_em else None,
+            "score_completo": score_completo.para_dict_serializavel(),
+        }
+        canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        self.hash_evidencia = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def anexar_relatorio(self, url: str) -> None:
         """Anexa URL do PDF gerado (output principal do diagnóstico)."""

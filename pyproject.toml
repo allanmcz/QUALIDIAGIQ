@@ -88,6 +88,9 @@ asyncio_mode = "auto"
 addopts = "-vv --cov=src --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
+markers = [
+    "postgres: integração com PostgreSQL (QDI_POSTGRES_TEST_URL ou postgres@127.0.0.1:60322)",
+]
 
 [tool.coverage.run]
 source = ["src"]

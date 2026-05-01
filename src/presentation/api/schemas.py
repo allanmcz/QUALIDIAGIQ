@@ -100,6 +100,12 @@ class IniciarDiagnosticoRequest(BaseModel):
     plano: str = "gratuito"
 
 
+class PatchRelatorioPdfRequest(BaseModel):
+    """Corpo do PATCH que só altera a URL do relatório (lock otimista via If-Match)."""
+
+    relatorio_pdf_url: str = Field(..., min_length=1, max_length=4096)
+
+
 # =====================================================================
 # Response Schemas (Saída)
 # =====================================================================
@@ -125,5 +131,8 @@ class DiagnosticoResponse(BaseModel):
     recomendacao_ia: str | None = None
     checklist: list[dict[str, Any]] | None = None
     matriz_impacto: list[dict[str, Any]] | None = None
+    # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
+    hash_evidencia: str | None = None
+    versao_otimista: int | None = None
 
     model_config = ConfigDict(from_attributes=True)

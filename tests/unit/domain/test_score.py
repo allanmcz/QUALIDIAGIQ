@@ -144,3 +144,17 @@ class TestPercentilSetorial:
                 uf_referencia="MT",
                 n_amostra=0,
             )
+
+
+class TestScoreCompletoSerializacao:
+    def test_para_dict_e_desde_dict_preserva_dados(self):
+        sg = ScoreNumerico(valor=72.0, peso_total_aplicado=10.0, perguntas_consideradas=("Q-001",))
+        sn_fiscal = ScoreNumerico(valor=80.0, peso_total_aplicado=5.0)
+        original = ScoreCompleto(
+            score_geral=sg,
+            score_por_dimensao={Dimensao.FISCAL: sn_fiscal},
+        )
+        blob = original.para_dict_serializavel()
+        reconstruido = ScoreCompleto.desde_dict(blob)
+        assert reconstruido.score_geral.valor == original.score_geral.valor
+        assert reconstruido.score_por_dimensao[Dimensao.FISCAL].valor == 80.0

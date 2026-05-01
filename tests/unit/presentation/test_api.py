@@ -1,16 +1,59 @@
+import copy
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 
+from src.application.errors import ConflitoVersaoOtimistaError
+from src.domain.entities.diagnostico import (
+    Diagnostico,
+    EmpresaInfo,
+    PorteEmpresa,
+    RegimeTributario,
+    Respondente,
+    SetorMacro,
+)
 from src.presentation.api.dependencies import (
+    get_anexar_relatorio_otimista_use_case,
     get_current_user_tenant,
     get_realizar_diagnostico_use_case,
 )
 from src.presentation.api.main import app
+from src.presentation.api.routers.diagnostico_router import _parse_if_match_versao
 from tests.conftest import cabecalho_auth_bearer, cabecalho_post_diagnostico
 
 client = TestClient(app)
+
+
+def _diag_finalizado_micro() -> Diagnostico:
+    empresa = EmpresaInfo(
+        cnpj="12345678000199",
+        razao_social="API PATCH LTDA",
+        porte=PorteEmpresa.MICRO,
+        regime=RegimeTributario.SIMPLES_NACIONAL,
+        cnae_principal="1234567",
+        uf="SP",
+        setor_macro=SetorMacro.COMERCIO,
+    )
+    d = Diagnostico(
+        tenant_id=uuid.uuid4(),
+        empresa=empresa,
+        respondente=Respondente(email="patch@teste.com"),
+    )
+    d.finalizar(62.0)
+    return d
+
+
+def test_parse_if_match_versao_variants():
+    assert _parse_if_match_versao("1") == 1
+    assert _parse_if_match_versao('"4"') == 4
+    assert _parse_if_match_versao('W/"2"') == 2
+
+
+def test_parse_if_match_versao_erro():
+    with pytest.raises(ValueError):
+        _parse_if_match_versao(None)
 
 
 def test_healthcheck():
@@ -68,6 +111,8 @@ def test_criar_diagnostico_com_sucesso():
     mock_resultado.recomendacao_ia = None
     mock_resultado.checklist = None
     mock_resultado.matriz_impacto = None
+    mock_resultado.diagnostico.hash_evidencia = "a" * 64
+    mock_resultado.diagnostico.versao_otimista = 1
 
     mock_use_case.execute.return_value = mock_resultado
 
@@ -99,6 +144,8 @@ def test_criar_diagnostico_com_sucesso():
     data = response.json()
     assert data["status"] == "finalizado"
     assert data["score"]["score_geral"]["valor"] == 100.0
+    assert data["hash_evidencia"] == "a" * 64
+    assert data["versao_otimista"] == 1
 
 
 def test_criar_diagnostico_com_token_invalido():
@@ -154,6 +201,81 @@ def test_obter_diagnostico_com_sucesso():
     data = response.json()
     assert data["id"] == str(diagnostico_id)
     assert data["empresa_razao_social"] == "Empresa GET LTDA"
+
+
+def test_patch_relatorio_sem_if_match_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}",
+        json={"relatorio_pdf_url": "https://x/p.pdf"},
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "If-Match" in response.json()["detail"]
+    mock_uc.execute.assert_not_called()
+
+
+def test_patch_relatorio_conflito_412():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ConflitoVersaoOtimistaError("versão 1 obsoleta")
+    app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}",
+        json={"relatorio_pdf_url": "https://x/p.pdf"},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": "1",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 412
+
+
+def test_patch_relatorio_sucesso():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_in = _diag_finalizado_micro()
+    d_in.tenant_id = tid
+    d_out = copy.deepcopy(d_in)
+    d_out.anexar_relatorio("https://storage/rel.pdf")
+    d_out.versao_otimista = 2
+
+    mock_uc = AsyncMock()
+    mock_uc.execute.return_value = d_out
+
+    app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    response = client.patch(
+        f"/diagnosticos/{d_in.id}",
+        json={"relatorio_pdf_url": "https://storage/rel.pdf"},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["relatorio_pdf_url"] == "https://storage/rel.pdf"
+    assert body["versao_otimista"] == 2
 
 
 def test_obter_diagnostico_nao_encontrado():

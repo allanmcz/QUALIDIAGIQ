@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 
 class Dimensao(Enum):
@@ -110,6 +111,66 @@ class ScoreCompleto:
     def __post_init__(self) -> None:
         if len(self.score_por_dimensao) == 0:
             raise ValueError("ScoreCompleto deve conter ao menos uma dimensão avaliada.")
+
+    def para_dict_serializavel(self) -> dict[str, Any]:
+        """Representação estável para JSONB (auditoria / hash de evidência)."""
+
+        def _sn(sn: ScoreNumerico) -> dict[str, Any]:
+            return {
+                "valor": sn.valor,
+                "peso_total_aplicado": sn.peso_total_aplicado,
+                "perguntas_consideradas": list(sn.perguntas_consideradas),
+            }
+
+        dims: dict[str, Any] = {dim.value: _sn(sn) for dim, sn in self.score_por_dimensao.items()}
+        out: dict[str, Any] = {
+            "score_geral": _sn(self.score_geral),
+            "score_por_dimensao": dims,
+        }
+        if self.score_relativo_setor is not None:
+            sr = self.score_relativo_setor
+            out["score_relativo_setor"] = {
+                "percentil": sr.percentil,
+                "setor_referencia": sr.setor_referencia,
+                "porte_referencia": sr.porte_referencia,
+                "uf_referencia": sr.uf_referencia,
+                "n_amostra": sr.n_amostra,
+            }
+        return out
+
+    @classmethod
+    def desde_dict(cls, data: dict[str, Any]) -> ScoreCompleto:
+        """Reidrata a partir do dict persistido em JSONB."""
+
+        def _sn(raw: dict[str, Any]) -> ScoreNumerico:
+            return ScoreNumerico(
+                valor=float(raw["valor"]),
+                peso_total_aplicado=float(raw["peso_total_aplicado"]),
+                perguntas_consideradas=tuple(str(x) for x in raw.get("perguntas_consideradas", [])),
+            )
+
+        sg_raw = data["score_geral"]
+        dims_raw: dict[str, Any] = data["score_por_dimensao"]
+        por_dim: dict[Dimensao, ScoreNumerico] = {}
+        for k, v in dims_raw.items():
+            por_dim[Dimensao(k)] = _sn(v)
+
+        rel: PercentilSetorial | None = None
+        if data.get("score_relativo_setor"):
+            sr = data["score_relativo_setor"]
+            rel = PercentilSetorial(
+                percentil=int(sr["percentil"]),
+                setor_referencia=str(sr["setor_referencia"]),
+                porte_referencia=str(sr["porte_referencia"]),
+                uf_referencia=sr.get("uf_referencia"),
+                n_amostra=int(sr["n_amostra"]),
+            )
+
+        return cls(
+            score_geral=_sn(sg_raw),
+            score_por_dimensao=por_dim,
+            score_relativo_setor=rel,
+        )
 
 
 @dataclass(frozen=True, slots=True)

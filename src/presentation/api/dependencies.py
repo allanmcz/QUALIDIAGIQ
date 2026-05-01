@@ -15,6 +15,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
+from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
@@ -89,6 +90,13 @@ def get_diagnostico_repository(
 ) -> SupabaseDiagnosticoRepository:
     """Injeta a implementação concreta do Repositório."""
     return SupabaseDiagnosticoRepository(client=client)
+
+
+def get_anexar_relatorio_otimista_use_case(
+    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> AnexarRelatorioOtimista:
+    """PATCH de relatório com versão otimista."""
+    return AnexarRelatorioOtimista(repo=repo)
 
 
 def get_calcular_score_use_case() -> CalcularScoreUseCase:

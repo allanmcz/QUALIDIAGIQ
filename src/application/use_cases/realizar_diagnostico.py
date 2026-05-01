@@ -107,6 +107,7 @@ class RealizarDiagnostico:
 
         # 3. Finaliza o diagnóstico injetando o score geral consolidado
         diagnostico.finalizar(score_geral=score_completo.score_geral.valor)
+        diagnostico.registrar_score_completo_para_evidencia(score_completo)
 
         # 4. Geração de Recomendações por IA (LLM) liberada temporariamente para todos
         recomendacao_ia = None

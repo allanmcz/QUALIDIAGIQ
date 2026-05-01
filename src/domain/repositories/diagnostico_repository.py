@@ -53,3 +53,19 @@ class DiagnosticoRepository(ABC):
     ) -> list[Diagnostico]:
         """Lista diagnósticos de um tenant, paginado."""
         ...
+
+    @abstractmethod
+    async def atualizar_relatorio_pdf_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        relatorio_pdf_url: str,
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        """
+        Atualiza apenas a URL do PDF com lock otimista (`versao_otimista`).
+
+        Retorna:
+            Diagnóstico atualizado se uma linha foi afetada; None se a versão não coincidir.
+        """
+        ...

@@ -109,6 +109,9 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
     assert "id" in data
     assert data["status"] == "finalizado"
     assert data["empresa_razao_social"] == "Empresa E2E SA"
+    assert data.get("hash_evidencia") is not None
+    assert len(data["hash_evidencia"]) == 64
+    assert data.get("versao_otimista") == 1
 
     # 2. Valida URL do PDF (resultado do MockStorageService)
     assert data["relatorio_pdf_url"] is not None
@@ -127,3 +130,5 @@ async def test_fluxo_completo_diagnostico(e2e_client, mock_dependencies):
     get_data = get_response.json()
     assert get_data["id"] == diagnostico_id
     assert get_data["empresa_razao_social"] == "Empresa E2E SA"
+    assert get_data.get("hash_evidencia") == data["hash_evidencia"]
+    assert get_data.get("versao_otimista") == 1

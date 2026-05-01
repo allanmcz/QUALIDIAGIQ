@@ -8,19 +8,25 @@ Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 
+from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
+from src.application.use_cases.anexar_relatorio_otimista import (
+    AnexarRelatorioOtimista,
+    ComandoAnexarRelatorioOtimista,
+)
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
     RealizarDiagnostico,
 )
-from src.domain.entities.diagnostico import EmpresaInfo, Respondente
+from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
 from src.domain.entities.questionario import Pergunta, Resposta, TipoPergunta
-from src.domain.value_objects.score import Dimensao
+from src.domain.value_objects.score import Dimensao, ScoreCompleto
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
 from src.presentation.api.dependencies import (
+    get_anexar_relatorio_otimista_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
     get_realizar_diagnostico_use_case,
@@ -28,11 +34,92 @@ from src.presentation.api.dependencies import (
 from src.presentation.api.schemas import (
     DiagnosticoResponse,
     IniciarDiagnosticoRequest,
+    PatchRelatorioPdfRequest,
     ScoreCompletoSchema,
     ScoreDimensaoSchema,
 )
 
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
+
+
+def _campos_auditoria_http(entity: object) -> tuple[str | None, int | None]:
+    """Extrai hash/versão apenas se tipos forem válidos (evita MagicMock nos testes unitários)."""
+    raw_h = getattr(entity, "hash_evidencia", None)
+    hash_out: str | None = raw_h if isinstance(raw_h, str) else None
+    raw_v = getattr(entity, "versao_otimista", None)
+    versao_out: int | None = raw_v if isinstance(raw_v, int) else None
+    return hash_out, versao_out
+
+
+def _parse_if_match_versao(raw: str | None) -> int:
+    """
+    Interpreta If-Match como inteiro (versao_otimista).
+
+    Aceita formas comuns: `3`, `"3"`, `W/"3"` (usa apenas o primeiro valor se houver lista).
+    """
+    if raw is None or not str(raw).strip():
+        raise ValueError(
+            "Header If-Match obrigatório com a versão otimista atual (ex.: 1 ou \"1\")."
+        )
+    s = str(raw).strip()
+    if "," in s:
+        s = s.split(",", 1)[0].strip()
+    if s.upper().startswith("W/"):
+        s = s[2:].strip()
+    if len(s) >= 2 and s[0] == '"' and s[-1] == '"':
+        s = s[1:-1]
+    try:
+        v = int(s)
+    except ValueError as e:
+        raise ValueError("If-Match deve ser um inteiro (versão otimista).") from e
+    if v < 1:
+        raise ValueError("Versão otimista inválida.")
+    return v
+
+
+def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoResponse:
+    """Monta o payload HTTP canônico (checklist/matriz derivados do domínio)."""
+    from dataclasses import asdict
+
+    from src.application.services.consultoria_service import ConsultoriaService
+
+    checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
+    matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+    checklist_data = [asdict(f) for f in checklist_entities]
+    matriz_data = [asdict(m) for m in matriz_entities]
+    h_aud, v_aud = _campos_auditoria_http(diagnostico)
+    return DiagnosticoResponse(
+        id=diagnostico.id,
+        status=diagnostico.status.value,
+        plano=diagnostico.plano.value,
+        empresa_razao_social=diagnostico.empresa.razao_social,
+        score=_score_completo_para_http(diagnostico),
+        relatorio_pdf_url=diagnostico.relatorio_pdf_url,
+        recomendacao_ia=None,
+        checklist=checklist_data,
+        matriz_impacto=matriz_data,
+        hash_evidencia=h_aud,
+        versao_otimista=v_aud,
+    )
+
+
+def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema | None:
+    """Monta o schema HTTP a partir do snapshot persistido (JSONB), se existir."""
+    snap = getattr(diagnostico, "score_completo_snapshot", None)
+    if snap is None or not isinstance(snap, ScoreCompleto):
+        return None
+    return ScoreCompletoSchema(
+        score_geral=ScoreDimensaoSchema(
+            valor=snap.score_geral.valor,
+            peso_total_aplicado=snap.score_geral.peso_total_aplicado,
+        ),
+        score_por_dimensao={
+            dim.value: ScoreDimensaoSchema(
+                valor=sn.valor, peso_total_aplicado=sn.peso_total_aplicado
+            )
+            for dim, sn in snap.score_por_dimensao.items()
+        },
+    )
 
 
 def _get_banco_perguntas() -> list[Pergunta]:
@@ -150,16 +237,20 @@ async def criar_diagnostico(
         score_por_dimensao=score_por_dimensao_schema,
     )
 
+    d = resultado.diagnostico
+    h_aud, v_aud = _campos_auditoria_http(d)
     return DiagnosticoResponse(
-        id=resultado.diagnostico.id,
-        status=resultado.diagnostico.status.value,
-        plano=resultado.diagnostico.plano.value,
-        empresa_razao_social=resultado.diagnostico.empresa.razao_social,
+        id=d.id,
+        status=d.status.value,
+        plano=d.plano.value,
+        empresa_razao_social=d.empresa.razao_social,
         score=score_completo_schema,
         relatorio_pdf_url=resultado.relatorio_pdf_url,
         recomendacao_ia=resultado.recomendacao_ia,
         checklist=resultado.checklist,
         matriz_impacto=resultado.matriz_impacto,
+        hash_evidencia=h_aud,
+        versao_otimista=v_aud,
     )
 
 
@@ -196,28 +287,47 @@ async def obter_diagnostico(
     if not diagnostico:
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
 
-    # Obs: Como o Repositório do MVP (Supabase) ainda só salva score_geral numérico
-    # e não o ScoreCompleto expandido, a serialização de GET devolverá o score parcial ou nulo.
-    checklist_data = None
-    matriz_data = None
+    return _montar_diagnostico_response(diagnostico)
 
-    from dataclasses import asdict
 
-    from src.application.services.consultoria_service import ConsultoriaService
+@router.patch("/{diagnostico_id}", response_model=DiagnosticoResponse)
+async def atualizar_relatorio_pdf(
+    diagnostico_id: UUID,
+    payload: PatchRelatorioPdfRequest,
+    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AnexarRelatorioOtimista,
+        Depends(get_anexar_relatorio_otimista_use_case),
+    ],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> DiagnosticoResponse:
+    """
+    Atualiza apenas `relatorio_pdf_url` em diagnóstico **finalizado**.
 
-    checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
-    matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
-    checklist_data = [asdict(f) for f in checklist_entities]
-    matriz_data = [asdict(m) for m in matriz_entities]
+    Exige `If-Match` com a `versao_otimista` retornada no GET (lock otimista).
+    """
+    _, tenant_id = current
+    try:
+        versao = _parse_if_match_versao(if_match)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return DiagnosticoResponse(
-        id=diagnostico.id,
-        status=diagnostico.status.value,
-        plano=diagnostico.plano.value,
-        empresa_razao_social=diagnostico.empresa.razao_social,
-        score=None,  # Para o MVP da Sprint 1 o GET retorna apenas metadados
-        relatorio_pdf_url=diagnostico.relatorio_pdf_url,
-        recomendacao_ia=None,  # IA não persistida no db do MVP ainda
-        checklist=checklist_data,
-        matriz_impacto=matriz_data,
+    comando = ComandoAnexarRelatorioOtimista(
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        relatorio_pdf_url=payload.relatorio_pdf_url,
+        versao_esperada=versao,
     )
+    try:
+        atualizado = await use_case.execute(comando)
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except ConflitoVersaoOtimistaError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail=str(e),
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return _montar_diagnostico_response(atualizado)
