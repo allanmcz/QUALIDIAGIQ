@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 try:
-    from src.infrastructure.pdf.generator import WeasyPrintPdfGenerator
+    from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 
     HAS_WEASYPRINT_DEPS = True
 except OSError:

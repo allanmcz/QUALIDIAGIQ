@@ -189,13 +189,22 @@ class ManifestoPesosResponse(BaseModel):
 
 
 class ValidarAncoraNormativaRequest(BaseModel):
-    """Corpo do protótipo Lexiq / guardrail (S02 mínimo)."""
+    """
+    Texto livre para heurística MVP (plano ANALISE §E1).
+
+    Aviso: validação léxica simples (`LC`, `NT`, referências tipo EC/ABNT) — não garante suficiência
+    jurídica nem acoplamento Lexiq oficial (base RAG Tributiq).
+    """
 
     texto: str = Field(..., min_length=1, max_length=50_000)
 
 
 class ValidarAncoraNormativaResponse(BaseModel):
-    """Resultado da verificação heurística de citação normativa."""
+    """
+    Saída heurística — apenas indica reconhecimento de padrões esperados pela API.
+
+    Não usar como evidência jurídico-contábil autônoma (ABNT NBR 17301:2026: decisão segue ciclo corporativo formal).
+    """
 
     valido: bool
     motivo_rejeicao: str | None = None

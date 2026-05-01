@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test lint format type-check clean migrate frontend-init
+.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init
 
 PYTHON := python3.12
 VENV := .venv
@@ -61,6 +61,17 @@ migrate: ## Aplica SQL em src/infrastructure/db/migrations na instância docker 
 	  docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$$f"; \
 	done
 	@echo "✅ Migrações aplicadas."
+
+ci-integration: ## Espelho local do CI: migra Postgres + pytest integration (analise ANALISE §B)
+	@if ! command -v psql >/dev/null 2>&1; then echo "Instale postgresql-client (psql)."; exit 1; fi
+	@if [ -z "$$POSTGRES_CI_URL" ]; then \
+	  echo "Defina POSTGRES_CI_URL, ex.: postgresql://postgres:postgres@127.0.0.1:60322/postgres"; exit 1; \
+	fi
+	@set -e; for f in $$(ls src/infrastructure/db/migrations/*.sql | sort); do \
+	  echo "ci-integration migrate: $$f"; \
+	  psql "$$POSTGRES_CI_URL" -v ON_ERROR_STOP=1 -f "$$f"; \
+	done
+	QDI_POSTGRES_TEST_URL=$$POSTGRES_CI_URL PYTHONPATH=. $(VENV)/bin/pytest tests/integration/
 
 frontend-init: ## Inicializa o frontend Next.js (executar uma vez)
 	cd frontend && npx create-next-app@14 . --ts --tailwind --app --eslint --no-src-dir

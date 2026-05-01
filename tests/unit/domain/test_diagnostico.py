@@ -207,3 +207,20 @@ class TestDiagnostico:
         )
         with pytest.raises(DiagnosticoNaoFinalizavelError):
             diag.registrar_score_completo_para_evidencia(sc)
+
+    def test_finalizar_e_registrar_evidencia_em_ordem(self, empresa_fixture, respondente_fixture):
+        """Fluxo único domínio: finalização + snapshot (plano execução 11 — R8)."""
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        sc = ScoreCompleto(
+            score_geral=ScoreNumerico(valor=72.0, peso_total_aplicado=10.0),
+            score_por_dimensao={
+                Dimensao.FISCAL: ScoreNumerico(valor=72.0, peso_total_aplicado=10.0),
+            },
+        )
+        diag.finalizar_e_registrar_evidencia(sc)
+        assert diag.status == StatusDiagnostico.FINALIZADO
+        assert diag.score_geral == 72.0
+        assert diag.score_completo_snapshot is sc
+        assert diag.hash_evidencia is not None

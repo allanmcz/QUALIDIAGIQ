@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tributiq.local/qdi/perguntas_mvp.schema.json",
+  "title": "Catalogo perguntas QDI MVP (JSON arquivo)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["versao_catalogo", "namespace_uuid", "perguntas"],
+  "properties": {
+    "versao_catalogo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deve bater com `versao_catalogo_lida` no código quando alterar o arquivo."
+    },
+    "namespace_uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "perguntas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/pergunta"
+      }
+    }
+  },
+  "$defs": {
+    "condicao": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "regimes_permitidos": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "setores_permitidos": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "setores_excluidos": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "portes_permitidos": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "pergunta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "codigo", "dimensao", "texto", "peso", "tipo", "condicao"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "codigo": {
+          "type": "string",
+          "pattern": "^Q-[A-Za-z0-9]+-\\d{3}$"
+        },
+        "dimensao": {
+          "type": "string",
+          "enum": [
+            "estrategica",
+            "contabil",
+            "financeira",
+            "operacional",
+            "tecnologica",
+            "compliance_abnt_17301",
+            "fiscal"
+          ]
+        },
+        "texto": { "type": "string", "minLength": 1 },
+        "peso": { "type": "number", "minimum": 0 },
+        "tipo": {
+          "type": "string",
+          "enum": ["ternaria", "binaria", "escala_1_5", "multipla_escolha", "checklist", "numerica"]
+        },
+        "base_legal": { "type": ["string", "null"] },
+        "condicao": { "$ref": "#/$defs/condicao" },
+        "multipla_total": { "type": ["integer", "null"], "minimum": 0 },
+        "opcoes": {
+          "type": ["array", "null"],
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

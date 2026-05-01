@@ -568,12 +568,13 @@ export function WizardForm() {
                 {NORMA_WIZARD_ATIVO && (
                   <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
                     <p className="text-sm font-semibold text-foreground">
-                      P8 — Checagem rápida de âncora normativa (Lexiq / guardrail)
+                      P8 — Protótipo: checagem leve de redação normativa (não é Lexiq / RAG completo)
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Cole um trecho de justificativa; o motor verifica se há referência reconhecível
-                      (ex.: LC 214/2025, EC 132/2023). Endpoint público:{" "}
-                      <span className="font-mono">POST /normativa/validar-ancora</span>.
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Ferramenta didática apenas: heurísticas simples sobre citações (ex.: LC 214/2025, EC 132/2023).
+                      Não gera parecer jurídico, não substitui análise profissional e não garante suficiência
+                      perante auditorias formais (LC 214/2025 — boa fé informacional ao contribuinte). Endpoint{" "}
+                      <span className="font-mono">POST /normativa/validar-ancora</span> sem login.
                     </p>
                     <textarea
                       value={normaTexto}

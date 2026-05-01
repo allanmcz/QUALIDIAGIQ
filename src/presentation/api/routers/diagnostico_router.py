@@ -20,10 +20,10 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
 )
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
+    EntradaRespostaDiagnostico,
     RealizarDiagnostico,
 )
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
-from src.domain.entities.questionario import Resposta
 from src.domain.value_objects.score import ScoreCompleto, pesos_macro_dimensao_para_dict_iso
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
@@ -202,37 +202,23 @@ async def criar_diagnostico(
     banco = get_banco_perguntas_cached()
     mapa_perguntas = {p.id: p for p in banco}
 
-    respostas_domain = []
-    perguntas_aplicadas = []
-
+    entradas_resposta: list[EntradaRespostaDiagnostico] = []
     for resp_payload in payload.respostas:
         pergunta = mapa_perguntas.get(resp_payload.pergunta_id)
         if not pergunta:
             raise HTTPException(
                 status_code=400, detail=f"Pergunta não encontrada: {resp_payload.pergunta_id}"
             )
-
-        # O diagnóstico ID real será instanciado dentro do UseCase,
-        # mas a Resposta precisa de um. Vamos usar um dummy por enquanto ou o UseCase refatora.
-        from uuid import uuid4
-
-        respostas_domain.append(
-            Resposta(
-                diagnostico_id=uuid4(),  # Será ignorado pelo cálculo puro
-                pergunta_id=pergunta.id,
-                pergunta_tipo=pergunta.tipo,
-                valor_bruto=resp_payload.valor,
-            )
+        entradas_resposta.append(
+            EntradaRespostaDiagnostico(pergunta=pergunta, valor_bruto=resp_payload.valor)
         )
-        perguntas_aplicadas.append(pergunta)
 
-    # 3. Montar Comando
+    # 3. Montar comando (UUID do diagnóstico aplicado apenas no use case, sobre entidade criada lá)
     comando = ComandoRealizarDiagnostico(
         tenant_id=tenant_id,
         empresa=empresa_domain,
         respondente=respondente_domain,
-        respostas=respostas_domain,
-        perguntas_aplicadas=perguntas_aplicadas,
+        entradas_resposta=entradas_resposta,
         plano=payload.plano,
     )
 

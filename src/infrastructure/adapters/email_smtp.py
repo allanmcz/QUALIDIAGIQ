@@ -1,3 +1,10 @@
+"""
+Adapter SMTP único para o QDI — envio real de relatório.
+
+Plano ANALISE 11 — Fase A3: não manter mocks SMTP duplicados no repositório; testes/e2e
+usam stubs locais onde necessário.
+"""
+
 import asyncio
 import os
 import smtplib
@@ -7,9 +14,7 @@ from src.application.ports.email_service import EmailServicePort
 
 
 class SmtpEmailAdapter(EmailServicePort):
-    """
-    Implementação concreta do serviço de e-mail via SMTP padrão.
-    """
+    """Implementação concreta do serviço de e-mail via SMTP padrão."""
 
     def __init__(self) -> None:
         # Configurações podem vir do ambiente, com fallbacks simulados para MVP

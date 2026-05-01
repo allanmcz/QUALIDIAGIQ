@@ -28,12 +28,6 @@ from uuid import UUID, uuid4
 if TYPE_CHECKING:
     from src.domain.value_objects.score import ScoreCompleto
 
-# ============================================================
-# Value Objects (importados do package value_objects)
-# ============================================================
-# Em produção: from src.domain.value_objects.score import ScoreCompleto
-# (deixado como TYPE_CHECKING para o stub não falhar)
-
 
 class StatusDiagnostico(Enum):
     """Estados possíveis de um diagnóstico ao longo do ciclo de vida."""
@@ -193,6 +187,16 @@ class Diagnostico:
         }
         canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
         self.hash_evidencia = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    def finalizar_e_registrar_evidencia(self, score_completo: ScoreCompleto) -> None:
+        """
+        Fluxo atômico de domínio: finalizar com o score geral do snapshot e registrar evidência.
+
+        Garante ordenação correta antes da persistência WORM (PostgreSQL) e alinhamento ao
+        ciclo de rastreabilidade (ABNT NBR 17301:2026 — governança do compliance tributário).
+        """
+        self.finalizar(score_geral=score_completo.score_geral.valor)
+        self.registrar_score_completo_para_evidencia(score_completo)
 
     def anexar_relatorio(self, url: str) -> None:
         """Anexa URL do PDF gerado (output principal do diagnóstico)."""

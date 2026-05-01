@@ -20,6 +20,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from src.domain.entities.diagnostico import (
+    Diagnostico,
+    EmpresaInfo,
+    PlanoDiagnostico,
+    Respondente,
+)
+from src.domain.entities.questionario import Pergunta, Resposta
+
 if TYPE_CHECKING:
     from uuid import UUID
 
@@ -28,16 +36,16 @@ if TYPE_CHECKING:
     from src.application.ports.pdf_generator import PdfGeneratorPort
     from src.application.ports.storage_service import StorageServicePort
     from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
-    from src.domain.entities.questionario import Pergunta, Resposta
     from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
     from src.domain.value_objects.score import ScoreCompleto
 
-from src.domain.entities.diagnostico import (
-    Diagnostico,
-    EmpresaInfo,
-    PlanoDiagnostico,
-    Respondente,
-)
+
+@dataclass(frozen=True)
+class EntradaRespostaDiagnostico:
+    """Par pergunta aplicada + valor bruto — `diagnostico_id` preenchido dentro do use case."""
+
+    pergunta: Pergunta
+    valor_bruto: str | int | list[str]
 
 
 @dataclass(frozen=True)
@@ -47,8 +55,7 @@ class ComandoRealizarDiagnostico:
     tenant_id: UUID
     empresa: EmpresaInfo
     respondente: Respondente
-    respostas: list[Resposta]
-    perguntas_aplicadas: list[Pergunta]
+    entradas_resposta: list[EntradaRespostaDiagnostico]
     plano: str = "gratuito"
 
 
@@ -101,14 +108,24 @@ class RealizarDiagnostico:
             plano=plano_enum,
         )
 
+        perguntas_aplicadas = [e.pergunta for e in comando.entradas_resposta]
+        respostas = [
+            Resposta(
+                diagnostico_id=diagnostico.id,
+                pergunta_id=e.pergunta.id,
+                pergunta_tipo=e.pergunta.tipo,
+                valor_bruto=e.valor_bruto,
+            )
+            for e in comando.entradas_resposta
+        ]
+
         # 2. Calcula o Score usando o motor matemático determinístico
         score_completo = self.calcular_score_use_case.execute(
-            perguntas=comando.perguntas_aplicadas, respostas=comando.respostas
+            perguntas=perguntas_aplicadas, respostas=respostas
         )
 
-        # 3. Finaliza o diagnóstico injetando o score geral consolidado
-        diagnostico.finalizar(score_geral=score_completo.score_geral.valor)
-        diagnostico.registrar_score_completo_para_evidencia(score_completo)
+        # 3. Finaliza e congela evidência em ordem de domínio (hash + snapshot)
+        diagnostico.finalizar_e_registrar_evidencia(score_completo)
 
         # 4. Geração de Recomendações por IA (LLM) liberada temporariamente para todos
         recomendacao_ia = None

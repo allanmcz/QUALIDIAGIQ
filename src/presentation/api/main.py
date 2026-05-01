@@ -68,7 +68,11 @@ def create_app() -> FastAPI:
         },
         {
             "name": "Lexiq / guardrails",
-            "description": "Validação mínima de âncoras normativas (protótipo S02).",
+            "description": (
+                "Protótipo (heurístico) de checagem de âncoras normativas na redação — não é RAG Lexiq "
+                "completo nem parecer jurídico consultivo (LC 214/2025 — boa fé informacional). "
+                "Ver ADR UX no repositório .github quando integrar baseline Lexiq oficial."
+            ),
         },
     ]
 

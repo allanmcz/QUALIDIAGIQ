@@ -1,5 +1,8 @@
 """
-Rotas auxiliares de normativo / guardrail Lexiq (protótipo).
+Rotas auxiliares de normativo — protótipo de âncoras (análise ANALISE §E1/E2).
+
+Não equivale ao motor Lexiq com RAG e citação a fontes versionadas (princípio tributiq roadmap).
+Para disclosure ao usuario final usar os mesmos avisos do OpenAPI schemas + front wizard.
 
 Camada: Presentation
 """
@@ -29,9 +32,10 @@ async def validar_ancora_normativa(
     ],
 ) -> ValidarAncoraNormativaResponse:
     """
-    Verifica se o texto contém âncora normativa reconhecível (heurística MVP).
+    Checagem heurística apenas (padrões tipo LC / EC / ABNT em texto corrido).
 
-    Base: princípio Tributiq — sem citação válida da Lexiq em fluxos futuros, resposta é rejeitada.
+    Disclaimer: não avalia suficiência legal nem substitui análise profissional; fluxos Lexiq formais futuros
+    rejeitarão lacunas segundo política tributiq configurada (LC 214/2025 — transparência contribuinte).
     """
     ok = texto_tem_ancora_normativa(payload.texto)
     return ValidarAncoraNormativaResponse(
