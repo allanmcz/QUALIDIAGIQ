@@ -57,7 +57,10 @@ supabase/.temp/
 # Outputs
 output/
 *.pdf
-!docs/*.pdf
+
+# Documentação e notas internas (não versionadas)
+_DEVELOPER/
+docs/
 
 # Cursor IDE caches
 .cursor/cache/
