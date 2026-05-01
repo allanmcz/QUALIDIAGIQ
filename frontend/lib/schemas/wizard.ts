@@ -23,6 +23,37 @@ function validaCNPJ(cnpj: string): boolean {
   return calc(t) === d1 && calc(t + 1) === d2;
 }
 
+/** UFs brasileiras (mesmo conjunto validado na API). */
+export const UFS_BR = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+] as const;
+
 export const EmpresaSchema = z.object({
   cnpj: z
     .string()
@@ -41,7 +72,7 @@ export const EmpresaSchema = z.object({
     .min(7, "CNAE deve conter 7 dígitos numéricos")
     .max(7)
     .regex(/^\d+$/, "CNAE apenas números"),
-  uf: z.string().length(2, "Selecione um Estado"),
+  uf: z.enum(UFS_BR, { errorMap: () => ({ message: "Selecione um Estado (UF)" }) }),
   setor_macro: z.enum(["comercio", "industria", "servicos", "agro", "consumo"], {
     errorMap: () => ({ message: "Selecione o setor de atuação" }),
   }),
@@ -54,13 +85,17 @@ export const RespondenteSchema = z.object({
 
 export const RespostaSchema = z.object({
   pergunta_id: z.string().uuid(),
-  valor: z.union([z.string(), z.number()]),
+  valor: z.union([z.string(), z.number(), z.array(z.string())]),
 });
 
 export const DiagnosticoPayloadSchema = z.object({
   empresa: EmpresaSchema,
   respondente: RespondenteSchema,
-  respostas: z.array(RespostaSchema),
+  respostas: z.array(RespostaSchema).min(1, "Responda ao questionário carregado"),
+  /** LGPD — consentimento para tratamento dos dados informados (MVP). */
+  aceite_termos_privacidade: z.boolean().refine((v) => v === true, {
+    message: "É necessário aceitar o tratamento dos dados conforme a política de privacidade.",
+  }),
 });
 
 export type DiagnosticoPayload = z.infer<typeof DiagnosticoPayloadSchema>;

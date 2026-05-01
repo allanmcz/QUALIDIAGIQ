@@ -104,7 +104,7 @@ O login MVP em `frontend/app/login/page.tsx` hoje aponta para `http://127.0.0.1:
 - **GET `/diagnosticos/{id}`** — isolamento por tenant via repositório.  
 - **PATCH `/diagnosticos/{id}`** — anexa URL de PDF com **If-Match** (versão otimista).  
 - **GET `/diagnosticos/metodologia`** — pesos por dimensão (transparência parcial).  
-- **GET `/diagnosticos/questionario`** — query params de perfil (`cnpj`, `razao_social`, `porte`, `regime`, `cnae_principal`, `uf`, `setor_macro`) + JWT; resposta com `versao_catalogo`, lista filtrada por `GerarQuestionarioAdaptativoUseCase`.  
+- **GET `/diagnosticos/questionario`** — query params de perfil (`cnpj`, `razao_social`, `porte`, `regime`, `cnae_principal`, `uf`, `setor_macro`); **sem JWT** (endpoint público). Resposta com `versao_catalogo`, lista filtrada por `GerarQuestionarioAdaptativoUseCase`.  
 - **POST `/auth/login`** — fluxo MVP para token (validar alinhamento com seed de admin).  
 - **GET `/health`**
 
@@ -147,13 +147,13 @@ Legenda: **OK** = atende o espírito da feature no código atual; **PARCIAL**; *
 | **M03** | Pesos transparentes + ponderação | **PARCIAL** | `/metodologia` e PRD; falta **manifesto público** único (peso por pergunta exportado / OpenAPI rico / página legal). |
 | **M04** | PDF executivo (1p exec + 6p técnicas) | **PARCIAL** | WeasyPrint gera PDF; estrutura **não** validada como 1+6 páginas nem “executivo” vs técnico; revisão contador **pendente**. |
 | **M05** | Heatmap + radar + ranking gaps | **NÃO** | `ConsultoriaService` gera checklist/matriz **textuais**; sem visualizações acordadas no front (Recharts instalável mas não fechado). |
-| **M06** | Cronograma 5 fases temporais | **NÃO** | Prazos genéricos em checklist; sem modelo explícito curto/médio/longo/36–60m/60–96m na UI/PDF. |
-| **M07** | Recomendações priorizadas (determinísticas) | **PARCIAL** | Regras por porte/regime em checklist/matriz; falta **priorização** explícita, scoring de ações, ligação forte com gaps das respostas. |
-| **M08** | Ancoragem legal por bullet | **PARCIAL** | Perguntas têm `base_legal` no JSON; checklist/matriz **não** repete citação dispositivo a dispositivo em cada bullet. |
+| **M06** | Cronograma 5 fases temporais | **PARCIAL** | `ConsultoriaService.gerar_cronograma_cinco_fases()` + PDF + campo `cronograma` no `DiagnosticoResponse`; UI dashboard ainda sem timeline dedicada. |
+| **M07** | Recomendações priorizadas (determinísticas) | **PARCIAL** | Campo `prioridade` numérica por ação + ordenação por frente; scoring dinâmico por gaps das respostas ainda não. |
+| **M08** | Ancoragem legal por bullet | **PARCIAL** | Checklist/PDF com coluna **Base legal** por ação; matriz departamental ainda sem dispositivo por linha. |
 | **M09** | Lead magnet self-service | **PARCIAL** | Wizard público existe; doc pede campos (segmento detalhado, faturamento, CNPJ opcional Free) **não** todos no schema; fluxo **login B2B** misturado ao lead self-service — definir jornada. |
 | **M10** | Multi-tenant Supabase + RLS | **PARCIAL** | RLS em migrações para `diagnosticos`; produção Supabase **não** é o único caminho no dev; políticas para **`idempotency_responses`** (não multi-tenant por linha — chave hash global) **avaliar risco**. JWT é fonte de verdade do tenant. |
 | **M11** | Eixos ABNT como espinha | **PARCIAL** | Bloco ABNT no JSON; aderência PDCA/7 pilares **não** mapeada explicitamente na UI nem no relatório. |
-| **M12** | Checklist final 10 itens binários | **NÃO** | Checklist atual ≠ modelo “10 binários BMS+ABNT” do MoSCoW; contar itens e padronizar. |
+| **M12** | Checklist final 10 itens binários | **PARCIAL** | Bloco explícito “10 controles” ABNT NBR 17301 no `ConsultoriaService` + PDF; formato pergunta sim/não na UI de conferência ainda não dedicado. |
 
 ---
 
@@ -234,7 +234,7 @@ Estes itens bloqueiam **demo honesta** “wizard → API → relatório”:
 | mypy strict em `src/` | **OK** |
 | ruff + black | **OK** |
 | Teste integração idempotência **com Postgres real** (subir docker, duplicar POST, replay) | **opcional / não obrigatório** na suíte CI |
-| Playwright (fluxo login + wizard + POST) | **NÃO** |
+| Playwright (fluxo login + wizard + POST) | **PARCIAL** — smoke `/wizard` + `/login` (`frontend/e2e/smoke.spec.ts`; `npm run test:e2e`) |
 | Casos de calibração score (5 segmentos) | **NÃO** (MoSCoW §8) |
 
 ---

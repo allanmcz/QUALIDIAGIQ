@@ -1,59 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
-import { DiagnosticoPayloadSchema, DiagnosticoPayload } from "@/lib/schemas/wizard";
+import { DiagnosticoPayloadSchema, DiagnosticoPayload, UFS_BR } from "@/lib/schemas/wizard";
 import { postDiagnostico } from "@/lib/api/diagnostico";
+import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
+import { getAccessToken } from "@/lib/api/config";
 
 const TOTAL_STEPS = 3;
-
-// Mock questions according to ABNT NBR 17301
-/** IDs alinhados ao catálogo `perguntas_mvp.json` (ABNT NBR 17301 — escala 1–5). */
-const MOCK_QUESTIONS = [
-  {
-    id: "1f74e164-195d-5fde-ba27-8ae08b8e011e",
-    label:
-      "Sua empresa possui política interna formal de Compliance Tributário (escrita, aprovada e divulgada)?",
-    options: [
-      { label: "Não possui / não formalizada", value: "1" },
-      { label: "Em elaboração ou parcial", value: "3" },
-      { label: "Sim, formalizada e divulgada", value: "5" },
-    ],
-  },
-  {
-    id: "5bd89013-2b3f-5c73-8a73-9351e114f14c",
-    label: "A empresa identifica e avalia periodicamente os riscos fiscais?",
-    options: [
-      { label: "Não identifica", value: "1" },
-      { label: "Identifica de forma eventual", value: "3" },
-      { label: "Sim, processo periódico estruturado", value: "5" },
-    ],
-  },
-  {
-    id: "9c1e9918-4856-5798-8797-37efacde4ff7",
-    label: "Os controles sobre obrigações tributárias estão documentados (ITs, fluxos)?",
-    options: [
-      { label: "Não documentados", value: "1" },
-      { label: "Parcialmente documentados", value: "3" },
-      { label: "Sim, documentação atualizada", value: "5" },
-    ],
-  },
-];
 
 export function WizardForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [perguntas, setPerguntas] = useState<PerguntaCatalogo[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [tokenChecked, setTokenChecked] = useState(false);
+
+  useEffect(() => {
+    setTokenChecked(true);
+  }, []);
 
   const form = useForm<DiagnosticoPayload>({
     resolver: zodResolver(DiagnosticoPayloadSchema),
@@ -64,67 +49,142 @@ export function WizardForm() {
         porte: "medio",
         regime: "lucro_real",
         cnae_principal: "",
-        uf: "",
+        uf: "SP",
         setor_macro: "servicos",
       },
       respondente: {
         nome: "",
         email: "",
       },
-      respostas: [
-        { pergunta_id: MOCK_QUESTIONS[0].id, valor: "" },
-        { pergunta_id: MOCK_QUESTIONS[1].id, valor: "" },
-        { pergunta_id: MOCK_QUESTIONS[2].id, valor: "" },
-      ]
+      respostas: [],
+      aceite_termos_privacidade: false,
     },
     mode: "onBlur",
   });
 
-  const { register, trigger, formState: { errors }, getValues } = form;
+  const {
+    register,
+    control,
+    trigger,
+    formState: { errors },
+    getValues,
+    reset,
+  } = form;
+
+  const renderPerguntaInput = (p: PerguntaCatalogo, index: number) => {
+    const base = `respostas.${index}.valor` as const;
+
+    if (p.tipo === "escala_1_5") {
+      return (
+        <div className="flex flex-col space-y-2 pt-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Label
+              key={n}
+              className="flex items-center space-x-3 cursor-pointer p-3 rounded border bg-background hover:bg-muted/50 transition-colors"
+            >
+              <input
+                type="radio"
+                value={String(n)}
+                className="w-4 h-4 text-primary focus:ring-primary"
+                {...register(base)}
+              />
+              <span className="font-normal text-sm">{n} — escala (1 menor … 5 maior aderência)</span>
+            </Label>
+          ))}
+        </div>
+      );
+    }
+
+    /* ternária e demais: mesmo conjunto de opções MVP alinhado ao domínio */
+    const opts = [
+      { v: "sim", l: "Sim" },
+      { v: "parcialmente", l: "Parcialmente" },
+      { v: "nao", l: "Não" },
+      { v: "nao_se_aplica", l: "Não se aplica ao meu negócio" },
+    ];
+    return (
+      <div className="flex flex-col space-y-2 pt-2">
+        {opts.map((o) => (
+          <Label
+            key={o.v}
+            className="flex items-center space-x-3 cursor-pointer p-3 rounded border bg-background hover:bg-muted/50 transition-colors"
+          >
+            <input
+              type="radio"
+              value={o.v}
+              className="w-4 h-4 text-primary focus:ring-primary"
+              {...register(base)}
+            />
+            <span className="font-normal text-sm">{o.l}</span>
+          </Label>
+        ))}
+      </div>
+    );
+  };
 
   const nextStep = async () => {
-    let fieldsToValidate: string[] = [];
+    let fieldsToValidate: (keyof DiagnosticoPayload | string)[] = [];
     if (step === 1) {
       fieldsToValidate = [
-        "empresa.cnpj", 
-        "empresa.razao_social", 
-        "respondente.nome", 
-        "respondente.email"
+        "empresa.cnpj",
+        "empresa.razao_social",
+        "respondente.nome",
+        "respondente.email",
+        "aceite_termos_privacidade",
       ];
     } else if (step === 2) {
       fieldsToValidate = [
-        "empresa.porte", 
-        "empresa.regime", 
-        "empresa.cnae_principal", 
-        "empresa.uf", 
-        "empresa.setor_macro"
+        "empresa.porte",
+        "empresa.regime",
+        "empresa.cnae_principal",
+        "empresa.uf",
+        "empresa.setor_macro",
       ];
     }
 
-    const isStepValid = await trigger(fieldsToValidate as any);
-    if (isStepValid) {
-      setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      console.log("Validation Failed:", JSON.stringify(form.formState.errors, null, 2));
+    const isStepValid = await trigger(fieldsToValidate as never);
+    if (!isStepValid) return;
+
+    if (step === 2) {
+      setCatalogError(null);
+      setCatalogLoading(true);
+      try {
+        const empresa = getValues("empresa");
+        const q = await fetchQuestionarioAdaptativo(empresa);
+        setPerguntas(q.perguntas);
+        reset({
+          ...getValues(),
+          respostas: q.perguntas.map((pg) => ({
+            pergunta_id: pg.id,
+            valor: "",
+          })),
+        });
+        setStep(3);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Falha ao carregar questionário.";
+        setCatalogError(msg);
+      } finally {
+        setCatalogLoading(false);
+      }
+      return;
     }
+
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const prevStep = () => {
     setStep((s) => Math.max(s - 1, 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const onSubmit = async () => {
     const isValid = await trigger();
-    if (!isValid) {
-      console.log("Validation Failed on Submit:", JSON.stringify(form.formState.errors, null, 2));
-      return;
-    }
-    
-    // Validar se todas as perguntas foram respondidas
+    if (!isValid) return;
+
     const respostas = getValues("respostas");
-    if (respostas.some(r => !r.valor)) {
+    if (respostas.some((r) => r.valor === "" || r.valor === undefined || r.valor === null)) {
       setApiError("Por favor, responda a todas as perguntas do questionário.");
       return;
     }
@@ -132,23 +192,26 @@ export function WizardForm() {
     try {
       setIsSubmitting(true);
       setApiError(null);
-      const data = getValues();
-      await postDiagnostico(data);
+      await postDiagnostico(getValues());
       router.push("/sucesso");
-    } catch (err: any) {
-      setApiError(err.message || "Ocorreu um erro ao enviar o diagnóstico.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ocorreu um erro ao enviar o diagnóstico.";
+      setApiError(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const progress = (step / TOTAL_STEPS) * 100;
+  const hasToken = tokenChecked && !!getAccessToken();
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground font-medium">
-          <span>Passo {step} de {TOTAL_STEPS}</span>
+          <span>
+            Passo {step} de {TOTAL_STEPS}
+          </span>
           <span>{Math.round(progress)}% Concluído</span>
         </div>
         <Progress value={progress} className="h-2" />
@@ -159,58 +222,118 @@ export function WizardForm() {
           <CardTitle className="text-2xl text-primary">
             {step === 1 && "Identificação Inicial"}
             {step === 2 && "Perfil da Empresa"}
-            {step === 3 && "Diagnóstico Express (ABNT NBR 17301)"}
+            {step === 3 && "Questionário adaptativo (Reforma + ABNT NBR 17301)"}
           </CardTitle>
           <CardDescription>
-            {step === 1 && "Preencha com os dados básicos para contato e registro."}
-            {step === 2 && "Precisamos dessas informações para balizar seu Score."}
-            {step === 3 && "Responda sinceramente para obter o retrato real da sua maturidade."}
+            {step === 1 && "Dados para contato e consentimento LGPD (tratamento dos dados informados)."}
+            {step === 2 && "Perfil usado para filtrar as perguntas aplicáveis (motor adaptativo)."}
+            {step === 3 &&
+              "Respostas sinceras geram score e relatório. Envio exige login B2B (JWT) no MVP."}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="pt-6">
           <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-            
-            {/* STEP 1 */}
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cnpj">CNPJ *</Label>
-                    <Input id="cnpj" placeholder="00.000.000/0000-00" {...register("empresa.cnpj")} className={errors.empresa?.cnpj ? "border-destructive" : ""} />
-                    {errors.empresa?.cnpj && <p className="text-sm text-destructive">{errors.empresa.cnpj.message as string}</p>}
+                    <Input
+                      id="cnpj"
+                      placeholder="00.000.000/0000-00"
+                      {...register("empresa.cnpj")}
+                      className={errors.empresa?.cnpj ? "border-destructive" : ""}
+                    />
+                    {errors.empresa?.cnpj && (
+                      <p className="text-sm text-destructive">{errors.empresa.cnpj.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="razao_social">Razão Social *</Label>
-                    <Input id="razao_social" placeholder="Empresa Fictícia LTDA" {...register("empresa.razao_social")} className={errors.empresa?.razao_social ? "border-destructive" : ""} />
-                    {errors.empresa?.razao_social && <p className="text-sm text-destructive">{errors.empresa.razao_social.message as string}</p>}
+                    <Input
+                      id="razao_social"
+                      placeholder="Empresa Fictícia LTDA"
+                      {...register("empresa.razao_social")}
+                      className={errors.empresa?.razao_social ? "border-destructive" : ""}
+                    />
+                    {errors.empresa?.razao_social && (
+                      <p className="text-sm text-destructive">{errors.empresa.razao_social.message}</p>
+                    )}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                   <div className="space-y-2">
                     <Label htmlFor="nome">Seu Nome *</Label>
-                    <Input id="nome" placeholder="João da Silva" {...register("respondente.nome")} className={errors.respondente?.nome ? "border-destructive" : ""} />
-                    {errors.respondente?.nome && <p className="text-sm text-destructive">{errors.respondente.nome.message as string}</p>}
+                    <Input
+                      id="nome"
+                      placeholder="João da Silva"
+                      {...register("respondente.nome")}
+                      className={errors.respondente?.nome ? "border-destructive" : ""}
+                    />
+                    {errors.respondente?.nome && (
+                      <p className="text-sm text-destructive">{errors.respondente.nome.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">E-mail Profissional *</Label>
-                    <Input id="email" type="email" placeholder="joao@empresa.com.br" {...register("respondente.email")} className={errors.respondente?.email ? "border-destructive" : ""} />
-                    {errors.respondente?.email && <p className="text-sm text-destructive">{errors.respondente.email.message as string}</p>}
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="joao@empresa.com.br"
+                      {...register("respondente.email")}
+                      className={errors.respondente?.email ? "border-destructive" : ""}
+                    />
+                    {errors.respondente?.email && (
+                      <p className="text-sm text-destructive">{errors.respondente.email.message}</p>
+                    )}
                   </div>
+                </div>
+
+                <div className="rounded-md border p-4 space-y-2 bg-muted/20">
+                  <div className="flex items-start gap-3">
+                    <Controller
+                      name="aceite_termos_privacidade"
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          id="lgpd"
+                          className="mt-1 h-4 w-4"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="lgpd" className="font-normal text-sm leading-snug cursor-pointer">
+                      Declaro que li e aceito o tratamento dos dados informados para elaboração do
+                      diagnóstico, nos termos da LGPD (Lei 13.709/2018). Política de privacidade em
+                      construção — uso interno Tributiq/QDI.
+                    </Label>
+                  </div>
+                  {errors.aceite_termos_privacidade && (
+                    <p className="text-sm text-destructive">
+                      {errors.aceite_termos_privacidade.message}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* STEP 2 */}
             {step === 2 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {catalogError && (
+                  <div className="p-3 text-sm text-destructive border border-destructive/30 rounded-md bg-destructive/10">
+                    {catalogError}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="porte">Porte da Empresa *</Label>
-                    <select 
-                      id="porte" 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    <select
+                      id="porte"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       {...register("empresa.porte")}
                     >
                       <option value="micro">Micro (Até R$ 360 mil)</option>
@@ -222,9 +345,9 @@ export function WizardForm() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="regime">Regime Tributário *</Label>
-                    <select 
-                      id="regime" 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    <select
+                      id="regime"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       {...register("empresa.regime")}
                     >
                       <option value="simples_nacional">Simples Nacional</option>
@@ -238,9 +361,9 @@ export function WizardForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="setor_macro">Setor Macro *</Label>
-                    <select 
-                      id="setor_macro" 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    <select
+                      id="setor_macro"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       {...register("empresa.setor_macro")}
                     >
                       <option value="comercio">Comércio</option>
@@ -251,90 +374,90 @@ export function WizardForm() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="uf">Estado (UF) *</Label>
-                    <select 
-                      id="uf" 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    <Label htmlFor="uf">UF *</Label>
+                    <select
+                      id="uf"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       {...register("empresa.uf")}
                     >
-                      <option value="">Selecione...</option>
-                      <option value="SP">São Paulo</option>
-                      <option value="RJ">Rio de Janeiro</option>
-                      <option value="MG">Minas Gerais</option>
-                      <option value="PR">Paraná</option>
-                      <option value="SC">Santa Catarina</option>
-                      <option value="RS">Rio Grande do Sul</option>
-                      <option value="BA">Bahia</option>
-                      <option value="GO">Goiás</option>
-                      {/* Outros UFs omitidos por brevidade */}
+                      {UFS_BR.map((uf) => (
+                        <option key={uf} value={uf}>
+                          {uf}
+                        </option>
+                      ))}
                     </select>
-                    {errors.empresa?.uf && <p className="text-sm text-destructive">{errors.empresa.uf.message as string}</p>}
+                    {errors.empresa?.uf && (
+                      <p className="text-sm text-destructive">{errors.empresa.uf.message}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cnae_principal">CNAE Principal (Somente Números) *</Label>
-                  <Input id="cnae_principal" placeholder="1234567" {...register("empresa.cnae_principal")} className={errors.empresa?.cnae_principal ? "border-destructive" : ""} />
-                  {errors.empresa?.cnae_principal && <p className="text-sm text-destructive">{errors.empresa.cnae_principal.message as string}</p>}
+                  <Label htmlFor="cnae_principal">CNAE Principal (7 dígitos) *</Label>
+                  <Input
+                    id="cnae_principal"
+                    placeholder="1234567"
+                    {...register("empresa.cnae_principal")}
+                    className={errors.empresa?.cnae_principal ? "border-destructive" : ""}
+                  />
+                  {errors.empresa?.cnae_principal && (
+                    <p className="text-sm text-destructive">{errors.empresa.cnae_principal.message}</p>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* STEP 3 */}
             {step === 3 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {!hasToken && (
+                  <div className="p-4 border border-amber-500/40 bg-amber-500/10 rounded-md text-sm">
+                    Para enviar o diagnóstico você precisa estar autenticado.{" "}
+                    <Link href="/login" className="text-primary font-medium underline">
+                      Fazer login
+                    </Link>
+                  </div>
+                )}
                 {apiError && (
                   <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-sm">
                     {apiError}
                   </div>
                 )}
-                
-                {MOCK_QUESTIONS.map((q, qIndex) => (
-                  <div key={q.id} className="space-y-3 bg-muted/20 p-4 rounded-lg border">
+                {perguntas.map((p, qIndex) => (
+                  <div key={p.id} className="space-y-3 bg-muted/20 p-4 rounded-lg border">
                     <Label className="text-base font-semibold text-foreground/90 leading-tight">
-                      {qIndex + 1}. {q.label}
+                      {qIndex + 1}. {p.texto}{" "}
+                      <span className="text-muted-foreground font-normal text-xs">({p.codigo})</span>
                     </Label>
-                    <div className="flex flex-col space-y-2 pt-2">
-                      {q.options.map((opt, oIndex) => (
-                        <Label key={oIndex} className="flex items-center space-x-3 cursor-pointer p-3 rounded border bg-background hover:bg-muted/50 transition-colors">
-                          <input 
-                            type="radio" 
-                            value={opt.value} 
-                            className="w-4 h-4 text-primary focus:ring-primary"
-                            {...register(`respostas.${qIndex}.valor`)}
-                          />
-                          <span className="font-normal text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{opt.label}</span>
-                        </Label>
-                      ))}
-                    </div>
+                    {p.base_legal && (
+                      <p className="text-xs text-muted-foreground">
+                        Base legal (referência): {p.base_legal}
+                      </p>
+                    )}
+                    {renderPerguntaInput(p, qIndex)}
                   </div>
                 ))}
               </div>
             )}
-
           </form>
         </CardContent>
 
         <CardFooter className="flex justify-between border-t p-6 bg-muted/10">
-          <Button 
-            type="button"
-            variant="outline" 
-            onClick={prevStep} 
-            disabled={step === 1 || isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={prevStep} disabled={step === 1 || isSubmitting}>
             Voltar
           </Button>
-          
+
           {step < TOTAL_STEPS ? (
-            <Button type="button" onClick={nextStep}>Próxima Etapa</Button>
+            <Button type="button" onClick={nextStep} disabled={catalogLoading}>
+              {catalogLoading ? "Carregando perguntas…" : "Próxima Etapa"}
+            </Button>
           ) : (
-            <Button 
+            <Button
               type="button"
-              onClick={onSubmit} 
-              disabled={isSubmitting}
+              onClick={onSubmit}
+              disabled={isSubmitting || !hasToken}
               className="bg-accent text-accent-foreground hover:bg-accent/90"
             >
-              {isSubmitting ? "Enviando e Gerando PDF..." : "Finalizar Diagnóstico"}
+              {isSubmitting ? "Enviando…" : "Finalizar Diagnóstico"}
             </Button>
           )}
         </CardFooter>

@@ -94,6 +94,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
 
     checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
     matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+    cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
     checklist_data = [asdict(f) for f in checklist_entities]
     matriz_data = [asdict(m) for m in matriz_entities]
     h_aud, v_aud = _campos_auditoria_http(diagnostico)
@@ -107,6 +108,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         recomendacao_ia=None,
         checklist=checklist_data,
         matriz_impacto=matriz_data,
+        cronograma=cronograma_data,
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
     )
@@ -227,6 +229,7 @@ async def criar_diagnostico(
         recomendacao_ia=resultado.recomendacao_ia,
         checklist=resultado.checklist,
         matriz_impacto=resultado.matriz_impacto,
+        cronograma=resultado.cronograma,
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
     )
@@ -256,7 +259,6 @@ async def obter_metodologia() -> dict[str, Any]:
 @router.get("/questionario", response_model=QuestionarioDisponivelResponse)
 async def obter_questionario_adaptativo(
     empresa: Annotated[EmpresaInfo, Depends(perfil_empresa_para_questionario)],
-    _auth: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
     use_case: Annotated[
         GerarQuestionarioAdaptativoUseCase,
         Depends(get_gerar_questionario_adaptativo_use_case),
@@ -264,6 +266,9 @@ async def obter_questionario_adaptativo(
 ) -> QuestionarioDisponivelResponse:
     """
     Lista perguntas aplicáveis ao perfil declarado (motor adaptativo).
+
+    Endpoint **público** (sem JWT): catálogo filtrado não expõe dados de tenant.
+    POST `/diagnosticos/` continua exigindo Bearer + Idempotency-Key.
 
     LC 214/2025 — transparência e previsibilidade na coleta de informações do contribuinte.
     """

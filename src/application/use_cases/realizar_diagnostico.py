@@ -62,6 +62,7 @@ class ResultadoDiagnostico:
     recomendacao_ia: str | None = None
     checklist: list[dict[str, Any]] | None = None
     matriz_impacto: list[dict[str, Any]] | None = None
+    cronograma: list[dict[str, Any]] | None = None
 
 
 class RealizarDiagnostico:
@@ -172,6 +173,7 @@ class RealizarDiagnostico:
 
         checklist_entities = ConsultoriaService.gerar_checklist(diagnostico)
         matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+        cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
         checklist_data = [asdict(f) for f in checklist_entities]
         matriz_data = [asdict(m) for m in matriz_entities]
 
@@ -183,4 +185,5 @@ class RealizarDiagnostico:
             recomendacao_ia=recomendacao_ia,
             checklist=checklist_data,
             matriz_impacto=matriz_data,
+            cronograma=cronograma_data,
         )

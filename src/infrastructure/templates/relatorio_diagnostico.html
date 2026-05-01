@@ -15,6 +15,20 @@
         <p><strong>Data da Geração:</strong> {{ data_geracao }}</p>
     </div>
 
+    <div class="sintese-executiva" style="border: 1px solid #dee2e6; padding: 16px; margin: 20px 0; background: #fafafa;">
+        <h2>Síntese executiva</h2>
+        <p><strong>Score geral:</strong> {{ "%.1f"|format(score_geral.valor) }}/100 — <strong>Nível:</strong> {{ nivel_geral }}.</p>
+        <p>Este relatório consolida o diagnóstico de prontidão para a Reforma Tributária do Consumo (<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>) e aderência ao modelo de compliance da <strong>ABNT NBR 17301:2026</strong>.</p>
+        {% if piores_dimensoes|length > 0 %}
+        <p><strong>Dimensões com menor pontuação (priorizar plano de ação):</strong></p>
+        <ul>
+            {% for item in piores_dimensoes %}
+            <li><strong>{{ item.codigo }}</strong>: {{ "%.1f"|format(item.valor) }}/100</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
     <div class="score-geral">
         <h2>Score de Maturidade Tributária</h2>
         <div class="score-value">{{ "%.1f"|format(score_geral.valor) }}/100</div>
@@ -56,18 +70,42 @@
 
     {% if recomendacao_ia %}
     <div style="background-color: #f8f9fa; border-left: 4px solid #0056b3; padding: 15px; margin-top: 20px;">
-        <h3>🤖 Consultoria de Bolso IA (Ollama / Claude)</h3>
-        <p><em>Baseado no Novo Decreto nº 12.955/2026 (CBS)</em></p>
+        <h3>Consultoria assistida por IA</h3>
+        <p><em>Texto complementar — validar sempre com base legal versionada (Lexiq) e parecer profissional.</em></p>
         <div>
             {{ recomendacao_ia | replace('\n', '<br>') | safe }}
         </div>
     </div>
     {% endif %}
 
+    {% if cronograma|length > 0 %}
+    <div style="page-break-before: always;"></div>
+    <h2>Cronograma em cinco horizontes (transição LC 214/2025)</h2>
+    <p>Referência temporal para governança e projetos — alinhado ao pipeline de implantação CBS/IBS.</p>
+    <table class="dimensoes-table">
+        <thead>
+            <tr>
+                <th>Fase</th>
+                <th>Foco</th>
+                <th>Referência normativa</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for linha in cronograma %}
+            <tr>
+                <td><strong>{{ linha.fase }}</strong></td>
+                <td>{{ linha.foco }}</td>
+                <td><em>{{ linha.referencia_normativa }}</em></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     {% if matriz_impacto|length > 0 %}
     <div style="page-break-before: always;"></div>
 
-    <h2>Matriz de Impacto por Departamento (Decreto 12.955/2026)</h2>
+    <h2>Matriz de impacto por departamento (Reforma do Consumo)</h2>
     <p>Avaliamos quais áreas da sua operação sofrerão maior atrito durante a implantação da CBS:</p>
     <table class="dimensoes-table">
         <thead>
@@ -101,19 +139,23 @@
         <table class="dimensoes-table">
             <thead>
                 <tr>
-                    <th style="width: 50%;">Ação</th>
-                    <th style="width: 20%;">Responsável</th>
-                    <th style="width: 15%;">Prazo</th>
-                    <th style="width: 15%;">Criticidade</th>
+                    <th style="width: 6%;">#</th>
+                    <th style="width: 38%;">Ação</th>
+                    <th style="width: 14%;">Responsável</th>
+                    <th style="width: 10%;">Prazo</th>
+                    <th style="width: 10%;">Criticidade</th>
+                    <th style="width: 22%;">Base legal (referência)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for acao in frente.acoes %}
                 <tr>
+                    <td>{{ acao.prioridade }}</td>
                     <td>{{ acao.descricao }}</td>
                     <td>{{ acao.responsavel }}</td>
                     <td>{{ acao.prazo }}</td>
                     <td><strong>{{ acao.criticidade }}</strong></td>
+                    <td>{% if acao.base_legal %}<em>{{ acao.base_legal }}</em>{% else %}—{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -44,6 +44,14 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
 
         checklist = ConsultoriaService.gerar_checklist(diagnostico)
         matriz_impacto = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+        cronograma = ConsultoriaService.gerar_cronograma_cinco_fases()
+        piores_dimensoes = sorted(
+            score.score_por_dimensao.items(),
+            key=lambda kv: kv[1].valor,
+        )[:3]
+        piores_template = [
+            {"codigo": dim.value, "valor": sn.valor} for dim, sn in piores_dimensoes
+        ]
 
         html_out = template.render(
             diagnostico=diagnostico,
@@ -54,6 +62,8 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             recomendacao_ia=recomendacao_ia,
             checklist=checklist,
             matriz_impacto=matriz_impacto,
+            cronograma=cronograma,
+            piores_dimensoes=piores_template,
         )
 
         css_path = str(self.templates_dir / "style.css")

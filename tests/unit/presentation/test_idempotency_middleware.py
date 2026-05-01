@@ -50,6 +50,7 @@ def _mock_use_case_sucesso() -> AsyncMock:
     mock_resultado.recomendacao_ia = None
     mock_resultado.checklist = None
     mock_resultado.matriz_impacto = None
+    mock_resultado.cronograma = None
     mock_resultado.diagnostico.hash_evidencia = "b" * 64
     mock_resultado.diagnostico.versao_otimista = 1
     mock_use_case.execute.return_value = mock_resultado

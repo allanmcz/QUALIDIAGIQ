@@ -151,6 +151,7 @@ class DiagnosticoResponse(BaseModel):
     recomendacao_ia: str | None = None
     checklist: list[dict[str, Any]] | None = None
     matriz_impacto: list[dict[str, Any]] | None = None
+    cronograma: list[dict[str, Any]] | None = None
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
     hash_evidencia: str | None = None
     versao_otimista: int | None = None

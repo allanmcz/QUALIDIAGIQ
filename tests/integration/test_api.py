@@ -54,14 +54,17 @@ async def test_get_questionario_adaptativo(async_client):
 
 
 @pytest.mark.asyncio
-async def test_get_questionario_sem_auth_401(async_client):
+async def test_get_questionario_publico_sem_jwt_200(async_client):
+    """GET é público (catálogo filtrado — sem dados de tenant)."""
     url = (
         "/diagnosticos/questionario"
         "?cnpj=12345678000195&razao_social=X"
         "&porte=micro&regime=simples_nacional&cnae_principal=1234567&uf=SP&setor_macro=comercio"
     )
     response = await async_client.get(url)
-    assert response.status_code == 401
+    assert response.status_code == 200
+    data = response.json()
+    assert "perguntas" in data and data["total"] >= 1
 
 
 @pytest.mark.asyncio
