@@ -1,0 +1,77 @@
+{
+  "arquivo_origem": "cIndBiocomb_IBS_CBS_v2026-04-24.xlsx",
+  "aba": "pBioObrigatorio",
+  "total_registros": 9,
+  "colunas": [
+    "cProdANP",
+    "Descrição",
+    "pBio  (% Anidro Obrigatorio)",
+    "Início de vigência",
+    "Fim de vigência"
+  ],
+  "registros": [
+    {
+      "cProdANP": 320102001,
+      "Descrição": "GASOLINA C COMUM",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320102002,
+      "Descrição": "GASOLINA C COMUM ADITIVADA",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320102003,
+      "Descrição": "GASOLINA C PREMIUM",
+      "pBio  (% Anidro Obrigatorio)": 0.25,
+      "Início de vigência": "2015-03-16 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320102005,
+      "Descrição": "GASOLINA C PREMIUM ADITIVADA",
+      "pBio  (% Anidro Obrigatorio)": 0.25,
+      "Início de vigência": "2015-03-16 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320103001,
+      "Descrição": "GASOLINA DE REFERÊNCIA - NBR 16038",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320103002,
+      "Descrição": "OUTRAS GASOLINAS AUTOMOTIVAS",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320103003,
+      "Descrição": "GASOLINA DE REFERÊNCIA - PROCONVE L-6",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320301001,
+      "Descrição": "OUTRAS GASOLINAS",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    },
+    {
+      "cProdANP": 320301002,
+      "Descrição": "GASOLINA PARA EXPORTAÇÃO",
+      "pBio  (% Anidro Obrigatorio)": 0.3,
+      "Início de vigência": "2025-08-01 00:00:00",
+      "Fim de vigência": ""
+    }
+  ]
+}

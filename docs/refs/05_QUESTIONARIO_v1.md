@@ -9,7 +9,7 @@
 
 ## 1. Resposta Direta
 
-O questionário definitivo do **QDI Free v1.0** combina **21 perguntas núcleo** (respondidas por todos) + **9 perguntas setoriais condicionais** (varejo/indústria/serviços/agro) + **5 perguntas avançadas só para Lucro Real**, totalizando **banco de 35 perguntas**. Cliente típico responde **22-26 perguntas em 12-15 minutos**, com cobertura balanceada das 7 dimensões e ancoragem em **LC 214/2025, EC 132/2023, NT 2025.002 e ABNT NBR 17301:2026**.
+O questionário definitivo do **QDI Free v1.0** combina **21 perguntas núcleo** (respondidas por todos) + **9 perguntas setoriais condicionais** (varejo/indústria/serviços/agro) + **5 perguntas avançadas só para Lucro Real** + perguntas adicionais mantidas para maturidade e ABNT nos arquivos de catálogo, totalizando **37 perguntas no JSON de produção** (`src/infrastructure/questionario/data/perguntas_mvp.json`; versão manifesto **v1-doc-05-full-37**). Cliente típico responde **22-28 perguntas em 12-15 minutos**, com cobertura balanceada das 7 dimensões e ancoragem em **LC 214/2025, EC 132/2023, NT 2025.002 e ABNT NBR 17301:2026**.
 
 ## 2. Estrutura do Questionário
 
@@ -501,8 +501,8 @@ Antes do GA do QDI Free, este questionário deve ser revisado por:
 
 ## 15. Volume Total
 
-- **35 perguntas no banco** (21 núcleo + 9 setoriais + 5 avançadas)
-- **22-29 perguntas respondidas por cliente** (depende de setor + regime)
+- **37 perguntas no arquivo de catálogo** (motor adaptativo por perfil; volume efetivo de resposta 22–28 conforme empresa)
+- **22-28 perguntas respondidas por cliente** (depende de setor + regime e catálogo filtrado)
 - **12-15 minutos de execução** (target)
 - **7 dimensões avaliadas** com 21 níveis de granularidade
 - **Score 0-100 + PDCA ABNT + top 5 gaps + recomendações**

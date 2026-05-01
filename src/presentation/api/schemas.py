@@ -7,6 +7,7 @@ Responsabilidade:
     - Transformar objetos de Domínio puros em JSON limpo de saída.
 """
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -152,6 +153,27 @@ class ManifestoPesosResponse(BaseModel):
     LC 214/2025 art. 5º — previsibilidade; ABNT NBR 17301:2026 — transparência metodológica.
     """
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "versao_manifesto": "2026-04-30",
+                "versao_catalogo": "v1-doc-05-full-37",
+                "formula_score_geral": "Para cada dimensao: media ponderada...",
+                "nota_calibracao_m02": "M02 - ...",
+                "pesos_macro_dimensao": {"fiscal": 1.5, "tecnologica": 1.3},
+                "perguntas": [
+                    {
+                        "codigo": "Q-EST-001",
+                        "dimensao": "estrategica",
+                        "tipo": "ternaria",
+                        "peso": 7.5,
+                        "base_legal": "EC 132/2023; LC 214/2025",
+                    },
+                ],
+            }
+        }
+    )
+
     versao_manifesto: str = "2026-04-30"
     versao_catalogo: str
     formula_score_geral: str = (
@@ -192,6 +214,23 @@ class ScoreDimensaoSchema(BaseModel):
 class ScoreCompletoSchema(BaseModel):
     score_geral: ScoreDimensaoSchema
     score_por_dimensao: dict[str, ScoreDimensaoSchema]
+
+
+class DiagnosticoResumoSchema(BaseModel):
+    """Item resumido para listagem do tenant (P7 — dashboard B2B)."""
+
+    id: UUID
+    empresa_razao_social: str
+    status: str
+    plano: str
+    score_geral: float | None = None
+    criado_em: datetime
+    finalizado_em: datetime | None = None
+    relatorio_pdf_url: str | None = Field(
+        default=None, description="URL do PDF quando gerado e anexado ao diagnóstico."
+    )
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DiagnosticoResponse(BaseModel):

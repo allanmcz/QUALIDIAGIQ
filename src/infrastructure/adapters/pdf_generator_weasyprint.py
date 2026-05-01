@@ -42,7 +42,7 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
 
         from src.application.services.consultoria_service import ConsultoriaService
 
-        checklist = ConsultoriaService.gerar_checklist(diagnostico)
+        checklist = ConsultoriaService.gerar_checklist(diagnostico, score)
         matriz_impacto = ConsultoriaService.gerar_matriz_impacto(diagnostico)
         cronograma = ConsultoriaService.gerar_cronograma_cinco_fases()
         piores_dimensoes = sorted(

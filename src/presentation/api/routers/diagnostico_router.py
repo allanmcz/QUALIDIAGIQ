@@ -8,7 +8,7 @@ Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, status
 
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
 from src.application.use_cases.anexar_relatorio_otimista import (
@@ -40,8 +40,10 @@ from src.presentation.api.dependencies import (
     get_realizar_diagnostico_use_case,
     perfil_empresa_para_questionario,
 )
+from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.schemas import (
     DiagnosticoResponse,
+    DiagnosticoResumoSchema,
     IniciarDiagnosticoRequest,
     ManifestoPesoPerguntaSchema,
     ManifestoPesosResponse,
@@ -86,6 +88,20 @@ def _parse_if_match_versao(raw: str | None) -> int:
     if v < 1:
         raise ValueError("Versão otimista inválida.")
     return v
+
+
+def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
+    """Monta linha da listagem B2B (P7 — sem recomputar checklist/matriz)."""
+    return DiagnosticoResumoSchema(
+        id=diagnostico.id,
+        empresa_razao_social=diagnostico.empresa.razao_social,
+        status=diagnostico.status.value,
+        plano=diagnostico.plano.value,
+        score_geral=diagnostico.score_geral,
+        criado_em=diagnostico.criado_em,
+        finalizado_em=diagnostico.finalizado_em,
+        relatorio_pdf_url=diagnostico.relatorio_pdf_url,
+    )
 
 
 def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoResponse:
@@ -139,9 +155,25 @@ def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema |
     )
 
 
+@router.get("/", response_model=list[DiagnosticoResumoSchema])
+async def listar_diagnosticos(
+    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[DiagnosticoResumoSchema]:
+    """Lista diagnósticos do tenant atual (ordenacao: mais recentes primeiro na camada repo/DB)."""
+    _, tenant_id = current
+    rows = await repo.listar_por_tenant(tenant_id, limit=limit, offset=offset)
+    return [_para_resumo(d) for d in rows]
+
+
 @router.post("/", response_model=DiagnosticoResponse, status_code=status.HTTP_201_CREATED)
 async def criar_diagnostico(
-    payload: IniciarDiagnosticoRequest,
+    payload: Annotated[
+        IniciarDiagnosticoRequest,
+        Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
+    ],
     current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
 ) -> DiagnosticoResponse:

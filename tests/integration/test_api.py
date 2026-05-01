@@ -108,6 +108,13 @@ async def test_normativa_validar_ancora_negativo(async_client):
 
 
 @pytest.mark.asyncio
+async def test_listar_diagnosticos_sem_bearer_401(async_client):
+    """GET /diagnosticos/ exige JWT (isolamento multi-tenant)."""
+    response = await async_client.get("/diagnosticos/")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_criar_diagnostico_sem_tenant(async_client):
     """Barra requisições sem Bearer JWT (Idempotency-Key exigido antes da auth)."""
     payload = {

@@ -103,13 +103,15 @@ async def test_deve_listar_por_tenant(diagnostico_mock):
     mock_table = MagicMock()
     mock_select = MagicMock()
     mock_eq = MagicMock()
+    mock_order = MagicMock()
     mock_limit = MagicMock()
     mock_offset = MagicMock()
 
     mock_client.table.return_value = mock_table
     mock_table.select.return_value = mock_select
     mock_select.eq.return_value = mock_eq
-    mock_eq.limit.return_value = mock_limit
+    mock_eq.order.return_value = mock_order
+    mock_order.limit.return_value = mock_limit
     mock_limit.offset.return_value = mock_offset
 
     repo = SupabaseDiagnosticoRepository(client=mock_client)

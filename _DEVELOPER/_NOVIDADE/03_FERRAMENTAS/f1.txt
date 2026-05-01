@@ -1,0 +1,612 @@
+  REFORMA TRIBUTÁRIA — CBS
+Decreto nº 12.955, de 29 de abril de 2026
+  Checklist de Implantação 
+Reforma Tributária — CBS — Implantação Empresarial Estruturada
+
+
+
+
+
+
+Código do Documento
+FERRAMENTA-01-Checklist-Implantacao
+Data de Elaboração
+30/04/2026
+Autor Técnico
+ALLAN MARCIO — Consultor Tributário Sênior
+Base Normativa
+LC 214/2025; Decreto nº 12.955/2026; EC 132/2023
+
+1. Apresentação
+Este Checklist estruturado orienta empresas brasileiras na implantação dos requisitos da Reforma Tributária sobre o consumo, com base na Lei Complementar nº 214/2025 e no Decreto nº 12.955, de 29 de abril de 2026, que regulamenta integralmente a Contribuição Social sobre Bens e Serviços (CBS). O instrumento permite acompanhamento por fase, responsável e prazo, contemplando 11 frentes de trabalho críticas.
+ℹ INFORMAÇÃO TÉCNICA
+O presente Checklist é referencial. Cada empresa deve adaptá-lo ao seu porte, regime tributário, setor de atuação e complexidade dos processos internos. Recomenda-se governança formal por meio de Comitê Tributário Reforma constituído por Diretoria, Fiscal, Contábil, TI, Comercial, Compras, Jurídico, Financeiro e Controladoria.
+
+2. Estrutura do Checklist
+O Checklist está estruturado em 11 frentes. Cada frente possui ações detalhadas, indicação de área responsável, criticidade (Crítica, Alta, Média, Baixa) e prazo sugerido. As datas referenciam o calendário 2025-2032, ou seja, o ciclo completo da transição.
+Frente 1 — Governança e Comitê;
+Frente 2 — Diagnóstico Tributário e Mapeamento;
+Frente 3 — Cadastros Mestres (Itens, Serviços, Fornecedores, Clientes);
+Frente 4 — TI / ERP / Sistema Fiscal;
+Frente 5 — Documentos Fiscais Eletrônicos;
+Frente 6 — Apuração e Compliance Fiscal;
+Frente 7 — Contratos e Cláusulas Tributárias;
+Frente 8 — Pricing e Política Comercial;
+Frente 9 — Tesouraria, Split Payment e Crédito;
+Frente 10 — Capacitação e Comunicação Interna;
+Frente 11 — Auditoria, Pós-Implantação e Monitoramento;
+Frente 1 — Governança e Comitê
+Ação
+Responsável
+Criticidade
+Prazo
+Constituir Comitê Tributário Reforma com membros das áreas-chave
+Diretoria
+Crítica
+Out/2025
+Definir Sponsor Executivo (CFO ou equivalente)
+Diretoria
+Crítica
+Out/2025
+Aprovar plano-mestre de implantação e orçamento
+Comitê / Diretoria
+Crítica
+Nov/2025
+Estabelecer reuniões quinzenais com pauta padronizada
+Comitê
+Alta
+Nov/2025
+Definir KPIs de acompanhamento (% de avanço por frente)
+PMO / Controladoria
+Alta
+Dez/2025
+Contratar (se necessário) consultoria especializada externa
+Diretoria
+Média
+Dez/2025
+Comunicar formalmente todas as áreas sobre o projeto
+Comitê
+Alta
+Dez/2025
+Definir matriz de aprovação para decisões críticas
+Comitê
+Alta
+Dez/2025
+
+Frente 2 — Diagnóstico Tributário e Mapeamento
+Ação
+Responsável
+Criticidade
+Prazo
+Mapear todas as operações da empresa (CFOPs, NBS, NCM)
+Fiscal
+Crítica
+Jan/2026
+Levantar regimes específicos e diferenciados aplicáveis
+Fiscal / Jurídico
+Crítica
+Jan/2026
+Simular impacto tributário em cenários (alíquota-teste 0,9%)
+Controladoria / Fiscal
+Crítica
+Fev/2026
+Identificar produtos/serviços alcançados pela cesta básica
+Fiscal
+Alta
+Fev/2026
+Mapear operações de exportação para imunidade
+Fiscal / Comercial Exterior
+Alta
+Fev/2026
+Identificar operações sujeitas a regime monofásico
+Fiscal
+Alta
+Fev/2026
+Análise específica para regimes do art. 245-269 (financeiro/profissionais)
+Jurídico / Fiscal
+Alta
+Mar/2026
+Mapear contratos de longo prazo afetados
+Jurídico
+Crítica
+Mar/2026
+Levantar saldo credor inicial em PIS/COFINS para transição
+Contabilidade / Fiscal
+Alta
+Dez/2025
+Inventário físico-fiscal para crédito de transição (estoque)
+Logística / Fiscal
+Crítica
+Dez/2025
+
+Frente 3 — Cadastros Mestres
+Ação
+Responsável
+Criticidade
+Prazo
+Revisar 100% do cadastro de itens/produtos (NCM, GTIN)
+Cadastro / Fiscal
+Crítica
+Mar/2026
+Classificar todos os serviços conforme NBS
+Cadastro / Fiscal
+Crítica
+Mar/2026
+Atualizar CST CBS por item / serviço
+Fiscal
+Crítica
+Mar/2026
+Incluir indicador de regime tributário (regular, monofásico, etc.)
+Fiscal / TI
+Crítica
+Mar/2026
+Validar fornecedores: contribuintes / Simples / não contribuintes
+Compras / Cadastro
+Alta
+Abr/2026
+Validar clientes PF/PJ / contribuinte / CadÚnico (cashback)
+Comercial / Cadastro
+Alta
+Abr/2026
+Atualizar centros de custo com mapeamento fiscal
+Controladoria
+Média
+Abr/2026
+Reclassificar bens do imobilizado para crédito imediato
+Contabilidade
+Alta
+Abr/2026
+Cadastrar regimes diferenciados (cesta básica, saúde, educação)
+Fiscal
+Alta
+Mar/2026
+Catalogar contratos por área e classificação fiscal
+Jurídico
+Alta
+Mar/2026
+
+Frente 4 — TI / ERP / Sistema Fiscal
+Ação
+Responsável
+Criticidade
+Prazo
+Levantar gap funcional do ERP atual em relação à CBS
+TI / Fiscal
+Crítica
+Dez/2025
+Engajar fornecedor de ERP (SAP, Oracle, Totvs, Sankhya, etc.)
+TI
+Crítica
+Dez/2025
+Aplicar pacotes / patches fornecidos pelo ERP
+TI
+Crítica
+Mar/2026
+Adequar rotina de cálculo CBS por fora
+TI / Fiscal
+Crítica
+Mar/2026
+Configurar split payment com adquirentes
+TI / Tesouraria
+Crítica
+Abr/2026
+Adequar rotinas de transferência entre filiais
+TI / Fiscal
+Alta
+Abr/2026
+Adequar regime monofásico (combustíveis, bebidas)
+TI / Fiscal
+Alta
+Abr/2026
+Implementar apuração paralela CBS x PIS/COFINS em 2026
+TI / Fiscal
+Crítica
+Abr/2026
+Adequar SPED Fiscal / Contribuições / EFD
+TI / Fiscal
+Crítica
+Mai/2026
+Testar integração com Receita Federal / CGIBS / SEFAZ
+TI
+Crítica
+Mai/2026
+Realizar testes de aceitação com volume de produção
+TI / Fiscal
+Crítica
+Mai/2026
+Plano de contingência para falhas no go-live
+TI / Operações
+Alta
+Mai/2026
+
+Frente 5 — Documentos Fiscais Eletrônicos
+Ação
+Responsável
+Criticidade
+Prazo
+Adequar leiaute da NF-e (campos CBS, redução, regime)
+TI / Fiscal
+Crítica
+Mar/2026
+Adequar NFC-e para varejo (CBS, demonstração tributária, split)
+TI / Operações
+Crítica
+Mar/2026
+Adequar NFS-e nacional (Bloco K Serviços / NFS-e padrão)
+TI / Fiscal
+Crítica
+Mar/2026
+Adequar CT-e (transporte) — campos CBS aplicáveis
+TI / Logística
+Alta
+Abr/2026
+Configurar emissão de NF-e de devolução com estorno de crédito
+TI / Fiscal
+Alta
+Abr/2026
+Configurar NF-e de transferência sem CBS, com manutenção do crédito
+TI / Fiscal
+Alta
+Abr/2026
+Adequar emissão de DANFE com nova demonstração
+TI / Fiscal
+Alta
+Abr/2026
+Validar manifestação do destinatário sobre a NF-e
+Fiscal
+Alta
+Mai/2026
+Validar conciliação NF-e emitidas x escrituradas
+Fiscal
+Alta
+Mai/2026
+Estabelecer rotina de retenção de notas com erro
+Fiscal
+Alta
+Mai/2026
+
+Frente 6 — Apuração e Compliance Fiscal
+Ação
+Responsável
+Criticidade
+Prazo
+Implementar rotina de apuração mensal CBS
+Fiscal
+Crítica
+Jan/2026
+Implementar apuração paralela PIS/COFINS em 2026
+Fiscal
+Crítica
+Jan/2026
+Configurar geração da EFD ou substituta da CBS
+Fiscal / TI
+Crítica
+Mai/2026
+Adequar geração da DCTFWeb / declaração equivalente
+Fiscal
+Alta
+Mai/2026
+Implementar controle de saldo credor mensal por estabelecimento
+Fiscal
+Alta
+Mai/2026
+Implementar controle de crédito presumido (agro, cooperativas)
+Fiscal
+Alta
+Mai/2026
+Implementar conciliação CBS x contábil mensal
+Contabilidade
+Alta
+Jun/2026
+Implantar dashboards gerenciais de CBS
+Controladoria / TI
+Média
+Jun/2026
+Estabelecer rotina de acompanhamento de regulamentação CGIBS
+Fiscal / Jurídico
+Alta
+Contínuo
+Definir pessoa responsável por revisão semanal de eventos
+Fiscal
+Alta
+Jan/2026
+
+Frente 7 — Contratos e Cláusulas Tributárias
+Ação
+Responsável
+Criticidade
+Prazo
+Mapear contratos vigentes afetados
+Jurídico
+Crítica
+Jan/2026
+Padronizar nova cláusula tributária (gross-up CBS)
+Jurídico
+Crítica
+Fev/2026
+Negociar aditivos com fornecedores estratégicos
+Compras / Jurídico
+Crítica
+Mar/2026
+Negociar aditivos com clientes estratégicos
+Comercial / Jurídico
+Crítica
+Mar/2026
+Implantar nova cláusula em todos os contratos novos a partir de 2026
+Jurídico
+Crítica
+Jan/2026
+Avaliar contratos de longo prazo (concessões, infraestrutura)
+Jurídico
+Alta
+Mar/2026
+Padronizar tratamento de bonificações e descontos
+Comercial / Fiscal
+Alta
+Mar/2026
+Adequar contratos de locação (móveis e imóveis)
+Jurídico / Fiscal
+Alta
+Mar/2026
+Tratar contratos com Simples Nacional (transferência de crédito)
+Jurídico / Fiscal
+Alta
+Abr/2026
+Estabelecer comitê para análise de contratos ad hoc
+Jurídico
+Média
+Jan/2026
+
+Frente 8 — Pricing e Política Comercial
+Ação
+Responsável
+Criticidade
+Prazo
+Recalcular margem por produto / serviço com CBS
+Controladoria / Comercial
+Crítica
+Fev/2026
+Definir política de gross-up (sobre tabela ou no fechamento)
+Comercial
+Crítica
+Fev/2026
+Atualizar tabelas de preços e simuladores
+Comercial / TI
+Crítica
+Mar/2026
+Recalibrar pricing por canal (e-commerce, varejo, B2B)
+Comercial
+Alta
+Mar/2026
+Adequar política de descontos e bonificações
+Comercial
+Alta
+Mar/2026
+Treinar equipe comercial na nova lógica tributária
+RH / Comercial
+Alta
+Abr/2026
+Implementar ferramentas de simulação para vendedores
+TI / Comercial
+Média
+Abr/2026
+Comunicar clientes sobre eventuais reajustes
+Comercial / Marketing
+Alta
+Mai/2026
+Acompanhar movimentos da concorrência
+Comercial / Inteligência
+Média
+Contínuo
+Avaliar repasse parcial / integral por linha
+Comercial / Diretoria
+Alta
+Mar/2026
+
+Frente 9 — Tesouraria, Split Payment e Crédito
+Ação
+Responsável
+Criticidade
+Prazo
+Engajar adquirentes (Cielo, Rede, Stone, etc.) para split payment
+Tesouraria
+Crítica
+Jan/2026
+Configurar split payment no Pix em operações empresariais
+Tesouraria / TI
+Crítica
+Fev/2026
+Reanálise do fluxo de caixa com retenções na origem
+Tesouraria / Controladoria
+Crítica
+Fev/2026
+Implementar gestão de saldo credor mensal
+Tesouraria / Fiscal
+Alta
+Mar/2026
+Estruturar processo de ressarcimento de exportação
+Tesouraria / Fiscal
+Alta
+Mar/2026
+Avaliar mecanismos de compensação cruzada
+Fiscal
+Alta
+Mar/2026
+Constituir reserva financeira para choque de transição
+Tesouraria / Diretoria
+Alta
+Out/2025
+Adequar conciliação bancária ao split payment
+Tesouraria / Contabilidade
+Alta
+Mai/2026
+Estabelecer pacto com bancos para liquidação fracionada
+Tesouraria
+Média
+Fev/2026
+Monitorar prazos de ressarcimento (CGIBS) — KPIs específicos
+Fiscal / Tesouraria
+Alta
+Contínuo
+
+Frente 10 — Capacitação e Comunicação Interna
+Ação
+Responsável
+Criticidade
+Prazo
+Programa de capacitação executiva (Diretoria)
+RH / Comitê
+Alta
+Dez/2025
+Capacitação técnica do Fiscal e Contábil (40 horas)
+RH / Fiscal
+Crítica
+Jan/2026
+Capacitação do Comercial (8 horas focadas em pricing)
+RH / Comercial
+Alta
+Fev/2026
+Capacitação de Compras (8 horas focadas em crédito)
+RH / Compras
+Alta
+Fev/2026
+Capacitação de TI (16 horas focadas em parametrização)
+RH / TI
+Alta
+Jan/2026
+Capacitação do Jurídico (8 horas focadas em contratos)
+RH / Jurídico
+Alta
+Jan/2026
+Capacitação operacional (PDV, recepção, entregas)
+RH / Operações
+Média
+Mar/2026
+Comunicação periódica via boletim ou intranet
+Comunicação / Comitê
+Média
+Contínuo
+Treinamento sobre demonstração tributária ao consumidor
+RH / Operações
+Alta
+Abr/2026
+Programa de embaixadores da reforma por área
+RH / Comitê
+Baixa
+Mar/2026
+
+Frente 11 — Auditoria, Pós-Implantação e Monitoramento
+Ação
+Responsável
+Criticidade
+Prazo
+Auditoria interna de aderência ao Decreto
+Auditoria Interna
+Crítica
+Jul/2026
+Auditoria externa de compliance fiscal
+Auditoria Externa
+Alta
+Set/2026
+Revisão das primeiras apurações (3 ciclos)
+Fiscal
+Crítica
+Jul/2026
+Reanálise dos KPIs de implantação
+PMO
+Alta
+Jul/2026
+Lessons learned do projeto
+PMO / Comitê
+Média
+Out/2026
+Revisão anual do programa frente à regulamentação
+Comitê
+Crítica
+Anual
+Revisão de cláusulas contratuais 12 meses pós go-live
+Jurídico
+Alta
+Mai/2027
+Aferição de margem efetiva pós-CBS
+Controladoria
+Alta
+Trimestral
+Acompanhamento de decisões CGIBS / RFB / CARF
+Fiscal / Jurídico
+Alta
+Contínuo
+Revisão da governança e composição do Comitê
+Comitê
+Média
+Anual
+
+4. Cronograma Resumido (Macro)
+Fase
+Período
+Foco Principal
+Mobilização
+Out/2025 — Dez/2025
+Comitê, Diagnóstico inicial, Engajamento de fornecedores
+Preparação Técnica
+Jan/2026 — Mar/2026
+Cadastros, ERP, NF-e, Contratos, Pricing
+Testes e Adequação
+Abr/2026 — Mai/2026
+Apuração paralela, integração SEFAZ/RFB, validação
+Go-Live e Estabilização
+Jul/2026 — Dez/2026
+Acompanhamento intensivo, ajustes finos
+Transição PIS/COFINS
+2026 — 2027
+Encerramento gradual de PIS/COFINS
+Transição IBS Estadual
+2027 — 2032
+Adequação progressiva ao IBS
+Pleno Funcionamento
+A partir de 2033
+Sistema CBS+IBS+IS pleno; PIS/COFINS/ICMS/ISS extintos
+
+5. Indicadores-Chave de Implantação (KPIs)
+KPI
+Métrica
+Meta
+% de cadastro de itens revisado
+(itens revisados / total) × 100
+100% até 30/06/2026
+% de fornecedores classificados
+(fornecedores classificados / total) × 100
+100% até 30/06/2026
+% de contratos com cláusula nova
+(contratos atualizados / total) × 100
+≥ 80% até 30/06/2026
+Aderência da NF-e à CBS
+Notas com erro / total emitido
+< 1% após 60 dias do go-live
+Acuracidade da apuração paralela
+Diferença CBS calculada x esperada
+Menor que 0,5%
+Cobertura de capacitação
+(treinados / população elegível) × 100
+≥ 95%
+Tempo médio de ressarcimento
+(dias entre crédito e devolução)
+Acompanhar — meta CGIBS
+Saldo credor / receita bruta
+(saldo credor / receita) × 100
+Reduzir trimestralmente
+Notificações fiscais recebidas
+Quantidade por trimestre
+Zero
+Custos do projeto x orçamento
+(executado / planejado)
+≤ 110%
+
+6. Recomendação Final
+A implantação da Reforma Tributária — em especial da CBS — constitui o maior projeto tributário das últimas décadas no Brasil. A profundidade das mudanças exige tratamento como projeto estratégico de alta prioridade, com envolvimento direto da Diretoria, recursos dedicados, governança formal e acompanhamento contínuo. Empresas que iniciarem a implantação ainda em 2025 terão margem confortável para validações; aquelas que postergarem para 2026 enfrentarão risco operacional e financeiro relevante.
+ℹ INFORMAÇÃO TÉCNICA
+Recomenda-se que a empresa promova revisões trimestrais do presente Checklist durante todo o período de transição (2026-2032), com atualização ágil em razão de novos atos do CGIBS, da RFB e de eventuais leis complementares supervenientes.
+
+
+──────────────────────────────────────────────────
+Documento técnico elaborado com base no Decreto nº 12.955, de 29/04/2026. Sujeito a ajustes em razão de atos normativos complementares (RFB/CGIBS) ainda pendentes de publicação.

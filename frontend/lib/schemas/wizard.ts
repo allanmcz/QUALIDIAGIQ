@@ -4,22 +4,21 @@ import { z } from "zod";
 function validaCNPJ(cnpj: string): boolean {
   const c = cnpj.replace(/[^\d]/g, "");
   if (c.length !== 14 || !!c.match(/(\d)\1{13}/)) return false;
-  let t = c.length - 2,
-    d = c.substring(t),
-    d1 = parseInt(d.charAt(0)),
-    d2 = parseInt(d.charAt(1)),
-    calc = (x: number) => {
-      let n = c.substring(0, x),
-        y = x - 7,
-        s = 0,
-        r = 0;
-      for (let i = x; i >= 1; i--) {
-        s += parseInt(n.charAt(x - i)) * y--;
-        if (y < 2) y = 9;
-      }
-      r = 11 - (s % 11);
-      return r > 9 ? 0 : r;
-    };
+  const t = c.length - 2;
+  const d = c.substring(t);
+  const d1 = parseInt(d.charAt(0), 10);
+  const d2 = parseInt(d.charAt(1), 10);
+  const calc = (x: number) => {
+    const n = c.substring(0, x);
+    let y = x - 7;
+    let s = 0;
+    for (let i = x; i >= 1; i--) {
+      s += parseInt(n.charAt(x - i), 10) * y--;
+      if (y < 2) y = 9;
+    }
+    const r = 11 - (s % 11);
+    return r > 9 ? 0 : r;
+  };
   return calc(t) === d1 && calc(t + 1) === d2;
 }
 

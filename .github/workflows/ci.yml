@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      JWT_SECRET_KEY: ci-test-secret-jwt-key-32-characters!!!!
+      APP_ENV: development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Instalar pacote em modo editável + dev-deps
+        run: pip install -e ".[dev]"
+      - name: Ruff (lint)
+        run: ruff check src/ tests/
+      - name: Mypy
+        run: mypy src/
+      - name: Pytest
+        run: PYTHONPATH=. pytest
+
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: ESLint (Next.js)
+        run: npm run lint
+      - name: Playwright (Chromium apenas)
+        run: npx playwright install --with-deps chromium
+      - name: E2E
+        env:
+          CI: true
+        run: npm run test:e2e

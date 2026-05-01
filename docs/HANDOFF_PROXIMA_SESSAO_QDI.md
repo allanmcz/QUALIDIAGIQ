@@ -2,7 +2,7 @@
 
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
 > **Local canônico (versionado):** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`  
-> **Última atualização:** 2026-04-30 (pós-blocos **N1–N7** fechados; lint/test/mypy + Playwright `wizard-post` verdes)
+> **Última atualização:** 2026-04-30 (pós **N1–N7** + incremento **MoSCoW MUST M01–M12** no código; ~141 pytest passed, 1 skipped; Playwright `wizard-post` verde)
 
 ---
 
@@ -19,7 +19,7 @@
 9. [Testes, qualidade e observabilidade](#9-testes-qualidade-e-observabilidade)  
 10. [Conformidade, LGPD e critérios de lançamento](#10-conformidade-lgpd-e-critérios-de-lançamento)  
 11. [Decisões de produto pendentes](#11-decisões-de-produto-pendentes)  
-12. [Blocos entregues (N1–N7) e próximos (O1–O8)](#12-blocos-entregues-n1n7-e-próximos-o18)  
+12. [Blocos entregues (N, M) e próximos (P1–P8)](#12-blocos-entregues-n-m-e-próximos-p1p8)  
 13. [Prompt modelo para agente](#13-prompt-modelo-para-agente)  
 14. [Armadilhas conhecidas (evitar regressão)](#14-armadilhas-conhecidas-evitar-regressão)  
 15. [Checklist pós-sessão (Allan)](#15-checklist-pós-sessão-allan)  
@@ -33,14 +33,14 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 
 **Situação atual (macro) — abril/2026:**
 
-- **API FastAPI:** POST/GET/PATCH diagnóstico, motor em **7 dimensões**, **GET `/diagnosticos/questionario` público**, catálogo JSON **37** perguntas, idempotência (Postgres + fallback), **migração `0008`** com comentários operacionais, WORM/hash/versão otimista, OTEL opcional, **router `/normativa/validar-ancora`** (protótipo guardrail Lexiq) com schemas dedicados.
-- **Consultoria + contrato:** `ConsultoriaService` com cronograma 5 fases, checklist **prioridade** + **base legal**, matriz (incl. `base_legal` onde aplicável), resposta JSON com `cronograma`, `matriz_impacto`, etc.
-- **Front-end:** wizard com ramos **`escala_1_5`**, **`binaria`**, **`numerica`**, **`multipla_escolha` / `checklist`**, **`ternaria`**; LGPD com link **`/privacidade`**; dashboard detalhe com **cronograma**, **matriz**, checklist, radar + **heatmap** + **Barras de ranking de gaps**, botão PDF; componente **`Badge`** (`frontend/components/ui/badge.tsx`).
-- **Testes:** pytest verde (~139 passed, 1 skipped); **`frontend/e2e/wizard-post.spec.ts`** cobre login → wizard → POST mock (Bearer + Idempotency-Key); **`tests/unit/infrastructure/test_pdf_template_m04.py`** valida marcadores HTML M04 no template Jinja.
+- **API FastAPI:** POST/GET/PATCH diagnóstico, motor em **7 dimensões**, **GET `/diagnosticos/questionario`** e **`GET /diagnosticos/manifesto-pesos`** públicos, **`GET /diagnosticos/metodologia`** alinhada ao motor (pesos macro = `PESOS_MACRO_DIMENSAO_SCORE_GERAL` em `src/domain/value_objects/score.py`). Catálogo **37** perguntas, idempotência, migrações **`0001`…`0009`** (`0009` = `respondente_telefone` + comentários M10), WORM/OTEL, **`/normativa/validar-ancora`**.
+- **Consultoria:** `ConsultoriaService` com frente **M07** (“Prioridade por gaps do score”) quando há `ScoreCompleto`; cronograma 5 fases; matriz com **NT CGNFS-e** na linha Jurídico (M08); checklist ABNT 10 itens.
+- **Front-end:** wizard (tipos de pergunta + **telefone opcional** M09 + links manifesto/metodologia JSON + **`/abnt-framework`**); dashboard lista com **barra de score** (M05); detalhe com radar, heatmap, ranking, **timeline** cronograma (M06), **autoconferência M12** (checkboxes só no browser, não persistidos).
+- **Testes:** pytest ~141 passed / 1 skipped; integração **`test_manifesto_pesos_publico`**; **`test_m07_prioridade_checklist`**; Playwright **`wizard-post`** (ordem de rotas §14).
 
-**MoSCoW MVP (12 MUST):** ainda **não declarado “fechado”** pelo produto; principais lacunas editoriais/arquiteturais: homologação **M04**, manifesto pesos **M03**, **M09**/jornada Free, **M10** hardening produção Supabase, **M11**/UI PDCA explícita, **M12** tela checklist 10× binário dedicada.
+**MoSCoW MVP (12 MUST):** **avanço grande no código**; **fechamento comercial/jurídico** ainda depende de homologação **M04**, calibração **M02** com dados reais, hardening **M10** em Supabase produção, decisões **M09** (Free vs CNPJ), e auditoria **37×35**.
 
-**Próximo marco sugerido (§12):** blocos **O1–O3** — polir produto executivo + CI E2E; **O4–O6** — conteúdo normativo/UI ABNT + reconciliação 37×35 perguntas.
+**Próximo marco sugerido (§12.3):** ciclo **P** — **OpenAPI** + **CI E2E**, **auditoria 37×35**, **fix `asChild`**, homologação PDF, hardening RLS prod.
 
 ---
 
@@ -49,7 +49,7 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 | Área | Escolha do projeto |
 |------|-------------------|
 | Backend | Python 3.12+, FastAPI 0.115+, Pydantic v2, Clean Architecture (`src/domain`, `application`, `infrastructure`, `presentation`) |
-| DB local | PostgreSQL via Docker; migrações `src/infrastructure/db/migrations/` (`0001`…`0008`) + `init.sql` |
+| DB local | PostgreSQL via Docker; migrações `src/infrastructure/db/migrations/` (**`0001`…`0009`**) + `init.sql` na raiz |
 | Front | Next.js 14 App Router, Tailwind, shadcn/ui, Recharts |
 | PDF | WeasyPrint (Python) + Jinja2 (`src/infrastructure/adapters/pdf_generator_weasyprint.py`) |
 | Testes | pytest, pytest-asyncio; Playwright (`frontend/e2e/`) |
@@ -89,27 +89,30 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 - **`NEXT_PUBLIC_API_URL`** — URL da API no browser (default no código: `http://localhost:60000`). Ver `frontend/.env.example`.
 - `DATABASE_URL`, `JWT_SECRET_KEY`, `SUPABASE_*`, `OTEL_*` — conforme `.env` / Docker.
 
+**Bases novas / upgrade:** rodar stack com volume limpo ou aplicar **`0009`** manualmente em bases já existentes (coluna `respondente_telefone`).
+
 ---
 
 ## 3. Mapa do repositório (onde está o quê)
 
 | Caminho | Responsabilidade |
 |---------|------------------|
-| `src/domain/` | Entidades (`diagnostico`, `questionario`), VOs de score, ports |
-| `src/application/` | Use cases; **`ConsultoriaService`**; **`services/lexiq_guardrail.py`** (validação pós-resposta âncoras) |
-| `src/infrastructure/` | Supabase repo, WeasyPrint + **`templates/relatorio_diagnostico.html`** (marcadores **M04**), questionário JSON, idempotência |
-| `src/infrastructure/db/migrations/` | **`0001`…`0008`** (incl. `0008_idempotency_comentarios_operacao.sql`) |
-| `src/presentation/api/` | FastAPI, schemas, **`routers/normativa_router.py`**, middleware idempotência |
-| `docs/operacao_rls_idempotency.md` | Notas operação RLS + idempotência (N6) |
-| `frontend/lib/api/` | `config.ts`, `diagnostico.ts`, `questionario.ts` |
-| `frontend/app/privacidade/` | Página política LGPD (link no wizard) |
-| `frontend/app/dashboard/diagnosticos/[id]/` | **`DiagnosticoDetalheClient.tsx`** — radar, heatmap, gaps, cronograma, matriz |
-| `frontend/components/wizard/` | **`WizardForm.tsx`** — tipos de pergunta |
-| `frontend/components/ui/badge.tsx` | Badge (dashboard / detalhe) |
-| `frontend/e2e/` | **`smoke.spec.ts`**, **`wizard-post.spec.ts`** |
-| `frontend/playwright.config.ts` | Porta **3333** |
-| `tests/unit/infrastructure/test_pdf_template_m04.py` | Golden parcial HTML M04 |
-| `tests/unit/application/test_lexiq_guardrail.py` | Guardrail âncoras |
+| `src/domain/value_objects/score.py` | **`PESOS_MACRO_DIMENSAO_SCORE_GERAL`**, `pesos_macro_dimensao_para_dict_iso()` — fonte única da agregação do score geral (M02/M03) |
+| `src/domain/entities/diagnostico.py` | `Respondente.telefone` opcional (M09) |
+| `src/application/services/consultoria_service.py` | M07 frente gaps; matriz M08; checklist ABNT M12 |
+| `src/application/use_cases/calcular_score_use_case.py` | Consome pesos macro do domain |
+| `src/infrastructure/db/migrations/` | **`0001`…`0009`** (`0009_respondente_telefone_m10.sql`) |
+| `src/presentation/api/routers/diagnostico_router.py` | **`/manifesto-pesos`**, `/metodologia`, `/questionario`, CRUD diagnóstico |
+| `src/presentation/api/schemas.py` | `ManifestoPesosResponse`, `ManifestoPesoPerguntaSchema`, `nota_calibracao_m02` |
+| `init.sql` | Orquestra `\i` das migrações no bootstrap Docker |
+| `frontend/app/abnt-framework/page.tsx` | Hub **M11** (PDCA + 7 pilares, texto didático) |
+| `frontend/app/privacidade/` | LGPD |
+| `frontend/app/dashboard/diagnosticos/[id]/DiagnosticoDetalheClient.tsx` | Radar, heatmap, gaps, cronograma+tabela+t**imeline**, **M12** checkboxes locais |
+| `frontend/app/dashboard/page.tsx` | Lista mock + **barra M05** por card |
+| `frontend/components/wizard/WizardForm.tsx` | Tipos pergunta, telefone, `aria-live`, links API |
+| `frontend/lib/schemas/wizard.ts` | Zod incl. `respondente.telefone` |
+| `docs/operacao_rls_idempotency.md` | Operação RLS + idempotência |
+| `frontend/e2e/` | `smoke.spec.ts`, `wizard-post.spec.ts` |
 | `docs/refs/` | PRD, MoSCoW, questionário v1, metodologia |
 
 ---
@@ -118,34 +121,35 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 
 ### 4.1 API HTTP
 
-- **POST `/diagnosticos/`** — Bearer JWT + **`Idempotency-Key`** obrigatória.  
-- **GET `/diagnosticos/{id}`**, **PATCH** (If-Match), **GET `/diagnosticos/metodologia`**, **GET `/health`**, **POST `/auth/login`**.  
+- **POST `/diagnosticos/`** — Bearer JWT + **`Idempotency-Key`** obrigatória; corpo pode incluir **`respondente.telefone`** (opcional).  
+- **GET `/diagnosticos/{id}`**, **PATCH** (If-Match), **GET `/diagnosticos/metodologia`**, **`GET /diagnosticos/manifesto-pesos`**, **GET `/health`**, **POST `/auth/login`**.  
 - **GET `/diagnosticos/questionario`** — público (query perfil empresa).  
-- **POST `/normativa/validar-ancora`** (ou prefixo configurado em `main.py`) — protótipo **N7**: corpo texto + flag âncoras normativas (LC/EC/ABNT/NT).
+- **POST `/normativa/validar-ancora`** — protótipo guardrail (N7).
 
 ### 4.2 Resposta de diagnóstico (JSON)
 
-- `score`, `checklist`, `matriz_impacto`, **`cronograma`**, `relatorio_pdf_url`, recomendação IA opcional, WORM/metadata.
+- `score`, `checklist` (**incl. frente M07** quando score disponível), `matriz_impacto`, `cronograma`, `relatorio_pdf_url`, WORM/metadata.
 
 ### 4.3 Domínio e PDF
 
-- Motor 7 dimensões; catálogo com condicionais; PDF com síntese, dimensões, gaps, matriz, cronograma, checklist (**prioridade** + **base legal** onde gerado pelo serviço).  
-- Template com comentários Jinja/HTML **`M04_SECAO:*`** para testes de regressão estrutural.
+- Motor 7 dimensões; PDF com marcadores **M04** (`capa`, `sintese_executiva`, `tecnico_detalhamento_dimensoes`, **`tecnico_gaps_recomendacoes`**, etc.).
+- **`nota_calibracao_m02`** exposta no JSON do manifesto (texto roadmap Beta).
 
 ### 4.4 Front (contrato)
 
-- POST: Bearer + Idempotency-Key; GET questionário sem token no wizard após perfil.  
-- Dashboard detalhe: tipos alinhados à API (**cronograma**, **matriz_impacto**, checklist com prioridade/base_legal).  
-- Visualizações: radar + heatmap por dimensão + ranking de gaps (Recharts).
+- Lista dashboard: prévia por score (barra).  
+- Detalhe: cronograma em tabela + **linha do tempo**; **M12** espelho local dos 10 itens ABNT.  
+- **`/abnt-framework`**: navegação M11.
 
 ### 4.5 Testes automatizados
 
-- pytest: unit + integração (incl. normativa/âncoras), idempotência, WORM onde aplicável, **`test_lexiq_guardrail`**, **`test_pdf_template_m04`**.  
-- Playwright: smoke (`/wizard`, `/login`) + **`wizard-post`**: mocks de rede + **atenção à ordem de `page.route`** (§14).
+- **`tests/integration/test_api.py`:** `test_manifesto_pesos_publico`, `test_metodologia_endpoint` (chaves **`pesos_macro_dimensao_score_geral`**).  
+- **`tests/unit/application/test_consultoria_service.py`:** `test_m07_prioridade_checklist_por_piores_dimensoes`, matriz com CGNFS-e.  
+- **`tests/unit/infrastructure/test_pdf_template_m04.py`:** assert **`M04_SECAO: tecnico_gaps_recomendacoes`**.
 
 ### 4.6 Paridade documental
 
-- Catálogo **37** vs doc **35** em `docs/refs/05_QUESTIONARIO_v1.md` — **auditoria editorial ainda pendente**.
+- Catálogo **37** vs doc **35** em `docs/refs/05_QUESTIONARIO_v1.md` — **auditoria editorial pendente (P4)**.
 
 ---
 
@@ -153,46 +157,47 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 
 | ID | Feature | Status | Comentário / pendência |
 |----|---------|--------|-------------------------|
-| **M01** | Wizard adaptativo | **PARCIAL → avançado** | Ramos UI por **`ternaria`**, **`binaria`**, **`escala_1_5`**, **`numerica`**, **`multipla_escolha`/`checklist`**. Revisão UX com catálogo real (edge cases opções vazias) e testes visuais. |
-| **M02** | Motor score 0–100, 6+ dimensões | **OK** (refinar) | Calibração por segmento **não** feita. |
-| **M03** | Pesos transparentes | **PARCIAL** | `/metodologia`; manifesto exportável/legal **aberto**. |
-| **M04** | PDF executivo | **PARCIAL** | Estrutura rica + testes M04 parciais; **não** homologado “1 exec + N técnicas”; paginação WeasyPrint em produção. |
-| **M05** | Heatmap + radar + ranking gaps | **PARCIAL → melhor** | Radar + heatmap + barras gaps no **detalhe**. Falta decisão produto onde replicar (lista principal, PDF mirror). |
-| **M06** | Cronograma 5 fases | **PARCIAL → melhor** | Tabela no dashboard + PDF; timeline visual “premium” opcional (O8). |
-| **M07** | Recomendações priorizadas | **PARCIAL** | Prioridade em checklist; ligar deterministicamente a **gaps derivados das respostas** (regras) — backlog. |
-| **M08** | Ancoragem legal por bullet | **PARCIAL** | Checklist/PDF; matriz ganhou **base legal** em parte do fluxo — conferir todas as linhas + NTs granularmente. |
-| **M09** | Lead magnet self-service | **PARCIAL** | LGPD + `/privacidade`; jornada Free sem login até certo passo vs B2B; campos extras (faturamento) **em aberto**. |
-| **M10** | Multi-tenant Supabase + RLS | **PARCIAL** | RLS + doc operação + comentários migração; **hardening prod** + políticas auxiliares (revisão periódica). |
-| **M11** | Eixos ABNT como espinha | **PARCIAL** | Conteúdo catálogo/PDF; **UI** com PDCA/7 pilares (mapa navegável ou stepper) **não**. |
-| **M12** | Checklist 10 itens binários | **PARCIAL** | Conteúdo serviço + PDF; **tela dedicada** tipo auditoria binária **não**. |
+| **M01** | Wizard adaptativo | **Fortemente avançado** | Ramos por tipo; copy + `aria-live` no fetch; revisar UX edge cases (`multipla_total`/`opcoes` vazias). |
+| **M02** | Motor score 0–100, 6+ dimensões | **OK no núcleo** | Calibração por coorte real = roadmap (`nota_calibracao_m02` no manifesto). |
+| **M03** | Pesos transparentes | **Fortemente avançado** | **`/manifesto-pesos`** + `/metodologia` coerentes com domain; página HTML “humana” opcional (`/metodologia` Next ainda não existe no repo). |
+| **M04** | PDF executivo | **PARCIAL técnico** | Homologação contábil “1 exec + N técnicas”, WeasyPrint em produção, revisão páginas. |
+| **M05** | Heatmap + radar + ranking gaps | **Avançado** | Completo no detalhe + barra na **lista** (mock); alinhar quando lista vier da API real. |
+| **M06** | Cronograma 5 fases | **Avançado** | Tabela + **timeline** no detalhe + PDF; polimento visual se Allan quiser. |
+| **M07** | Recomendações priorizadas | **Avançado** | **3 dimensões piores score** geram primeira frente de checklist (regra determinística). |
+| **M08** | Ancoragem legal por bullet | **PARCIAL** | Matriz jurídica + NT CGNFS-e; revisão editorial linha-a-linha (todas NTs / dispositivos). |
+| **M09** | Lead magnet self-service | **PARCIAL** | Telefone opcional persistido (**`0009`**); jornada Free sem login total, CNPJ opcional, faturamento = decisão produto (§11). |
+| **M10** | Multi-tenant Supabase + RLS | **PARCIAL** | RLS + docs + comentários tabela; **políticas e roles produção** + auditoria periódica. |
+| **M11** | Eixos ABNT como espinha | **Avançado UI** | **`/abnt-framework`** + links no wizard e detalhe; linkagem pergunta↔pilar no catálogo = opcional. |
+| **M12** | Checklist 10 itens binários | **Avançado UI** | Autoconferência no detalhe **não persistida**; PDF/serviço já tinham os 10 itens. |
 
 ---
 
 ## 6. MoSCoW SHOULD / COULD / WONT — backlog
 
-- **SHOULD:** S01 LLM plano personalizado (**não** no núcleo); **S02 RAG Lexiq no wizard — não** (há apenas **endpoint + guardrail** e opcional uso em adapter LLM; não é fluxo wizard completo). S03+ conforme `docs/refs/02_MOSCOW_FEATURES.md`.  
-- **COULD:** Winthor, white-label, API pública documentada — backlog longo.  
-- **WONT:** QAI, QFC, QMI, defesa auto, RestituIQ — **fora do QDI**.
+- **SHOULD:** S01 LLM plano (**não** núcleo); **S02** RAG wizard completo (**não**); existe endpoint **validar-ancora** + guardrail.  
+- **COULD:** Winthor, white-label, API pública documentada.  
+- **WONT:** QAI, QFC, QMI, defesa auto, RestituIQ.
 
 ---
 
 ## 7. Front-end Next.js — pendências (próximo ciclo)
 
-1. **`asChild` / Button (Base UI):** warning no dev SSR — revisar uso de `Button` onde `asChild` vaza para `<button>` nativo ou alinhar API do componente.
-2. **CI:** job opcional `npm run test:e2e` (cache Playwright) em pipeline — decisão Allan.
-3. **Dashboard lista vs detalhe:** consistência visual e deep-link para relatório quando `relatorio_pdf_url` nulo vs disponível (estados vazios).
-4. **Acessibilidade:** radios/checkboxes do wizard já em `Label`; rodar axe ou checklist manual nas telas críticas.
-5. **`allowedDevOrigins`:** aviso Next em dev (127.0.0.1 vs localhost) — configurar antes de upgrade major conforme doc Next.
+1. **`asChild` / Button (Base UI):** warning SSR no dev — **P3**.  
+2. **CI E2E:** job Playwright + cache — **P2**.  
+3. **Lista dashboard real:** hoje **mock**; substituir por GET API + estados vazios/erro + barra M05 com dados reais.  
+4. **Página Next `/metodologia`:** consumir JSON da API e renderizar manifesto “legível” (complemento ao JSON bruto).  
+5. **Acessibilidade:** axe / checklist manual.  
+6. **`allowedDevOrigins`:** Next config antes de upgrade major.
 
 ---
 
 ## 8. Back-end / infra / dados
 
-- Reconciliar **37 vs 35** perguntas com `05_QUESTIONARIO_v1.md`.  
-- Versionamento normativo em DB (`vigencia_*`) — **não** implementado (JSON estático).  
-- OTEL produção (OTLP, correlação logs) — **pendente**.  
-- OpenAPI: documentar **Idempotency-Key**, exemplo **`cronograma`**, endpoint **normativa**.  
-- Pipeline LLM LangGraph — **opcional** ao MVP diagnóstico; guardrail Lexiq já reutilizável em adapters.
+- **P4:** Reconciliar **37×35** com `05_QUESTIONARIO_v1.md`.  
+- **P5 + M04:** Homologação PDF + paginação/impressão.  
+- **P6:** OTEL prod; OpenAPI exemplos (**Idempotency-Key**, `cronograma`, `manifesto-pesos`, normativa).  
+- Versionamento normativo DB (`vigencia_*`) — não implementado.  
+- **Bases antigas:** garantir migração **`0009`** aplicada (coluna telefone).
 
 ---
 
@@ -200,17 +205,17 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 
 | Item | Estado |
 |------|--------|
-| pytest, cobertura ≥ 80% | **OK** (última rodada global verde) |
+| pytest, cobertura ≥ 80% | **OK** (~141 passed, 1 skipped na última rodada registrada) |
 | mypy `src` | **OK** |
-| ruff + black | **OK** (rodar `make format` ao fechar sessão) |
-| Playwright | **Smoke** + **`wizard-post`** (mock rede; valida headers POST) |
-| Calibração score (segmentos reais) | **NÃO** |
+| ruff + black | Rodar **`make format`** ao fechar sessão |
+| Playwright | Smoke + **`wizard-post`** |
+| Calibração score (campo real) | **NÃO** |
 
 ---
 
 ## 10. Conformidade, LGPD e critérios de lançamento
 
-Checklist produto (extrato MoSCoW) — manifesto pesos, PDF homologado, parecer jurídico página privacidade “oficial”, 12 MUST assinados pelo negócio: **majoritariamente aberto**.
+Parecer jurídico em **privacidade** “oficial”, homologação **M04**, assinatura negocial dos **12 MUST**, política de retenção do **`respondente_telefone`**: **abertos**.
 
 ---
 
@@ -218,44 +223,60 @@ Checklist produto (extrato MoSCoW) — manifesto pesos, PDF homologado, parecer 
 
 | # | Tema | Observação |
 |---|------|------------|
-| D1 | Free self-service vs B2B logado | Narrativa única no marketing + fluxo técnico. |
-| D2 | CNPJ opcional no Free | API/schema hoje **exige** CNPJ válido — alinhar. |
-| D3 | Faturamento / setor detalhado | Schema API + front. |
-| D4 | URL canônica dev/stage/prod | `NEXT_PUBLIC_API_URL` + docs deploy. |
-| D5 | Billing Plus/Pro | Triggers perguntas “Plus” sem cobrança no código. |
+| D1 | Free self-service vs B2B logado | Narrativa + fluxo (wizard já menciona lead B2B). |
+| D2 | CNPJ opcional no Free | API ainda **exige** CNPJ 14 dígitos. |
+| D3 | Faturamento / setor detalhado | Schema + UI. |
+| D4 | URL canônica dev/stage/prod | Deploy docs. |
+| D5 | Billing Plus/Pro | Triggers comerciais sem cobrança no código. |
+| **D6** | **Persistir estado M12** (checkboxes) | Hoje só cliente; decisão se vira PATCH ou evidência auditoria. |
 
 ---
 
-## 12. Blocos entregues (N1–N7) e próximos (O1–O8)
+## 12. Blocos entregues (N, M) e próximos (P1–P8)
 
 ### 12.1 Ciclo **N** (concluído — referência)
 
 | ID | Escopo entregue (resumo) |
 |----|--------------------------|
-| **N1** | Dashboard detalhe: `cronograma`, matriz, checklist tipados; radar + heatmap + ranking gaps; botão PDF; mock enriquecido. |
-| **N2** | Wizard por `tipo` (`escala_1_5`, `binaria`, `numerica`, `multipla`/`checklist`, `ternaria`); LGPD → `/privacidade`. |
-| **N3** | Playwright `wizard-post.spec.ts`: login → wizard → POST mock (**Bearer + Idempotency-Key**). **Registrar rota específica `questionario` depois da rota ampla `diagnosticos**`** (§14). |
-| **N4** | Marcadores **`M04_SECAO:*`** no template PDF + teste unitário Jinja/HTML. |
-| **N5** | Heatmap + barras de gaps no detalhe (M05). |
-| **N6** | `docs/operacao_rls_idempotency.md` + migração **`0008`** (comentários operação); `init.sql` atualizado. |
-| **N7** | `lexiq_guardrail.py`, adapter LLM (prompt/validação), `normativa_router`, schemas + testes + integração API. |
+| **N1** | Dashboard detalhe: cronograma, matriz, checklist; radar + heatmap + ranking; PDF. |
+| **N2** | Wizard por `tipo`; LGPD → `/privacidade`. |
+| **N3** | Playwright `wizard-post`; ordem de `page.route` (§14). |
+| **N4** | Marcadores **M04** no HTML PDF + teste Jinja. |
+| **N5** | Heatmap + barras gaps no detalhe. |
+| **N6** | `docs/operacao_rls_idempotency.md` + migração **0008**. |
+| **N7** | `lexiq_guardrail`, `/normativa/validar-ancora`, testes. |
 
-**Histórico anterior (A–L):** ver commits anteriores; núcleo API, Bearer, catálogo 37, idempotência, PDF consultoria.
+### 12.2 Ciclo **M** (MoSCoW MUST — incremento código abril/2026)
 
-### 12.2 Ciclo **O** (sugerido — próximo handoff operacional)
+| ID | Entrega resumida |
+|----|------------------|
+| **M01** | Copy passos + `aria-live` carregamento catálogo. |
+| **M02** | `nota_calibracao_m02` no manifesto; pesos macro centralizados no **domain**. |
+| **M03** | **`GET /diagnosticos/manifesto-pesos`**; **`/metodologia`** alinhada ao motor. |
+| **M04** | Marcador **`tecnico_gaps_recomendacoes`** no template. |
+| **M05** | Barra score na **lista** dashboard (mock). |
+| **M06** | **Timeline** vertical no detalhe (além da tabela). |
+| **M07** | Frente checklist **top 3 dimensões** mais fracas. |
+| **M08** | **NT CGNFS-e** na matriz Jurídico. |
+| **M09** | **`respondente.telefone`** + migração **0009** + campo wizard. |
+| **M10** | Comentários SQL em **0009** (auditoria tabela/coluna). |
+| **M11** | **`/abnt-framework`** + links. |
+| **M12** | Checkboxes locais 10 controles no detalhe. |
+
+### 12.3 Ciclo **P** (próximo handoff operacional)
 
 | ID | Escopo | Pronto quando |
 |----|--------|---------------|
-| **O1** | **M03 + OpenAPI:** endpoint ou página “manifesto de pesos” (export JSON/Markdown) + exemplos Swagger para `cronograma`, idempotência, normativa | Publicável sem consultar código-fonte |
-| **O2** | **CI E2E:** GitHub/GitLab job com Playwright (`wizard-post` mínimo), cache browsers, opcional apenas em PR que toca `frontend/` | Pipeline verde reproduzível |
-| **O3** | **Button/`asChild`:** eliminar warning React no dev server (dashboard/marketing) | Log limpo nos fluxos wizard + dashboard |
-| **O4** | **M12 UI:** tela ou seção expansível “10 controles ABNT” com toggles binários espelhando checklist PDF (somente leitura vs self-check — decidir) | Critérios MoSCoW M12 revisitados pelo produto |
-| **O5** | **M11 UI:** mapa **PDCA + 7 pilares** no detalhe ou hub `/metodologia` enriquecido com âncoras catálogo | Linkagem pergunta → pilar opcionalmente |
-| **O6** | **Auditoria 37×35:** script ou planilha + ajustes catálogo ou doc refs para paridade oficial | Lista de divergências = 0 ou justificativas registradas |
-| **O7** | **S02 evolução:** tooltip ou painel wizard com “consulta normativa” behind feature flag + mesma política guardrail Lexiq | Não obrigatório ao MVP — beta |
-| **O8** | **M06 visual:** timeline vertical (CSS ou lib leve) para cronograma 5 fases | UX revisada Allan |
+| **P1** | **OpenAPI/Swagger:** exemplos `manifesto-pesos`, metodologia, POST diagnóstico (Idempotency), normativa | Documentação exportável |
+| **P2** | **CI E2E** Playwright (`wizard-post` mínimo) | Job verde em PR |
+| **P3** | Corrigir warning **`asChild`** no `Button` | Log dev limpo nas rotas principais |
+| **P4** | **Auditoria 37×35** + ajuste catálogo ou doc | Divergências zeradas ou ADR |
+| **P5** | **M04** homologação + PDF produção (WeasyPrint) | Checklist contábil Allan |
+| **P6** | **M10** hardening Supabase prod (RLS, roles, revisão) | Runbook + teste de fumaça tenant |
+| **P7** | Dashboard lista **real** (GET diagnósticos) + empty states | Sem mock hardcoded |
+| **P8** | **S02** leve: feature flag consulta normativa no wizard (reuso `validar-ancora`) | Opcional / Beta |
 
-Prioridade sugerida para a **próxima sessão única:** **O3 + O2** (qualidade DX/CI), em seguida **O6** (dívida documental).
+**Prioridade sugerida:** **P2 + P3** (DX), em seguida **P4** (dívida documental), **P5/P6** conforme prazo de go-live.
 
 ---
 
@@ -264,24 +285,25 @@ Prioridade sugerida para a **próxima sessão única:** **O3 + O2** (qualidade D
 ```
 Branch local: feat/qdi-<nome>.
 
-Leia docs/HANDOFF_PROXIMA_SESSAO_QDI.md (§1, §7, §12 — bloco O<n> combinado).
+Leia docs/HANDOFF_PROXIMA_SESSAO_QDI.md (§1, §7, §12.3 — bloco P<n> acordado).
 
-Escopo: apenas o bloco O acordado — não expandir para QAI/QFC/QMI, Winthor completo ou RAG Lexiq wizard completo sem pedido explícito.
+Escopo: apenas o bloco P combinado — não expandir QAI/QFC/QMI sem pedido explícito.
 
 Não fazer: git push/rebase sem confirmação do Allan.
 
-Ao terminar: make lint; make format; make test; mypy src; se front E2E: cd frontend && npx playwright test (ou spec alvo).
+Ao terminar: make lint; make format; make test; mypy src; se front: npx playwright test quando relevante.
 
-Playwright: ao mockar APIs, registre rotas **específicas** (ex.: */questionario*) **depois** de rotas amplas (**/diagnosticos**) — ver §14.
+Playwright: rotas específicas (*questionario*) depois de rotas amplas (*diagnosticos**) — §14.
 ```
 
 ---
 
 ## 14. Armadilhas conhecidas (evitar regressão)
 
-1. **Playwright `page.route`:** interceptores são avaliados **do último registrado para o primeiro**. Um handler **`**/diagnosticos**`** que faz `continue()` para GET **absorve** o request antes do mock **`**/diagnosticos/questionario*`**, gerando **“Failed to fetch”** na UI. Mitigação: registrar `questionario` **por último** ou não usar `continue()` para esse path no handler genérico.  
-2. **NEXT vs API porta:** frontend default **`localhost:60000`**; Playwright não sobe API — E2E de contrato deve **mockar** ou usar script que suba compose.  
-3. **LGPD:** `aceite_termos_privacidade` **não** vai no corpo POST (strip no client) — não reintroduzir no DTO HTTP de criação.  
+1. **Playwright `page.route`:** ordem **último registrado = avaliado primeiro**; handler amplo `**/diagnosticos**` com `continue()` em GET pode impedir mock de **`questionario`** → “Failed to fetch”.  
+2. **Rotas FastAPI estáticas:** **`/manifesto-pesos`** e **`/metodologia`** devem permanecer **antes** de **`/{diagnostico_id}`** (UUID).  
+3. **Migração 0009:** ambientes criados antes dela precisam do `ALTER` aplicado; senão upsert pode falhar se PostgREST exigir coluna.  
+4. **LGPD:** `aceite_termos_privacidade` **fora** do POST de criação (strip no client).  
 
 ---
 
@@ -289,7 +311,7 @@ Playwright: ao mockar APIs, registre rotas **específicas** (ex.: */questionario
 
 - [ ] Diff revisado  
 - [ ] `make test` + `mypy src` (+ Playwright se front)  
-- [ ] Atualizar este handoff se mudança material em §4–§7, §12 ou migrations  
+- [ ] Atualizar este handoff após mudanças em §4–§8, §12 ou novas migrations  
 - [ ] Commit Conventional em **pt-BR** quando satisfeito  
 
 ---
@@ -305,4 +327,4 @@ Playwright: ao mockar APIs, registre rotas **específicas** (ex.: */questionario
 
 ---
 
-*Fim do handoff. Prioridade operacional imediata sugerida: **§12.2 → O3 + O2**, depois **O6** (paridade perguntas).*
+*Fim do handoff. Prioridade sugerida: **§12.3 → P2 + P3**, depois **P4**.*

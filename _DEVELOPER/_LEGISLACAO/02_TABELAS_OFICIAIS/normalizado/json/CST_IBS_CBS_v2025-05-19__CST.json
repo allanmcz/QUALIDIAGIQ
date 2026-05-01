@@ -1,0 +1,197 @@
+{
+  "arquivo_origem": "CST_IBS_CBS_v2025-05-19.xlsx",
+  "aba": "CST",
+  "total_registros": 18,
+  "colunas": [
+    "CST-IBS/CBS",
+    "Descrição CST-IBS/CBS",
+    "Permitido em DFe ICMS?",
+    "ind_gIBSCBS",
+    "ind_gIBSCBSMono",
+    "ind_gRed",
+    "ind_gDif",
+    "ind_gTribRegular"
+  ],
+  "registros": [
+    {
+      "CST-IBS/CBS": "000",
+      "Descrição CST-IBS/CBS": "Tributação integral",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 1,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": "010",
+      "Descrição CST-IBS/CBS": "Tributação com alíquotas uniformes",
+      "Permitido em DFe ICMS?": "Não",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": "011",
+      "Descrição CST-IBS/CBS": "Tributação com alíquotas uniformes reduzidas",
+      "Permitido em DFe ICMS?": "Não",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 200,
+      "Descrição CST-IBS/CBS": "Alíquota reduzida",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 1,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 1,
+      "ind_gDif": 0,
+      "ind_gTribRegular": "AVALIAR EM CCLASSTRIB"
+    },
+    {
+      "CST-IBS/CBS": 210,
+      "Descrição CST-IBS/CBS": "Redução de alíquota com redutor de base de cálculo",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 1,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 220,
+      "Descrição CST-IBS/CBS": "Alíquota fixa",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 1,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 221,
+      "Descrição CST-IBS/CBS": "Alíquota fixa proporcional",
+      "Permitido em DFe ICMS?": "Não",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 400,
+      "Descrição CST-IBS/CBS": "Isenção",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 410,
+      "Descrição CST-IBS/CBS": "Imunidade e não incidência",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 510,
+      "Descrição CST-IBS/CBS": "Diferimento",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 1,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 1,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 550,
+      "Descrição CST-IBS/CBS": "Suspensão",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 1,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": "AVALIAR EM CCLASSTRIB"
+    },
+    {
+      "CST-IBS/CBS": 620,
+      "Descrição CST-IBS/CBS": "Tributação monofásica",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 1,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 800,
+      "Descrição CST-IBS/CBS": "Transferência de crédito",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": 810,
+      "Descrição CST-IBS/CBS": "Ajustes",
+      "Permitido em DFe ICMS?": "Sim",
+      "ind_gIBSCBS": "",
+      "ind_gIBSCBSMono": "",
+      "ind_gRed": "",
+      "ind_gDif": "",
+      "ind_gTribRegular": ""
+    },
+    {
+      "CST-IBS/CBS": 820,
+      "Descrição CST-IBS/CBS": "Tributação em declaração de regime específico",
+      "Permitido em DFe ICMS?": "Não",
+      "ind_gIBSCBS": 0,
+      "ind_gIBSCBSMono": 0,
+      "ind_gRed": 0,
+      "ind_gDif": 0,
+      "ind_gTribRegular": 0
+    },
+    {
+      "CST-IBS/CBS": "",
+      "Descrição CST-IBS/CBS": "Legenda:",
+      "Permitido em DFe ICMS?": "",
+      "ind_gIBSCBS": "",
+      "ind_gIBSCBSMono": "",
+      "ind_gRed": "",
+      "ind_gDif": "",
+      "ind_gTribRegular": ""
+    },
+    {
+      "CST-IBS/CBS": "",
+      "Descrição CST-IBS/CBS": "0 = Não é permitido",
+      "Permitido em DFe ICMS?": "",
+      "ind_gIBSCBS": "",
+      "ind_gIBSCBSMono": "",
+      "ind_gRed": "",
+      "ind_gDif": "",
+      "ind_gTribRegular": ""
+    },
+    {
+      "CST-IBS/CBS": "",
+      "Descrição CST-IBS/CBS": "1 = Exige",
+      "Permitido em DFe ICMS?": "",
+      "ind_gIBSCBS": "",
+      "ind_gIBSCBSMono": "",
+      "ind_gRed": "",
+      "ind_gDif": "",
+      "ind_gTribRegular": ""
+    }
+  ]
+}

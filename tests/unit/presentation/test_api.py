@@ -279,6 +279,47 @@ def test_patch_relatorio_sucesso():
     assert body["versao_otimista"] == 2
 
 
+def test_listar_diagnosticos_resumo():
+    from src.presentation.api.dependencies import get_diagnostico_repository
+
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    d1 = _diag_finalizado_micro()
+    d1.tenant_id = tid
+    d2 = copy.deepcopy(d1)
+    d2.id = uuid.uuid4()
+    d2.empresa = EmpresaInfo(
+        cnpj="98765432000111",
+        razao_social="Outra LTDA",
+        porte=PorteEmpresa.MICRO,
+        regime=RegimeTributario.SIMPLES_NACIONAL,
+        cnae_principal="1234567",
+        uf="SP",
+        setor_macro=SetorMacro.COMERCIO,
+    )
+
+    mock_repo = AsyncMock()
+    mock_repo.listar_por_tenant.return_value = [d1, d2]
+
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    response = client.get(
+        "/diagnosticos/?limit=10&offset=0",
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["empresa_razao_social"] == "API PATCH LTDA"
+    assert body[0]["score_geral"] == 62.0
+    assert body[1]["empresa_razao_social"] == "Outra LTDA"
+    mock_repo.listar_por_tenant.assert_awaited_once_with(tid, limit=10, offset=0)
+
+
 def test_obter_diagnostico_nao_encontrado():
     from src.presentation.api.dependencies import get_diagnostico_repository
 

@@ -1,0 +1,272 @@
+[
+  {
+    "arquivo": "cClassTrib_v2026-04-15.xlsx",
+    "abas": [
+      {
+        "nome": "cClass 15-04-2026",
+        "registros": 156,
+        "colunas": [
+          "CST-IBS/CBS",
+          "Descrição CST-IBS/CBS",
+          "cClassTrib",
+          "Nome cClassTrib",
+          "Descrição cClassTrib",
+          "LC Redação",
+          "LC 214/25",
+          "Tipo de Alíquota",
+          "pRedIBS",
+          "pRedCBS",
+          "ind_gTribRegular",
+          "ind_gCredPresOper",
+          "ind_gMonoPadrao",
+          "ind_gMonoReten",
+          "ind_gMonoRet",
+          "ind_gMonoDif",
+          "ind_gEstornoCred",
+          "dIniVig",
+          "dFimVig",
+          "DataAtualização",
+          "indNFeABI",
+          "indNFe",
+          "indNFCe",
+          "indCTe",
+          "indCTeOS",
+          "indBPe",
+          "indBPeTA",
+          "indBPeTM",
+          "indNF3e",
+          "indNFSe",
+          "indNFSe Via",
+          "indNFCom",
+          "indNFAg",
+          "indNFGas",
+          "indDERE",
+          "ANEXO",
+          "Link",
+          "col_37"
+        ]
+      },
+      {
+        "nome": "CST 15-04-2026",
+        "registros": 21,
+        "colunas": [
+          "CST-IBS/CBS",
+          "Descrição CST-IBS/CBS",
+          "ind_gIBSCBS",
+          "ind_gIBSCBSMono",
+          "ind_gRed",
+          "ind_gDif",
+          "ind_gTransfCred",
+          "ind_ gCredPresIBSZFM",
+          "ind_gAjusteCompet",
+          "ind_RedutorBC",
+          "col_10",
+          "col_11",
+          "col_12",
+          "col_13",
+          "col_14",
+          "col_15"
+        ]
+      }
+    ]
+  },
+  {
+    "arquivo": "cCredPres_v2025-12-15.xlsx",
+    "abas": [
+      {
+        "nome": "cCredPres",
+        "registros": 13,
+        "colunas": [
+          "cCredPres",
+          "Descrição",
+          "LC 214/2025",
+          "Apropria via NF?",
+          "Apropria via evento?",
+          "ind_DeduzCredPres",
+          "ind_gCBSCredPres",
+          "ind_gIBSCredPres",
+          "Alíquota CBS",
+          "Alíquota IBS",
+          "pAliqCredPresCBS",
+          "pAliqCredPresIBS",
+          "cClass nota referenciada",
+          "dIniVig",
+          "dFimVig",
+          "dIniVigCBS",
+          "dFimVigCBS",
+          "dIniVigIBS",
+          "dFimVigIBS"
+        ]
+      },
+      {
+        "nome": "Planilha2",
+        "registros": 13,
+        "colunas": [
+          "cCredPres",
+          "LC 214/2025",
+          "pAliq",
+          "vBC_CredPres",
+          "vCred Pres",
+          "Impedimento de CredPres",
+          "col_6",
+          "col_7",
+          "col_8"
+        ]
+      }
+    ]
+  },
+  {
+    "arquivo": "CST_IBS_CBS_v2025-05-19.xlsx",
+    "abas": [
+      {
+        "nome": "CST",
+        "registros": 18,
+        "colunas": [
+          "CST-IBS/CBS",
+          "Descrição CST-IBS/CBS",
+          "Permitido em DFe ICMS?",
+          "ind_gIBSCBS",
+          "ind_gIBSCBSMono",
+          "ind_gRed",
+          "ind_gDif",
+          "ind_gTribRegular"
+        ]
+      }
+    ]
+  },
+  {
+    "arquivo": "cIndBiocomb_IBS_CBS_v2026-04-24.xlsx",
+    "abas": [
+      {
+        "nome": "pBioObrigatorio",
+        "registros": 9,
+        "colunas": [
+          "cProdANP",
+          "Descrição",
+          "pBio  (% Anidro Obrigatorio)",
+          "Início de vigência",
+          "Fim de vigência"
+        ]
+      },
+      {
+        "nome": "pBioObrigatorio_Historico",
+        "registros": 9,
+        "colunas": [
+          "cProdANP",
+          "Descrição",
+          "pBio  (% Anidro Obrigatorio)",
+          "Início de vigência",
+          "Fim de vigência"
+        ]
+      }
+    ]
+  },
+  {
+    "arquivo": "cBenef_x_CST_NT2019-001.xlsx",
+    "abas": [
+      {
+        "nome": "PR",
+        "registros": 468,
+        "colunas": [
+          "CÓDIGO",
+          "CST 00",
+          "CST 10",
+          "CST 20",
+          "CST 30",
+          "CST 40",
+          "CST 41",
+          "CST 50",
+          "CST 51",
+          "CST 60",
+          "CST 70",
+          "CST 90",
+          "DT INÍCIO",
+          "DT FINAL",
+          "DESCRIÇÃO",
+          "OBSERVAÇÃO",
+          "col_16"
+        ]
+      },
+      {
+        "nome": "RJ",
+        "registros": 590,
+        "colunas": [
+          "CÓDIGO",
+          "CST 00",
+          "CST 10",
+          "CST 20",
+          "CST 30",
+          "CST 40",
+          "CST 41",
+          "CST 50",
+          "CST 51",
+          "CST 60",
+          "CST 70",
+          "CST 90",
+          "DATA INÍCIO",
+          "DATA FIM",
+          "DESCRIÇÃO",
+          "OBSERVAÇÃO",
+          "col_16"
+        ]
+      },
+      {
+        "nome": "RS",
+        "registros": 438,
+        "colunas": [
+          "CÓDIGO",
+          "CST 00",
+          "CST 10",
+          "CST 20",
+          "CST 30",
+          "CST 40",
+          "CST 41",
+          "CST 50",
+          "CST 51",
+          "CST 60",
+          "CST 70",
+          "CST 90",
+          "DATA INÍCIO",
+          "DATA FIM",
+          "DESCRIÇÃO",
+          "OBSERVAÇÃO"
+        ]
+      }
+    ]
+  },
+  {
+    "arquivo": "Tabela_Prefixo_GS1.xlsx",
+    "abas": [
+      {
+        "nome": "Valida GTIN",
+        "registros": 28,
+        "colunas": [
+          "Informações práticas para validação do GTIN",
+          "col_1",
+          "col_2",
+          "col_3",
+          "col_4",
+          "col_5",
+          "col_6",
+          "col_7",
+          "col_8",
+          "col_9",
+          "col_10",
+          "col_11",
+          "col_12",
+          "col_13"
+        ]
+      },
+      {
+        "nome": "Prefixo GS1",
+        "registros": 127,
+        "colunas": [
+          "fxPrefixIni",
+          "fxPrefixFim",
+          "indEsp",
+          "fxPais_Nome"
+        ]
+      }
+    ]
+  }
+]

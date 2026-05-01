@@ -1,0 +1,21 @@
+{
+  "name": "@tributiq/calculadora-rfb-client",
+  "version": "1.0.0",
+  "description": "Cliente TypeScript para a Calculadora oficial da Reforma Tributária do Consumo (RFB)",
+  "type": "module",
+  "main": "calculadora-client.ts",
+  "scripts": {
+    "demo": "tsx calculadora-client.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

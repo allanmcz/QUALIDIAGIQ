@@ -21,10 +21,15 @@ import { Progress } from "@/components/ui/progress";
 
 import { DiagnosticoPayloadSchema, DiagnosticoPayload, UFS_BR } from "@/lib/schemas/wizard";
 import { postDiagnostico } from "@/lib/api/diagnostico";
+import { getAccessToken, getApiUrl } from "@/lib/api/config";
+import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
-import { getAccessToken } from "@/lib/api/config";
 
 const TOTAL_STEPS = 3;
+
+const NORMA_WIZARD_ATIVO =
+  typeof process.env.NEXT_PUBLIC_WIZARD_NORMATIVA === "string" &&
+  process.env.NEXT_PUBLIC_WIZARD_NORMATIVA === "true";
 
 export function WizardForm() {
   const router = useRouter();
@@ -35,6 +40,9 @@ export function WizardForm() {
   const [perguntas, setPerguntas] = useState<PerguntaCatalogo[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [tokenChecked, setTokenChecked] = useState(false);
+  const [normaTexto, setNormaTexto] = useState("");
+  const [normaFeedback, setNormaFeedback] = useState<string | null>(null);
+  const [normaCarregando, setNormaCarregando] = useState(false);
 
   useEffect(() => {
     setTokenChecked(true);
@@ -555,8 +563,56 @@ export function WizardForm() {
               </div>
             )}
 
-            {step === 3 && (
+                {step === 3 && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {NORMA_WIZARD_ATIVO && (
+                  <div className="rounded-lg border bg-muted/10 p-4 space-y-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      P8 — Checagem rápida de âncora normativa (Lexiq / guardrail)
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Cole um trecho de justificativa; o motor verifica se há referência reconhecível
+                      (ex.: LC 214/2025, EC 132/2023). Endpoint público:{" "}
+                      <span className="font-mono">POST /normativa/validar-ancora</span>.
+                    </p>
+                    <textarea
+                      value={normaTexto}
+                      onChange={(e) => setNormaTexto(e.target.value)}
+                      rows={4}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="Ex.: Esta prática deve ser revisada conforme LC 214/2025 art. 5º."
+                    />
+                    <div className="flex gap-2 items-center flex-wrap">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={normaCarregando || normaTexto.trim().length < 3}
+                        onClick={async () => {
+                          setNormaFeedback(null);
+                          setNormaCarregando(true);
+                          try {
+                            const r = await postValidarAncora(normaTexto.trim());
+                            setNormaFeedback(
+                              r.valido ? "Aceito — âncora normativa reconhecível." : (r.motivo_rejeicao ?? "Sem âncora."),
+                            );
+                          } catch (err) {
+                            setNormaFeedback(err instanceof Error ? err.message : "Erro ao validar.");
+                          } finally {
+                            setNormaCarregando(false);
+                          }
+                        }}
+                      >
+                        {normaCarregando ? "Validando…" : "Validar texto"}
+                      </Button>
+                      {normaFeedback && (
+                        <span className="text-xs text-muted-foreground" role="status">
+                          {normaFeedback}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {!hasToken && (
                   <div className="p-4 border border-amber-500/40 bg-amber-500/10 rounded-md text-sm">
                     Para enviar o diagnóstico você precisa estar autenticado.{" "}

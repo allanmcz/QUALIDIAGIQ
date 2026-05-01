@@ -1,0 +1,650 @@
+  REFORMA TRIBUTÁRIA — CBS
+Decreto nº 12.955, de 29 de abril de 2026
+  Matriz de Impacto por Departamento 
+Reforma Tributária — CBS — Priorização, Cronograma e Plano de Mitigação
+
+
+
+
+
+
+Código do Documento
+FERRAMENTA-02-Matriz-Impacto-Departamentos
+Data de Elaboração
+30/04/2026
+Autor Técnico
+ALLAN MARCIO — Consultor Tributário Sênior
+Base Normativa
+LC 214/2025; Decreto nº 12.955/2026; EC 132/2023
+
+1. Apresentação
+Esta Matriz de Impacto consolida, departamento a departamento, os efeitos do Decreto nº 12.955/2026 (CBS) sobre as operações empresariais. A estrutura foi pensada para permitir tomada de decisão executiva: cada área tem o seu impacto descrito, criticidade atribuída, prazo de adequação e plano de mitigação sugerido. A matriz dialoga com o Checklist de Implantação (Ferramenta 01).
+ℹ INFORMAÇÃO TÉCNICA
+A criticidade segue convenção: CRÍTICA (impacto direto na continuidade operacional ou compliance fiscal), ALTA (impacto relevante e prazos curtos), MÉDIA (impacto controlável com planejamento) e BAIXA (impacto marginal ou indireto). Os prazos sugeridos pressupõem o calendário Outubro/2025 → Junho/2026.
+
+2. Metodologia
+A análise de impacto considera três dimensões: (i) escopo da mudança normativa exigida pelo Decreto; (ii) complexidade operacional para implantação; (iii) risco em caso de inadequação (compliance, financeiro, reputacional). A pontuação foi consolidada para classificação final de criticidade.
+Etapa 1: Mapeamento da matéria-prima normativa (artigos do Decreto x atividade do departamento);
+Etapa 2: Identificação dos sistemas, processos e pessoas afetados;
+Etapa 3: Avaliação do prazo razoável de adequação;
+Etapa 4: Atribuição de criticidade e prioridade;
+Etapa 5: Recomendação de plano de mitigação por departamento;
+3. Matriz Departamental Detalhada
+3.1 Departamento Fiscal
+Departamento mais impactado em termos absolutos. Concentra a operação da apuração da CBS, gestão de créditos, emissão e escrituração de documentos fiscais, atendimento à fiscalização e produção de obrigações acessórias. Em 2026, opera em regime duplo (CBS e PIS/COFINS), exigindo redobrada atenção.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Apuração mensal CBS
+Crítica
+Jan/2026
+Implementar rotina + double-check com PIS/COFINS
+Apuração paralela PIS/COFINS
+Crítica
+Jan/2026
+Manter equipe duplicada em 2026
+Gestão de créditos amplos
+Crítica
+Mar/2026
+Política formal de aproveitamento de crédito
+Geração de SPED/EFD CBS
+Crítica
+Mai/2026
+Validação contínua com TI e ERP
+Cesta básica e regimes diferenciados
+Alta
+Mar/2026
+Reclassificação prévia do catálogo
+Operações com Simples Nacional
+Alta
+Abr/2026
+Validação prévia da opção do fornecedor
+Crédito presumido (agro, cooperativas)
+Alta
+Abr/2026
+Acompanhar regulamentação CGIBS
+Devoluções e bonificações
+Alta
+Mar/2026
+Processo formal de estorno de crédito
+Comunicação com clientes/fornecedores
+Média
+Contínuo
+Boletim mensal informativo
+Treinamento técnico interno
+Crítica
+Jan/2026
+40h por integrante da equipe
+
+3.2 Tecnologia da Informação / ERP
+TI é coluna vertebral da implantação. A tempestividade dos pacotes do fornecedor de ERP, a compatibilidade dos leiautes fiscais e a integração com SEFAZ/RFB/CGIBS dependem fundamentalmente desta área. Falhas de TI comprometem todo o programa.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Engajamento com fornecedor de ERP
+Crítica
+Out/2025
+Contrato formal com SLA de pacotes
+Pacotes / patches do ERP
+Crítica
+Mar/2026
+Aplicação em ambiente de homologação
+Cálculo CBS por fora
+Crítica
+Mar/2026
+Test cases ampliados
+Integração com adquirentes (split payment)
+Crítica
+Abr/2026
+Homologação prévia com cada adquirente
+Adequação NF-e / NFC-e / NFS-e / CT-e
+Crítica
+Mar/2026
+Roadmap por documento fiscal
+Apuração paralela CBS x PIS/COFINS
+Crítica
+Abr/2026
+Módulo dedicado de paralelização
+SPED/EFD/DCTF (transição)
+Crítica
+Mai/2026
+Validação contra portal RFB
+Performance de processamento (volume)
+Alta
+Mai/2026
+Carga de stress antes do go-live
+Plano de contingência
+Alta
+Mai/2026
+Tier 4 em ambiente, com rollback
+Backup e auditabilidade
+Alta
+Contínuo
+Política formalizada de retenção
+
+3.3 Departamento Comercial / Vendas
+Comercial precisa rever toda a política de pricing, contratos com clientes e modelo de comissionamento. A CBS opera por fora — o preço de tabela precisa repassar a tributação corretamente. A área deve ser engajada antecipadamente para evitar perda de margem.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Reformulação de pricing por linha
+Crítica
+Fev/2026
+Modelo de margem com simulador
+Atualização de tabelas de preços
+Crítica
+Mar/2026
+Versionamento controlado
+Cláusula de gross-up em contratos
+Crítica
+Mar/2026
+Padronização jurídica
+Revisão de comissionamento
+Alta
+Mar/2026
+Política calibrada à nova margem
+Política de descontos e bonificações
+Alta
+Mar/2026
+Categorização condicional / não condicional
+Negociação com clientes-chave
+Alta
+Mar/2026
+Carta-cliente padrão
+Treinamento de vendedores
+Alta
+Abr/2026
+8 horas mínimas
+Adequação de propostas/orçamentos
+Alta
+Mar/2026
+Demonstração tributária
+E-commerce e marketplaces
+Alta
+Abr/2026
+Adequação técnica em paralelo com TI
+Comunicação ao cliente
+Média
+Mai/2026
+Newsletter institucional
+
+3.4 Compras / Suprimentos
+Compras opera o lado do crédito — a maior oportunidade financeira da reforma para a empresa. A correta validação de fornecedores, regimes e classificações fiscais determina o valor efetivo de crédito a ser apropriado. Fornecedores não aptos representam custo permanente.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Cadastro classificatório de fornecedores
+Crítica
+Abr/2026
+KYC tributário
+Validação de regime do fornecedor
+Crítica
+Abr/2026
+Quesito obrigatório no on-boarding
+Tratamento Simples Nacional (opção pelo regular)
+Alta
+Abr/2026
+Negociar opção formalizada
+Bonificações e descontos comerciais
+Alta
+Mar/2026
+Documentação contratual
+Política de aproveitamento de crédito
+Crítica
+Mar/2026
+Aprovada pela Diretoria
+Adequação contratual (gross-up)
+Crítica
+Mar/2026
+Padronizado pelo Jurídico
+Ajustes em compras de combustíveis (monofásico)
+Alta
+Abr/2026
+Procedimento específico
+Compras internacionais (importação)
+Alta
+Abr/2026
+Procedimento aduaneiro adequado
+Rastreabilidade do crédito por OC
+Alta
+Mai/2026
+Indicador no ERP
+KPI de fornecedores aptos
+Média
+Contínuo
+Painel mensal
+
+3.5 Financeiro / Tesouraria
+Tesouraria sentirá impacto pela retenção em split payment e pela mudança no fluxo de caixa. A gestão de saldo credor e o ressarcimento de exportação tornam-se rotinas críticas. Reservas financeiras de transição devem ser constituídas.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Adequação ao split payment (cartões/Pix)
+Crítica
+Fev/2026
+Acordo com adquirentes
+Reanálise de fluxo de caixa
+Crítica
+Fev/2026
+Modelo de simulação trimestral
+Gestão de saldo credor
+Crítica
+Mar/2026
+Painel diário
+Ressarcimento de exportação
+Alta
+Mar/2026
+Pleitos em lote mensal
+Reserva financeira de transição
+Alta
+Out/2025
+Proporcional ao faturamento
+Conciliação bancária pós-split
+Alta
+Mai/2026
+Adequação de software
+Política de antecipação de recebíveis
+Média
+Abr/2026
+Reanálise das taxas
+Compensação cruzada de tributos
+Média
+Mar/2026
+Procedimento formal
+Acompanhamento CGIBS / ressarcimentos
+Crítica
+Contínuo
+Revisão mensal
+Financial Planning & Analysis (FP&A)
+Alta
+Trimestral
+Forecast revisado
+
+3.6 Contabilidade / Controladoria
+Controladoria assume papel-chave na gestão integrada. Reclassificações, contas contábeis novas, conciliações e análise de margem por linha são responsabilidades reforçadas pela reforma.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Plano de contas adequado à CBS
+Crítica
+Jan/2026
+Revisão integral
+Reclassificação do imobilizado (crédito)
+Alta
+Abr/2026
+Levantamento técnico-fiscal
+Conciliações fiscais x contábeis
+Crítica
+Mai/2026
+Mensal automatizada
+Margem por produto/serviço pós-CBS
+Crítica
+Fev/2026
+Painel gerencial
+Indicadores SPED / SPED Contábil
+Alta
+Mai/2026
+Validação técnica
+Apuração contábil paralela 2026
+Crítica
+Jan/2026
+Estrutura específica
+Reporting executivo da reforma
+Alta
+Mensal
+Dashboards CFO
+Notas explicativas (DFP)
+Média
+Mar/2026
+Política específica
+Análise de variações por filial / linha
+Alta
+Trimestral
+Forecast atualizado
+Treinamento da equipe
+Alta
+Jan/2026
+16 horas focadas
+
+3.7 Jurídico / Compliance
+Jurídico é responsável pela revisão integral dos contratos vigentes, padronização de cláusulas tributárias, acompanhamento de regulamentação e contencioso. Atua também como guardião do compliance fiscal.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Mapeamento contratual completo
+Crítica
+Jan/2026
+Inventário sistemático
+Cláusula tributária padrão
+Crítica
+Fev/2026
+Aprovação na Diretoria
+Aditivos contratuais
+Crítica
+Mar/2026
+Cronograma de envio
+Acompanhamento CGIBS / RFB / CARF
+Alta
+Contínuo
+Boletim semanal interno
+Pareceres internos sobre dúvidas
+Alta
+Contínuo
+Repositório eletrônico
+Política de contencioso preventivo
+Alta
+Mar/2026
+Aprovado em Comitê
+Regulação setorial (ANS, ANTT, etc.)
+Média
+Mai/2026
+Diálogo formal com agências
+Adequação de contratos com Simples
+Alta
+Abr/2026
+Cláusula de opção
+Contratos cross-border
+Alta
+Abr/2026
+Análise de imunidade
+Treinamento jurídico interno
+Alta
+Jan/2026
+8 horas obrigatórias
+
+3.8 Logística / Operações / Distribuição
+Logística é diretamente impactada por transferências entre filiais, movimentações de estoque, devoluções e documentação fiscal eletrônica do transporte (CT-e). Operações industriais e atacadistas exigem atenção redobrada.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Inventário físico-fiscal pré-transição
+Crítica
+Dez/2025
+Auditoria interna
+Transferências entre filiais (sem CBS)
+Alta
+Abr/2026
+Documentação adequada
+CT-e adaptado à CBS
+Alta
+Abr/2026
+Em paralelo com TI
+Devoluções com estorno de crédito
+Alta
+Mar/2026
+Procedimento padronizado
+Movimentação de itens da cesta básica
+Média
+Abr/2026
+Sinalização no WMS
+Logística reversa
+Média
+Mai/2026
+Procedimento específico
+Combustíveis (regime monofásico)
+Alta
+Abr/2026
+Acordo formal com fornecedores
+Importação / Exportação
+Alta
+Abr/2026
+Procedimento aduaneiro revisto
+Treinamento das equipes operacionais
+Alta
+Mai/2026
+Pílulas de 4 horas
+KPI de operações sem erro fiscal
+Média
+Contínuo
+Painel mensal
+
+3.9 Recursos Humanos
+Embora a reforma do consumo não impacte diretamente folha de pagamento, RH é responsável pelo programa de capacitação e pela comunicação interna. Reflexos em terceirizações e contratos PJ também merecem atenção.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Programa de capacitação por área
+Alta
+Jan/2026
+Plano anual aprovado
+Mapeamento de gaps de conhecimento
+Alta
+Dez/2025
+Diagnóstico por área
+Comunicação interna periódica
+Média
+Contínuo
+Boletim mensal
+Reflexos em terceirização e PJ
+Média
+Abr/2026
+Adequação contratual
+Plano de embaixadores da reforma
+Baixa
+Mar/2026
+Designação formal
+Avaliação de necessidade de novos perfis
+Alta
+Jan/2026
+Recrutamento se necessário
+Atualização de manuais internos
+Média
+Abr/2026
+Versionamento
+Treinamento de gestores e líderes
+Alta
+Fev/2026
+8 horas mínimas
+Plano de retenção da equipe-chave
+Alta
+Out/2025
+Política específica
+Mensuração de aderência à capacitação
+Média
+Trimestral
+Auditoria de RH
+
+3.10 Diretoria Executiva / Governança
+A alta liderança exerce papel decisivo no patrocínio do programa, na aprovação das mudanças de modelo de negócio e na alocação de recursos. A reforma exige patrocínio executivo formal e visível.
+Frente de Trabalho
+Criticidade
+Prazo
+Mitigação
+Patrocínio executivo formal
+Crítica
+Out/2025
+CFO Sponsor designado
+Aprovação do plano-mestre e orçamento
+Crítica
+Nov/2025
+Comitê com poder de decisão
+Reuniões mensais de status
+Alta
+Contínuo
+Pauta estruturada
+Aprovação da política tributária
+Crítica
+Dez/2025
+Documento estratégico
+Comunicação ao Conselho/Acionistas
+Alta
+Trimestral
+Reporting padrão
+Aprovação da política de pricing nova
+Crítica
+Fev/2026
+Decisão estratégica
+Validação do plano de mitigação de riscos
+Alta
+Jan/2026
+Revisão formal
+Avaliação dos resultados pós-reforma
+Crítica
+Trimestral 2026 em diante
+KPIs revisados
+Tomada de decisão para opção fiscal (Simples / outros)
+Alta
+Dez/2025
+Estudo formal
+Reflexão estratégica sobre modelo de negócio
+Alta
+Contínuo
+Plano de longo prazo
+
+4. Priorização Consolidada (Visão Executiva)
+A tabela a seguir consolida o quadro geral por departamento, com a quantidade de frentes críticas e o prazo médio de adequação.
+Departamento
+Frentes Críticas
+Frentes Altas
+Prazo Médio
+Prioridade Geral
+Fiscal
+5
+4
+Mar/2026
+1ª
+TI / ERP
+8
+2
+Mar/2026 — Mai/2026
+2ª
+Comercial
+3
+5
+Mar/2026
+3ª
+Compras
+3
+5
+Abr/2026
+4ª
+Tesouraria
+3
+5
+Mar/2026
+5ª
+Controladoria
+4
+4
+Mai/2026
+6ª
+Jurídico
+3
+5
+Mar/2026
+7ª
+Logística
+1
+5
+Abr/2026
+8ª
+Diretoria
+5
+3
+Dez/2025 — Mar/2026
+Patrocínio Contínuo
+RH
+0
+5
+Jan/2026 — Abr/2026
+Apoio
+
+5. Cronograma Resumido por Departamento
+5.1 Fase Mobilização (Out-Dez/2025)
+Diretoria: aprovar plano e orçamento;
+Fiscal: diagnóstico e simulação;
+TI: engajar fornecedor de ERP;
+Tesouraria: constituir reserva de transição;
+RH: mapear gaps e iniciar capacitação;
+5.2 Fase Preparação (Jan-Mar/2026)
+Fiscal: implementar apuração paralela;
+TI: aplicar pacotes do ERP;
+Cadastros: revisar 100% de itens e fornecedores;
+Comercial: novas tabelas e contratos;
+Jurídico: cláusulas tributárias padrão;
+Compras: política de crédito;
+Controladoria: plano de contas adequado;
+5.3 Fase Adequação (Abr-Mai/2026)
+TI: integração com SEFAZ/RFB e split payment;
+Fiscal: SPED CBS;
+Compras: KYC tributário concluído;
+Logística: WMS e CT-e adequados;
+Comercial: e-commerce e marketplaces ajustados;
+RH: capacitação operacional concluída;
+5.4 Fase Estabilização (Jul-Dez/2026)
+Fiscal: ciclos de apuração revisados;
+Auditoria: aderência ao Decreto;
+Controladoria: análise de margem efetiva;
+Diretoria: avaliação trimestral;
+Comitê: lessons learned;
+5.5 Transição Estendida (2027-2032)
+Encerramento gradual de PIS/COFINS (2026-2027);
+Adoção integral do IBS estadual e municipal (2029-2032);
+Plena operação do sistema CBS+IBS+IS a partir de 2033;
+Acompanhamento contínuo da regulamentação CGIBS;
+6. Riscos Críticos da Implantação
+✖ RISCO RELEVANTE
+Os riscos a seguir foram considerados de altíssima criticidade. A não mitigação pode comprometer a operação ou gerar exposição relevante a autuações fiscais.
+
+Risco
+Probabilidade
+Impacto
+Mitigação
+Pacotes de ERP em atraso
+Alta
+Crítica
+SLA contratual com fornecedor
+Falha no split payment
+Média
+Crítica
+Homologação prévia com adquirentes
+Cadastro incompleto de itens
+Alta
+Alta
+Plano com prazo intermediário trimestral
+Erro na cesta básica
+Média
+Alta
+Validação cruzada Fiscal/Comercial
+Contratos sem cláusula tributária
+Alta
+Alta
+Aditivos com prazo formal
+Capacitação insuficiente
+Média
+Alta
+Treinamento com avaliação
+Saldo credor estagnado
+Alta
+Média
+Política de monetização
+Apuração paralela com erro
+Alta
+Alta
+Conciliação independente
+Inadequação ao Imposto Seletivo
+Média
+Média
+Mapeamento prévio
+Regulamentação CGIBS tardia
+Alta
+Alta
+Posições conservadoras documentadas
+
+7. Recomendação Executiva
+A análise consolidada indica que a maturidade do programa de implantação é diretamente proporcional ao alinhamento entre Diretoria, TI e Fiscal. Departamentos como Comercial e Compras exigem orquestração transversal — frequentemente subestimada. A recomendação é a constituição imediata do Comitê Tributário Reforma, com sponsor executivo, e o início das frentes críticas ainda em outubro de 2025.
+⚠ ATENÇÃO
+Este documento deve ser revisado mensalmente durante a fase de implantação e trimestralmente após o go-live. Cada nova publicação CGIBS/RFB/STF pode alterar criticidade ou prazos.
+
+
+──────────────────────────────────────────────────
+Documento técnico elaborado com base no Decreto nº 12.955, de 29/04/2026. Sujeito a ajustes em razão de atos normativos complementares (RFB/CGIBS) ainda pendentes de publicação.

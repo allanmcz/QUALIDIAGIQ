@@ -91,6 +91,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 self._client.table("diagnosticos")
                 .select("*")
                 .eq("tenant_id", stid)
+                .order("criado_em", desc=True)
                 .limit(limit)
                 .offset(offset)
                 .execute()

@@ -1,0 +1,28 @@
+{
+  "dataHoraEmissao": "2027-01-15T08:00:00-03:00",
+  "codigoMunicipioOrigem": 4314902,
+  "ufMunicipioOrigem": "RS",
+  "cst": "000",
+  "cClassTrib": "000002",
+  "baseCalculo": 250.00,
+  "trechos": [
+    {
+      "numero": 1,
+      "municipio": 4314902,
+      "uf": "RS",
+      "extensao": 50.5
+    },
+    {
+      "numero": 2,
+      "municipio": 4202404,
+      "uf": "SC",
+      "extensao": 120.0
+    },
+    {
+      "numero": 3,
+      "municipio": 4106902,
+      "uf": "PR",
+      "extensao": 80.3
+    }
+  ]
+}

@@ -4,7 +4,8 @@ import { getAccessToken, getApiUrl } from "./config";
 type PayloadApi = Omit<DiagnosticoPayload, "aceite_termos_privacidade">;
 
 function stripLeadFields(payload: DiagnosticoPayload): PayloadApi {
-  const { aceite_termos_privacidade: _a, ...rest } = payload;
+  const { aceite_termos_privacidade: _aceite, ...rest } = payload;
+  void _aceite;
   return rest;
 }
 
