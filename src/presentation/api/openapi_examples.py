@@ -41,6 +41,12 @@ OPENAPI_EXAMPLES_POST_DIAGNOSTICO: dict[str, dict[str, Any]] = {
 }
 
 
+# Referência cruzada — resposta tipada em ValidarAncoraNormativaResponse (schemas.py).
+OPENAPI_NORMATIVA_TAGS_DOC = (
+    "Sem autenticação. Resposta sempre 200 com campo `valido` booleano e opcional "
+    "`motivo_rejeicao` quando inválido."
+)
+
 OPENAPI_EXAMPLES_NORMATIVA: dict[str, dict[str, Any]] = {
     "com_lc214": {
         "summary": "Texto com LC 214/2025",

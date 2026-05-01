@@ -61,19 +61,19 @@ export const EmpresaSchema = z.object({
     .refine((val) => validaCNPJ(val), "CNPJ inválido"),
   razao_social: z.string().min(3, "Razão social deve ter no mínimo 3 caracteres"),
   porte: z.enum(["micro", "pequeno", "medio", "grande", "enterprise"], {
-    errorMap: () => ({ message: "Selecione o porte da empresa" }),
+    message: "Selecione o porte da empresa",
   }),
   regime: z.enum(["simples_nacional", "lucro_presumido", "lucro_real", "mei"], {
-    errorMap: () => ({ message: "Selecione o regime tributário" }),
+    message: "Selecione o regime tributário",
   }),
   cnae_principal: z
     .string()
     .min(7, "CNAE deve conter 7 dígitos numéricos")
     .max(7)
     .regex(/^\d+$/, "CNAE apenas números"),
-  uf: z.enum(UFS_BR, { errorMap: () => ({ message: "Selecione um Estado (UF)" }) }),
+  uf: z.enum(UFS_BR, { message: "Selecione um Estado (UF)" }),
   setor_macro: z.enum(["comercio", "industria", "servicos", "agro", "consumo"], {
-    errorMap: () => ({ message: "Selecione o setor de atuação" }),
+    message: "Selecione o setor de atuação",
   }),
 });
 
@@ -81,13 +81,7 @@ export const RespondenteSchema = z.object({
   nome: z.string().min(2, "Nome é obrigatório"),
   email: z.string().email("E-mail inválido"),
   /** M09 — lead B2B opcional (API aceita máx. 32 caracteres). */
-  telefone: z.preprocess(
-    (v) => {
-      if (v === undefined || v === null || v === "") return undefined;
-      return typeof v === "string" ? v.trim() : v;
-    },
-    z.string().max(32, "Telefone muito longo").optional(),
-  ),
+  telefone: z.string().max(32, "Telefone muito longo").optional(),
 });
 
 export const RespostaSchema = z.object({

@@ -15,7 +15,10 @@ from src.application.services.lexiq_guardrail import (
     mensagem_rejeicao_guardrail,
     texto_tem_ancora_normativa,
 )
-from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_NORMATIVA
+from src.presentation.api.openapi_examples import (
+    OPENAPI_EXAMPLES_NORMATIVA,
+    OPENAPI_NORMATIVA_TAGS_DOC,
+)
 from src.presentation.api.schemas import (
     ValidarAncoraNormativaRequest,
     ValidarAncoraNormativaResponse,
@@ -24,7 +27,15 @@ from src.presentation.api.schemas import (
 router = APIRouter(prefix="/normativa", tags=["Lexiq / guardrails"])
 
 
-@router.post("/validar-ancora", response_model=ValidarAncoraNormativaResponse)
+@router.post(
+    "/validar-ancora",
+    response_model=ValidarAncoraNormativaResponse,
+    summary="Validar âncora normativa (heurística MVP)",
+    description=(
+        "Checagem heurística de padrões (LC, EC, NT, ABNT) no texto. **Não** substitui Lexiq/RAG "
+        "com citação versionada. " + OPENAPI_NORMATIVA_TAGS_DOC
+    ),
+)
 async def validar_ancora_normativa(
     payload: Annotated[
         ValidarAncoraNormativaRequest,

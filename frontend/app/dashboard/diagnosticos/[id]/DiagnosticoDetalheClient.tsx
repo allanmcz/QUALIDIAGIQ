@@ -176,8 +176,10 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
   /** M12 — frente checklist ABNT 10 itens (mesmo texto retornado pela API). */
   const frenteAbnt10 = useMemo(() => {
-    return data.checklist?.find((f) => f.nome.includes("17301") && f.nome.includes("10")) ?? null;
-  }, [data.checklist]);
+    return (
+      data?.checklist?.find((f) => f.nome.includes("17301") && f.nome.includes("10")) ?? null
+    );
+  }, [data?.checklist]);
 
   const [abntChecks, setAbntChecks] = useState<boolean[]>([]);
   useEffect(() => {
@@ -290,7 +292,12 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 >
                   <XAxis type="number" domain={[0, 100]} />
                   <YAxis type="category" dataKey="dimensao" width={120} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [`${v.toFixed(1)} / 100`, "Score"]} />
+                  <Tooltip
+                    formatter={(v) => [
+                      `${typeof v === "number" ? v.toFixed(1) : String(v ?? "")} / 100`,
+                      "Score",
+                    ]}
+                  />
                   <Bar dataKey="valor" radius={[0, 4, 4, 0]}>
                     {rankingGaps.map((_, i) => (
                       <Cell key={i} fill={barGapColors[Math.min(i, barGapColors.length - 1)]} />

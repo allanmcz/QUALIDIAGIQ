@@ -139,11 +139,17 @@ class QuestionarioDisponivelResponse(BaseModel):
 class ManifestoPesoPerguntaSchema(BaseModel):
     """Um item do catálogo com peso explícito (transparência M03)."""
 
-    codigo: str
-    dimensao: str
-    tipo: str
-    peso: float
-    base_legal: str | None = None
+    codigo: str = Field(..., description="Código canônico da pergunta (ex.: Q-EST-001).")
+    dimensao: str = Field(
+        ...,
+        description="Dimensão ABNT / score (fiscal, estrategica, tecnologica, etc.).",
+    )
+    tipo: str = Field(..., description="Tipo de resposta (ternaria, binaria, escala_1_5, ...).")
+    peso: float = Field(..., description="Peso no cálculo dentro da dimensão.")
+    base_legal: str | None = Field(
+        default=None,
+        description="Referência normativa associada à pergunta (LC 214/2025, NT, EC 132/2023, ...).",
+    )
 
 
 class ManifestoPesosResponse(BaseModel):
@@ -188,6 +194,52 @@ class ManifestoPesosResponse(BaseModel):
     perguntas: list[ManifestoPesoPerguntaSchema]
 
 
+class MetodologiaResponse(BaseModel):
+    """
+    Conteúdo de GET /diagnosticos/metodologia — alinhamento do motor com transparência (M03).
+
+    Público, sem JWT. Complementa o manifesto de pesos.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "versao_normativa": "ABNT NBR 17301:2026",
+                "pesos_macro_dimensao_score_geral": {
+                    "fiscal": 1.5,
+                    "estrategica": 1.0,
+                    "tecnologica": 1.3,
+                },
+                "nota_metodologica": (
+                    "pesos_macro_dimensao_score_geral ponderam apenas a agregação do score "
+                    "a partir das médias por dimensão; dentro de cada dimensão usam-se os pesos "
+                    "do catálogo (ver GET /diagnosticos/manifesto-pesos)."
+                ),
+                "recomendacoes_gaps_criticos": [
+                    "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
+                ],
+            }
+        }
+    )
+
+    versao_normativa: str = Field(
+        ...,
+        description="Referência de norma-guia usada na camada de compliance (ex.: ABNT NBR 17301:2026).",
+    )
+    pesos_macro_dimensao_score_geral: dict[str, float] = Field(
+        ...,
+        description="Pesos que agregam as médias por dimensão no score geral 0-100 (ver domain).",
+    )
+    nota_metodologica: str = Field(
+        ...,
+        description="Texto explicando a relação entre pesos macro e pesos do catálogo por pergunta.",
+    )
+    recomendacoes_gaps_criticos: list[str] = Field(
+        default_factory=list,
+        description="Alertas heurísticos para leitura executiva (não vinculam obrigação legal).",
+    )
+
+
 class ValidarAncoraNormativaRequest(BaseModel):
     """
     Texto livre para heurística MVP (plano ANALISE §E1).
@@ -206,8 +258,20 @@ class ValidarAncoraNormativaResponse(BaseModel):
     Não usar como evidência jurídico-contábil autônoma (ABNT NBR 17301:2026: decisão segue ciclo corporativo formal).
     """
 
-    valido: bool
-    motivo_rejeicao: str | None = None
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "valido": True,
+                "motivo_rejeicao": None,
+            },
+        }
+    )
+
+    valido: bool = Field(..., description="True se o texto contém padrão de âncora normativa MVP.")
+    motivo_rejeicao: str | None = Field(
+        default=None,
+        description="Preenchido quando valido=false (mensagem para UX / wizard).",
+    )
 
 
 # =====================================================================

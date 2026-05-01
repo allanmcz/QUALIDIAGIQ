@@ -5,7 +5,7 @@ Camada: Presentation
 Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 """
 
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, status
@@ -47,6 +47,7 @@ from src.presentation.api.schemas import (
     IniciarDiagnosticoRequest,
     ManifestoPesoPerguntaSchema,
     ManifestoPesosResponse,
+    MetodologiaResponse,
     PatchRelatorioPdfRequest,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
@@ -168,7 +169,18 @@ async def listar_diagnosticos(
     return [_para_resumo(d) for d in rows]
 
 
-@router.post("/", response_model=DiagnosticoResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=DiagnosticoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Criar diagnóstico",
+    description=(
+        "Calcula o score e persiste o diagnóstico no tenant do JWT.\n\n"
+        "**Headers obrigatórios:** `Authorization: Bearer <JWT>` (claim `tenant_id`) e "
+        "`Idempotency-Key` (UUID v4 recomendado). Reexecução com a mesma chave devolve a mesma "
+        "resposta 2xx em cache (middleware de idempotência)."
+    ),
+)
 async def criar_diagnostico(
     payload: Annotated[
         IniciarDiagnosticoRequest,
@@ -260,25 +272,43 @@ async def criar_diagnostico(
     )
 
 
-@router.get("/metodologia")
-async def obter_metodologia() -> dict[str, Any]:
-    """Retorna os pesos e a metodologia do motor de cálculo (Transparência)."""
-    return {
-        "versao_normativa": "ABNT NBR 17301:2026",
-        "pesos_macro_dimensao_score_geral": pesos_macro_dimensao_para_dict_iso(),
-        "nota_metodologica": (
+@router.get(
+    "/metodologia",
+    response_model=MetodologiaResponse,
+    summary="Metodologia e pesos macro do score geral",
+    description=(
+        "Endpoint **público** (sem JWT). Expõe `pesos_macro_dimensao_score_geral` usados na "
+        "agregação do score 0-100 e texto metodológico. Detalhamento por pergunta: "
+        "**GET /diagnosticos/manifesto-pesos**."
+    ),
+)
+async def obter_metodologia() -> MetodologiaResponse:
+    """Retorna os pesos macro e a metodologia do motor de cálculo (transparência M03)."""
+    return MetodologiaResponse(
+        versao_normativa="ABNT NBR 17301:2026",
+        pesos_macro_dimensao_score_geral=pesos_macro_dimensao_para_dict_iso(),
+        nota_metodologica=(
             "pesos_macro_dimensao_score_geral ponderam apenas a agregação do score "
             "a partir das médias por dimensão; dentro de cada dimensão usam-se os pesos "
             "do catálogo (ver GET /diagnosticos/manifesto-pesos)."
         ),
-        "recomendacoes_gaps_criticos": [
+        recomendacoes_gaps_criticos=[
             "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
             "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado.",
         ],
-    }
+    )
 
 
-@router.get("/manifesto-pesos", response_model=ManifestoPesosResponse)
+@router.get(
+    "/manifesto-pesos",
+    response_model=ManifestoPesosResponse,
+    summary="Manifesto público de pesos por pergunta",
+    description=(
+        "Catálogo completo com peso e dimensão por código de pergunta; inclui `versao_catalogo` "
+        "e `pesos_macro_dimensao` aplicados ao score geral. **Público**, sem JWT — auditable "
+        "(LC 214/2025, ABNT NBR 17301:2026)."
+    ),
+)
 async def obter_manifesto_pesos() -> ManifestoPesosResponse:
     """
     Manifesto público de pesos (M03) — catálogo completo + macrodimensões do score geral.

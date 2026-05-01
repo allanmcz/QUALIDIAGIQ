@@ -64,7 +64,8 @@ function Button({
   const merged = cn(buttonVariants({ variant, size, className }));
 
   if (asChild && React.isValidElement(children)) {
-    const ch = children as React.ReactElement<{ className?: string | undefined }>;
+    type SlotProps = React.HTMLAttributes<HTMLElement> & { "data-slot"?: string };
+    const ch = children as React.ReactElement<SlotProps>;
     return React.cloneElement(ch, {
       className: cn(merged, ch.props.className),
       "data-slot": "button",
