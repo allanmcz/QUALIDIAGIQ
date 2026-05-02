@@ -13,7 +13,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from src.domain.entities.diagnostico import PorteEmpresa, RegimeTributario, SetorMacro
+from src.domain.entities.diagnostico import (
+    FaixaFaturamentoDeclarada,
+    PorteEmpresa,
+    RegimeTributario,
+    SetorMacro,
+)
 from src.domain.value_objects.cnpj_brasil import (
     cnpj_com_digitos_verificadores_validos,
     normalizar_cnpj_apenas_digitos,
@@ -70,6 +75,13 @@ class EmpresaSchema(BaseModel):
     )
     uf: str = Field(..., description="Sigla da UF com 2 letras", min_length=2, max_length=2)
     setor_macro: SetorMacro
+    faixa_faturamento: FaixaFaturamentoDeclarada | None = Field(
+        default=None,
+        description=(
+            "Opcional — faixa de faturamento bruto anual autodeclarada (R$), para segmentação; "
+            "omitir ou null se o respondente não informar."
+        ),
+    )
 
     @field_validator("cnpj")
     @classmethod
@@ -386,6 +398,10 @@ class DiagnosticoResponse(BaseModel):
     status: str
     plano: str
     empresa_razao_social: str
+    empresa_faixa_faturamento: str | None = Field(
+        default=None,
+        description="Faixa de faturamento autodeclarada no POST (slug canónico), se informada.",
+    )
     locale_relatorio: str = Field(
         default="pt-BR",
         description="Idioma usado na geração do PDF (persistido com o diagnóstico).",

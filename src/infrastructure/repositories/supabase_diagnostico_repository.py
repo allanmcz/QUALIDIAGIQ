@@ -29,6 +29,7 @@ from uuid import UUID
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
+    FaixaFaturamentoDeclarada,
     PorteEmpresa,
     RegimeTributario,
     Respondente,
@@ -188,6 +189,11 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             "empresa_cnae": d.empresa.cnae_principal,
             "empresa_uf": d.empresa.uf,
             "empresa_setor_macro": d.empresa.setor_macro.value,
+            "empresa_faixa_faturamento": (
+                d.empresa.faixa_faturamento.value
+                if d.empresa.faixa_faturamento is not None
+                else None
+            ),
             "status": d.status.value,
             "plano": d.plano.value,
             "score_geral": d.score_geral,
@@ -245,6 +251,14 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         loc_raw = row.get("locale_relatorio") or "pt-BR"
         locale_relatorio = str(loc_raw).strip() if loc_raw is not None else "pt-BR"
 
+        ff_raw = row.get("empresa_faixa_faturamento")
+        faixa: FaixaFaturamentoDeclarada | None = None
+        if ff_raw is not None and str(ff_raw).strip() != "":
+            try:
+                faixa = FaixaFaturamentoDeclarada(str(ff_raw).strip())
+            except ValueError:
+                faixa = None
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -256,6 +270,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 cnae_principal=row["empresa_cnae"],
                 uf=row["empresa_uf"],
                 setor_macro=SetorMacro(row["empresa_setor_macro"]),
+                faixa_faturamento=faixa,
             ),
             respondente=Respondente(
                 email=email_resp,

@@ -6,6 +6,7 @@ import pytest
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
+    FaixaFaturamentoDeclarada,
     PorteEmpresa,
     RegimeTributario,
     Respondente,
@@ -95,6 +96,24 @@ async def test_para_dict_inclui_campos_worm_quando_evidencia_registrada(diagnost
     assert payload["score_completo"] == sc.para_dict_serializavel()
     assert payload["versao_otimista"] == 1
     assert payload["locale_relatorio"] == "pt-BR"
+    assert payload["empresa_faixa_faturamento"] is None
+
+
+@pytest.mark.asyncio
+async def test_para_dict_serializa_faixa_faturamento_quando_informada(diagnostico_mock):
+    diagnostico_mock.empresa = EmpresaInfo(
+        cnpj="12345678000195",
+        razao_social="Mock LTDA",
+        porte=PorteEmpresa.MICRO,
+        regime=RegimeTributario.SIMPLES_NACIONAL,
+        cnae_principal="1234567",
+        uf="SP",
+        setor_macro=SetorMacro.COMERCIO,
+        faixa_faturamento=FaixaFaturamentoDeclarada.ACIMA_500_MI,
+    )
+    repo = SupabaseDiagnosticoRepository(client=MagicMock())
+    payload = repo._para_dict(diagnostico_mock)
+    assert payload["empresa_faixa_faturamento"] == "acima_500_mi"
 
 
 @pytest.mark.asyncio

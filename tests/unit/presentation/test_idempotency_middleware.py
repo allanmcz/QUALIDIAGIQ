@@ -40,6 +40,7 @@ def _mock_use_case_sucesso() -> AsyncMock:
     mock_resultado.diagnostico.status.value = "finalizado"
     mock_resultado.diagnostico.plano.value = "gratuito"
     mock_resultado.diagnostico.empresa.razao_social = "Empresa Idem LTDA"
+    mock_resultado.diagnostico.empresa.faixa_faturamento = None
     mock_resultado.score.score_geral.valor = 88.0
     mock_resultado.score.score_geral.peso_total_aplicado = 1.0
     dimensao_mock = MagicMock()

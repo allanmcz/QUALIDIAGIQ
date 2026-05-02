@@ -21,7 +21,9 @@ import { Progress } from "@/components/ui/progress";
 
 import {
   DiagnosticoPayloadSchema,
+  FAIXAS_FATURAMENTO_OPCIONAL,
   MENSAGEM_SELECT_PERFIL_EMPRESA,
+  ROTULOS_FAIXA_FATURAMENTO,
   type DiagnosticoPayload,
   type DiagnosticoPayloadFormInput,
   UFS_BR,
@@ -132,6 +134,7 @@ export function WizardForm() {
         cnae_principal: "",
         uf: "",
         setor_macro: "",
+        faixa_faturamento: "",
       },
       respondente: {
         nome: "",
@@ -894,6 +897,30 @@ export function WizardForm() {
                       <p className="text-sm text-destructive">{errors.empresa.regime.message}</p>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="faixa_faturamento">Faturamento bruto anual (opcional)</Label>
+                  <select
+                    id="faixa_faturamento"
+                    className={cn(
+                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    )}
+                    {...register("empresa.faixa_faturamento")}
+                  >
+                    <option value="">Prefiro não informar</option>
+                    {FAIXAS_FATURAMENTO_OPCIONAL.map((slug) => (
+                      <option key={slug} value={slug}>
+                        {ROTULOS_FAIXA_FATURAMENTO[slug]}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Faixa autodeclarada para segmentação do relatório; não substitui escrituração fiscal nem auditoria.
+                  </p>
+                  {errors.empresa?.faixa_faturamento && (
+                    <p className="text-sm text-destructive">{errors.empresa.faixa_faturamento.message}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

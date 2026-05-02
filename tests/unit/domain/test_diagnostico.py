@@ -7,6 +7,7 @@ from src.domain.entities.diagnostico import (
     Diagnostico,
     DiagnosticoNaoFinalizavelError,
     EmpresaInfo,
+    FaixaFaturamentoDeclarada,
     PorteEmpresa,
     RegimeTributario,
     Respondente,
@@ -92,6 +93,31 @@ class TestEmpresaInfo:
                 uf=uf_invalida,
                 setor_macro=SetorMacro.COMERCIO,
             )
+
+    def test_faixa_faturamento_opcional_none_por_padrao(self):
+        empresa = EmpresaInfo(
+            cnpj="12345678000195",
+            razao_social="Sem faixa",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        assert empresa.faixa_faturamento is None
+
+    def test_faixa_faturamento_informada(self):
+        empresa = EmpresaInfo(
+            cnpj="12345678000195",
+            razao_social="Com faixa",
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.LUCRO_PRESUMIDO,
+            cnae_principal="1234567",
+            uf="RJ",
+            setor_macro=SetorMacro.SERVICOS,
+            faixa_faturamento=FaixaFaturamentoDeclarada.ENTRE_360_MIL_E_4_8_MI,
+        )
+        assert empresa.faixa_faturamento == FaixaFaturamentoDeclarada.ENTRE_360_MIL_E_4_8_MI
 
 
 class TestRespondente:

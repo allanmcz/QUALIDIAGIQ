@@ -148,6 +148,11 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         status=diagnostico.status.value,
         plano=diagnostico.plano.value,
         empresa_razao_social=diagnostico.empresa.razao_social,
+        empresa_faixa_faturamento=(
+            diagnostico.empresa.faixa_faturamento.value
+            if diagnostico.empresa.faixa_faturamento is not None
+            else None
+        ),
         locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
@@ -228,6 +233,7 @@ async def criar_diagnostico(
         cnae_principal=payload.empresa.cnae_principal,
         uf=payload.empresa.uf,
         setor_macro=payload.empresa.setor_macro,
+        faixa_faturamento=payload.empresa.faixa_faturamento,
     )
 
     respondente_domain = Respondente(
@@ -290,6 +296,9 @@ async def criar_diagnostico(
         status=d.status.value,
         plano=d.plano.value,
         empresa_razao_social=d.empresa.razao_social,
+        empresa_faixa_faturamento=(
+            d.empresa.faixa_faturamento.value if d.empresa.faixa_faturamento is not None else None
+        ),
         locale_relatorio=getattr(d, "locale_relatorio", "pt-BR"),
         score=score_completo_schema,
         relatorio_pdf_url=resultado.relatorio_pdf_url,

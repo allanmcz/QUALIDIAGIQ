@@ -79,6 +79,23 @@ class SetorMacro(Enum):
     CONSUMO = "consumo"  # PwC: 53% apreensivo
 
 
+class FaixaFaturamentoDeclarada(Enum):
+    """
+    Faixa de faturamento bruto anual **autodeclarada** (opcional).
+
+    Valores em R$ para segmentação / benchmark; não substitui escrituração nem auditoria.
+    Marcos alinhados a faixas usuais de enquadramento (ex.: limites do Simples Nacional, LC 123/2006).
+    """
+
+    ATE_360_MIL = "ate_360_mil"
+    ENTRE_360_MIL_E_4_8_MI = "entre_360_mil_e_4_8_mi"
+    ENTRE_4_8_MI_E_10_MI = "entre_4_8_mi_e_10_mi"
+    ENTRE_10_MI_E_60_MI = "entre_10_mi_e_60_mi"
+    ENTRE_60_MI_E_100_MI = "entre_60_mi_e_100_mi"
+    ENTRE_100_MI_E_500_MI = "entre_100_mi_e_500_mi"
+    ACIMA_500_MI = "acima_500_mi"
+
+
 @dataclass(frozen=True, slots=True)
 class EmpresaInfo:
     """Informações de identificação da empresa-cliente (snapshot no momento do diagnóstico)."""
@@ -90,6 +107,7 @@ class EmpresaInfo:
     cnae_principal: str  # 7 dígitos
     uf: str  # sigla 2 caracteres
     setor_macro: SetorMacro
+    faixa_faturamento: FaixaFaturamentoDeclarada | None = None
 
     def __post_init__(self) -> None:
         if self.cnpj == "":

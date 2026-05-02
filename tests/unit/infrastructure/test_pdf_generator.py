@@ -22,6 +22,7 @@ async def test_gerar_pdf_diagnostico_sucesso():
 
     mock_diagnostico = MagicMock()
     mock_diagnostico.empresa.razao_social = "Empresa Teste"
+    mock_diagnostico.empresa.faixa_faturamento = None
     mock_diagnostico.empresa.cnpj = "12345678000195"
     mock_diagnostico.empresa.porte.value = "Microempresa"
     mock_diagnostico.empresa.regime.value = "Simples Nacional"

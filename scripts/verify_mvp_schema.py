@@ -72,6 +72,18 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     if loc_pdf != 1:
         erros.append("Coluna public.diagnosticos.locale_relatorio ausente (aplique migração 0016).")
 
+    ff_col = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'empresa_faixa_faturamento'
+    """)
+    if ff_col != 1:
+        erros.append(
+            "Coluna public.diagnosticos.empresa_faixa_faturamento ausente (aplique migração 0017)."
+        )
+
     m12 = await conn.fetchval("""
         SELECT 1
         FROM information_schema.columns

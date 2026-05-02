@@ -17,4 +17,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0014_cnae_seed_dados.sql
 \i /docker-entrypoint-initdb.d/migrations/0015_normativa_score_macro_dimensao.sql
 \i /docker-entrypoint-initdb.d/migrations/0016_locale_relatorio_pdf.sql
+\i /docker-entrypoint-initdb.d/migrations/0017_empresa_faixa_faturamento_opcional.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

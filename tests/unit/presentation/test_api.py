@@ -106,6 +106,7 @@ def test_criar_diagnostico_com_sucesso():
     mock_resultado.diagnostico.status.value = "finalizado"
     mock_resultado.diagnostico.plano.value = "gratuito"
     mock_resultado.diagnostico.empresa.razao_social = "Teste LTDA"
+    mock_resultado.diagnostico.empresa.faixa_faturamento = None
 
     mock_resultado.score.score_geral.valor = 100.0
     mock_resultado.score.score_geral.peso_total_aplicado = 1.0
@@ -227,6 +228,7 @@ def test_obter_diagnostico_com_sucesso():
     mock_diagnostico.status.value = "finalizado"
     mock_diagnostico.plano.value = "gratuito"
     mock_diagnostico.empresa.razao_social = "Empresa GET LTDA"
+    mock_diagnostico.empresa.faixa_faturamento = None
     mock_diagnostico.relatorio_pdf_url = "http://pdf.url"
     mock_diagnostico.locale_relatorio = "pt-BR"
 

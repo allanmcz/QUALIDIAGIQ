@@ -23,7 +23,13 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
-from src.domain.entities.diagnostico import EmpresaInfo, PorteEmpresa, RegimeTributario, SetorMacro
+from src.domain.entities.diagnostico import (
+    EmpresaInfo,
+    FaixaFaturamentoDeclarada,
+    PorteEmpresa,
+    RegimeTributario,
+    SetorMacro,
+)
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository  # noqa: TC001
 from src.domain.repositories.normativa_score_macro_repository import (
     NormativaScoreMacroRepository,  # noqa: TC001
@@ -226,6 +232,14 @@ def perfil_empresa_para_questionario(
     cnae_principal: Annotated[str, Query(min_length=7, max_length=7)],
     uf: Annotated[str, Query(min_length=2, max_length=2)],
     setor_macro: Annotated[SetorMacro, Query()],
+    faixa_faturamento: Annotated[
+        FaixaFaturamentoDeclarada | None,
+        Query(
+            description=(
+                "Opcional — faixa de faturamento bruto anual autodeclarada (slug canónico do catálogo)."
+            ),
+        ),
+    ] = None,
     cnpj: Annotated[
         str,
         Query(
@@ -280,6 +294,7 @@ def perfil_empresa_para_questionario(
         cnae_principal=cnae_principal,
         uf=ufu,
         setor_macro=setor_macro,
+        faixa_faturamento=faixa_faturamento,
     )
 
 

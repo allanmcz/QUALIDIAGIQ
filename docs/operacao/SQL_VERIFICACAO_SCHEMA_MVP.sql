@@ -26,6 +26,18 @@ SELECT 'locale_relatorio_0016' AS check_id,
            ELSE 'falta_coluna_locale_relatorio'
        END AS status;
 
+SELECT 'empresa_faixa_faturamento_0017' AS check_id,
+       CASE
+           WHEN EXISTS (
+               SELECT 1
+               FROM information_schema.columns
+               WHERE table_schema = 'public'
+                 AND table_name = 'diagnosticos'
+                 AND column_name = 'empresa_faixa_faturamento'
+           ) THEN 'ok'
+           ELSE 'falta_coluna_empresa_faixa_faturamento'
+       END AS status;
+
 SELECT 'm12_jsonb_0011' AS check_id,
        CASE
            WHEN EXISTS (

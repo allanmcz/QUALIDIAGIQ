@@ -51,7 +51,7 @@ async def pg_conn():
 @pytest.mark.postgres
 @pytest.mark.mvp_gate
 async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
-    """Confere migrações 0012 (LGPD) e 0016 (locale_relatorio PDF / WORM)."""
+    """Confere migrações 0012 (LGPD), 0016 (locale_relatorio PDF / WORM) e 0017 (faixa faturamento)."""
     val = await pg_conn.fetchval("""
         SELECT 1
         FROM information_schema.columns
@@ -68,6 +68,14 @@ async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
           AND column_name = 'locale_relatorio'
         """)
     assert loc == 1
+    ff = await pg_conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'empresa_faixa_faturamento'
+        """)
+    assert ff == 1
 
 
 @pytest.mark.asyncio
