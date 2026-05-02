@@ -30,6 +30,16 @@ make test
 # → DB:  postgres://postgres:postgres@localhost:60322/postgres
 ```
 
+### Ollama local (recomendações IA no diagnóstico)
+
+1. Instale o [Ollama](https://ollama.com) no Mac e deixe o serviço rodando (porta **11434**).
+2. Baixe o modelo configurado em `OLLAMA_MODEL`, por exemplo: `ollama pull llama3`.
+3. **Onde a API roda importa para a URL:**
+   - **`make dev` (API dentro do Docker):** o `docker-compose.yml` já define `OLLAMA_BASE_URL=http://host.docker.internal:11434` para falar com o Ollama no host — não use `127.0.0.1` aí (dentro do container isso não é a sua máquina).
+   - **uvicorn no host** (sem container da API): use `OLLAMA_BASE_URL=http://127.0.0.1:11434` no `.env`.
+
+Se o Ollama não estiver disponível, o fluxo de diagnóstico segue com mensagem amigável de fallback na recomendação IA.
+
 ## 📂 Estrutura do Projeto
 
 ```
