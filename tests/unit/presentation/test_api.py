@@ -23,7 +23,11 @@ from src.presentation.api.dependencies import (
 )
 from src.presentation.api.main import app
 from src.presentation.api.routers.diagnostico_router import _parse_if_match_versao
-from tests.conftest import cabecalho_auth_bearer, cabecalho_post_diagnostico
+from tests.conftest import (
+    cabecalho_auth_bearer,
+    cabecalho_post_diagnostico,
+    cabecalho_post_diagnostico_self_service,
+)
 
 client = TestClient(app)
 
@@ -216,6 +220,102 @@ def test_criar_diagnostico_com_token_invalido():
     app.dependency_overrides.clear()
     assert response.status_code == 401
     assert "inválido" in response.json()["detail"] or "expirado" in response.json()["detail"]
+
+
+def _payload_diagnostico_minimo_api(*, email: str = "teste@teste.com") -> dict:
+    return {
+        "empresa": {
+            "cnpj": "12345678000195",
+            "razao_social": "Teste LTDA",
+            "porte": "micro",
+            "regime": "simples_nacional",
+            "cnae_principal": "1234567",
+            "uf": "SP",
+            "setor_macro": "comercio",
+        },
+        "respondente": {"email": email},
+        "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+        "aceite_termos_privacidade": True,
+    }
+
+
+def test_criar_diagnostico_self_service_sem_token_falha():
+    response = client.post(
+        "/diagnosticos/self-service",
+        json=_payload_diagnostico_minimo_api(),
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    assert response.status_code == 401
+
+
+def test_criar_diagnostico_self_service_email_diferente_403():
+    from src.infrastructure.config.settings import get_settings
+    from src.presentation.api.dependencies import (
+        get_realizar_diagnostico_use_case,
+        get_self_service_diagnostico_claims,
+    )
+
+    mock_uc = AsyncMock()
+    settings = get_settings()
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_self_service_diagnostico_claims] = lambda: (
+        uuid.uuid4(),
+        settings.self_service_tenant_id,
+        "um@teste.com",
+    )
+    response = client.post(
+        "/diagnosticos/self-service",
+        json=_payload_diagnostico_minimo_api(email="dois@teste.com"),
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    app.dependency_overrides.clear()
+    assert response.status_code == 403
+    assert "OTP" in response.json()["detail"] or "e-mail" in response.json()["detail"].lower()
+    mock_uc.execute.assert_not_called()
+
+
+def test_criar_diagnostico_self_service_jwt_valido_sucesso():
+    from src.presentation.api.dependencies import get_realizar_diagnostico_use_case
+
+    mock_use_case = AsyncMock()
+    mock_resultado = MagicMock()
+    mock_resultado.diagnostico.id = uuid.uuid4()
+    mock_resultado.diagnostico.status.value = "finalizado"
+    mock_resultado.diagnostico.plano.value = "gratuito"
+    mock_resultado.diagnostico.empresa.razao_social = "Teste LTDA"
+    mock_resultado.diagnostico.empresa.faixa_faturamento = None
+    mock_resultado.score.score_geral.valor = 88.5
+    mock_resultado.score.score_geral.peso_total_aplicado = 1.0
+    dimensao_mock = MagicMock()
+    dimensao_mock.valor = 90.0
+    dimensao_mock.peso_total_aplicado = 1.0
+    dim_key = MagicMock()
+    dim_key.value = "fiscal"
+    mock_resultado.score.score_por_dimensao = {dim_key: dimensao_mock}
+    mock_resultado.relatorio_pdf_url = None
+    mock_resultado.recomendacao_ia = None
+    mock_resultado.checklist = None
+    mock_resultado.matriz_impacto = None
+    mock_resultado.cronograma = None
+    mock_resultado.diagnostico.hash_evidencia = "b" * 64
+    mock_resultado.diagnostico.versao_otimista = 2
+    mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
+    mock_resultado.diagnostico.locale_relatorio = "pt-BR"
+    mock_use_case.execute.return_value = mock_resultado
+
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_use_case
+
+    response = client.post(
+        "/diagnosticos/self-service",
+        json=_payload_diagnostico_minimo_api(email="lead@self.br"),
+        headers=cabecalho_post_diagnostico_self_service(email="lead@self.br"),
+    )
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["status"] == "finalizado"
+    assert data["score"]["score_geral"]["valor"] == 88.5
 
 
 def test_obter_diagnostico_com_sucesso():

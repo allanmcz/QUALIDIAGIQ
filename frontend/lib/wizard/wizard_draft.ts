@@ -13,7 +13,6 @@ export type WizardDraftV1 = {
   v: 1;
   step: number;
   indicePerguntaAtual: number;
-  diagnosticoGeradoLocalmente: boolean;
   form: DiagnosticoPayloadFormInput;
 };
 
@@ -32,17 +31,14 @@ export function loadWizardDraft(): WizardDraftV1 | null {
     if (data["v"] !== 1) return null;
     const step = data["step"];
     const indicePerguntaAtual = data["indicePerguntaAtual"];
-    const diagnosticoGeradoLocalmente = data["diagnosticoGeradoLocalmente"];
     const form = data["form"];
     if (typeof step !== "number" || step < 1 || step > 3) return null;
     if (typeof indicePerguntaAtual !== "number" || indicePerguntaAtual < 0) return null;
-    if (typeof diagnosticoGeradoLocalmente !== "boolean") return null;
     if (!isRecord(form)) return null;
     return {
       v: 1,
       step,
       indicePerguntaAtual,
-      diagnosticoGeradoLocalmente,
       form: form as DiagnosticoPayloadFormInput,
     };
   } catch {

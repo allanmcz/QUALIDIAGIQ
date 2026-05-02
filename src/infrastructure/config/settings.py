@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal, Self
+from uuid import UUID
 
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -40,6 +41,19 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", validation_alias=AliasChoices("JWT_ALGORITHM"))
     jwt_expire_minutes: int = Field(
         default=480, validation_alias=AliasChoices("JWT_EXPIRE_MINUTES")
+    )
+
+    #: Tenant dedicado a diagnósticos gravados após OTP no e-mail (sem conta B2B).
+    self_service_tenant_id: UUID = Field(
+        default=UUID("44444444-4444-4444-8444-444444444444"),
+        validation_alias=AliasChoices("QDI_SELF_SERVICE_TENANT_ID"),
+    )
+    self_service_jwt_expire_minutes: int = Field(
+        default=30,
+        ge=5,
+        le=120,
+        validation_alias=AliasChoices("QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES"),
+        description="Validade do JWT emitido após confirmar OTP (gravar diagnóstico self-service).",
     )
 
     database_url: str | None = Field(

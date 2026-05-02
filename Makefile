@@ -17,6 +17,7 @@ install: ## Cria .venv e instala dependências
 
 dev: ## Sobe ambiente de dev (db + api + web); --build alinha deps do pyproject na imagem da API
 	docker compose up -d --build --remove-orphans
+	@bash -ec 'source INICIAR_APP/lib/qdi-env.sh && qdi_cd_root "$(CURDIR)/INICIAR_APP" && if qdi_wait_api_health 25; then echo "✓ API /health OK."; else echo "⚠ API ainda não respondeu — docker compose logs api"; fi'
 	@echo ""
 	@echo "✅ Ambiente subindo:"
 	@echo "  → API:  http://localhost:60000/docs (mapa host 60000 → container 8000)"

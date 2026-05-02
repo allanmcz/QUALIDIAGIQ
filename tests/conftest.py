@@ -69,3 +69,30 @@ def cabecalho_post_diagnostico(
         **cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id),
         "Idempotency-Key": idempotency_key or str(uuid.uuid4()),
     }
+
+
+def cabecalho_post_diagnostico_self_service(
+    *,
+    email: str,
+    idempotency_key: str | None = None,
+) -> dict[str, str]:
+    """Bearer JWT self-service (OTP) + Idempotency-Key para POST /diagnosticos/self-service."""
+    from src.infrastructure.config.settings import get_settings
+    from src.presentation.api.dependencies import SELF_SERVICE_DIAGNOSTICO_SCOPE
+
+    settings = get_settings()
+    token = jwt.encode(
+        {
+            "sub": str(uuid.uuid4()),
+            "tenant_id": str(settings.self_service_tenant_id),
+            "email": email.strip().lower(),
+            "scope": SELF_SERVICE_DIAGNOSTICO_SCOPE,
+            "exp": datetime.now(UTC) + timedelta(minutes=30),
+        },
+        os.environ["JWT_SECRET_KEY"],
+        algorithm="HS256",
+    )
+    return {
+        "Authorization": f"Bearer {token}",
+        "Idempotency-Key": idempotency_key or str(uuid.uuid4()),
+    }

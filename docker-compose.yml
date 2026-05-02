@@ -58,6 +58,16 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      # Login lê `admins` no Postgres (sync_database_url). Diagnósticos: memória local no Compose
+      # (evita PostgREST em :54321 inexistente dentro do container). Para persistir via Supabase Cloud,
+      # crie `.env` na raiz com QDI_CI_PLAYWRIGHT_INTEGRATED=0 e SUPABASE_URL / SUPABASE_ANON_KEY reais.
+      QDI_CI_PLAYWRIGHT_INTEGRATED: "${QDI_CI_PLAYWRIGHT_INTEGRATED:-1}"
+      # create_client exige chave não vazia; upload ao storage pode falhar → adapter devolve URL mock (ver storage_supabase.py).
+      SUPABASE_URL: "${SUPABASE_URL:-http://127.0.0.1:54321}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InFkai1sb2NhbC1jb21wb3NlIn0.local-dev-placeholder}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev-docker-compose-qdi-jwt-secret-min-32-chars!!}"
+      QDI_SELF_SERVICE_TENANT_ID: "${QDI_SELF_SERVICE_TENANT_ID:-44444444-4444-4444-8444-444444444444}"
+      QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES: "${QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES:-30}"
       # Next no compose exposto em :60001 — precisa constar no CORS (senão fetch → "Failed to fetch").
       CORS_ALLOWED_ORIGINS: http://localhost:3010,http://127.0.0.1:3010,http://localhost:60001,http://127.0.0.1:60001,http://localhost:3333,http://127.0.0.1:3333
       # Ollama típico no host; dentro do container 127.0.0.1 NÃO é o Mac — ver README «Ollama local».

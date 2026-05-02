@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { mascaraTelefoneBR } from "@/lib/utils/mascaraTelefoneBr";
 import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { postDiagnostico } from "@/lib/api/diagnostico";
-import { getAccessToken, getApiUrl } from "@/lib/api/config";
+import { getAccessToken } from "@/lib/api/config";
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
 import { STORAGE_PENDING_DIAGNOSTICO } from "@/lib/wizard/pending_diagnostico";
@@ -79,10 +79,6 @@ export function WizardForm() {
   const [normaCarregando, setNormaCarregando] = useState(false);
   /** Índice da pergunta exibida no passo 3 (uma por página). */
   const [indicePerguntaAtual, setIndicePerguntaAtual] = useState(0);
-  /**
-   * Sem JWT: após «Gerar diagnóstico» o payload fica em sessionStorage e mostramos o passo de «gravar e avançar».
-   */
-  const [diagnosticoGeradoLocalmente, setDiagnosticoGeradoLocalmente] = useState(false);
   /** Área rolável do questionário — volta ao topo a cada pergunta para não “ficar” no fim do scroll. */
   const painelPerguntasRef = useRef<HTMLDivElement>(null);
   /** Evita gravar rascunho durante hidratação inicial (restore). */
@@ -241,7 +237,6 @@ export function WizardForm() {
           });
           setStep(draft.step);
           setIndicePerguntaAtual(draft.indicePerguntaAtual);
-          setDiagnosticoGeradoLocalmente(draft.diagnosticoGeradoLocalmente);
           return;
         }
 
@@ -263,7 +258,6 @@ export function WizardForm() {
           setIndicePerguntaAtual(
             Math.min(draft.indicePerguntaAtual, Math.max(0, q.perguntas.length - 1)),
           );
-          setDiagnosticoGeradoLocalmente(draft.diagnosticoGeradoLocalmente);
         } catch {
           if (!cancelled) {
             setPerguntas([]);
@@ -273,7 +267,6 @@ export function WizardForm() {
               respostas: [],
             });
             setIndicePerguntaAtual(0);
-            setDiagnosticoGeradoLocalmente(false);
           }
         } finally {
           if (!cancelled) setCatalogLoading(false);
@@ -306,7 +299,6 @@ export function WizardForm() {
         v: 1,
         step,
         indicePerguntaAtual,
-        diagnosticoGeradoLocalmente,
         form: getValues(),
       });
     };
@@ -332,7 +324,6 @@ export function WizardForm() {
     getValues,
     step,
     indicePerguntaAtual,
-    diagnosticoGeradoLocalmente,
   ]);
 
   /** Grava imediatamente ao sair da página (evita perder rascunho se o debounce não disparou). */
@@ -347,7 +338,6 @@ export function WizardForm() {
         v: 1,
         step,
         indicePerguntaAtual,
-        diagnosticoGeradoLocalmente,
         form: getValues(),
       });
     };
@@ -367,7 +357,6 @@ export function WizardForm() {
     getValues,
     step,
     indicePerguntaAtual,
-    diagnosticoGeradoLocalmente,
   ]);
 
   const renderPerguntaInput = (p: PerguntaCatalogo, index: number) => {
@@ -551,7 +540,6 @@ export function WizardForm() {
         const q = await fetchQuestionarioAdaptativo(empresa);
         setPerguntas(q.perguntas);
         setIndicePerguntaAtual(0);
-        setDiagnosticoGeradoLocalmente(false);
         reset({
           ...getValues(),
           respostas: q.perguntas.map((pg) => ({
@@ -607,16 +595,6 @@ export function WizardForm() {
   const voltarWizard = () => {
     if (isSubmitting) return;
     setApiError(null);
-    if (step === 3 && diagnosticoGeradoLocalmente) {
-      setDiagnosticoGeradoLocalmente(false);
-      try {
-        sessionStorage.removeItem(STORAGE_PENDING_DIAGNOSTICO);
-      } catch {
-        /* ignore */
-      }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
     if (step === 3 && indicePerguntaAtual > 0) {
       setIndicePerguntaAtual((x) => x - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -703,7 +681,7 @@ export function WizardForm() {
     await onSubmit();
   };
 
-  /** Valida, persiste em sessionStorage e exibe o passo «gravar e avançar» (sem JWT). */
+  /** Valida, persiste em sessionStorage e abre a página de resumo (OTP / login B2B). */
   const gerarDiagnosticoLocalmente = async () => {
     const payload = await montarPayloadDiagnosticoValidado();
     if (!payload) return;
@@ -716,32 +694,7 @@ export function WizardForm() {
       return;
     }
     setApiError(null);
-    setDiagnosticoGeradoLocalmente(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  /** Após `gerarDiagnosticoLocalmente`: login B2B; ao voltar ao wizard o POST é automático (useEffect). */
-  const irParaLoginAposGeracao = async () => {
-    if (!sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO)) {
-      await irParaLoginComDiagnosticoPendente();
-      return;
-    }
-    router.push("/login?redirect=/wizard");
-  };
-
-  /** Guarda o payload, redireciona ao login; ao voltar com JWT o envio à API é automático. */
-  const irParaLoginComDiagnosticoPendente = async () => {
-    const payload = await montarPayloadDiagnosticoValidado();
-    if (!payload) return;
-    try {
-      sessionStorage.setItem(STORAGE_PENDING_DIAGNOSTICO, JSON.stringify(payload));
-    } catch {
-      setApiError(
-        "Não foi possível guardar o diagnóstico no navegador (sessionStorage). Verifique modo privado ou espaço em disco.",
-      );
-      return;
-    }
-    router.push("/login?redirect=/wizard");
+    router.push("/diagnostico/gravado-local");
   };
 
   const onSubmit = async () => {
@@ -749,7 +702,7 @@ export function WizardForm() {
     if (!payload) return;
 
     if (!getAccessToken()) {
-      setApiError("Sessão ausente — use «Gerar diagnóstico» e depois «Entrar para gravar e avançar».");
+      setApiError("Sessão ausente — use «Gerar diagnóstico» e confirme por e-mail ou entre com conta B2B.");
       return;
     }
 
@@ -774,7 +727,7 @@ export function WizardForm() {
       : totalPerguntas > 0
         ? ((2 + (indicePerguntaAtual + 1) / totalPerguntas) / TOTAL_STEPS) * 100
         : (step / TOTAL_STEPS) * 100;
-  const progressBarPercent = diagnosticoGeradoLocalmente ? 100 : progress;
+  const progressBarPercent = progress;
   const hasToken = tokenChecked && !!getAccessToken();
   const ultimaPerguntaDoQuestionario =
     step === 3 && totalPerguntas > 0 && indicePerguntaAtual >= totalPerguntas - 1;
@@ -802,18 +755,6 @@ export function WizardForm() {
             className={clsBotao}
           >
             {catalogLoading ? "Carregando perguntas…" : "Próxima Etapa"}
-          </Button>
-        ) : diagnosticoGeradoLocalmente && !hasToken ? (
-          <Button
-            type="button"
-            onClick={() => void irParaLoginAposGeracao()}
-            disabled={isSubmitting || totalPerguntas === 0}
-            className={cn(
-              "bg-accent text-accent-foreground hover:bg-accent/90",
-              clsBotao,
-            )}
-          >
-            Entrar para gravar e avançar
           </Button>
         ) : (
           <Button
@@ -892,7 +833,7 @@ export function WizardForm() {
             {step === 2 &&
               "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). A conclusão persiste na API após autenticação."}
             {step === 3 &&
-              "Uma pergunta por tela — Seguir / Voltar. Na última pergunta sem sessão: primeiro «Gerar diagnóstico»; depois «Entrar para gravar e avançar» na API (painel consultor). Com login, «Finalizar Diagnóstico» grava direto."}
+              "Uma pergunta por tela — Seguir / Voltar. Sem conta B2B: «Gerar diagnóstico» salva e segue para confirmar o e-mail e gravar na nuvem; com login, «Finalizar Diagnóstico» envia direto."}
           </CardDescription>
         </CardHeader>
 
@@ -1053,12 +994,10 @@ export function WizardForm() {
                 </span>
                 {!getAccessToken() && (
                   <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground md:text-sm">
-                    Você pode preencher o assistente sem sessão. Para{" "}
-                    <span className="font-medium text-foreground">gravar o diagnóstico na API</span>, na
-                    última pergunta use{" "}
-                    <span className="font-medium text-foreground">Gerar diagnóstico</span> e em seguida{" "}
-                    <span className="font-medium text-foreground">Entrar para gravar e avançar</span>{" "}
-                    (cadastro/login B2B).
+                    Sem login corporativo você pode concluir o assistente; na última pergunta,{" "}
+                    <span className="font-medium text-foreground">Gerar diagnóstico</span> guarda as respostas e abre
+                    a etapa seguinte: confirmação do e-mail (código) para gravar na nuvem ou login B2B para o painel
+                    consultor.
                   </div>
                 )}
                 {catalogError && (
@@ -1248,28 +1187,6 @@ export function WizardForm() {
                       </div>
                     </div>
                   )}
-                  {diagnosticoGeradoLocalmente && !hasToken && (
-                    <div
-                      role="status"
-                      className="rounded-lg border border-accent/35 bg-accent/5 px-4 py-4 space-y-2 text-sm text-muted-foreground leading-relaxed"
-                    >
-                      <p className="font-semibold text-foreground">Diagnóstico gerado</p>
-                      <p>
-                        Respostas validadas ({totalPerguntas} pergunta
-                        {totalPerguntas === 1 ? "" : "s"}).
-                        {empresaPerfil.razao_social ? (
-                          <>
-                            {" "}
-                            Referência:{" "}
-                            <span className="font-medium text-foreground">{empresaPerfil.razao_social}</span>.
-                          </>
-                        ) : null}{" "}
-                        O próximo passo é autenticar-se para <strong className="text-foreground">gravar na API</strong>{" "}
-                        e avançar ao painel. Use o botão «Entrar para gravar e avançar». «Voltar» revisa as respostas e
-                        descarta este passo gerado.
-                      </p>
-                    </div>
-                  )}
                   {apiError && (
                     <div className="px-3 py-2 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-xs md:text-sm">
                       {apiError}
@@ -1284,33 +1201,15 @@ export function WizardForm() {
                     </summary>
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground pt-1 border-t border-border/50">
                       <Link href="/abnt-framework" className="text-primary underline font-medium">
-                        M11 — ABNT (guia)
+                        Framework ABNT (guia)
                       </Link>
-                      <a
-                        href={`${getApiUrl().replace(/\/$/, "")}/diagnosticos/manifesto-pesos`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline font-medium"
-                      >
-                        Manifesto (JSON)
-                      </a>
                       <Link href="/metodologia" className="text-primary underline font-medium">
-                        Metodologia (painel)
+                        Metodologia e pesos
                       </Link>
-                      <a
-                        href={`${getApiUrl().replace(/\/$/, "")}/diagnosticos/metodologia`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline font-medium"
-                      >
-                        Metodologia (JSON)
-                      </a>
                     </div>
                   </details>
                 </div>
-                {totalPerguntas > 0 &&
-                  indicePerguntaAtual < totalPerguntas &&
-                  !diagnosticoGeradoLocalmente && (
+                {totalPerguntas > 0 && indicePerguntaAtual < totalPerguntas && (
                   <div
                     key={perguntas[indicePerguntaAtual].id}
                     data-testid="wizard-pergunta-atual"

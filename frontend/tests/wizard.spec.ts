@@ -36,9 +36,12 @@ test('Wizard E2E Flow', async ({ page }) => {
   await radios[5].check();
   await radios[8].check();
 
-  console.log("Gerar diagnóstico (sem sessão → painel local antes do login)...");
+  console.log("Gerar diagnóstico (sem sessão → /diagnostico/gravado-local)...");
   await page.getByRole("button", { name: "Gerar diagnóstico" }).click();
-  await expect(page.getByRole("status")).toContainText(/Diagnóstico gerado/i);
-  await expect(page.getByRole("button", { name: /Entrar para gravar e avançar/i })).toBeVisible();
-  console.log("SUCCESS: Fluxo gerar → opção de gravar na API visível.");
+  await page.waitForURL("**/diagnostico/gravado-local**", { timeout: 15_000 });
+  await expect(
+    page.getByRole("heading", { name: /guardado neste navegador/i }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Enviar código ao e-mail/i })).toBeVisible();
+  console.log("SUCCESS: Fluxo gerar → página de confirmação e OTP visível.");
 });

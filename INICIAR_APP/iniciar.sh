@@ -38,10 +38,10 @@ echo -e "${BLUE}[STACK]${NC} make dev — Compose com ${YELLOW}--build${NC} se D
 make dev
 
 echo -e "\n${BLUE}[CHECK]${NC} GET http://127.0.0.1:60000/health …"
-if qdi_health_probe 4; then
+if qdi_wait_api_health 25; then
   echo -e "${GREEN}✓ API OK (health).${NC}"
 else
-  echo -e "${YELLOW}⚠ API ainda não respondeu — normal nos primeiros segundos; veja os logs.${NC}"
+  echo -e "${YELLOW}⚠ API ainda não respondeu — veja: docker compose logs api${NC}"
 fi
 
 echo -e "\n${GREEN}=================================================${NC}"

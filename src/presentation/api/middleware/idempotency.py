@@ -39,7 +39,11 @@ def _exige_idempotencia(request: Request) -> bool:
     if request.method.upper() != "POST":
         return False
     path = request.url.path
-    return path == "/diagnosticos" or path == "/diagnosticos/"
+    return path in (
+        "/diagnosticos",
+        "/diagnosticos/",
+        "/diagnosticos/self-service",
+    )
 
 
 def _chave_composta(request: Request, idempotency_key: str) -> str:
@@ -64,7 +68,12 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if not raw_key or not str(raw_key).strip():
             return JSONResponse(
                 status_code=400,
-                content={"detail": "Header Idempotency-Key obrigatório para POST /diagnosticos/"},
+                content={
+                    "detail": (
+                        "Header Idempotency-Key obrigatório para POST /diagnosticos/ "
+                        "e POST /diagnosticos/self-service"
+                    )
+                },
             )
 
         idem_key = str(raw_key).strip()

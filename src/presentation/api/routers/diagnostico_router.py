@@ -31,6 +31,7 @@ from src.application.use_cases.realizar_diagnostico import (
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto
+from src.infrastructure.email_verificacao import codigo_store
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
     versao_catalogo_lida,
@@ -42,6 +43,7 @@ from src.presentation.api.dependencies import (
     get_diagnostico_repository,
     get_gerar_questionario_adaptativo_use_case,
     get_realizar_diagnostico_use_case,
+    get_self_service_diagnostico_claims,
     perfil_empresa_para_questionario,
     pesos_macro_dimensao_iso_para_http,
 )
@@ -186,6 +188,97 @@ def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema |
     )
 
 
+async def _executar_criar_diagnostico_core(
+    *,
+    tenant_id: UUID,
+    payload: IniciarDiagnosticoRequest,
+    use_case: RealizarDiagnostico,
+) -> DiagnosticoResponse:
+    """Núcleo compartilhado entre POST autenticado B2B e POST self-service (JWT após OTP)."""
+    empresa_domain = EmpresaInfo(
+        cnpj=payload.empresa.cnpj,
+        razao_social=payload.empresa.razao_social,
+        porte=payload.empresa.porte,
+        regime=payload.empresa.regime,
+        cnae_principal=payload.empresa.cnae_principal,
+        uf=payload.empresa.uf,
+        setor_macro=payload.empresa.setor_macro,
+        faixa_faturamento=payload.empresa.faixa_faturamento,
+    )
+
+    respondente_domain = Respondente(
+        email=payload.respondente.email,
+        nome=payload.respondente.nome,
+        cargo=payload.respondente.cargo,
+        telefone=payload.respondente.telefone,
+    )
+
+    banco = get_banco_perguntas_cached()
+    mapa_perguntas = {p.id: p for p in banco}
+
+    entradas_resposta: list[EntradaRespostaDiagnostico] = []
+    for resp_payload in payload.respostas:
+        pergunta = mapa_perguntas.get(resp_payload.pergunta_id)
+        if not pergunta:
+            raise HTTPException(
+                status_code=400, detail=f"Pergunta não encontrada: {resp_payload.pergunta_id}"
+            )
+        entradas_resposta.append(
+            EntradaRespostaDiagnostico(pergunta=pergunta, valor_bruto=resp_payload.valor)
+        )
+
+    comando = ComandoRealizarDiagnostico(
+        tenant_id=tenant_id,
+        empresa=empresa_domain,
+        respondente=respondente_domain,
+        entradas_resposta=entradas_resposta,
+        plano=payload.plano,
+        aceite_termos_privacidade=payload.aceite_termos_privacidade,
+        locale_relatorio=payload.locale_relatorio,
+    )
+
+    try:
+        resultado = await use_case.execute(comando)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    score_por_dimensao_schema = {
+        dim.value: ScoreDimensaoSchema(valor=sn.valor, peso_total_aplicado=sn.peso_total_aplicado)
+        for dim, sn in resultado.score.score_por_dimensao.items()
+    }
+
+    score_completo_schema = ScoreCompletoSchema(
+        score_geral=ScoreDimensaoSchema(
+            valor=resultado.score.score_geral.valor,
+            peso_total_aplicado=resultado.score.score_geral.peso_total_aplicado,
+        ),
+        score_por_dimensao=score_por_dimensao_schema,
+    )
+
+    d = resultado.diagnostico
+    h_aud, v_aud = _campos_auditoria_http(d)
+    return DiagnosticoResponse(
+        id=d.id,
+        status=d.status.value,
+        plano=d.plano.value,
+        empresa_razao_social=d.empresa.razao_social,
+        empresa_faixa_faturamento=(
+            d.empresa.faixa_faturamento.value if d.empresa.faixa_faturamento is not None else None
+        ),
+        locale_relatorio=getattr(d, "locale_relatorio", "pt-BR"),
+        score=score_completo_schema,
+        relatorio_pdf_url=resultado.relatorio_pdf_url,
+        recomendacao_ia=resultado.recomendacao_ia,
+        checklist=resultado.checklist,
+        matriz_impacto=resultado.matriz_impacto,
+        cronograma=resultado.cronograma,
+        checklist_m12_autoconf=_checklist_m12_para_http(d),
+        aceite_termos_privacidade_em=_aceite_lgpd_para_http(d),
+        hash_evidencia=h_aud,
+        versao_otimista=v_aud,
+    )
+
+
 @router.get("/", response_model=list[DiagnosticoResumoSchema])
 async def listar_diagnosticos(
     current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
@@ -223,93 +316,45 @@ async def criar_diagnostico(
 ) -> DiagnosticoResponse:
     """Inicia um novo diagnóstico e calcula o score com base nas respostas."""
     _, tenant_id = current
-
-    # 1. Converter Schemas Pydantic para Entidades de Domínio
-    empresa_domain = EmpresaInfo(
-        cnpj=payload.empresa.cnpj,
-        razao_social=payload.empresa.razao_social,
-        porte=payload.empresa.porte,
-        regime=payload.empresa.regime,
-        cnae_principal=payload.empresa.cnae_principal,
-        uf=payload.empresa.uf,
-        setor_macro=payload.empresa.setor_macro,
-        faixa_faturamento=payload.empresa.faixa_faturamento,
-    )
-
-    respondente_domain = Respondente(
-        email=payload.respondente.email,
-        nome=payload.respondente.nome,
-        cargo=payload.respondente.cargo,
-        telefone=payload.respondente.telefone,
-    )
-
-    # 2. Match de Respostas com as Perguntas
-    banco = get_banco_perguntas_cached()
-    mapa_perguntas = {p.id: p for p in banco}
-
-    entradas_resposta: list[EntradaRespostaDiagnostico] = []
-    for resp_payload in payload.respostas:
-        pergunta = mapa_perguntas.get(resp_payload.pergunta_id)
-        if not pergunta:
-            raise HTTPException(
-                status_code=400, detail=f"Pergunta não encontrada: {resp_payload.pergunta_id}"
-            )
-        entradas_resposta.append(
-            EntradaRespostaDiagnostico(pergunta=pergunta, valor_bruto=resp_payload.valor)
-        )
-
-    # 3. Montar comando (UUID do diagnóstico aplicado apenas no use case, sobre entidade criada lá)
-    comando = ComandoRealizarDiagnostico(
+    return await _executar_criar_diagnostico_core(
         tenant_id=tenant_id,
-        empresa=empresa_domain,
-        respondente=respondente_domain,
-        entradas_resposta=entradas_resposta,
-        plano=payload.plano,
-        aceite_termos_privacidade=payload.aceite_termos_privacidade,
-        locale_relatorio=payload.locale_relatorio,
+        payload=payload,
+        use_case=use_case,
     )
 
-    # 4. Executar Use Case
-    try:
-        resultado = await use_case.execute(comando)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    # 5. Mapear Resposta de volta para Schema Pydantic
-    score_por_dimensao_schema = {
-        dim.value: ScoreDimensaoSchema(valor=sn.valor, peso_total_aplicado=sn.peso_total_aplicado)
-        for dim, sn in resultado.score.score_por_dimensao.items()
-    }
-
-    score_completo_schema = ScoreCompletoSchema(
-        score_geral=ScoreDimensaoSchema(
-            valor=resultado.score.score_geral.valor,
-            peso_total_aplicado=resultado.score.score_geral.peso_total_aplicado,
-        ),
-        score_por_dimensao=score_por_dimensao_schema,
-    )
-
-    d = resultado.diagnostico
-    h_aud, v_aud = _campos_auditoria_http(d)
-    return DiagnosticoResponse(
-        id=d.id,
-        status=d.status.value,
-        plano=d.plano.value,
-        empresa_razao_social=d.empresa.razao_social,
-        empresa_faixa_faturamento=(
-            d.empresa.faixa_faturamento.value if d.empresa.faixa_faturamento is not None else None
-        ),
-        locale_relatorio=getattr(d, "locale_relatorio", "pt-BR"),
-        score=score_completo_schema,
-        relatorio_pdf_url=resultado.relatorio_pdf_url,
-        recomendacao_ia=resultado.recomendacao_ia,
-        checklist=resultado.checklist,
-        matriz_impacto=resultado.matriz_impacto,
-        cronograma=resultado.cronograma,
-        checklist_m12_autoconf=_checklist_m12_para_http(d),
-        aceite_termos_privacidade_em=_aceite_lgpd_para_http(d),
-        hash_evidencia=h_aud,
-        versao_otimista=v_aud,
+@router.post(
+    "/self-service",
+    response_model=DiagnosticoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Criar diagnóstico (e-mail verificado por OTP)",
+    description=(
+        "Fluxo: POST /auth/verificar-email/solicitar → POST /auth/self-service/token → este endpoint.\n\n"
+        "**Bearer:** JWT self-service (claim `scope=self_service_diagnostico`).\n"
+        "**Corpo:** mesmo contrato de POST /diagnosticos/. O e-mail do respondente deve coincidir com o OTP.\n"
+        "**Idempotency-Key:** obrigatório."
+    ),
+)
+async def criar_diagnostico_self_service(
+    payload: Annotated[
+        IniciarDiagnosticoRequest,
+        Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
+    ],
+    claims: Annotated[tuple[UUID, UUID, str], Depends(get_self_service_diagnostico_claims)],
+    use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+) -> DiagnosticoResponse:
+    """Persiste diagnóstico no tenant self-service (verificação de posse do e-mail)."""
+    _sub, tenant_id, email_norm = claims
+    payload_email = codigo_store.normalizar_email(str(payload.respondente.email))
+    if payload_email != email_norm:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="O e-mail do respondente deve ser o mesmo confirmado por OTP.",
+        )
+    return await _executar_criar_diagnostico_core(
+        tenant_id=tenant_id,
+        payload=payload,
+        use_case=use_case,
     )
 
 

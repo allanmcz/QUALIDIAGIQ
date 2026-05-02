@@ -25,8 +25,20 @@ chmod +x INICIAR_APP/iniciar.sh INICIAR_APP/iniciar-app.sh INICIAR_APP/parar-app
 | API (Swagger) | http://127.0.0.1:60000/docs |
 | Next.js | http://127.0.0.1:60001 (no container o Next escuta **3010**; mapa `60001:3010`) |
 | Postgres | `postgresql://postgres:postgres@127.0.0.1:60322/postgres` |
+| Mailpit (OTP dev) | UI http://127.0.0.1:8025 · SMTP interno `mailpit:1025` |
 
 No Compose, o browser fala com **`/api-backend/*`** no mesmo host (**proxy** no Next → API interna `api:8000`). Detalhes: `frontend/next.config.mjs`, `docker-compose.yml`.
+
+### Variáveis no `.env` da raiz (opcional)
+
+O Docker Compose **lê automaticamente** o arquivo `.env` na raiz do repositório para interpolar `${VAR}` em `docker-compose.yml` (não confundir com `frontend/.env.local`).
+
+| Variável | Efeito típico |
+|----------|----------------|
+| `QDI_CI_PLAYWRIGHT_INTEGRATED` | Default **`1`**: login via Postgres + repositório de diagnósticos **em memória** (stack local sem Supabase Cloud). Use **`0`** + `SUPABASE_*` para persistir via PostgREST real. |
+| `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Sobrescrevem os placeholders do compose quando você usa projeto Supabase (com `QDI_CI_PLAYWRIGHT_INTEGRATED=0`). |
+| `JWT_SECRET_KEY` | Default de desenvolvimento no compose; defina uma chave forte em ambientes compartilhados. |
+| `QDI_SELF_SERVICE_TENANT_ID` | Tenant UUID do fluxo OTP → `/diagnosticos/self-service` (default alinhado ao backend). |
 
 ## Comandos — `iniciar-app.sh`
 

@@ -41,6 +41,7 @@ from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
+from src.infrastructure.email_verificacao import codigo_store
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
 from src.infrastructure.repositories.ci_playwright_diagnostico_repository import (
     CiPlaywrightDiagnosticoRepository,
@@ -156,6 +157,73 @@ async def get_current_user_tenant(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado",
         ) from e
+
+
+SELF_SERVICE_DIAGNOSTICO_SCOPE = "self_service_diagnostico"
+
+
+async def get_self_service_diagnostico_claims(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
+) -> tuple[UUID, UUID, str]:
+    """
+    JWT emitido por POST /auth/self-service/token após OTP válido.
+
+    Returns:
+        Tupla (subject_sessão, tenant_id, email_normalizado) para gravar diagnóstico no pool self-service.
+    """
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token Bearer ausente ou inválido",
+        )
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except (jwt.PyJWTError, ValueError) as e:
+        logger.warning("jwt_self_service_invalido", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido ou expirado",
+        ) from e
+
+    if payload.get("scope") != SELF_SERVICE_DIAGNOSTICO_SCOPE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token não autorizado para gravar diagnóstico self-service",
+        )
+
+    sub = payload.get("sub")
+    tid = payload.get("tenant_id")
+    email_raw = payload.get("email")
+    if not sub or not tid or not email_raw:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token self-service incompleto",
+        )
+    try:
+        tenant_uuid = UUID(str(tid))
+        session_uuid = UUID(str(sub))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token self-service com identificadores inválidos",
+        ) from e
+
+    if tenant_uuid != settings.self_service_tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant do token incompatível com self-service",
+        )
+
+    email_norm = codigo_store.normalizar_email(str(email_raw))
+    return session_uuid, tenant_uuid, email_norm
 
 
 def get_diagnostico_repository() -> DiagnosticoRepository:

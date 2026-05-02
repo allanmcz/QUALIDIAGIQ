@@ -9,7 +9,7 @@ from __future__ import annotations
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 import psycopg2
@@ -22,7 +22,11 @@ from src.application.ports.email_service import EmailServicePort  # noqa: TC001
 from src.infrastructure.auth.postgres_admin_login import buscar_admin_por_email_postgres
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.email_verificacao import codigo_store
-from src.presentation.api.dependencies import get_email_service, get_supabase_client
+from src.presentation.api.dependencies import (
+    SELF_SERVICE_DIAGNOSTICO_SCOPE,
+    get_email_service,
+    get_supabase_client,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -62,6 +66,19 @@ class ConfirmarVerificacaoEmailResponse(BaseModel):
     verificado: bool
 
 
+class SelfServiceTokenRequest(BaseModel):
+    """Troca código OTP (mesmo fluxo de /verificar-email/solicitar) por JWT para POST /diagnosticos/self-service."""
+
+    email: EmailStr
+    codigo: str = Field(min_length=4, max_length=8, description="Código numérico recebido por e-mail")
+
+
+class SelfServiceTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
 def create_access_token(
     *,
     subject_user_id: UUID,
@@ -79,6 +96,49 @@ def create_access_token(
         "exp": expire,
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
+
+def create_self_service_access_token(*, email_norm: str) -> tuple[str, int]:
+    """JWT de curta duração para gravar um diagnóstico no tenant self-service após OTP."""
+    settings = get_settings()
+    minutes = settings.self_service_jwt_expire_minutes
+    expire = datetime.now(UTC) + timedelta(minutes=minutes)
+    payload_jwt: dict[str, Any] = {
+        "sub": str(uuid4()),
+        "tenant_id": str(settings.self_service_tenant_id),
+        "email": email_norm,
+        "scope": SELF_SERVICE_DIAGNOSTICO_SCOPE,
+        "exp": expire,
+    }
+    token = jwt.encode(payload_jwt, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return token, int(minutes * 60)
+
+
+@router.post(
+    "/self-service/token",
+    response_model=SelfServiceTokenResponse,
+    summary="OTP → JWT self-service (gravar diagnóstico)",
+    description=(
+        "Consumir o código enviado por POST /auth/verificar-email/solicitar e receber um Bearer JWT "
+        "válido para POST /diagnosticos/self-service (Idempotency-Key obrigatório). "
+        "O e-mail do diagnóstico deve ser o mesmo verificado."
+    ),
+)
+async def emitir_token_self_service(body: SelfServiceTokenRequest) -> SelfServiceTokenResponse:
+    email_norm = codigo_store.normalizar_email(str(body.email))
+    codigo_limpo = body.codigo.strip().replace(" ", "")
+    if not codigo_limpo.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código deve conter apenas números.",
+        )
+    if not codigo_store.validar_e_consumir(email_norm, codigo_limpo):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código inválido ou expirado. Solicite um novo código.",
+        )
+    token, ttl_sec = create_self_service_access_token(email_norm=email_norm)
+    return SelfServiceTokenResponse(access_token=token, expires_in=ttl_sec)
 
 
 @router.post("/login", response_model=LoginResponse)

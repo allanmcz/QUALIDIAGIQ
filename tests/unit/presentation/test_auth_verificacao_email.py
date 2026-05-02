@@ -60,6 +60,30 @@ def test_confirmar_codigo_valido(client_smtp_ok: TestClient):
     assert res.json() == {"verificado": True}
 
 
+def test_self_service_token_codigo_valido(client_smtp_ok: TestClient):
+    client_smtp_ok.post("/auth/verificar-email/solicitar", json={"email": "self@svc.br"})
+    codigo = codigo_store.codigo_ativo_para_debug("self@svc.br")
+    assert codigo is not None
+    res = client_smtp_ok.post(
+        "/auth/self-service/token",
+        json={"email": "self@svc.br", "codigo": codigo},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert "access_token" in body
+    assert body.get("token_type") == "bearer"
+    assert int(body.get("expires_in", 0)) > 0
+
+
+def test_self_service_token_codigo_invalido(client_smtp_ok: TestClient):
+    client_smtp_ok.post("/auth/verificar-email/solicitar", json={"email": "bad@svc.br"})
+    res = client_smtp_ok.post(
+        "/auth/self-service/token",
+        json={"email": "bad@svc.br", "codigo": "000000"},
+    )
+    assert res.status_code == 400
+
+
 def test_solicitar_falha_smtp_nao_registra_codigo():
     mock = AsyncMock()
     mock.enviar_codigo_verificacao_email.return_value = False
