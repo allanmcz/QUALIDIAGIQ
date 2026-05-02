@@ -22,9 +22,9 @@ Estas decisões **já foram tomadas** pelo Allan (produto); a engenharia pode as
 | PDF — idioma | **pt-BR** padrão; **en** opcional para rótulos do PDF (`locale_relatorio`); conteúdo dinâmico pode permanecer em PT até tradução completa | 2026-05-02 | Migração **`0016_locale_relatorio_pdf.sql`**, API + wizard |
 | PDF — motor | **WeasyPrint** como **único** gerador deste relatório (sem Puppeteer) | 2026-05-02 | `pdf_generator_weasyprint.py`; linha **[x]** na secção 8 |
 | LLM em runtime | **LangChain/LangGraph + Ollama** em conjunto (**ADR-007**); fallback HTTP documentado | 2026-05-02 | Secção 8 · variável `QDI_LLM_BACKEND` |
-| Schema baseline MVP | Migrações até **0016** no ambiente que serve PDF/i18n (inclui **0015** onde CNAE/macros em DB) | 2026-05-02 | `init.sql`, `make verify-schema-mvp`, SQL verificação MVP |
+| Schema baseline MVP | Migrações **0015** e **0016** aplicadas no ambiente alvo (CNAE/macros + `locale_relatorio` / WORM PDF) | 2026-05-02 | `init.sql`, `make verify-schema-mvp`, SQL verificação MVP — **estado:** aplicadas (**confirmado Allan**) |
 
-**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, aplicar **0016** no projeto cloud se ainda não estiver, tag de release).
+**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, tag de release). Migrações **0015** e **0016** já constam como **feitas** na linha correspondente da secção 1.
 
 ---
 
@@ -37,7 +37,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **1** | P5 — PDF sign-off contábil | Allan (produto); parecer contábil pode ser **próprio Allan** se o processo interno aceitar auto-sign-off formal | Allan ou revisor contábil + registo no `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` |
 | **1** | P5 — ambiente espelho WeasyPrint | Allan (aprova critério “igual a prod”) | Engenharia / Ops — replicação de imagem, env, fontes |
 | **1** | P6 — RLS smoke 2 tenants no Supabase **real** | Allan (aceita evidência “passou”) | Quem tem **credenciais Supabase** (Allan ou Ops) — ver runbooks em `docs/operacao/` |
-| **1** | Migrações schema MVP até **0016** (incl. `locale_relatorio`; **0015** CNAE/macros onde aplicável) | Allan (autoriza release/schema) | Allan, Ops ou pipeline — `psql` / `make verify-schema-mvp-strict` · `scripts/verify_mvp_schema.py` |
+| **1** | Migrações schema MVP até **0016** (incl. `locale_relatorio`; **0015** CNAE/macros onde aplicável) — **estado:** **0015** e **0016** aplicadas | Allan (autoriza release/schema) | Allan, Ops ou pipeline — `psql` / `make verify-schema-mvp-strict` · `scripts/verify_mvp_schema.py` |
 | **1** | Tag / release MVP + `CHANGELOG_MVP` | Allan (momento e número) | Allan ou CI — git tag, entrada no changelog |
 | **2** | Parecer **`/termos`** e **`/privacidade`** | Allan (aceita ou pede revisão) | **Advogado** (externo ou jurídico da casa) |
 | **2** | Retenção telefone + alinhamento legal | Allan + **jurídico** (política de dados) | Jurídico (texto) + Eng (campos/API se mudar) |
@@ -68,7 +68,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [ ] | **P5 — PDF** sign-off contábil (B.2) | `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` | | |
 | [ ] | **P5 — PDF** ambiente espelho produção WeasyPrint (B.3) | mesmo + `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` | | |
 | [ ] | **P6 — RLS** smoke dois tenants no **projeto Supabase real** (não só CI local) | `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` + evidência de execução no projeto; procedimento RLS detalhado pode estar em artefacto Ops | | |
-| [ ] | Migrações aplicadas no ambiente alvo até **`0016`** (obrigatório para PDF/i18n; inclui **0015** CNAE + pesos macro DB onde aplicável) | `make verify-schema-mvp-strict`, `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql` | | |
+| [x] | Migrações aplicadas no ambiente alvo até **`0016`** (**0015** CNAE + pesos macro; **0016** `locale_relatorio` + WORM) | `make verify-schema-mvp-strict`, `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql` | 2026-05-02 | **0015** e **0016** aplicadas no ambiente alvo (confirmado Allan). Revalidar após novo ambiente ou restore. |
 | [ ] | **Tag / release** MVP + linha em `docs/CHANGELOG_MVP.md` | `docs/HANDOFF_PLANO_MVP_FECHADO.md` §8 | | |
 
 ---
