@@ -7,7 +7,7 @@ Versões internas podem usar data `YYYY-MM-DD` até adoção de semver de produt
 
 ## [Unreleased]
 
-- _(Sem alterações pendentes de lançamento; usar esta secção para patches após **1.0**.)_
+- **IA:** stack **LangGraph + LangChain (`langchain-ollama` ChatOllama) + servidor Ollama** como default da recomendação no diagnóstico (**ADR-007**); fallback ``QDI_LLM_BACKEND=http_ollama`` (REST legado).
 
 ---
 

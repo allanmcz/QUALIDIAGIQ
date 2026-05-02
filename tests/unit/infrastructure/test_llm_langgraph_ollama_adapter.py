@@ -1,0 +1,56 @@
+"""Testes do adapter LangGraph + ChatOllama (mock de rede)."""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from langchain_core.messages import AIMessage
+
+from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
+
+
+@pytest.mark.asyncio
+async def test_langgraph_ollama_propaga_resposta_com_ancora_normativa() -> None:
+    """Com ``ainvoke`` do modelo a devolver citação reconhecida, o texto passa o guardrail."""
+    with patch(
+        "src.infrastructure.adapters.llm_langgraph_ollama.ChatOllama",
+    ) as mock_cls:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(
+            return_value=AIMessage(
+                content="Ajuste crédito conforme LC 214/2025 art. 5º no plano de transição.",
+            ),
+        )
+        mock_cls.return_value = mock_llm
+
+        adapter = LangGraphOllamaLlmAdapter(
+            ollama_url="http://127.0.0.1:11434",
+            model="llama3",
+            timeout_seconds=10.0,
+        )
+        out = await adapter.gerar_recomendacao("Empresa X", "Resumo normativo")
+
+        assert "LC 214/2025" in out
+        mock_llm.ainvoke.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_langgraph_ollama_guardrail_quando_sem_ancora() -> None:
+    """Sem âncora Lexiq, devolve mensagem de rejeição estável."""
+    with patch(
+        "src.infrastructure.adapters.llm_langgraph_ollama.ChatOllama",
+    ) as mock_cls:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(
+            return_value=AIMessage(content="Melhore processos internos e treine a equipe."),
+        )
+        mock_cls.return_value = mock_llm
+
+        adapter = LangGraphOllamaLlmAdapter(
+            ollama_url="http://127.0.0.1:11434",
+            model="llama3",
+        )
+        out = await adapter.gerar_recomendacao("Empresa Y", "base")
+
+        assert "Recomendação não exibida" in out

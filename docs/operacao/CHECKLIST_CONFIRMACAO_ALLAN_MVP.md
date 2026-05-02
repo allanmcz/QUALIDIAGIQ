@@ -36,7 +36,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **6** | Priorização Beta **S01–S11** | **Allan** | Eng — por item priorizado |
 | **7** | GA / COULD **C01, C10, C08…** | **Allan** | Roadmap / Eng conforme escolha |
 | **8** | RAG Lexiq obrigatório vs MVP pragmático | **Allan** | Eng — se exigir S02 antes de go-live institucional |
-| **8** | LangChain/LangGraph obrigatório vs Ollama-only | **Allan** | Eng — ADR / épico SHOULD conforme decisão |
+| **8** | LangChain/LangGraph + Ollama (stack conjunta) | **Allan** (**fechado 2026-05-02**) | Eng — **ADR-007**; default API LangGraph+ChatOllama; ``QDI_LLM_BACKEND=http_ollama`` fallback |
 
 ---
 
@@ -131,7 +131,7 @@ Preencher **S** (Sim neste trimestre) ou **N** (não agora) — pelo menos uma l
 | OK | Tema | Decisão necessária | Data | Notas |
 |:--:|------|-------------------|------|-------|
 | [ ] | **RAG Lexiq obrigatório** em respostas fiscais | Aceitar **MVP pragmático** atual (guardrail sem RAG) **ou** exigir S02 antes de go-live institucional | | |
-| [ ] | **LangChain/LangGraph** como stack obrigatória no papel | Aceitar Ollama-only até épico SHOULD **ou** impor integração com prazo | | |
+| [x] | **LangChain/LangGraph** + **Ollama** em conjunto | **Decidido (2026-05-02):** runtime default API — ver **ADR-007** (``LangGraphOllamaLlmAdapter``) | 2026-05-02 | Fallback HTTP: ``QDI_LLM_BACKEND=http_ollama`` |
 
 ---
 

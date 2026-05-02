@@ -30,6 +30,7 @@ from src.domain.repositories.normativa_score_macro_repository import (
 )
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
+from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
@@ -299,13 +300,27 @@ def get_email_service() -> SmtpEmailAdapter:
     return SmtpEmailAdapter()
 
 
-def get_llm_service() -> OllamaLlmAdapter:
-    """Injeta LLM — **Ollama** é o padrão desde o MVP de recomendações (local/dev). Ver ADR-003."""
+def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter:
+    """
+    Injeta LLM — default **LangGraph + LangChain ChatOllama** (Ollama local).
+
+    Fallback ``http_ollama``: REST direta (``QDI_LLM_BACKEND=http_ollama``).
+    Ver **ADR-007** e ADR-003.
+    """
     settings = get_settings()
-    return OllamaLlmAdapter(
-        ollama_url=settings.ollama_base_url.strip(),
-        model=settings.ollama_model.strip(),
-        timeout_seconds=float(settings.ollama_timeout_seconds),
+    url = settings.ollama_base_url.strip()
+    model = settings.ollama_model.strip()
+    timeout = float(settings.ollama_timeout_seconds)
+    if settings.llm_backend == "http_ollama":
+        return OllamaLlmAdapter(
+            ollama_url=url,
+            model=model,
+            timeout_seconds=timeout,
+        )
+    return LangGraphOllamaLlmAdapter(
+        ollama_url=url,
+        model=model,
+        timeout_seconds=timeout,
     )
 
 
@@ -335,7 +350,10 @@ def get_realizar_diagnostico_use_case(
     pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
     storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],
     email_service: Annotated[SmtpEmailAdapter, Depends(get_email_service)],
-    llm_service: Annotated[OllamaLlmAdapter, Depends(get_llm_service)],
+    llm_service: Annotated[
+        LangGraphOllamaLlmAdapter | OllamaLlmAdapter,
+        Depends(get_llm_service),
+    ],
 ) -> RealizarDiagnostico:
     """Orquestrador principal."""
     return RealizarDiagnostico(

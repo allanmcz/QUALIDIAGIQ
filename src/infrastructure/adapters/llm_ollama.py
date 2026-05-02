@@ -6,13 +6,16 @@ from src.application.services.lexiq_guardrail import (
     mensagem_rejeicao_guardrail,
     texto_tem_ancora_normativa,
 )
+from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
 
 logger = structlog.get_logger(__name__)
 
 
 class OllamaLlmAdapter(LlmServicePort):
     """
-    Adapter para comunicar com uma instância local do Ollama via API REST.
+    Adapter legado: Ollama via API REST direta (httpx).
+
+    Preferir ``LangGraphOllamaLlmAdapter`` (default) — ver ADR-007.
     """
 
     def __init__(
@@ -27,19 +30,7 @@ class OllamaLlmAdapter(LlmServicePort):
         self._timeout_seconds = timeout_seconds
 
     async def gerar_recomendacao(self, contexto_empresa: str, base_normativa: str) -> str:
-        prompt = f"""
-Você é um Consultor Tributário Sênior especialista na Reforma Tributária Brasileira (EC 132/2023 e LC 214/2025).
-Baseado exclusivamente no resumo do Decreto nº 12.955/2026 abaixo, faça uma recomendação de ação curta e objetiva para a empresa.
-
---- BASE NORMATIVA (Decreto 12.955/2026) ---
-{base_normativa}
-
---- CONTEXTO DA EMPRESA ---
-{contexto_empresa}
-
-Recomendação (obrigatório citar no texto pelo menos uma referência explícita dentre:
-LC 214/2025, EC 132/2023 ou ABNT NBR 17301:2026):
-"""
+        prompt = montar_prompt_recomendacao(contexto_empresa, base_normativa)
         try:
             async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
                 response = await client.post(

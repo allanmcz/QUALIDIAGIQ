@@ -40,7 +40,9 @@ make test
 
 Se o Ollama não estiver disponível, o fluxo de diagnóstico segue com mensagem amigável de fallback na recomendação IA.
 
-Env opcional: **`OLLAMA_TIMEOUT_SECONDS`** (default `30`) — tempo máximo de espera pela API REST do Ollama (`src/infrastructure/adapters/llm_ollama.py`).
+**Stack default:** **LangGraph + LangChain (`ChatOllama`)** contra o servidor Ollama — ver **ADR-007**.  
+Env opcional: **`QDI_LLM_BACKEND=http_ollama`** — força chamada REST direta (adapter legado `llm_ollama.py`).  
+**`OLLAMA_TIMEOUT_SECONDS`** (default `30`) aplica-se ao cliente LangChain ou ao `httpx`, conforme o backend.
 
 ### OpenTelemetry (traços)
 
@@ -105,7 +107,7 @@ Variáveis lidas em runtime: `OTEL_TRACING_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_
 | Backend | Python 3.12 + FastAPI 0.115 + Pydantic v2 |
 | Frontend | Next.js 14 + Tailwind + shadcn/ui |
 | DB | Supabase (PostgreSQL 16 + RLS + pgvector) |
-| IA / LLM | **Ollama** (padrão dev/local na API) · Claude/API em produção planejada + LangChain/LangGraph (ADR-003) |
+| IA / LLM | **LangGraph + LangChain ChatOllama** + servidor **Ollama** (default dev — ADR-007) · Claude/API produção (ADR-003) · fallback **`QDI_LLM_BACKEND=http_ollama`** |
 | PDF | WeasyPrint |
 | Container | Docker + OrbStack (M2 Max) |
 | Test | pytest + pytest-asyncio + Playwright |

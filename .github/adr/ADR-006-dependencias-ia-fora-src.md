@@ -2,7 +2,7 @@
 
 **Data:** 2026-05-02  
 **Estado:** Aceite  
-**Contexto:** Pacotes `anthropic`, `openai`, `langchain*`, `langgraph` constam em `pyproject.toml` mas o fluxo runtime do MVP usa o adapter **Ollama** (`src/infrastructure/adapters/llm_ollama.py`). Há risco de “dependências mortas” vs preparação para SHOULD (ADR-003).
+**Contexto:** Pacotes `anthropic`, `openai`, `langchain*`, `langgraph` constam em `pyproject.toml`. Até **2026-05-02** o runtime MVP usava só **REST httpx** ao Ollama (`llm_ollama.py`). **ADR-007** passou a usar **LangGraph + LangChain + Ollama** em `src/` com fallback HTTP opcional.
 
 ## Decisão
 
@@ -18,10 +18,11 @@
 ## Consequências
 
 - CI continua resolvendo o mesmo conjunto de pacotes; não há ganho imediato de tempo de install.
-- Qualquer novo código em `src/` que use Anthropic/LangChain deve passar por adapter dedicado (Port + Adapter), mantendo Ollama como default dev.
+- Qualquer novo código em `src/` que use Anthropic/LangChain deve passar por adapter dedicado (Port + Adapter), mantendo **Ollama** como backend default dev.
 - Revisitar esta ADR quando SHOULD “motor IA produção” entrar em desenvolvimento ativo ou quando métricas de build indicarem custo relevante.
 
 ## Referências
 
 - ADR-003 (stack LLM produção planejada)
+- **ADR-007** (LangGraph + LangChain + Ollama em runtime)
 - `pyproject.toml` — grupo `dependencies` IA / LLM

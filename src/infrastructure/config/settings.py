@@ -7,7 +7,7 @@ Camada: Infrastructure (adaptador de config — sem regras de domínio).
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -106,7 +106,15 @@ class Settings(BaseSettings):
         ge=1.0,
         le=600.0,
         validation_alias=AliasChoices("OLLAMA_TIMEOUT_SECONDS"),
-        description="Timeout HTTP (segundos) nas chamadas REST ao Ollama (/api/generate).",
+        description="Timeout (segundos) nas chamadas ao Ollama — REST direta ou cliente LangChain.",
+    )
+
+    llm_backend: Literal["langgraph_ollama", "http_ollama"] = Field(
+        default="langgraph_ollama",
+        validation_alias=AliasChoices("QDI_LLM_BACKEND"),
+        description=(
+            "Backend de recomendação IA: LangGraph+LangChain+Ollama (default) ou HTTP legado."
+        ),
     )
 
     cors_allowed_origins: str = Field(
