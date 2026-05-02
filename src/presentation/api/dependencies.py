@@ -25,6 +25,9 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.domain.entities.diagnostico import EmpresaInfo, PorteEmpresa, RegimeTributario, SetorMacro
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository  # noqa: TC001
+from src.domain.repositories.normativa_score_macro_repository import (
+    NormativaScoreMacroRepository,  # noqa: TC001
+)
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
@@ -35,8 +38,14 @@ from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cach
 from src.infrastructure.repositories.ci_playwright_diagnostico_repository import (
     CiPlaywrightDiagnosticoRepository,
 )
+from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
+    EmbutidasNormativaScoreMacroRepository,
+)
 from src.infrastructure.repositories.postgres_cnae_subclasse_repository import (
     PostgresCnaeSubclasseRepository,
+)
+from src.infrastructure.repositories.postgres_normativa_score_macro_repository import (
+    PostgresNormativaScoreMacroRepository,
 )
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
@@ -164,9 +173,44 @@ def get_atualizar_checklist_m12_autoconf_use_case(
     return AtualizarChecklistM12Autoconf(repo=repo)
 
 
-def get_calcular_score_use_case() -> CalcularScoreUseCase:
-    """Injeta o motor matemático de Score."""
-    return CalcularScoreUseCase()
+def get_normativa_score_macro_repository() -> NormativaScoreMacroRepository:
+    """
+    Fonte dos pesos macro (agregação score geral).
+
+    Com `DATABASE_URL`, lê `qdi.normativa_score_macro_dimensao`; senão usa constantes embutidas.
+    """
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn is None:
+        return EmbutidasNormativaScoreMacroRepository()
+    return PostgresNormativaScoreMacroRepository(dsn=dsn)
+
+
+def get_calcular_score_use_case(
+    normativa_repo: Annotated[
+        NormativaScoreMacroRepository,
+        Depends(get_normativa_score_macro_repository),
+    ],
+) -> CalcularScoreUseCase:
+    """Injeta o motor matemático de Score com resolução de vigência normativa."""
+    return CalcularScoreUseCase(normativa_repo=normativa_repo)
+
+
+def pesos_macro_dimensao_iso_para_http(
+    normativa_repo: Annotated[
+        NormativaScoreMacroRepository,
+        Depends(get_normativa_score_macro_repository),
+    ],
+) -> dict[str, float]:
+    """Snapshot dos pesos macro na data UTC atual — alinhado ao cálculo do POST /diagnosticos/."""
+    from datetime import UTC, datetime
+
+    from src.domain.value_objects.score import exigir_mapa_pesos_macro_completo
+
+    ref = datetime.now(UTC).date()
+    bruto = normativa_repo.obter_pesos_macro_validos_na_data(ref)
+    exigir_mapa_pesos_macro_completo(bruto)
+    return {d.value: float(w) for d, w in bruto.items()}
 
 
 def get_gerar_questionario_adaptativo_use_case() -> GerarQuestionarioAdaptativoUseCase:

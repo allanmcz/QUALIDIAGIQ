@@ -2,6 +2,8 @@
 """
 Verifica no Postgres alvo se o schema mínimo do MVP está presente (migrações até 0012 + RLS).
 
+Modo estrito (``QDI_VERIFY_SCHEMA_STRICT_CNAE=1``): CNAE 0013/0014 e tabela normativa de score macro (0015).
+
 Uso (uma das opções):
   DATABASE_URL=postgresql://user:pass@host:5432/db python scripts/verify_mvp_schema.py
   QDI_POSTGRES_TEST_URL=postgresql://... python scripts/verify_mvp_schema.py
@@ -101,6 +103,33 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     return erros
 
 
+async def _verificar_normativa_score_macro_strict(conn: asyncpg.Connection) -> list[str]:
+    """Migração 0015 — pesos macro por dimensão (épico E1)."""
+    erros: list[str] = []
+
+    tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'qdi' AND table_name = 'normativa_score_macro_dimensao'
+    """)
+    if tbl != 1:
+        erros.append("Tabela qdi.normativa_score_macro_dimensao ausente (aplique migração 0015).")
+        return erros
+
+    cnt = await conn.fetchval("""
+        SELECT count(DISTINCT dimensao)::int
+        FROM qdi.normativa_score_macro_dimensao
+    """)
+    esperado_dimensoes = 7
+    if (cnt or 0) < esperado_dimensoes:
+        erros.append(
+            f"Esperadas ao menos {esperado_dimensoes} dimensões distintas em "
+            f"qdi.normativa_score_macro_dimensao; encontradas: {cnt or 0}."
+        )
+
+    return erros
+
+
 async def _verificar_strict_cnae(conn: asyncpg.Connection) -> list[str]:
     erros: list[str] = []
 
@@ -141,6 +170,7 @@ async def _verificar(conn_dsn: str, *, strict_cnae: bool) -> list[str]:
         erros = await _verificar_nucleo(conn)
         if strict_cnae:
             erros.extend(await _verificar_strict_cnae(conn))
+            erros.extend(await _verificar_normativa_score_macro_strict(conn))
         return erros
     finally:
         await conn.close()
@@ -176,7 +206,7 @@ def main() -> int:
 
     msg = "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id)."
     if strict_cnae:
-        msg += " Modo strict CNAE: extensões + 1332 subclasses vigentes."
+        msg += " Modo strict: CNAE (extensões + 1332 subclasses) + normativa score macro (0015)."
     print(msg)
     return 0
 

@@ -30,7 +30,7 @@ from src.application.use_cases.realizar_diagnostico import (
 )
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
-from src.domain.value_objects.score import ScoreCompleto, pesos_macro_dimensao_para_dict_iso
+from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
     versao_catalogo_lida,
@@ -43,6 +43,7 @@ from src.presentation.api.dependencies import (
     get_gerar_questionario_adaptativo_use_case,
     get_realizar_diagnostico_use_case,
     perfil_empresa_para_questionario,
+    pesos_macro_dimensao_iso_para_http,
 )
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.schemas import (
@@ -310,11 +311,13 @@ async def criar_diagnostico(
         "**GET /diagnosticos/manifesto-pesos**."
     ),
 )
-async def obter_metodologia() -> MetodologiaResponse:
+async def obter_metodologia(
+    pesos_macro_iso: Annotated[dict[str, float], Depends(pesos_macro_dimensao_iso_para_http)],
+) -> MetodologiaResponse:
     """Retorna os pesos macro e a metodologia do motor de cálculo (transparência M03)."""
     return MetodologiaResponse(
         versao_normativa="ABNT NBR 17301:2026",
-        pesos_macro_dimensao_score_geral=pesos_macro_dimensao_para_dict_iso(),
+        pesos_macro_dimensao_score_geral=pesos_macro_iso,
         nota_metodologica=(
             "pesos_macro_dimensao_score_geral ponderam apenas a agregação do score "
             "a partir das médias por dimensão; dentro de cada dimensão usam-se os pesos "
@@ -337,7 +340,9 @@ async def obter_metodologia() -> MetodologiaResponse:
         "(LC 214/2025, ABNT NBR 17301:2026)."
     ),
 )
-async def obter_manifesto_pesos() -> ManifestoPesosResponse:
+async def obter_manifesto_pesos(
+    pesos_macro_iso: Annotated[dict[str, float], Depends(pesos_macro_dimensao_iso_para_http)],
+) -> ManifestoPesosResponse:
     """
     Manifesto público de pesos (M03) — catálogo completo + macrodimensões do score geral.
 
@@ -357,7 +362,7 @@ async def obter_manifesto_pesos() -> ManifestoPesosResponse:
     ]
     return ManifestoPesosResponse(
         versao_catalogo=versao_catalogo_lida(),
-        pesos_macro_dimensao=pesos_macro_dimensao_para_dict_iso(),
+        pesos_macro_dimensao=pesos_macro_iso,
         perguntas=itens,
     )
 

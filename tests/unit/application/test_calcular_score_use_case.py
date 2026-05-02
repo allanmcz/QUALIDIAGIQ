@@ -1,10 +1,19 @@
 import uuid
+from datetime import date
 
 import pytest
 
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.domain.entities.questionario import Pergunta, Resposta, TipoPergunta
+from src.domain.repositories.normativa_score_macro_repository import NormativaScoreMacroRepository
 from src.domain.value_objects.score import Dimensao
+from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
+    EmbutidasNormativaScoreMacroRepository,
+)
+
+
+def _motor_padrao() -> CalcularScoreUseCase:
+    return CalcularScoreUseCase(normativa_repo=EmbutidasNormativaScoreMacroRepository())
 
 
 @pytest.fixture
@@ -29,9 +38,15 @@ def perguntas_mock():
     ]
 
 
+class _RepoMacroIncompleto(NormativaScoreMacroRepository):
+    def obter_pesos_macro_validos_na_data(self, data_referencia: date) -> dict[Dimensao, float]:
+        _ = data_referencia
+        return {Dimensao.FISCAL: 1.5}
+
+
 class TestCalcularScoreUseCase:
     def test_deve_calcular_score_com_sucesso(self, perguntas_mock):
-        use_case = CalcularScoreUseCase()
+        use_case = _motor_padrao()
 
         diag_id = uuid.uuid4()
         respostas = [
@@ -49,7 +64,11 @@ class TestCalcularScoreUseCase:
             ),
         ]
 
-        score_completo = use_case.execute(perguntas=perguntas_mock, respostas=respostas)
+        score_completo = use_case.execute(
+            perguntas=perguntas_mock,
+            respostas=respostas,
+            data_referencia_normativa=date(2026, 5, 1),
+        )
 
         # Valida score Fiscal
         score_fiscal = score_completo.score_por_dimensao[Dimensao.FISCAL]
@@ -68,12 +87,12 @@ class TestCalcularScoreUseCase:
         assert score_completo.score_geral.valor == 76.79
 
     def test_deve_rejeitar_calculo_sem_respostas(self, perguntas_mock):
-        use_case = CalcularScoreUseCase()
+        use_case = _motor_padrao()
         with pytest.raises(ValueError, match=r"Não é possível calcular score sem respostas"):
             use_case.execute(perguntas=perguntas_mock, respostas=[])
 
     def test_deve_rejeitar_se_pergunta_nao_existir(self, perguntas_mock):
-        use_case = CalcularScoreUseCase()
+        use_case = _motor_padrao()
         respostas = [
             Resposta(
                 diagnostico_id=uuid.uuid4(),
@@ -87,7 +106,7 @@ class TestCalcularScoreUseCase:
 
     def test_nao_se_aplica_exclui_da_media_dimensao(self, perguntas_mock):
         """Doc 05_QUESTIONARIO §11.1 — excluir da média ponderada."""
-        use_case = CalcularScoreUseCase()
+        use_case = _motor_padrao()
         diag_id = uuid.uuid4()
         respostas = [
             Resposta(
@@ -106,3 +125,17 @@ class TestCalcularScoreUseCase:
         score = use_case.execute(perguntas=perguntas_mock, respostas=respostas)
         assert Dimensao.FISCAL not in score.score_por_dimensao
         assert score.score_por_dimensao[Dimensao.TECNOLOGICA].valor == 100.0
+
+    def test_rejeita_mapa_macro_incompleto(self, perguntas_mock):
+        use_case = CalcularScoreUseCase(normativa_repo=_RepoMacroIncompleto())
+        diag_id = uuid.uuid4()
+        respostas = [
+            Resposta(
+                diagnostico_id=diag_id,
+                pergunta_id=perguntas_mock[0].id,
+                pergunta_tipo=perguntas_mock[0].tipo,
+                valor_bruto="sim",
+            ),
+        ]
+        with pytest.raises(ValueError, match=r"falta a dimensão"):
+            use_case.execute(perguntas=perguntas_mock, respostas=respostas)

@@ -8,25 +8,39 @@ Responsabilidade:
     no Value Object ScoreCompleto.
 """
 
+from datetime import date
+
 from src.domain.entities.questionario import Pergunta, Resposta
+from src.domain.repositories.normativa_score_macro_repository import NormativaScoreMacroRepository
 from src.domain.value_objects.score import (
-    PESOS_MACRO_DIMENSAO_SCORE_GERAL,
     Dimensao,
     ScoreCompleto,
     ScoreNumerico,
+    exigir_mapa_pesos_macro_completo,
 )
 
 
 class CalcularScoreUseCase:
     """Motor matemático determinístico de pontuação do QDI."""
 
-    def execute(self, perguntas: list[Pergunta], respostas: list[Resposta]) -> ScoreCompleto:
+    def __init__(self, normativa_repo: NormativaScoreMacroRepository) -> None:
+        self._normativa_repo = normativa_repo
+
+    def execute(
+        self,
+        perguntas: list[Pergunta],
+        respostas: list[Resposta],
+        *,
+        data_referencia_normativa: date | None = None,
+    ) -> ScoreCompleto:
         """
         Calcula o ScoreCompleto a partir das respostas dadas.
 
         Args:
             perguntas: Banco de perguntas aplicáveis que foram feitas ao usuário.
             respostas: As respostas preenchidas pelo usuário.
+            data_referencia_normativa: Data para resolver pesos macro versionados;
+                default `date.today()` (UTC/local do processo).
 
         Returns:
             ScoreCompleto: O agrupamento consolidado das dimensões e geral.
@@ -34,14 +48,16 @@ class CalcularScoreUseCase:
         if not respostas:
             raise ValueError("Não é possível calcular score sem respostas.")
 
+        data_ref = data_referencia_normativa or date.today()
+        pesos_macro_dimensoes = self._normativa_repo.obter_pesos_macro_validos_na_data(data_ref)
+        exigir_mapa_pesos_macro_completo(pesos_macro_dimensoes)
+
         # Cria lookup de perguntas por ID/código para acesso rápido (usaremos codigo para simplificar match)
         mapa_perguntas = {p.id: p for p in perguntas}
 
         # Agrupamentos para o cálculo
         pontos_por_dimensao: dict[Dimensao, float] = dict.fromkeys(Dimensao, 0.0)
         peso_por_dimensao: dict[Dimensao, float] = dict.fromkeys(Dimensao, 0.0)
-
-        pesos_macro_dimensoes = PESOS_MACRO_DIMENSAO_SCORE_GERAL
 
         # 1. Acumula pontos ganhos vs pesos possíveis por dimensão
         for resposta in respostas:

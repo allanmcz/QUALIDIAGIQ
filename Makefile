@@ -61,7 +61,7 @@ verify-schema-mvp: ## Verifica 0012/M11 + RLS no Postgres (DATABASE_URL ou QDI_P
 	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
 	$(VENV)/bin/python scripts/verify_mvp_schema.py
 
-verify-schema-mvp-strict: ## Como verify-schema-mvp + CNAE 0013/0014 (1332 subclasses, extensões pg_trgm/pgcrypto)
+verify-schema-mvp-strict: ## Como verify-schema-mvp + CNAE 0013/0014 + normativa score macro 0015 (modo strict)
 	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
 	QDI_VERIFY_SCHEMA_STRICT_CNAE=1 $(VENV)/bin/python scripts/verify_mvp_schema.py
 

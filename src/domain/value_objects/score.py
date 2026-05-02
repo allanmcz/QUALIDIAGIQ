@@ -7,6 +7,7 @@ Imutáveis (frozen=True) por princípio DDD — value objects não têm identida
 
 from __future__ import annotations
 
+from collections.abc import Mapping  # noqa: TC003
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Final
@@ -46,6 +47,24 @@ PESOS_MACRO_DIMENSAO_SCORE_GERAL: Final[dict[Dimensao, float]] = {
 def pesos_macro_dimensao_para_dict_iso() -> dict[str, float]:
     """Representação estável `{dimensao.value: peso}` para API / manifestos."""
     return {d.value: float(w) for d, w in PESOS_MACRO_DIMENSAO_SCORE_GERAL.items()}
+
+
+def exigir_mapa_pesos_macro_completo(pesos: Mapping[Dimensao, float]) -> None:
+    """
+    Invariante do motor M03: todas as dimensões devem ter peso macro positivo.
+
+    Raises:
+        ValueError: dimensão ausente ou peso não positivo.
+    """
+    for dim in Dimensao:
+        if dim not in pesos:
+            raise ValueError(
+                f"Mapa de pesos macro incompleto: falta a dimensão '{dim.value}' "
+                "(motor exige todas as 7 dimensões para transparência)."
+            )
+        p = float(pesos[dim])
+        if p <= 0:
+            raise ValueError(f"Peso macro da dimensão '{dim.value}' deve ser > 0; recebido {p}.")
 
 
 class NivelMaturidade(Enum):

@@ -129,7 +129,9 @@ class RealizarDiagnostico:
 
         # 2. Calcula o Score usando o motor matemático determinístico
         score_completo = self.calcular_score_use_case.execute(
-            perguntas=perguntas_aplicadas, respostas=respostas
+            perguntas=perguntas_aplicadas,
+            respostas=respostas,
+            data_referencia_normativa=datetime.now(UTC).date(),
         )
 
         # 3. Finaliza e congela evidência em ordem de domínio (hash + snapshot)
