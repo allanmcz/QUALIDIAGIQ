@@ -2,7 +2,7 @@
 
 @page {
     size: A4;
-    margin: 2cm;
+    margin: 18mm 16mm 22mm 16mm;
     @top-right {
         content: "QualiDiagIQ — Diagnóstico Tributário";
         font-size: 9pt;
@@ -20,6 +20,26 @@ body {
     color: #111827;
     line-height: 1.5;
     font-size: 11pt;
+}
+
+/* Bloco síntese executiva — evita fragmentação óbvia na impressão (alvo ~1 página B1). */
+.sintese-executiva-pdf {
+    border: 1px solid #e5e7eb;
+    padding: 16px;
+    margin: 20px 0;
+    background: #f8f9fa;
+    border-radius: 4px;
+    page-break-inside: avoid;
+    orphans: 3;
+    widows: 3;
+}
+
+.sintese-executiva-pdf h2 {
+    margin-top: 0;
+    color: #0d1b4b;
+    font-size: 14pt;
+    border-bottom: 1px solid #f26e2a;
+    padding-bottom: 6px;
 }
 
 .pdf-header-brand {
@@ -123,6 +143,10 @@ h3 {
     font-size: 9pt;
     color: #374151;
     text-align: justify;
-    border-top: 1px solid #E5E7EB;
-    padding-top: 10px;
+    border-top: 2px solid #f26e2a;
+    padding-top: 12px;
+}
+
+.footer-note strong {
+    color: #0d1b4b;
 }

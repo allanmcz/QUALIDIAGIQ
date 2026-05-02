@@ -13,4 +13,6 @@
 \i /docker-entrypoint-initdb.d/migrations/0010_rls_comentarios_documentacao_m10.sql
 \i /docker-entrypoint-initdb.d/migrations/0011_checklist_m12_autoconf.sql
 \i /docker-entrypoint-initdb.d/migrations/0012_aceite_lgpd_e_worm.sql
+\i /docker-entrypoint-initdb.d/migrations/0013_cnae_referencia.sql
+\i /docker-entrypoint-initdb.d/migrations/0014_cnae_seed_dados.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

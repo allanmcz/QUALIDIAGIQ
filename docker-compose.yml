@@ -1,10 +1,12 @@
 # docker-compose.yml — Ambiente de desenvolvimento local QDI
-# Stack: PostgreSQL (Supabase-compatible) + FastAPI + Next.js
+# Stack: PostgreSQL 16 (mesma imagem base do CI) + FastAPI + Next.js
 # Use: make dev  ou  docker compose up -d
 
 services:
   db:
-    image: supabase/postgres:15.6.1.146
+    # CI (.github/workflows/ci.yml) usa postgres:16-alpine; supabase/postgres local quebrava
+    # CREATE EXTENSION (hook pg_read_file). Produção Supabase aplica o mesmo SQL na cloud.
+    image: postgres:16-alpine
     container_name: qdi-db
     restart: unless-stopped
     environment:

@@ -22,7 +22,7 @@
     </div>
 
     <!-- M04_SECAO: sintese_executiva (alvo ~1 página impressa) -->
-    <div class="sintese-executiva" style="border: 1px solid #E5E7EB; padding: 16px; margin: 20px 0; background: #F8F9FA;">
+    <div class="sintese-executiva-pdf">
         <h2>Síntese executiva</h2>
         <p><strong>Score geral:</strong> {{ "%.1f"|format(score_geral.valor) }}/100 — <strong>Nível:</strong> {{ nivel_geral }}.</p>
         <p>Este relatório consolida o diagnóstico de prontidão para a Reforma Tributária do Consumo (<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>) e aderência ao modelo de compliance da <strong>ABNT NBR 17301:2026</strong>.</p>
@@ -180,7 +180,8 @@
     {% endif %}
 
     <div class="footer-note">
-        <p>Este relatório foi gerado automaticamente pelo motor QualiDiagIQ, com base nas respostas fornecidas pelo usuário. Os resultados são uma estimativa de conformidade e maturidade baseada em metodologia própria amparada pela EC 132/2023, LC 214/2025 e ABNT NBR 17301:2026. Para uma auditoria completa e emissão de pareceres contábeis/fiscais vinculantes, consulte um especialista Tributiq.</p>
+        <p><strong>Disclaimer.</strong> Este relatório foi gerado automaticamente pelo motor QualiDiagIQ com base nas respostas fornecidas. Os resultados são estimativa de maturidade e conformidade metodológica, com âncoras normativas de referência (<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>, <strong>ABNT NBR 17301:2026</strong>). Não substitui auditoria independente, parecer jurídico vinculante nem trabalho contábil fiscal formal; consulte um profissional habilitado.</p>
+        <p><strong>QualiDiagIQ</strong> — ecossistema <strong>Tributiq</strong>.</p>
     </div>
 
 </body>
