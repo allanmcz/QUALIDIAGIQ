@@ -56,12 +56,47 @@ class Settings(BaseSettings):
         default="qualidiagiq-api",
         validation_alias=AliasChoices("OTEL_SERVICE_NAME"),
     )
+    otel_exporter_otlp_endpoint: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OTEL_EXPORTER_OTLP_ENDPOINT"),
+        description="URL do collector OTLP/HTTP (ex.: https://otel.example.com:4318/v1/traces).",
+    )
+    otel_exporter_otlp_headers: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OTEL_EXPORTER_OTLP_HEADERS"),
+        description="Cabeçalhos OTLP opcionais, formato k=v,k2=v2 (ex.: autenticação no collector).",
+    )
+
+    ci_playwright_integrated: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("QDI_CI_PLAYWRIGHT_INTEGRATED"),
+        description="CI: login via Postgres + repo diagnósticos em memória (sem Supabase).",
+    )
+
+    public_rate_limit_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("QDI_PUBLIC_RATE_LIMIT_ENABLED"),
+    )
+    public_rate_limit_per_minute: int = Field(
+        default=120,
+        ge=1,
+        validation_alias=AliasChoices("QDI_PUBLIC_RATE_LIMIT_PER_MINUTE"),
+        description="Limite por IP/minuto para rotas públicas (normativa, manifesto, metodologia, questionário).",
+    )
+
+    pdf_render_timeout_seconds: float = Field(
+        default=90.0,
+        ge=5.0,
+        validation_alias=AliasChoices("QDI_PDF_RENDER_TIMEOUT_SECONDS"),
+        description="Timeout WeasyPrint (asyncio.wait_for) por geração de PDF.",
+    )
 
     cors_allowed_origins: str = Field(
         default=(
             "http://localhost:3010,http://127.0.0.1:3010,"
             "http://localhost:60001,http://127.0.0.1:60001,"
-            "http://localhost:3333,http://127.0.0.1:3333"
+            "http://localhost:3333,http://127.0.0.1:3333,"
+            "http://127.0.0.1:8765,http://localhost:8765"
         ),
         validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS"),
     )
@@ -88,6 +123,20 @@ class Settings(BaseSettings):
             raise ValueError(
                 "JWT_SECRET_KEY deve ter ao menos 32 caracteres ou defina APP_ENV=development."
             )
+        return self
+
+    @model_validator(mode="after")
+    def _ci_playwright_somente_dev_com_postgres(self) -> Self:
+        """Evita modo CI acidental em produção."""
+        if self.ci_playwright_integrated:
+            if self.app_env != "development":
+                raise ValueError(
+                    "QDI_CI_PLAYWRIGHT_INTEGRATED só é permitido com APP_ENV=development."
+                )
+            if not self.sync_database_url:
+                raise ValueError(
+                    "QDI_CI_PLAYWRIGHT_INTEGRATED exige DATABASE_URL (Postgres) para login em admins."
+                )
         return self
 
     @property

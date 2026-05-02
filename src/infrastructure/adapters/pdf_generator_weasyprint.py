@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from src.application.ports.pdf_generator import PdfGeneratorPort
 from src.domain.entities.diagnostico import Diagnostico
 from src.domain.value_objects.score import ScoreCompleto
+from src.infrastructure.config.settings import get_settings
 
 logger = structlog.get_logger(__name__)
 
@@ -97,5 +98,16 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
                 )
                 return b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
 
-        pdf_bytes = await asyncio.to_thread(_render)
+        timeout_s = float(get_settings().pdf_render_timeout_seconds)
+        try:
+            pdf_bytes = await asyncio.wait_for(asyncio.to_thread(_render), timeout=timeout_s)
+        except TimeoutError:
+            logger.error(
+                "weasyprint_timeout_render",
+                timeout_segundos=timeout_s,
+                diagnostico_id=str(diagnostico.id),
+            )
+            raise RuntimeError(
+                f"Timeout ao gerar PDF (>{timeout_s}s). Ajuste QDI_PDF_RENDER_TIMEOUT_SECONDS ou infra WeasyPrint."
+            ) from None
         return bytes(pdf_bytes)

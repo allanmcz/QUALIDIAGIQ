@@ -25,6 +25,8 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from src.domain.value_objects.cnpj_brasil import exigir_cnpj_vazio_ou_com_dv_ok
+
 if TYPE_CHECKING:
     from src.domain.value_objects.score import ScoreCompleto
 
@@ -94,6 +96,8 @@ class EmpresaInfo:
             pass
         elif len(self.cnpj) != 14 or not self.cnpj.isdigit():
             raise ValueError("CNPJ deve conter exatamente 14 dígitos numéricos ou ficar vazio")
+        else:
+            exigir_cnpj_vazio_ou_com_dv_ok(self.cnpj)
         if len(self.uf) != 2:
             raise ValueError("UF deve ter 2 caracteres (ex: SP, RJ)")
 

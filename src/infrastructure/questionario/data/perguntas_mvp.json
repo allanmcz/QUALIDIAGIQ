@@ -10,6 +10,7 @@
       "peso": 7.5,
       "tipo": "ternaria",
       "base_legal": "EC 132/2023; LC 214/2025",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cláusula 4 (contexto da organização)",
       "condicao": null
     },
     {
@@ -20,6 +21,7 @@
       "peso": 8.0,
       "tipo": "ternaria",
       "base_legal": "LC 214/2025 art. 28-32",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cláusula 6 (planejamento)",
       "condicao": null
     },
     {

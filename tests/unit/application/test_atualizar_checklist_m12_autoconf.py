@@ -24,7 +24,7 @@ from src.domain.entities.diagnostico import (
 
 def _diag_finalizado(tid: uuid.UUID) -> Diagnostico:
     empresa = EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="M12 LTDA",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -104,7 +104,7 @@ async def test_execute_conflito_versao():
 async def test_execute_rejeita_em_andamento():
     tid = uuid.uuid4()
     empresa = EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="X",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,

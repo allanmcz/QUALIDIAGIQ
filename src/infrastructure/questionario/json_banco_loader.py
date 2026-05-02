@@ -94,6 +94,11 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
         if isinstance(opcoes_raw, list) and opcoes_raw:
             opcoes = tuple(str(x) for x in opcoes_raw)
 
+        pilar_raw = item.get("pilar_abnt")
+        pilar_abnt: str | None = None
+        if pilar_raw is not None and str(pilar_raw).strip():
+            pilar_abnt = str(pilar_raw).strip()
+
         resultado.append(
             Pergunta(
                 id=pid,
@@ -106,6 +111,7 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
                 condicao=condicao,
                 multipla_total=multipla_total,
                 opcoes=opcoes,
+                pilar_abnt=pilar_abnt,
             )
         )
     return resultado

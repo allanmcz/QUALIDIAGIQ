@@ -98,10 +98,18 @@ def test_m07_prioridade_checklist_por_piores_dimensoes() -> None:
     assert frentes[0].acoes[0].prioridade == 1
 
 
-def test_matriz_impacto_quatro_departamentos() -> None:
+def test_matriz_impacto_seis_departamentos_com_base_legal() -> None:
     d = _diagnostico(PorteEmpresa.PEQUENO)
     m = ConsultoriaService.gerar_matriz_impacto(d)
-    assert len(m) == 4
-    assert {x.departamento for x in m} == {"Fiscal", "Comercial", "TI", "Jurídico"}
+    assert len(m) == 6
+    assert {x.departamento for x in m} == {
+        "Fiscal",
+        "Comercial",
+        "TI",
+        "Jurídico",
+        "Financeiro / Controladoria",
+        "RH / Folha",
+    }
     jur = next(x for x in m if x.departamento == "Jurídico")
     assert jur.base_legal and "CGNFS" in jur.base_legal
+    assert all(x.base_legal and x.base_legal.strip() for x in m)

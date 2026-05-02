@@ -13,6 +13,8 @@ from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from src.infrastructure.config.settings import get_settings
+
 if TYPE_CHECKING:
     from starlette.middleware.base import RequestResponseEndpoint
     from starlette.requests import Request
@@ -27,5 +29,15 @@ class TraceContextMiddleware(BaseHTTPMiddleware):
         tid = raw.strip() if raw and str(raw).strip() else str(uuid4())
         request.state.trace_id = tid
         response = await call_next(request)
+        settings = get_settings()
+        if settings.otel_tracing_enabled:
+            try:
+                from opentelemetry import trace
+
+                span = trace.get_current_span()
+                if span.is_recording():
+                    span.set_attribute("qualidiagiq.trace_id_http", tid)
+            except Exception:
+                pass
         response.headers["X-Trace-Id"] = tid
         return response

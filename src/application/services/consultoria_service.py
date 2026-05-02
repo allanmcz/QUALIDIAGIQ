@@ -360,4 +360,16 @@ class ConsultoriaService:
                 "Média",
                 "LC 214/2025 art. 415; CC art. 478; NT CGNFS-e (série RFB) — documentação e serviços",
             ),
+            ImpactoDepartamento(
+                "Financeiro / Controladoria",
+                "Projeção de caixa com CBS/IBS e reflexos na formação de preço",
+                "Alta",
+                "LC 214/2025 arts. 28-32 (créditos); EC 132/2023 art. 156-A",
+            ),
+            ImpactoDepartamento(
+                "RH / Folha",
+                "Retenções e benefícios com impacto na base de contribuições correlatas",
+                "Média",
+                "LC 214/2025 (disciplina do sistema tributário); Lei 8.212/1991 art. 28 (base contrib.)",
+            ),
         ]

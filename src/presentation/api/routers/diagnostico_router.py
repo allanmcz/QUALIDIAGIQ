@@ -29,13 +29,11 @@ from src.application.use_cases.realizar_diagnostico import (
     RealizarDiagnostico,
 )
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
+from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto, pesos_macro_dimensao_para_dict_iso
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
     versao_catalogo_lida,
-)
-from src.infrastructure.repositories.supabase_diagnostico_repository import (
-    SupabaseDiagnosticoRepository,
 )
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
@@ -184,7 +182,7 @@ def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema |
 @router.get("/", response_model=list[DiagnosticoResumoSchema])
 async def listar_diagnosticos(
     current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
-    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[DiagnosticoResumoSchema]:
@@ -353,6 +351,7 @@ async def obter_manifesto_pesos() -> ManifestoPesosResponse:
             tipo=p.tipo.value,
             peso=p.peso,
             base_legal=p.base_legal,
+            pilar_abnt=p.pilar_abnt,
         )
         for p in banco
     ]
@@ -395,6 +394,7 @@ async def obter_questionario_adaptativo(
             base_legal=p.base_legal,
             multipla_total=p.multipla_total,
             opcoes=list(p.opcoes) if p.opcoes else None,
+            pilar_abnt=p.pilar_abnt,
         )
         for p in lista
     ]
@@ -409,7 +409,7 @@ async def obter_questionario_adaptativo(
 async def obter_diagnostico(
     diagnostico_id: UUID,
     current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
-    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     """Busca um diagnóstico pelo ID, garantindo o isolamento do tenant."""
     _, tenant_id = current

@@ -65,6 +65,8 @@ class Pergunta:
     multipla_total: int | None = None
     # Rótulos opcionais vindos do catálogo JSON (Lexiq / editorial).
     opcoes: tuple[str, ...] | None = None
+    # Opcional — vínculo editorial com pilares da ABNT NBR 17301:2026 (ex.: cláusula / tema).
+    pilar_abnt: str | None = None
     id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self) -> None:

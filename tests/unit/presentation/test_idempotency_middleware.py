@@ -18,7 +18,7 @@ client = TestClient(app)
 
 _PAYLOAD_BASE = {
     "empresa": {
-        "cnpj": "12345678000199",
+        "cnpj": "12345678000195",
         "razao_social": "Empresa Idem LTDA",
         "porte": "micro",
         "regime": "simples_nacional",

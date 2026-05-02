@@ -11,6 +11,8 @@ export type PerguntaCatalogo = {
   base_legal: string | null;
   multipla_total?: number | null;
   opcoes?: string[] | null;
+  /** Opcional — vínculo com pilares ABNT NBR 17301:2026 (catálogo). */
+  pilar_abnt?: string | null;
 };
 
 export type QuestionarioDisponivel = {

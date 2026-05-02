@@ -15,7 +15,7 @@ from src.domain.value_objects.score import Dimensao
 @pytest.fixture
 def empresa_padrao():
     return EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="Empresa",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -28,7 +28,7 @@ def empresa_padrao():
 @pytest.fixture
 def empresa_lucro_real_industria():
     return EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="Indústria",
         porte=PorteEmpresa.GRANDE,
         regime=RegimeTributario.LUCRO_REAL,
@@ -133,7 +133,7 @@ class TestPergunta:
 
     def test_pergunta_exclusiva_industria_e_lucro_real(self):
         empresa_industria_simples = EmpresaInfo(
-            cnpj="12345678000199",
+            cnpj="12345678000195",
             razao_social="Indústria Simples",
             porte=PorteEmpresa.MICRO,
             regime=RegimeTributario.SIMPLES_NACIONAL,

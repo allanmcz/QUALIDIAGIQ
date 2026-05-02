@@ -20,7 +20,7 @@ from src.infrastructure.repositories.supabase_diagnostico_repository import (
 @pytest.fixture
 def diagnostico_mock():
     empresa = EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="Mock LTDA",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -73,7 +73,7 @@ async def test_deve_buscar_diagnostico_por_id_no_supabase(diagnostico_mock):
 
     assert resultado is not None
     assert resultado.id == diagnostico_mock.id
-    assert resultado.empresa.cnpj == "12345678000199"
+    assert resultado.empresa.cnpj == "12345678000195"
 
 
 @pytest.mark.asyncio

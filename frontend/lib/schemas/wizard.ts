@@ -1,25 +1,21 @@
 import { z } from "zod";
 
 // Utils
+/** DV alinhado ao domínio Python (`cnpj_brasil`) — pesos oficiais RFB. */
 function validaCNPJ(cnpj: string): boolean {
-  const c = cnpj.replace(/[^\d]/g, "");
-  if (c.length !== 14 || !!c.match(/(\d)\1{13}/)) return false;
-  const t = c.length - 2;
-  const d = c.substring(t);
-  const d1 = parseInt(d.charAt(0), 10);
-  const d2 = parseInt(d.charAt(1), 10);
-  const calc = (x: number) => {
-    const n = c.substring(0, x);
-    let y = x - 7;
-    let s = 0;
-    for (let i = x; i >= 1; i--) {
-      s += parseInt(n.charAt(x - i), 10) * y--;
-      if (y < 2) y = 9;
-    }
-    const r = 11 - (s % 11);
-    return r > 9 ? 0 : r;
+  const c = cnpj.replace(/\D/g, "");
+  if (c.length !== 14 || /^(\d)\1{13}$/.test(c)) return false;
+  const calcDv = (base: string, pesos: number[]) => {
+    let soma = 0;
+    for (let i = 0; i < base.length; i++) soma += parseInt(base[i]!, 10) * pesos[i]!;
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
   };
-  return calc(t) === d1 && calc(t + 1) === d2;
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const d1 = calcDv(c.slice(0, 12), w1);
+  const d2 = calcDv(c.slice(0, 13), w2);
+  return d1 === parseInt(c[12]!, 10) && d2 === parseInt(c[13]!, 10);
 }
 
 /** UFs brasileiras (mesmo conjunto validado na API). */

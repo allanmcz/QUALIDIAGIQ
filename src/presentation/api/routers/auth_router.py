@@ -18,6 +18,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 
 from src.application.ports.email_service import EmailServicePort  # noqa: TC001
+from src.infrastructure.auth.postgres_admin_login import buscar_admin_por_email_postgres
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.email_verificacao import codigo_store
 from src.presentation.api.dependencies import get_email_service, get_supabase_client
@@ -82,18 +83,29 @@ def create_access_token(
 @router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest) -> LoginResponse:
     """Login contra a tabela `admins`; token inclui tenant para RLS futuro."""
-    client = get_supabase_client()
+    settings_login = get_settings()
+    user: dict[str, Any] | None = None
 
     try:
-        response = client.table("admins").select("*").eq("email", str(request.email)).execute()
-        users = response.data
-        if not users:
+        if settings_login.ci_playwright_integrated and settings_login.sync_database_url:
+            row = buscar_admin_por_email_postgres(
+                str(request.email),
+                settings_login.sync_database_url,
+            )
+            user = row
+        else:
+            client = get_supabase_client()
+            response = client.table("admins").select("*").eq("email", str(request.email)).execute()
+            users = response.data
+            if users:
+                user = cast("dict[str, Any]", users[0])
+
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="E-mail ou senha incorretos",
             )
 
-        user = cast("dict[str, Any]", users[0])
         if not pwd_context.verify(request.password, str(user["hashed_password"])):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -111,11 +123,10 @@ async def login(request: LoginRequest) -> LoginResponse:
         tenant_id = UUID(str(raw_tid))
         user_id = UUID(str(user["id"]))
 
-        settings = get_settings()
         access_token = create_access_token(
             subject_user_id=user_id,
             tenant_id=tenant_id,
-            expires_delta=timedelta(minutes=settings.jwt_expire_minutes),
+            expires_delta=timedelta(minutes=settings_login.jwt_expire_minutes),
         )
         nome_raw = user.get("nome")
         nome = str(nome_raw) if nome_raw is not None else None

@@ -80,6 +80,11 @@
         "opcoes": {
           "type": ["array", "null"],
           "items": { "type": "string" }
+        },
+        "pilar_abnt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opcional — vínculo editorial com pilares ABNT NBR 17301:2026."
         }
       }
     }

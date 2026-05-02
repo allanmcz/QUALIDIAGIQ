@@ -2,6 +2,17 @@
 
 > **Status:** scaffold pendente — inicializar com Next.js 14 antes do Sprint 2.
 
+## E2E integrado (API Python real — C1)
+
+Variáveis típicas no mesmo shell antes de subir Next + Playwright:
+
+- `NEXT_PUBLIC_API_URL` — URL da API (ex.: `http://127.0.0.1:8765`).
+- `PLAYWRIGHT_SKIP_WEBSERVER=1` — quando Next já está em background (`npm run dev -p 3333`).
+- `PLAYWRIGHT_BASE_URL` / `PLAYWRIGHT_PORT` — base do Next (ex.: `http://127.0.0.1:3333`).
+- `PLAYWRIGHT_INTEGRATED=1` — habilita `e2e/dashboard-list-integrado.spec.ts`.
+
+Script auxiliar: `npm run test:e2e:integrado` (ajuste env conforme o host; requer API com `QDI_CI_PLAYWRIGHT_INTEGRATED=1` e Postgres migrado + seed `0005`).
+
 ## Stack-alvo
 
 - Next.js 14 (App Router)

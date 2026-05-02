@@ -422,15 +422,25 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 ))}
               </tbody>
             </table>
-            <div className="mt-8">
-              <p className="text-sm font-semibold mb-4">Linha do tempo (M06 — visão rápida)</p>
-              <ol className="relative border-l-2 border-primary/35 ml-3 space-y-8 pl-6">
-                {(data.cronograma ?? []).map((linha) => (
-                  <li key={linha.fase} className="relative">
-                    <span className="absolute -left-[21px] top-1.5 flex h-3 w-3 rounded-full bg-primary ring-4 ring-background" />
-                    <p className="font-medium text-sm">{linha.fase}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{linha.foco}</p>
-                    <p className="text-xs text-muted-foreground italic mt-1">{linha.referencia_normativa}</p>
+            <div className="mt-8 rounded-xl border bg-muted/20 p-4 sm:p-6">
+              <p className="text-sm font-semibold mb-5 tracking-tight">
+                Linha do tempo (M06 — visão rápida)
+              </p>
+              <ol className="relative ml-2 border-l-2 border-primary/45 space-y-10 pl-8 sm:pl-10">
+                {(data.cronograma ?? []).map((linha, idx) => (
+                  <li key={linha.fase} className="relative scroll-mt-4">
+                    <span
+                      className="absolute -left-[25px] sm:-left-[29px] top-1 flex h-3.5 w-3.5 rounded-full bg-primary shadow-sm ring-[3px] ring-background"
+                      aria-hidden
+                    />
+                    <span className="sr-only">
+                      Fase {idx + 1} de {(data.cronograma ?? []).length}
+                    </span>
+                    <p className="font-semibold text-sm leading-snug text-foreground">{linha.fase}</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{linha.foco}</p>
+                    <p className="text-xs text-muted-foreground mt-2 italic border-l-2 border-muted pl-3">
+                      {linha.referencia_normativa}
+                    </p>
                   </li>
                 ))}
               </ol>

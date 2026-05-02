@@ -25,7 +25,7 @@ from src.domain.entities.diagnostico import (
 
 def _diag_finalizado() -> Diagnostico:
     empresa = EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="UC LTDA",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -61,7 +61,7 @@ async def test_nao_encontrado() -> None:
 async def test_rejeita_nao_finalizado() -> None:
     repo = AsyncMock()
     empresa = EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="UC LTDA",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,

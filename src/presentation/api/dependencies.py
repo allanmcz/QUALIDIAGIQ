@@ -24,18 +24,33 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.domain.entities.diagnostico import EmpresaInfo, PorteEmpresa, RegimeTributario, SetorMacro
+from src.domain.repositories.diagnostico_repository import DiagnosticoRepository  # noqa: TC001
+from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
+from src.infrastructure.repositories.ci_playwright_diagnostico_repository import (
+    CiPlaywrightDiagnosticoRepository,
+)
 from src.infrastructure.repositories.postgres_cnae_subclasse_repository import (
     PostgresCnaeSubclasseRepository,
 )
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
+
+_repo_ci_playwright_singleton: CiPlaywrightDiagnosticoRepository | None = None
+
+
+def _singleton_ci_playwright_repo() -> CiPlaywrightDiagnosticoRepository:
+    global _repo_ci_playwright_singleton
+    if _repo_ci_playwright_singleton is None:
+        _repo_ci_playwright_singleton = CiPlaywrightDiagnosticoRepository()
+    return _repo_ci_playwright_singleton
+
 
 _UFS_VALIDAS_QUERY = frozenset(
     {
@@ -127,22 +142,23 @@ async def get_current_user_tenant(
         ) from e
 
 
-def get_diagnostico_repository(
-    client: Annotated[Client, Depends(get_supabase_client)],
-) -> SupabaseDiagnosticoRepository:
-    """Injeta a implementação concreta do Repositório."""
-    return SupabaseDiagnosticoRepository(client=client)
+def get_diagnostico_repository() -> DiagnosticoRepository:
+    """Injeta o repositório de diagnósticos (Supabase ou modo CI Playwright)."""
+    settings = get_settings()
+    if settings.ci_playwright_integrated:
+        return _singleton_ci_playwright_repo()
+    return SupabaseDiagnosticoRepository(client=get_supabase_client())
 
 
 def get_anexar_relatorio_otimista_use_case(
-    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> AnexarRelatorioOtimista:
     """PATCH de relatório com versão otimista."""
     return AnexarRelatorioOtimista(repo=repo)
 
 
 def get_atualizar_checklist_m12_autoconf_use_case(
-    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> AtualizarChecklistM12Autoconf:
     """PATCH M12 (autoconf ABNT) com versão otimista."""
     return AtualizarChecklistM12Autoconf(repo=repo)
@@ -194,6 +210,11 @@ def perfil_empresa_para_questionario(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="CNPJ inválido",
+            )
+        if not cnpj_com_digitos_verificadores_validos(cnpj_clean):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CNPJ inválido: dígitos verificadores não conferem",
             )
     ufu = uf.upper()
     if ufu not in _UFS_VALIDAS_QUERY:
@@ -260,7 +281,7 @@ def get_buscar_cnae_subclasses_use_case(
 
 
 def get_realizar_diagnostico_use_case(
-    repo: Annotated[SupabaseDiagnosticoRepository, Depends(get_diagnostico_repository)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     score_use_case: Annotated[CalcularScoreUseCase, Depends(get_calcular_score_use_case)],
     pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
     storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],

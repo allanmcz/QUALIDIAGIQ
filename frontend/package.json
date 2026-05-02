@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:wizard-normativa": "PLAYWRIGHT_WIZARD_NORMATIVA=1 playwright test e2e/wizard-normativa.spec.ts"
+    "test:e2e:wizard-normativa": "PLAYWRIGHT_WIZARD_NORMATIVA=1 playwright test e2e/wizard-normativa.spec.ts",
+    "test:e2e:integrado": "PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_INTEGRATED=1 playwright test e2e/dashboard-list-integrado.spec.ts e2e/a11y-critical.spec.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
@@ -31,6 +32,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.59.1",
     "@types/node": "^20",
     "@types/react": "^18",

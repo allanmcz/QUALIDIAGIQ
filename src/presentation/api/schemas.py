@@ -14,6 +14,10 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from src.domain.entities.diagnostico import PorteEmpresa, RegimeTributario, SetorMacro
+from src.domain.value_objects.cnpj_brasil import (
+    cnpj_com_digitos_verificadores_validos,
+    normalizar_cnpj_apenas_digitos,
+)
 
 # =====================================================================
 # Request Schemas (Entrada)
@@ -70,16 +74,15 @@ class EmpresaSchema(BaseModel):
     @field_validator("cnpj")
     @classmethod
     def validar_cnpj(cls, v: str) -> str:
-        raw = (v or "").strip()
+        raw = normalizar_cnpj_apenas_digitos(v or "")
         if raw == "":
             return ""
-        if not raw.isdigit():
-            raise ValueError("CNPJ deve conter apenas números")
         if len(raw) != 14:
             raise ValueError("CNPJ deve conter exatos 14 dígitos ou ficar vazio")
-        # Validação simplificada para o MVP. Em produção, incluir cálculo dos dígitos verificadores.
         if len(set(raw)) == 1:
             raise ValueError("CNPJ não pode conter todos os dígitos iguais")
+        if not cnpj_com_digitos_verificadores_validos(raw):
+            raise ValueError("CNPJ inválido: dígitos verificadores não conferem")
         return raw
 
     @field_validator("uf")
@@ -183,6 +186,10 @@ class QuestionarioPerguntaItemSchema(BaseModel):
     base_legal: str | None = None
     multipla_total: int | None = None
     opcoes: list[str] | None = None
+    pilar_abnt: str | None = Field(
+        default=None,
+        description="Referência opcional ao pilar/tema ABNT NBR 17301:2026 vinculado à pergunta.",
+    )
 
 
 class QuestionarioDisponivelResponse(BaseModel):
@@ -206,6 +213,10 @@ class ManifestoPesoPerguntaSchema(BaseModel):
     base_legal: str | None = Field(
         default=None,
         description="Referência normativa associada à pergunta (LC 214/2025, NT, EC 132/2023, ...).",
+    )
+    pilar_abnt: str | None = Field(
+        default=None,
+        description="Pilar/tema ABNT NBR 17301:2026 opcional (catálogo versionado).",
     )
 
 

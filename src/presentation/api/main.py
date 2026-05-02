@@ -15,8 +15,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 
-from src.infrastructure.config.settings import get_settings
+from src.infrastructure.config.settings import Settings, get_settings
 from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
+from src.presentation.api.middleware.public_rate_limit import PublicRateLimitMiddleware
 from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 from src.presentation.api.routers import diagnostico_router
 
@@ -24,17 +25,46 @@ if TYPE_CHECKING:
     from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
 
 
-def _instrumentar_otel(app: FastAPI, service_name: str) -> None:
-    """OpenTelemetry mínimo — export console em desenvolvimento (ativar via OTEL_TRACING_ENABLED)."""
+def _parse_otlp_headers(raw: str | None) -> dict[str, str] | None:
+    """Parse `OTEL_EXPORTER_OTLP_HEADERS` no formato `k=v,k2=v2`."""
+    if not raw or not str(raw).strip():
+        return None
+    out: dict[str, str] = {}
+    for part in str(raw).split(","):
+        p = part.strip()
+        if "=" in p:
+            k, v = p.split("=", 1)
+            out[k.strip()] = v.strip().strip('"')
+    return out or None
+
+
+def _instrumentar_otel(app: FastAPI, settings: Settings) -> None:
+    """
+    OpenTelemetry — console em dev ou OTLP/HTTP quando `OTEL_EXPORTER_OTLP_ENDPOINT` está definido.
+
+    Smoke staging: enviar uma requisição GET /health com trace habilitado e verificar span no collector.
+    """
     from opentelemetry import trace
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
-    resource = Resource.create({SERVICE_NAME: service_name})
+    resource = Resource.create({SERVICE_NAME: settings.otel_service_name})
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+
+    endpoint = (settings.otel_exporter_otlp_endpoint or "").strip()
+    if endpoint:
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+        exporter = OTLPSpanExporter(
+            endpoint=endpoint,
+            headers=_parse_otlp_headers(settings.otel_exporter_otlp_headers),
+        )
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+    else:
+        provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+
     trace.set_tracer_provider(provider)
     FastAPIInstrumentor.instrument_app(app)
 
@@ -124,6 +154,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(IdempotencyMiddleware, cache=idempotency_cache)
     app.add_middleware(TraceContextMiddleware)
+    app.add_middleware(PublicRateLimitMiddleware)
 
     # Healthcheck simples
     @app.get("/health", tags=["Infra"])
@@ -139,7 +170,7 @@ def create_app() -> FastAPI:
     app.include_router(cnae_router.router)
 
     if settings.otel_tracing_enabled:
-        _instrumentar_otel(app, settings.otel_service_name)
+        _instrumentar_otel(app, settings)
 
     return app
 

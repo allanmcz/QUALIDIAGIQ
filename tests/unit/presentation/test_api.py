@@ -30,7 +30,7 @@ client = TestClient(app)
 
 def _diag_finalizado_micro() -> Diagnostico:
     empresa = EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="API PATCH LTDA",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -74,7 +74,7 @@ def test_healthcheck_repasse_x_trace_id():
 def test_criar_diagnostico_sem_token_falha():
     payload = {
         "empresa": {
-            "cnpj": "12345678000199",
+            "cnpj": "12345678000195",
             "razao_social": "Teste",
             "porte": "micro",
             "regime": "simples_nacional",
@@ -136,7 +136,7 @@ def test_criar_diagnostico_com_sucesso():
 
     payload = {
         "empresa": {
-            "cnpj": "12345678000199",
+            "cnpj": "12345678000195",
             "razao_social": "Teste LTDA",
             "porte": "micro",
             "regime": "simples_nacional",
@@ -165,7 +165,7 @@ def test_criar_diagnostico_com_sucesso():
 def test_criar_diagnostico_sem_aceite_lgpd_422():
     payload = {
         "empresa": {
-            "cnpj": "12345678000199",
+            "cnpj": "12345678000195",
             "razao_social": "Teste",
             "porte": "micro",
             "regime": "simples_nacional",
@@ -193,7 +193,7 @@ def test_criar_diagnostico_com_token_invalido():
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
     payload = {
         "empresa": {
-            "cnpj": "12345678000199",
+            "cnpj": "12345678000195",
             "razao_social": "Teste",
             "porte": "micro",
             "regime": "simples_nacional",
@@ -408,7 +408,7 @@ def test_listar_diagnosticos_resumo():
     d2 = copy.deepcopy(d1)
     d2.id = uuid.uuid4()
     d2.empresa = EmpresaInfo(
-        cnpj="98765432000111",
+        cnpj="11222333000181",
         razao_social="Outra LTDA",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,

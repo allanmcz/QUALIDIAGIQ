@@ -34,6 +34,7 @@ import { getAccessToken, getApiUrl } from "@/lib/api/config";
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
 import { STORAGE_PENDING_DIAGNOSTICO } from "@/lib/wizard/pending_diagnostico";
+import { montarRotulosMultiplaEscolha } from "@/lib/wizard/multiplaLabels";
 
 const TOTAL_STEPS = 3;
 
@@ -265,47 +266,59 @@ export function WizardForm() {
 
     if (t === "multipla_escolha" || t === "checklist") {
       const total = p.multipla_total ?? 0;
-      const baseLabels =
-        p.opcoes && p.opcoes.length > 0 ? p.opcoes : [];
-      const rowLabels = Array.from({ length: total }, (_, i) => baseLabels[i] ?? `Item ${i + 1}`);
+      const { labels: rowLabels, avisoRotulos } = montarRotulosMultiplaEscolha(
+        total,
+        p.opcoes ?? [],
+        p.codigo,
+      );
       if (total < 1) {
         return (
           <p className="text-sm text-destructive pt-2">
-            Catálogo incompleto: multipla_total ausente para {p.codigo}.
+            Catálogo incompleto: multipla_total ausente ou inválido para {p.codigo}.
           </p>
         );
       }
       return (
-        <Controller
-          name={base}
-          control={control}
-          render={({ field }) => {
-            const selected = Array.isArray(field.value) ? field.value : [];
-            return (
-              <div className="flex flex-col space-y-2 pt-2">
-                {rowLabels.map((label, i) => {
-                  const key = `opt_${i + 1}`;
-                  const checked = selected.includes(key);
-                  return (
-                    <Label key={key} className={rowClass}>
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-input text-primary"
-                        checked={checked}
-                        onChange={(e) => {
-                          const cur = Array.isArray(field.value) ? [...field.value] : [];
-                          if (e.target.checked) field.onChange([...cur, key]);
-                          else field.onChange(cur.filter((x) => x !== key));
-                        }}
-                      />
-                      <span className="font-normal text-sm">{label}</span>
-                    </Label>
-                  );
-                })}
-              </div>
-            );
-          }}
-        />
+        <>
+          {avisoRotulos ? (
+            <p
+              className="text-sm text-amber-800 dark:text-amber-400 mt-2 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2"
+              role="status"
+            >
+              {avisoRotulos}
+            </p>
+          ) : null}
+          <Controller
+            name={base}
+            control={control}
+            render={({ field }) => {
+              const selected = Array.isArray(field.value) ? field.value : [];
+              return (
+                <div className="flex flex-col space-y-2 pt-2">
+                  {rowLabels.map((label, i) => {
+                    const key = `opt_${i + 1}`;
+                    const checked = selected.includes(key);
+                    return (
+                      <Label key={key} className={rowClass}>
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-input text-primary"
+                          checked={checked}
+                          onChange={(e) => {
+                            const cur = Array.isArray(field.value) ? [...field.value] : [];
+                            if (e.target.checked) field.onChange([...cur, key]);
+                            else field.onChange(cur.filter((x) => x !== key));
+                          }}
+                        />
+                        <span className="font-normal text-sm">{label}</span>
+                      </Label>
+                    );
+                  })}
+                </div>
+              );
+            }}
+          />
+        </>
       );
     }
 

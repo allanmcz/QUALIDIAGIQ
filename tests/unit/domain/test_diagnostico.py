@@ -19,7 +19,7 @@ from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumeric
 class TestEmpresaInfo:
     def test_deve_criar_empresa_valida(self):
         empresa = EmpresaInfo(
-            cnpj="12345678000199",
+            cnpj="12345678000195",
             razao_social="Empresa Teste LTDA",
             porte=PorteEmpresa.MEDIO,
             regime=RegimeTributario.LUCRO_REAL,
@@ -27,8 +27,20 @@ class TestEmpresaInfo:
             uf="SP",
             setor_macro=SetorMacro.INDUSTRIA,
         )
-        assert empresa.cnpj == "12345678000199"
+        assert empresa.cnpj == "12345678000195"
         assert empresa.uf == "SP"
+
+    def test_deve_rejeitar_cnpj_dv_invalido(self):
+        with pytest.raises(ValueError, match="verificadores"):
+            EmpresaInfo(
+                cnpj="12345678000199",
+                razao_social="Empresa Teste LTDA",
+                porte=PorteEmpresa.MICRO,
+                regime=RegimeTributario.SIMPLES_NACIONAL,
+                cnae_principal="1234567",
+                uf="SP",
+                setor_macro=SetorMacro.COMERCIO,
+            )
 
     def test_permite_cnpj_vazio_quando_nao_informado(self):
         empresa = EmpresaInfo(
@@ -72,7 +84,7 @@ class TestEmpresaInfo:
     def test_deve_rejeitar_uf_invalida(self, uf_invalida):
         with pytest.raises(ValueError, match=r"UF deve ter 2 caracteres"):
             EmpresaInfo(
-                cnpj="12345678000199",
+                cnpj="12345678000195",
                 razao_social="Teste",
                 porte=PorteEmpresa.MICRO,
                 regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -99,7 +111,7 @@ class TestRespondente:
 @pytest.fixture
 def empresa_fixture():
     return EmpresaInfo(
-        cnpj="12345678000199",
+        cnpj="12345678000195",
         razao_social="Empresa",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,

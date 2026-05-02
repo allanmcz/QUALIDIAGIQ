@@ -24,6 +24,34 @@ def test_carregar_banco_mvp_catalogo_doc_ids_estaveis() -> None:
     assert lista[0].tipo == TipoPergunta.TERNARIA
     assert lista[0].base_legal is not None
     assert "EC 132" in lista[0].base_legal or "LC 214" in lista[0].base_legal
+    assert lista[0].pilar_abnt is not None and "17301" in lista[0].pilar_abnt
+    assert lista[1].pilar_abnt is not None and "17301" in lista[1].pilar_abnt
+
+
+def test_pilar_abnt_opcional_no_json(tmp_path) -> None:
+    p = tmp_path / "pilares.json"
+    p.write_text(
+        json.dumps(
+            {
+                "versao_catalogo": "t",
+                "perguntas": [
+                    {
+                        "id": "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb",
+                        "codigo": "Q-Z",
+                        "dimensao": "fiscal",
+                        "texto": "Teste sem pilar?",
+                        "peso": 2.0,
+                        "tipo": "binaria",
+                        "base_legal": "LC 214/2025",
+                        "condicao": None,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    lista = carregar_perguntas_de_arquivo(p)
+    assert lista[0].pilar_abnt is None
 
 
 def test_carregar_perguntas_condicional(tmp_path) -> None:

@@ -41,7 +41,7 @@ class TestGerarQuestionarioAdaptativoUseCase:
     def test_deve_retornar_apenas_perguntas_core_para_comercio_simples(self, banco_perguntas_mock):
         use_case = GerarQuestionarioAdaptativoUseCase(banco_perguntas_mock)
         empresa = EmpresaInfo(
-            cnpj="12345678000199",
+            cnpj="12345678000195",
             razao_social="Loja",
             porte=PorteEmpresa.MICRO,
             regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -57,7 +57,7 @@ class TestGerarQuestionarioAdaptativoUseCase:
     def test_deve_retornar_core_e_industria_para_industria_simples(self, banco_perguntas_mock):
         use_case = GerarQuestionarioAdaptativoUseCase(banco_perguntas_mock)
         empresa = EmpresaInfo(
-            cnpj="12345678000199",
+            cnpj="12345678000195",
             razao_social="Fábrica",
             porte=PorteEmpresa.PEQUENO,
             regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -75,7 +75,7 @@ class TestGerarQuestionarioAdaptativoUseCase:
     def test_deve_retornar_todas_para_industria_lucro_real(self, banco_perguntas_mock):
         use_case = GerarQuestionarioAdaptativoUseCase(banco_perguntas_mock)
         empresa = EmpresaInfo(
-            cnpj="12345678000199",
+            cnpj="12345678000195",
             razao_social="Mega Fábrica",
             porte=PorteEmpresa.GRANDE,
             regime=RegimeTributario.LUCRO_REAL,
