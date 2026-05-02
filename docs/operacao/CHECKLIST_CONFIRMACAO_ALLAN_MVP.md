@@ -1,12 +1,30 @@
 # Checklist — confirmações Allan (MVP / Beta)
 
-> **Versão Git (canónica):** `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md` — rastreável em PR/release.  
-> **Cópia de trabalho opcional:** pode existir espelho local em `_DEVELOPER/CHECKLIST_CONFIRMACAO_ALLAN_02052026.md` (pasta normalmente ignorada pelo Git); ao divergir, **priorizar este ficheiro** no repositório ou sincronizar explicitamente.  
-> **Origem analítica:** `_DEVELOPER/_CONCLUIDOS_DEV/ANALISE_DEVELOPER_02052026.md` (interno).  
+> **Única fonte no repositório:** este ficheiro (`docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md`). Não há cópia paralela em `_DEVELOPER/` para este checklist.  
+> **Origem analítica (interna):** `_DEVELOPER/_CONCLUIDOS_DEV/ANALISE_DEVELOPER_02052026.md` — pasta local de trabalho, não versionada.  
 > **Data baseline checklist:** 2026-05-02  
 > **Uso:** marcar **[x]** quando confirmado; preencher campos **Data** e **Notas** onde aplicável. Itens aqui **bloqueiam** ou **orientam** lançamento MVP / Beta — não são delegáveis só a engenharia sem OK explícito do produto.
 
 **Ligações úteis:** decisões D\* — `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` · jurídico MVP — `docs/legal/STATUS_JURIDICO_MVP.md`
+
+---
+
+## Resumo: decisões já fechadas (produto / política)
+
+Estas decisões **já foram tomadas** pelo Allan (produto); a engenharia pode assumir como baseline. **Só mudam** com nova decisão explícita de política ou escopo.
+
+| Área | O que ficou decidido | Data | Evidência técnica (rasto) |
+|------|----------------------|------|---------------------------|
+| Fluxo diagnóstico Free vs B2B | **D1** — sem login obrigatório no início; POST com sessão B2B; opt-in consultor conforme doc | 2026-05-02 | `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` § D1 |
+| Identificação empresa | **D2** — CNPJ obrigatório | (doc D*) | mesmo documento |
+| M12 checklist | **D6** — persistido conforme desenho | (doc D*) | mesmo documento |
+| PDF — captação de lead (bloco explícito) | Mostrar **apenas e-mail e telefone**; sem nome nem cargo nesse bloco | 2026-05-02 | Template `relatorio_diagnostico.html`, fluxo wizard |
+| PDF — idioma | **pt-BR** padrão; **en** opcional para rótulos do PDF (`locale_relatorio`); conteúdo dinâmico pode permanecer em PT até tradução completa | 2026-05-02 | Migração **`0016_locale_relatorio_pdf.sql`**, API + wizard |
+| PDF — motor | **WeasyPrint** como **único** gerador deste relatório (sem Puppeteer) | 2026-05-02 | `pdf_generator_weasyprint.py`; linha **[x]** na secção 8 |
+| LLM em runtime | **LangChain/LangGraph + Ollama** em conjunto (**ADR-007**); fallback HTTP documentado | 2026-05-02 | Secção 8 · variável `QDI_LLM_BACKEND` |
+| Schema baseline MVP | Migrações até **0016** no ambiente que serve PDF/i18n (inclui **0015** onde CNAE/macros em DB) | 2026-05-02 | `init.sql`, `make verify-schema-mvp`, SQL verificação MVP |
+
+**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, aplicar **0016** no projeto cloud se ainda não estiver, tag de release).
 
 ---
 
@@ -73,13 +91,13 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [ ] | **D4** | URL canónica produção | URL final assinada Ops | | Parcial no doc |
 | [ ] | **D5** | Billing Plus/Pro | Adiar **ou** escolher gateway/data | | |
 
-**Já fechado (referência):** **D1** (2026-05-02) diagnóstico sem login no início; POST com sessão B2B; opt-in consultor **ou** só — ver `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` § D1 · **D2** CNPJ obrigatório · **D6** M12 persistido — não requer reconfirmação salvo mudança de política.
+**Já fechado (referência):** ver tabela **«Resumo: decisões já fechadas»** no início deste documento — inclui **D1**, **D2**, **D6** e PDF (lead, idioma, WeasyPrint). Detalhe normativo D\* continua em `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md`.
 
-**Já fechado — PDF / relatório (2026-05-02):**
+**Complemento PDF (mesmo pacote de decisão 2026-05-02):**
 
-- **Captação de lead no PDF:** no relatório, o bloco explícito de lead mostra **somente e-mail e telefone** (sem nome nem cargo nesse bloco; dados completos mantêm-se no fluxo/API conforme modelo actual).
-- **Idioma:** **pt-BR** por defeito; **en** como opção para o PDF (rótulos em inglês; matriz/checklist/cronograma gerados dinamicamente podem seguir em português até haver tradução).
-- **Geração de PDF:** **WeasyPrint** como único motor (alinhado à stack QDI; não usar Puppeteer para este artefacto).
+- **Lead no PDF:** bloco explícito = **só e-mail e telefone**; nome/cargo **fora** desse bloco; dados completos no fluxo/API conforme modelo **atual**.
+- **Idioma:** **pt-BR** por defeito; **en** para rótulos do PDF; matriz/checklist/cronograma dinâmicos podem seguir em PT até tradução.
+- **Motor:** **WeasyPrint** único para este artefacto.
 
 ---
 
@@ -135,7 +153,7 @@ Preencher **S** (Sim neste trimestre) ou **N** (não agora) — pelo menos uma l
 
 ---
 
-## 8. Princípios “não negociáveis” vs MVP actual
+## 8. Princípios “não negociáveis” vs MVP atual
 
 | OK | Tema | Decisão necessária | Data | Notas |
 |:--:|------|-------------------|------|-------|
