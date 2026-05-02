@@ -300,8 +300,12 @@ def get_email_service() -> SmtpEmailAdapter:
 
 
 def get_llm_service() -> OllamaLlmAdapter:
-    """Injeta o serviço de IA."""
-    return OllamaLlmAdapter()
+    """Injeta LLM — **Ollama** é o padrão desde o MVP de recomendações (local/dev). Ver ADR-003."""
+    settings = get_settings()
+    return OllamaLlmAdapter(
+        ollama_url=settings.ollama_base_url.strip(),
+        model=settings.ollama_model.strip(),
+    )
 
 
 def get_buscar_cnae_subclasses_use_case(

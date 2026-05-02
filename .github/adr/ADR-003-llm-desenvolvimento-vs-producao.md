@@ -9,7 +9,7 @@ Stack declarada pelo produto menciona modelo primário Claude (Anthropic). O có
 
 ## Decisão
 
-1. Desenvolvimento / laboratório pode usar **`OllamaLlmAdapter`** via injeção de dependências (Docker local).
+1. Desenvolvimento / laboratório usa **`OllamaLlmAdapter`** por padrão (`get_llm_service`), configurável por **`OLLAMA_BASE_URL`** (ou `OLLAMA_URL`) e **`OLLAMA_MODEL`**.
 2. Produção cliente pago deve documentar modelo **contratado** (Claude/API ou equivalente) em variável de ambiente **`LLM_PROVIDER`** + versão modelo em changelog interno antes de comunicar SLA de precisão.
 3. Outputs exibidas ao cliente final da assessoria sempre passam disclaimers já presentes nos textos UX (consultoria tributária, não parecer jurídico).
 

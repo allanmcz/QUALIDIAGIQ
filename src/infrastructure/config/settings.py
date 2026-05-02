@@ -91,6 +91,17 @@ class Settings(BaseSettings):
         description="Timeout WeasyPrint (asyncio.wait_for) por geração de PDF.",
     )
 
+    ollama_base_url: str = Field(
+        default="http://127.0.0.1:11434",
+        validation_alias=AliasChoices("OLLAMA_BASE_URL", "OLLAMA_URL"),
+        description="Endpoint HTTP do Ollama — LLM padrão em desenvolvimento (ADR-003).",
+    )
+    ollama_model: str = Field(
+        default="llama3",
+        validation_alias=AliasChoices("OLLAMA_MODEL"),
+        description="Nome do modelo no Ollama (ex.: llama3, mistral).",
+    )
+
     cors_allowed_origins: str = Field(
         default=(
             "http://localhost:3010,http://127.0.0.1:3010,"

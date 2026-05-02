@@ -16,7 +16,7 @@ class OllamaLlmAdapter(LlmServicePort):
     Adapter para comunicar com uma instância local do Ollama via API REST.
     """
 
-    def __init__(self, ollama_url: str = "http://localhost:11434", model: str = "llama3"):
+    def __init__(self, ollama_url: str = "http://127.0.0.1:11434", model: str = "llama3"):
         self.ollama_url = ollama_url
         self.model = model
 

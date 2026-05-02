@@ -60,7 +60,7 @@ make test
 ├── src/                        ← Backend Python (Clean Architecture)
 │   ├── domain/                 ← Regras de negócio puras
 │   ├── application/            ← Casos de uso
-│   ├── infrastructure/         ← Adapters (Supabase, Anthropic, WeasyPrint)
+│   ├── infrastructure/         ← Adapters (Supabase, Ollama/LLM, WeasyPrint)
 │   └── presentation/           ← API FastAPI
 ├── tests/                      ← pytest (unit + integration + e2e)
 ├── frontend/                   ← Next.js 14 (a inicializar no Sprint 2)
@@ -77,7 +77,7 @@ make test
 | Backend | Python 3.12 + FastAPI 0.115 + Pydantic v2 |
 | Frontend | Next.js 14 + Tailwind + shadcn/ui |
 | DB | Supabase (PostgreSQL 16 + RLS + pgvector) |
-| IA / LLM | Anthropic Claude (Sonnet 4.6) + LangChain + LangGraph |
+| IA / LLM | **Ollama** (padrão dev/local na API) · Claude/API em produção planejada + LangChain/LangGraph (ADR-003) |
 | PDF | WeasyPrint |
 | Container | Docker + OrbStack (M2 Max) |
 | Test | pytest + pytest-asyncio + Playwright |
@@ -166,9 +166,10 @@ Copie `.env.example` para `.env` e preencha:
 ```bash
 cp .env.example .env
 # Edite .env com:
-# - ANTHROPIC_API_KEY (https://console.anthropic.com/)
+# - OLLAMA_BASE_URL + OLLAMA_MODEL (recomendações IA — subir Ollama local)
 # - SUPABASE_URL + chaves (se usar Cloud)
 # - SMTP_* para envio de e-mails
+# - ANTHROPIC_* quando integrar adapter de produção (ADR-003)
 ```
 
 ## 📚 Documentação
