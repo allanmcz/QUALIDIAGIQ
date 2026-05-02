@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -8,13 +8,22 @@ from src.application.ports.pdf_generator import PdfGeneratorPort
 from src.domain.entities.diagnostico import Diagnostico
 from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.config.settings import get_settings
+from src.infrastructure.pdf.relatorio_pdf_i18n import (
+    formatar_data_geracao_pdf,
+    formatar_telefone_exibicao_br,
+    nivel_score_labels,
+    obter_textos_pdf,
+)
 
 logger = structlog.get_logger(__name__)
 
 
 class WeasyPrintPdfGenerator(PdfGeneratorPort):
     """
-    Implementação concreta do gerador de PDF utilizando WeasyPrint e Jinja2.
+    Único motor de PDF do QDI: **WeasyPrint** + Jinja2 (HTML/CSS → PDF).
+
+    Captação de lead na capa do relatório: apenas **e-mail** e **telefone** (minimização na peça PDF).
+    Idiomas: ``diagnostico.locale_relatorio`` (**pt-BR** | **en**).
     """
 
     def __init__(self, templates_dir: str | Path | None = None) -> None:
@@ -35,14 +44,13 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         """
         template = self.jinja_env.get_template("relatorio_diagnostico.html")
 
-        # Mapeamento de níveis para exibição na UI (ex: badge)
-        nivel_mapping = {
-            "CRITICO": "Crítico",
-            "INICIAL": "Inicial",
-            "INTERMEDIARIO": "Intermediário",
-            "AVANCADO": "Avançado",
-            "EXEMPLAR": "Exemplar",
-        }
+        locale_pdf = getattr(diagnostico, "locale_relatorio", "pt-BR") or "pt-BR"
+        t = obter_textos_pdf(locale_pdf)
+        nivel_mapping = nivel_score_labels(locale_pdf)
+        telefone_pdf = formatar_telefone_exibicao_br(diagnostico.respondente.telefone)
+        agora = datetime.now(UTC)
+        data_geracao = formatar_data_geracao_pdf(locale_pdf, agora)
+        html_lang = "en" if locale_pdf == "en" else "pt-BR"
 
         from src.application.services.consultoria_service import ConsultoriaService
 
@@ -57,10 +65,13 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
 
         html_out = template.render(
             diagnostico=diagnostico,
+            t=t,
+            html_lang=html_lang,
+            telefone_lead_exibicao=telefone_pdf,
             score_geral=score.score_geral,
             nivel_geral=nivel_mapping.get(score.score_geral.nivel.name, "N/A"),
             dimensoes=score.score_por_dimensao,
-            data_geracao=datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            data_geracao=data_geracao,
             recomendacao_ia=recomendacao_ia,
             checklist=checklist,
             matriz_impacto=matriz_impacto,

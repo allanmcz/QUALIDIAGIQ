@@ -1,5 +1,5 @@
 """
-Gate MVP (Postgres) — schema 0012 + RLS dois tenants (P6 automatizado em CI).
+Gate MVP (Postgres) — schema 0012 + 0016 + RLS dois tenants (P6 automatizado em CI).
 
 Requer migrações aplicadas (job CI ou `make dev` / `make migrate`).
 Variável: QDI_POSTGRES_TEST_URL (default postgres@127.0.0.1:60322).
@@ -51,7 +51,7 @@ async def pg_conn():
 @pytest.mark.postgres
 @pytest.mark.mvp_gate
 async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
-    """Confere que a migração 0012 foi aplicada (coluna LGPD)."""
+    """Confere migrações 0012 (LGPD) e 0016 (locale_relatorio PDF / WORM)."""
     val = await pg_conn.fetchval("""
         SELECT 1
         FROM information_schema.columns
@@ -60,6 +60,14 @@ async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
           AND column_name = 'aceite_termos_privacidade_em'
         """)
     assert val == 1
+    loc = await pg_conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'locale_relatorio'
+        """)
+    assert loc == 1
 
 
 @pytest.mark.asyncio

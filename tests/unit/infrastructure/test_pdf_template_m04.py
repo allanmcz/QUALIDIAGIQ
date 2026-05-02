@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -16,6 +17,12 @@ from src.domain.entities.diagnostico import (
     SetorMacro,
 )
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
+from src.infrastructure.pdf.relatorio_pdf_i18n import (
+    formatar_data_geracao_pdf,
+    formatar_telefone_exibicao_br,
+    nivel_score_labels,
+    obter_textos_pdf,
+)
 
 
 def _score_minimo() -> ScoreCompleto:
@@ -40,7 +47,8 @@ def _diag_minimo() -> Diagnostico:
     d = Diagnostico(
         tenant_id=uuid4(),
         empresa=emp,
-        respondente=Respondente(email="tpl@teste.com", nome="Fulano"),
+        respondente=Respondente(email="tpl@teste.com", nome="Fulano", telefone="11988887777"),
+        locale_relatorio="pt-BR",
     )
     d.finalizar(72.0)
     d.registrar_score_completo_para_evidencia(_score_minimo())
@@ -57,14 +65,12 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
 
     diagnostico = _diag_minimo()
     score = _score_minimo()
-    nivel_mapping = {
-        "CRITICO": "Crítico",
-        "INICIAL": "Inicial",
-        "INTERMEDIARIO": "Intermediário",
-        "AVANCADO": "Avançado",
-        "EXEMPLAR": "Exemplar",
-    }
+    locale_pdf = "pt-BR"
+    t = obter_textos_pdf(locale_pdf)
+    nivel_mapping = nivel_score_labels(locale_pdf)
     nivel_geral = nivel_mapping.get(score.score_geral.nivel.name, "N/A")
+    telefone_lead = formatar_telefone_exibicao_br(diagnostico.respondente.telefone)
+    data_geracao = formatar_data_geracao_pdf(locale_pdf, datetime.now(UTC))
 
     checklist = ConsultoriaService.gerar_checklist(diagnostico, score)
     matriz = ConsultoriaService.gerar_matriz_impacto(diagnostico)
@@ -74,10 +80,13 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
 
     html = template.render(
         diagnostico=diagnostico,
+        t=t,
+        html_lang="pt-BR",
+        telefone_lead_exibicao=telefone_lead,
         score_geral=score.score_geral,
         nivel_geral=nivel_geral,
         dimensoes=score.score_por_dimensao,
-        data_geracao="01/01/2026 12:00:00",
+        data_geracao=data_geracao,
         recomendacao_ia=None,
         checklist=checklist,
         matriz_impacto=matriz,
@@ -90,7 +99,10 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
     assert "M04_SECAO: sintese_executiva" in html
     assert "M04_SECAO: tecnico_detalhamento_dimensoes" in html
     assert "M04_SECAO: tecnico_gaps_recomendacoes" in html
-    assert "Síntese executiva" in html
-    assert "Cronograma em cinco horizontes" in html
-    assert "Base legal (referência)" in html
-    assert "Matriz de impacto por departamento" in html
+    assert t["exec_summary_title"] in html
+    assert t["lead_section_title"] in html
+    assert telefone_lead in html
+    assert "tpl@teste.com" in html
+    assert t["schedule_title"] in html
+    assert t["th_legal_ref"] in html
+    assert t["matrix_title"] in html

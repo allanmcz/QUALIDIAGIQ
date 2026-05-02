@@ -6,7 +6,7 @@ Depende de: Domain (entities, value_objects, repositories)
 NÃO depende de: Infrastructure, Presentation
 
 Sequência orquestrada:
-    1. Captura de lead (CNPJ + e-mail + dados básicos da empresa)
+    1. Captura de contexto (empresa + respondente); **no PDF** a captação de lead exibe só **e-mail** e **telefone**
     2. Geração de questionário adaptativo (segmento x regime x porte x UF)
     3. Coleta de respostas
     4. Cálculo de score (motor com pesos transparentes)
@@ -28,6 +28,13 @@ from src.domain.entities.diagnostico import (
     Respondente,
 )
 from src.domain.entities.questionario import Pergunta, Resposta
+
+
+def _locale_relatorio_pdf_normalizado(raw: str) -> str:
+    """Normaliza idioma do PDF: ``pt-BR`` (default) ou ``en``."""
+    v = (raw or "pt-BR").strip().lower().replace("_", "-")
+    return "en" if v == "en" else "pt-BR"
+
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -59,6 +66,7 @@ class ComandoRealizarDiagnostico:
     entradas_resposta: list[EntradaRespostaDiagnostico]
     plano: str = "gratuito"
     aceite_termos_privacidade: bool = False
+    locale_relatorio: str = "pt-BR"
 
 
 @dataclass(frozen=True)
@@ -108,6 +116,7 @@ class RealizarDiagnostico:
             empresa=comando.empresa,
             respondente=comando.respondente,
             plano=plano_enum,
+            locale_relatorio=_locale_relatorio_pdf_normalizado(comando.locale_relatorio),
         )
 
         if not comando.aceite_termos_privacidade:

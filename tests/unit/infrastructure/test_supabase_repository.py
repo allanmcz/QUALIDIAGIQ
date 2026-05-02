@@ -94,6 +94,7 @@ async def test_para_dict_inclui_campos_worm_quando_evidencia_registrada(diagnost
     assert payload["hash_sha256"] is not None
     assert payload["score_completo"] == sc.para_dict_serializavel()
     assert payload["versao_otimista"] == 1
+    assert payload["locale_relatorio"] == "pt-BR"
 
 
 @pytest.mark.asyncio

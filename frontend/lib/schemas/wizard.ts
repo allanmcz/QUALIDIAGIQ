@@ -106,10 +106,14 @@ export const RespostaSchema = z.object({
   valor: z.union([z.string(), z.number(), z.array(z.string())]),
 });
 
+const LOCALES_RELATORIO_PDF = ["pt-BR", "en"] as const;
+
 export const DiagnosticoPayloadSchema = z.object({
   empresa: EmpresaSchema,
   respondente: RespondenteSchema,
   respostas: z.array(RespostaSchema).min(1, "Responda ao questionário carregado"),
+  /** Idioma do relatório PDF (WeasyPrint): pt-BR ou en (labels EN; narrativa dinâmica pode seguir em PT). */
+  locale_relatorio: z.enum(LOCALES_RELATORIO_PDF).default("pt-BR"),
   /** LGPD — consentimento para tratamento dos dados informados (MVP). */
   aceite_termos_privacidade: z.boolean().refine((v) => v === true, {
     message: "É necessário aceitar o tratamento dos dados conforme a política de privacidade.",

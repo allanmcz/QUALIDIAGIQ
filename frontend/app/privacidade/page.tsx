@@ -33,6 +33,11 @@ export default function PrivacidadePage() {
           diagnóstico no PostgreSQL (Supabase); exclusão e titularidade conforme canal definido em produção.
         </li>
         <li>
+          <strong>Relatório PDF (WeasyPrint):</strong> na peça gerada para download, o bloco explícito de
+          captação de lead exibe apenas <strong>e-mail</strong> e <strong>telefone</strong>; nome e cargo
+          permanecem no cadastro operacional/API quando informados, mas não são repetidos nesse bloco do PDF.
+        </li>
+        <li>
           <strong>Base legal:</strong> execução de procedimentos preliminares a pedido do titular e
           medidas de segurança (LGPD art. 7º e 11º).
         </li>

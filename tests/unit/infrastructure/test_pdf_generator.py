@@ -27,6 +27,8 @@ async def test_gerar_pdf_diagnostico_sucesso():
     mock_diagnostico.empresa.regime.value = "Simples Nacional"
     mock_diagnostico.empresa.setor_macro.value = "Serviços"
     mock_diagnostico.respondente.nome = "João Teste"
+    mock_diagnostico.respondente.telefone = None
+    mock_diagnostico.locale_relatorio = "pt-BR"
 
     mock_score = MagicMock()
     mock_score.score_geral.valor = 85.5

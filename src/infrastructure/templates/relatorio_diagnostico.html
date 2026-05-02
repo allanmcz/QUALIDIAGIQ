@@ -1,33 +1,43 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="{{ html_lang }}">
 <head>
     <meta charset="UTF-8">
-    <title>Relatório QualiDiagIQ</title>
+    <title>{{ t.html_title }}</title>
 </head>
 <body>
-    {# M04: capa + identificação #}
+    {# M04: capa + identificação — PDF gerado com WeasyPrint; lead = e-mail + telefone apenas. #}
     <!-- M04_SECAO: capa_identificacao -->
 
     <div class="pdf-header-brand">
         <img src="assets/QDI-NB1-logo-completo.png" alt="QualiDiagIQ" class="pdf-logo" width="200" height="56" />
     </div>
 
-    <h1>Relatório de Diagnóstico Tributário</h1>
+    <h1>{{ t.h1_report_title }}</h1>
+    <p class="muted"><em>{{ t.pdf_engine_note }}</em></p>
     
     <div class="header-info">
-        <p><strong>Empresa:</strong> {{ diagnostico.empresa.razao_social }}{% if diagnostico.empresa.cnpj %} (CNPJ: {{ diagnostico.empresa.cnpj }}){% else %} <span class="muted">(CNPJ não informado)</span>{% endif %}</p>
-        <p><strong>Setor:</strong> {{ diagnostico.empresa.setor_macro.value }} | <strong>Porte:</strong> {{ diagnostico.empresa.porte.value }} | <strong>Regime:</strong> {{ diagnostico.empresa.regime.value }}</p>
-        <p><strong>Respondente:</strong> {{ diagnostico.respondente.nome or 'Não informado' }} ({{ diagnostico.respondente.email }})</p>
-        <p><strong>Data da Geração:</strong> {{ data_geracao }}</p>
+        <p><strong>{{ t.label_company }}:</strong> {{ diagnostico.empresa.razao_social }}{% if diagnostico.empresa.cnpj %} (CNPJ: {{ diagnostico.empresa.cnpj }}){% else %} <span class="muted">{{ t.cnpj_not_informed }}</span>{% endif %}</p>
+        <p><strong>{{ t.label_sector }}:</strong> {{ diagnostico.empresa.setor_macro.value }} | <strong>{{ t.label_size }}:</strong> {{ diagnostico.empresa.porte.value }} | <strong>{{ t.label_regime }}:</strong> {{ diagnostico.empresa.regime.value }}</p>
+        <div class="lead-capture-pdf">
+            <p><strong>{{ t.lead_section_title }}</strong></p>
+            <p class="muted small">{{ t.lead_section_note }}</p>
+            <p><strong>{{ t.label_email }}:</strong> {{ diagnostico.respondente.email }}</p>
+            <p><strong>{{ t.label_phone }}:</strong> {% if telefone_lead_exibicao %}{{ telefone_lead_exibicao }}{% else %}<span class="muted">{{ t.phone_not_informed }}</span>{% endif %}</p>
+        </div>
+        <p><strong>{{ t.label_generated_at }}:</strong> {{ data_geracao }}</p>
     </div>
+
+    {% if t.partial_locale_notice %}
+    <p class="muted">{{ t.partial_locale_notice | safe }}</p>
+    {% endif %}
 
     <!-- M04_SECAO: sintese_executiva (alvo ~1 página impressa) -->
     <div class="sintese-executiva-pdf">
-        <h2>Síntese executiva</h2>
-        <p><strong>Score geral:</strong> {{ "%.1f"|format(score_geral.valor) }}/100 — <strong>Nível:</strong> {{ nivel_geral }}.</p>
-        <p>Este relatório consolida o diagnóstico de prontidão para a Reforma Tributária do Consumo (<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>) e aderência ao modelo de compliance da <strong>ABNT NBR 17301:2026</strong>.</p>
+        <h2>{{ t.exec_summary_title }}</h2>
+        <p><strong>{{ t.label_overall_score }}:</strong> {{ "%.1f"|format(score_geral.valor) }}/100 — <strong>{{ t.label_level }}:</strong> {{ nivel_geral }}.</p>
+        <p>{{ t.exec_summary_body | safe }}</p>
         {% if piores_dimensoes|length > 0 %}
-        <p><strong>Dimensões com menor pontuação (priorizar plano de ação):</strong></p>
+        <p><strong>{{ t.dimensions_priority_title }}:</strong></p>
         <ul>
             {% for item in piores_dimensoes %}
             <li><strong>{{ item.codigo }}</strong>: {{ "%.1f"|format(item.valor) }}/100</li>
@@ -37,21 +47,21 @@
     </div>
 
     <div class="score-geral">
-        <h2>Score de Maturidade Tributária</h2>
+        <h2>{{ t.maturity_title }}</h2>
         <div class="score-value">{{ "%.1f"|format(score_geral.valor) }}/100</div>
-        <p>Nível: <span class="badge badge-{{ nivel_geral|lower }}">{{ nivel_geral }}</span></p>
+        <p>{{ t.level_prefix }}: <span class="badge badge-{{ score_geral.nivel.value }}">{{ nivel_geral }}</span></p>
     </div>
 
     <!-- M04_SECAO: tecnico_detalhamento_dimensoes -->
-    <h2>Detalhamento por Dimensão (ABNT NBR 17301)</h2>
-    <p>Abaixo apresentamos o detalhamento do seu score em relação aos 7 eixos normativos da ABNT NBR 17301:2026.</p>
+    <h2>{{ t.dimensions_detail_title }}</h2>
+    <p>{{ t.dimensions_detail_intro }}</p>
 
     <table class="dimensoes-table">
         <thead>
             <tr>
-                <th>Dimensão</th>
-                <th>Score Alcançado</th>
-                <th>Peso Aplicado</th>
+                <th>{{ t.th_dimension }}</th>
+                <th>{{ t.th_score }}</th>
+                <th>{{ t.th_weight }}</th>
             </tr>
         </thead>
         <tbody>
@@ -68,19 +78,19 @@
     <div style="page-break-before: always;"></div>
     <!-- M04_SECAO: tecnico_gaps_recomendacoes -->
 
-    <h2>Gaps Identificados e Recomendações</h2>
-    <p>Com base no diagnóstico realizado, identificamos as seguintes oportunidades de melhoria (Gaps) na sua operação:</p>
+    <h2>{{ t.gaps_title }}</h2>
+    <p>{{ t.gaps_intro }}</p>
 
     <ul>
-        <li><strong>Políticas Internas (Fiscal):</strong> As rotinas fiscais estão pouco alinhadas às novas resoluções da EC 132/2023.</li>
-        <li><strong>Automação (Tecnológica):</strong> Sugerimos a adoção de um sistema ERP atualizado ou módulo fiscal específico para mitigar riscos de cálculos de CBS/IBS.</li>
-        <li><strong>Conformidade (Compliance ABNT):</strong> Iniciar processo de auditoria interna para alinhamento mínimo com a ABNT NBR 17301.</li>
+        <li>{{ t.gap_li_fiscal | safe }}</li>
+        <li>{{ t.gap_li_tech | safe }}</li>
+        <li>{{ t.gap_li_compliance | safe }}</li>
     </ul>
 
     {% if recomendacao_ia %}
     <div style="background-color: #F8F9FA; border-left: 4px solid #0D1B4B; padding: 15px; margin-top: 20px;">
-        <h3>Consultoria assistida por IA</h3>
-        <p><em>Texto complementar — validar sempre com base legal versionada (Lexiq) e parecer profissional.</em></p>
+        <h3>{{ t.ai_box_title }}</h3>
+        <p><em>{{ t.ai_box_disclaimer }}</em></p>
         <div>
             {{ recomendacao_ia | replace('\n', '<br>') | safe }}
         </div>
@@ -89,14 +99,14 @@
 
     {% if cronograma|length > 0 %}
     <div style="page-break-before: always;"></div>
-    <h2>Cronograma em cinco horizontes (transição LC 214/2025)</h2>
-    <p>Referência temporal para governança e projetos — alinhado ao pipeline de implantação CBS/IBS.</p>
+    <h2>{{ t.schedule_title }}</h2>
+    <p>{{ t.schedule_intro }}</p>
     <table class="dimensoes-table">
         <thead>
             <tr>
-                <th>Fase</th>
-                <th>Foco</th>
-                <th>Referência normativa</th>
+                <th>{{ t.th_phase }}</th>
+                <th>{{ t.th_focus }}</th>
+                <th>{{ t.th_norm_ref }}</th>
             </tr>
         </thead>
         <tbody>
@@ -114,15 +124,15 @@
     {% if matriz_impacto|length > 0 %}
     <div style="page-break-before: always;"></div>
 
-    <h2>Matriz de impacto por departamento (Reforma do Consumo)</h2>
-    <p>Avaliamos quais áreas da sua operação sofrerão maior atrito durante a implantação da CBS:</p>
+    <h2>{{ t.matrix_title }}</h2>
+    <p>{{ t.matrix_intro }}</p>
     <table class="dimensoes-table">
         <thead>
             <tr>
-                <th>Departamento</th>
-                <th>Impacto / Ação Necessária</th>
-                <th>Criticidade</th>
-                <th>Base legal (referência)</th>
+                <th>{{ t.th_department }}</th>
+                <th>{{ t.th_impact }}</th>
+                <th>{{ t.th_criticality }}</th>
+                <th>{{ t.th_legal_ref }}</th>
             </tr>
         </thead>
         <tbody>
@@ -141,8 +151,8 @@
     {% if checklist|length > 0 %}
     <div style="page-break-before: always;"></div>
 
-    <h2>Plano de Ação Sugerido (Checklist de Implantação)</h2>
-    <p>Com base no seu perfil, listamos as ações estruturantes recomendadas para os próximos meses:</p>
+    <h2>{{ t.plan_title }}</h2>
+    <p>{{ t.plan_intro }}</p>
     
     {% for frente in checklist %}
     <div style="margin-bottom: 20px;">
@@ -150,12 +160,12 @@
         <table class="dimensoes-table">
             <thead>
                 <tr>
-                    <th style="width: 6%;">#</th>
-                    <th style="width: 38%;">Ação</th>
-                    <th style="width: 14%;">Responsável</th>
-                    <th style="width: 10%;">Prazo</th>
-                    <th style="width: 10%;">Criticidade</th>
-                    <th style="width: 22%;">Base legal (referência)</th>
+                    <th style="width: 6%;">{{ t.th_num }}</th>
+                    <th style="width: 38%;">{{ t.th_action }}</th>
+                    <th style="width: 14%;">{{ t.th_owner }}</th>
+                    <th style="width: 10%;">{{ t.th_deadline }}</th>
+                    <th style="width: 10%;">{{ t.th_crit_table }}</th>
+                    <th style="width: 22%;">{{ t.th_legal_action }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -175,13 +185,13 @@
     {% endfor %}
     {% else %}
     <div style="page-break-before: always;"></div>
-    <h2>Plano de Ação Avançado (Bloqueado)</h2>
-    <p>O seu plano atual é o <strong>Gratuito</strong>. Para acessar o Checklist de Implantação e a Matriz de Impacto departamental, faça o upgrade para o plano <strong>Avançado</strong>.</p>
+    <h2>{{ t.plan_blocked_title }}</h2>
+    <p>{{ t.plan_blocked_body | safe }}</p>
     {% endif %}
 
     <div class="footer-note">
-        <p><strong>Disclaimer.</strong> Este relatório foi gerado automaticamente pelo motor QualiDiagIQ com base nas respostas fornecidas. Os resultados são estimativa de maturidade e conformidade metodológica, com âncoras normativas de referência (<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>, <strong>ABNT NBR 17301:2026</strong>). Não substitui auditoria independente, parecer jurídico vinculante nem trabalho contábil fiscal formal; consulte um profissional habilitado.</p>
-        <p><strong>QualiDiagIQ</strong> — ecossistema <strong>Tributiq</strong>.</p>
+        <p><strong>{{ t.disclaimer_title }}.</strong> {{ t.disclaimer_body | safe }}</p>
+        <p>{{ t.footer_brand | safe }}</p>
     </div>
 
 </body>

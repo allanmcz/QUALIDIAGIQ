@@ -14,6 +14,18 @@ SELECT 'aceite_lgpd_0012' AS check_id,
            ELSE 'falta_coluna_aceite_termos_privacidade_em'
        END AS status;
 
+SELECT 'locale_relatorio_0016' AS check_id,
+       CASE
+           WHEN EXISTS (
+               SELECT 1
+               FROM information_schema.columns
+               WHERE table_schema = 'public'
+                 AND table_name = 'diagnosticos'
+                 AND column_name = 'locale_relatorio'
+           ) THEN 'ok'
+           ELSE 'falta_coluna_locale_relatorio'
+       END AS status;
+
 SELECT 'm12_jsonb_0011' AS check_id,
        CASE
            WHEN EXISTS (

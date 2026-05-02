@@ -147,6 +147,8 @@ class Diagnostico:
     checklist_m12_estado: list[bool] | None = None
     # LGPD — instante do aceite declarado no POST (persistido pelo servidor; imutável após finalizado via WORM).
     aceite_termos_privacidade_em: datetime | None = None
+    # Relatório PDF (WeasyPrint) — pt-BR default; en preparado para expansão i18n.
+    locale_relatorio: str = "pt-BR"
 
     def finalizar(self, score_geral: float) -> None:
         """
@@ -194,6 +196,7 @@ class Diagnostico:
             "status": self.status.value,
             "finalizado_em": self.finalizado_em.isoformat() if self.finalizado_em else None,
             "score_completo": score_completo.para_dict_serializavel(),
+            "locale_relatorio": self.locale_relatorio,
         }
         canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
         self.hash_evidencia = hashlib.sha256(canonical.encode("utf-8")).hexdigest()

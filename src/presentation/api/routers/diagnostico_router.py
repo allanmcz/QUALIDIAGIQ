@@ -148,6 +148,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         status=diagnostico.status.value,
         plano=diagnostico.plano.value,
         empresa_razao_social=diagnostico.empresa.razao_social,
+        locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
         recomendacao_ia=None,
@@ -259,6 +260,7 @@ async def criar_diagnostico(
         entradas_resposta=entradas_resposta,
         plano=payload.plano,
         aceite_termos_privacidade=payload.aceite_termos_privacidade,
+        locale_relatorio=payload.locale_relatorio,
     )
 
     # 4. Executar Use Case
@@ -288,6 +290,7 @@ async def criar_diagnostico(
         status=d.status.value,
         plano=d.plano.value,
         empresa_razao_social=d.empresa.razao_social,
+        locale_relatorio=getattr(d, "locale_relatorio", "pt-BR"),
         score=score_completo_schema,
         relatorio_pdf_url=resultado.relatorio_pdf_url,
         recomendacao_ia=resultado.recomendacao_ia,

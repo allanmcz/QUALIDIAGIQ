@@ -85,6 +85,22 @@ h3 {
     margin: 5px 0;
 }
 
+.lead-capture-pdf {
+    margin: 12px 0;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+}
+
+.muted {
+    color: #6b7280;
+}
+
+.small {
+    font-size: 9pt;
+}
+
 .score-geral {
     text-align: center;
     margin: 40px 0;

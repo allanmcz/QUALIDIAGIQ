@@ -8,7 +8,7 @@ Responsabilidade:
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -135,6 +135,13 @@ class IniciarDiagnosticoRequest(BaseModel):
     respondente: RespondenteSchema
     respostas: list[RespostaRequestSchema]
     plano: str = "gratuito"
+    locale_relatorio: Literal["pt-BR", "en"] = Field(
+        default="pt-BR",
+        description=(
+            "Idioma do relatório PDF (WeasyPrint): pt-BR completo; en — labels em inglês "
+            "(conteúdo gerado dinamicamente pode permanecer em PT até tradução total)."
+        ),
+    )
     aceite_termos_privacidade: bool = Field(
         ...,
         description=(
@@ -379,6 +386,10 @@ class DiagnosticoResponse(BaseModel):
     status: str
     plano: str
     empresa_razao_social: str
+    locale_relatorio: str = Field(
+        default="pt-BR",
+        description="Idioma usado na geração do PDF (persistido com o diagnóstico).",
+    )
     score: ScoreCompletoSchema | None = None
     relatorio_pdf_url: str | None = None
     recomendacao_ia: str | None = None

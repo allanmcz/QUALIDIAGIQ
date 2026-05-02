@@ -203,6 +203,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 if d.aceite_termos_privacidade_em is not None
                 else None
             ),
+            "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
         }
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
@@ -241,6 +242,9 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         if aceite_raw is not None:
             aceite_em = datetime.fromisoformat(str(aceite_raw).replace("Z", "+00:00"))
 
+        loc_raw = row.get("locale_relatorio") or "pt-BR"
+        locale_relatorio = str(loc_raw).strip() if loc_raw is not None else "pt-BR"
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -270,4 +274,5 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             versao_otimista=int(row.get("versao_otimista") or 1),
             checklist_m12_estado=checklist_m12,
             aceite_termos_privacidade_em=aceite_em,
+            locale_relatorio=locale_relatorio,
         )

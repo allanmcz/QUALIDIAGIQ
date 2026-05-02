@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
@@ -54,6 +55,8 @@ def _mock_use_case_sucesso() -> AsyncMock:
     mock_resultado.cronograma = None
     mock_resultado.diagnostico.hash_evidencia = "b" * 64
     mock_resultado.diagnostico.versao_otimista = 1
+    mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
+    mock_resultado.diagnostico.locale_relatorio = "pt-BR"
     mock_use_case.execute.return_value = mock_resultado
     return mock_use_case
 

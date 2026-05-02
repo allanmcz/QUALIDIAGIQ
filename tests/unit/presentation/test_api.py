@@ -125,6 +125,7 @@ def test_criar_diagnostico_com_sucesso():
     mock_resultado.diagnostico.hash_evidencia = "a" * 64
     mock_resultado.diagnostico.versao_otimista = 1
     mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
+    mock_resultado.diagnostico.locale_relatorio = "pt-BR"
 
     mock_use_case.execute.return_value = mock_resultado
 
@@ -160,6 +161,7 @@ def test_criar_diagnostico_com_sucesso():
     assert data["hash_evidencia"] == "a" * 64
     assert data["versao_otimista"] == 1
     assert data.get("aceite_termos_privacidade_em") is not None
+    assert data.get("locale_relatorio") == "pt-BR"
 
 
 def test_criar_diagnostico_sem_aceite_lgpd_422():
@@ -226,6 +228,7 @@ def test_obter_diagnostico_com_sucesso():
     mock_diagnostico.plano.value = "gratuito"
     mock_diagnostico.empresa.razao_social = "Empresa GET LTDA"
     mock_diagnostico.relatorio_pdf_url = "http://pdf.url"
+    mock_diagnostico.locale_relatorio = "pt-BR"
 
     mock_repo.buscar_por_id.return_value = mock_diagnostico
 
@@ -245,6 +248,7 @@ def test_obter_diagnostico_com_sucesso():
     data = response.json()
     assert data["id"] == str(diagnostico_id)
     assert data["empresa_razao_social"] == "Empresa GET LTDA"
+    assert data["locale_relatorio"] == "pt-BR"
 
 
 def test_patch_relatorio_sem_if_match_400():

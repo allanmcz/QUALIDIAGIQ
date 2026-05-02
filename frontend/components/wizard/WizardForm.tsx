@@ -138,6 +138,7 @@ export function WizardForm() {
         email: "",
         telefone: "",
       },
+      locale_relatorio: "pt-BR",
       respostas: [],
       aceite_termos_privacidade: false,
     },
@@ -769,8 +770,23 @@ export function WizardForm() {
                     )}
                   />
                   <p id="hint-telefone" className="text-xs text-muted-foreground">
-                    M09 — Apenas DDD e número (sem +55). Facilita recontato B2B; opcional na API MVP.
+                    M09 — Apenas DDD e número (sem +55). No relatório PDF (WeasyPrint), o bloco de captação de lead
+                    mostra apenas e-mail e telefone.
                   </p>
+                  <div className="space-y-2 max-w-md pt-2">
+                    <Label htmlFor="locale_relatorio">Idioma do relatório PDF</Label>
+                    <select
+                      id="locale_relatorio"
+                      className={cn(
+                        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+                        "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      )}
+                      {...register("locale_relatorio")}
+                    >
+                      <option value="pt-BR">Português (Brasil)</option>
+                      <option value="en">English (labels; partial PT narrative)</option>
+                    </select>
+                  </div>
                   {errors.respondente?.telefone != null &&
                     typeof errors.respondente.telefone === "object" &&
                     "message" in errors.respondente.telefone && (

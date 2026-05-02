@@ -19,7 +19,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **1** | P5 — PDF sign-off contábil | Allan (produto); parecer contábil pode ser **próprio Allan** se o processo interno aceitar auto-sign-off formal | Allan ou revisor contábil + registo no `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` |
 | **1** | P5 — ambiente espelho WeasyPrint | Allan (aprova critério “igual a prod”) | Engenharia / Ops — replicação de imagem, env, fontes |
 | **1** | P6 — RLS smoke 2 tenants no Supabase **real** | Allan (aceita evidência “passou”) | Quem tem **credenciais Supabase** (Allan ou Ops) — ver runbooks em `docs/operacao/` |
-| **1** | Migrações até **0015** no ambiente alvo | Allan (autoriza release/schema) | Allan, Ops ou pipeline — `psql` / `make verify-schema-mvp-strict` |
+| **1** | Migrações schema MVP até **0016** (incl. `locale_relatorio`; **0015** CNAE/macros onde aplicável) | Allan (autoriza release/schema) | Allan, Ops ou pipeline — `psql` / `make verify-schema-mvp-strict` · `scripts/verify_mvp_schema.py` |
 | **1** | Tag / release MVP + `CHANGELOG_MVP` | Allan (momento e número) | Allan ou CI — git tag, entrada no changelog |
 | **2** | Parecer **`/termos`** e **`/privacidade`** | Allan (aceita ou pede revisão) | **Advogado** (externo ou jurídico da casa) |
 | **2** | Retenção telefone + alinhamento legal | Allan + **jurídico** (política de dados) | Jurídico (texto) + Eng (campos/API se mudar) |
@@ -28,6 +28,9 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **3** | **D3** Faturamento / setor fino | **Allan** | Eng — se houver novo requisito |
 | **3** | **D4** URL canónica produção | **Allan** (assinatura da URL final) | Ops / Eng — DNS, `NEXT_PUBLIC_*`, CORS |
 | **3** | **D5** Billing Plus/Pro | **Allan** | Eng / financeiro — gateway quando existir |
+| **3** | PDF — **captação de lead** no relatório (bloco explícito) | **Allan** (**fechado 2026-05-02**) | Eng — apenas **e-mail + telefone** no bloco lead do PDF; nome/cargo fora desse bloco |
+| **3** | PDF — **idioma** relatório | **Allan** (**fechado 2026-05-02**) | Eng — **pt-BR** padrão + **en** (labels EN; conteúdo dinâmico pode permanecer PT até tradução completa); campo `locale_relatorio`, migração **0016** |
+| **3** | PDF — **motor de geração** | **Allan** (**fechado 2026-05-02**) | Eng — **WeasyPrint** único (sem Puppeteer) |
 | **4** | **M08** revisão editorial (NTs, dispositivos) | Allan (aceita cobertura) | Revisor **interno ou externo** com perfil fiscal/editorial |
 | **4** | **M03** manifesto revisto por tributarista | Allan (aceita texto público) | **Advogado / tributarista externo** (recomendado MoSCoW) |
 | **4** | **M02** calibração 5 cases | Allan (metodologia e ownership) | Allan domínio + dados; Eng pode instrumentar/importação |
@@ -47,7 +50,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [ ] | **P5 — PDF** sign-off contábil (B.2) | `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` | | |
 | [ ] | **P5 — PDF** ambiente espelho produção WeasyPrint (B.3) | mesmo + `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` | | |
 | [ ] | **P6 — RLS** smoke dois tenants no **projeto Supabase real** (não só CI local) | `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` + evidência de execução no projeto; procedimento RLS detalhado pode estar em artefacto Ops | | |
-| [ ] | Migrações aplicadas no ambiente alvo até **`0015`** (se usar CNAE + pesos macro DB) | `make verify-schema-mvp-strict` ou SQL equivalente | | |
+| [ ] | Migrações aplicadas no ambiente alvo até **`0016`** (obrigatório para PDF/i18n; inclui **0015** CNAE + pesos macro DB onde aplicável) | `make verify-schema-mvp-strict`, `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql` | | |
 | [ ] | **Tag / release** MVP + linha em `docs/CHANGELOG_MVP.md` | `docs/HANDOFF_PLANO_MVP_FECHADO.md` §8 | | |
 
 ---
@@ -57,7 +60,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | OK | Item | Documento / evidência | Data | Notas |
 |:--:|------|----------------------|------|-------|
 | [ ] | Parecer externo sobre **`/termos`** e **`/privacidade`** | `docs/legal/STATUS_JURIDICO_MVP.md` | | |
-| [ ] | Retenção **telefone respondente** alinhada a texto legal + processo interno | LGPD handoff MVP | | |
+| [ ] | Retenção **telefone respondente** alinhada a texto legal + processo interno | LGPD handoff MVP | | **Eng (2026-05-02):** telefone pode aparecer no **bloco lead do PDF** junto com e-mail; política de retenção continua a exigir parecer jurídico. |
 | [ ] | Canal titular / DPO operacional | registar contacto público | | |
 
 ---
@@ -71,6 +74,12 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [ ] | **D5** | Billing Plus/Pro | Adiar **ou** escolher gateway/data | | |
 
 **Já fechado (referência):** **D1** (2026-05-02) diagnóstico sem login no início; POST com sessão B2B; opt-in consultor **ou** só — ver `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` § D1 · **D2** CNPJ obrigatório · **D6** M12 persistido — não requer reconfirmação salvo mudança de política.
+
+**Já fechado — PDF / relatório (2026-05-02):**
+
+- **Captação de lead no PDF:** no relatório, o bloco explícito de lead mostra **somente e-mail e telefone** (sem nome nem cargo nesse bloco; dados completos mantêm-se no fluxo/API conforme modelo actual).
+- **Idioma:** **pt-BR** por defeito; **en** como opção para o PDF (rótulos em inglês; matriz/checklist/cronograma gerados dinamicamente podem seguir em português até haver tradução).
+- **Geração de PDF:** **WeasyPrint** como único motor (alinhado à stack QDI; não usar Puppeteer para este artefacto).
 
 ---
 
@@ -132,6 +141,7 @@ Preencher **S** (Sim neste trimestre) ou **N** (não agora) — pelo menos uma l
 |:--:|------|-------------------|------|-------|
 | [ ] | **RAG Lexiq obrigatório** em respostas fiscais | Aceitar **MVP pragmático** atual (guardrail sem RAG) **ou** exigir S02 antes de go-live institucional | | |
 | [x] | **LangChain/LangGraph** + **Ollama** em conjunto | **Decidido (2026-05-02):** runtime default API — ver **ADR-007** (``LangGraphOllamaLlmAdapter``) | 2026-05-02 | Fallback HTTP: ``QDI_LLM_BACKEND=http_ollama`` |
+| [x] | **WeasyPrint** como gerador único do PDF de diagnóstico | **Decidido (2026-05-02)** — sem motor paralelo Puppeteer para este relatório | 2026-05-02 | Homologação operacional continua em P5 (B.2/B.3) |
 
 ---
 
