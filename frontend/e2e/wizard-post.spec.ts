@@ -123,6 +123,10 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
     await page.locator("#lgpd").check();
     await page.getByRole("button", { name: "Próxima Etapa" }).click();
 
+    await page.locator("#porte").selectOption("micro");
+    await page.locator("#regime").selectOption("simples_nacional");
+    await page.locator("#setor_macro").selectOption("comercio");
+    await page.locator("#uf").selectOption("SP");
     await page.locator("#cnae_principal").fill("1234567");
     await page.getByRole("button", { name: "Próxima Etapa" }).click();
 

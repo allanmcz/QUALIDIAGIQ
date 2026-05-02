@@ -91,6 +91,6 @@ frontend/
 
 ## Notas
 
-- **Não usar localStorage/sessionStorage** — armazenar tudo em React state ou Supabase
-- **Tenant ID** vem da URL ou cookie httpOnly (não exposto ao JS)
-- **PDF** é gerado server-side (FastAPI + WeasyPrint), não client-side
+- **Armazenamento no navegador (excepção MVP):** o fluxo actual usa **`localStorage`** para o token do painel após login (`admin_token`, `admin_nome`) e **`sessionStorage`** para o payload do diagnóstico quando o utilizador é enviado ao login antes do POST (`frontend/lib/wizard/pending_diagnostico.ts`). Isto **não** é o modelo-alvo de produção (cookies httpOnly + backend); está documentado nas páginas de login e deve ser substituído num roadmap de hardening.
+- **Tenant ID** em produção deve vir de JWT/cookies seguros — não confiar só em storage JS para dados sensíveis.
+- **PDF** é gerado server-side (FastAPI + WeasyPrint), não client-side.

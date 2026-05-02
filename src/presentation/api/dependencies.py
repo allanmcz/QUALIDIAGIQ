@@ -305,6 +305,7 @@ def get_llm_service() -> OllamaLlmAdapter:
     return OllamaLlmAdapter(
         ollama_url=settings.ollama_base_url.strip(),
         model=settings.ollama_model.strip(),
+        timeout_seconds=float(settings.ollama_timeout_seconds),
     )
 
 

@@ -101,6 +101,13 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("OLLAMA_MODEL"),
         description="Nome do modelo no Ollama (ex.: llama3, mistral).",
     )
+    ollama_timeout_seconds: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=600.0,
+        validation_alias=AliasChoices("OLLAMA_TIMEOUT_SECONDS"),
+        description="Timeout HTTP (segundos) nas chamadas REST ao Ollama (/api/generate).",
+    )
 
     cors_allowed_origins: str = Field(
         default=(

@@ -2,7 +2,7 @@
 
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
 > **Local canônico (versionado):** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`  
-> **Última atualização:** 2026-05-02 — identidade **Tributiq** no Next + PDF + OG/Twitter (`next/og`); migrações **`0013`/`0014` CNAE**; ver **`docs/HANDOFF_CICLO_Q_2026-05-02.md`** (Ciclo Q executado). Baseline anterior: MVP fechado **`0012`** + **`X-Trace-Id`** (`docs/HANDOFF_PLANO_MVP_FECHADO.md`).
+> **Última atualização:** 2026-05-02 (tarde) — backlog autónomo **02052026**: migração **`0015`** (pesos macro em Postgres / `qdi.normativa_score_macro_dimensao`); **`init.sql`** inclui **0015**; endpoints **`GET /diagnosticos/metodologia`** e **`manifesto-pesos`** leem a mesma normativa que o motor quando **`DATABASE_URL`** está definido (fallback embutido sem DB); CI opcional **`verify-schema-mvp-strict`**; Ollama **`OLLAMA_TIMEOUT_SECONDS`** + logs **`structlog`** no adapter; ADR **ADR-006** (deps IA fora de `src/`); catálogo **Q-ABNT-*** com **`pilar_abnt`** alinhado ao PRD (secção 8); E2E **`wizard-edge-cases.spec.ts`**. Ver também **`docs/HANDOFF_CICLO_Q_2026-05-02.md`**.
 
 ---
 
@@ -34,7 +34,7 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 
 **Situação atual (macro) — maio/2026:**
 
-- **API FastAPI:** POST/GET/PATCH diagnóstico, motor em **7 dimensões**, **GET `/diagnosticos/questionario`** e **`GET /diagnosticos/manifesto-pesos`** públicos, **`GET /diagnosticos/metodologia`** alinhada ao motor (pesos macro = `PESOS_MACRO_DIMENSAO_SCORE_GERAL` em `src/domain/value_objects/score.py`). Catálogo **37** perguntas, idempotência, migrações **`0001`…`0014`** (incl. **`0012`** LGPD/WORM aceite; **`0013`/`0014`** CNAE 2.3 em schema **`qdi`**), **`0011`** M12, **header `X-Trace-Id`**, WORM/OTEL, **`/normativa/validar-ancora`**, **`GET /referencia/cnae/subclasses`** (JWT + `DATABASE_URL` — autocomplete CNAE).
+- **API FastAPI:** POST/GET/PATCH diagnóstico, motor em **7 dimensões**, **GET `/diagnosticos/questionario`** e **`GET /diagnosticos/manifesto-pesos`** públicos, **`GET /diagnosticos/metodologia`** com **`pesos_macro_dimensao_score_geral`** resolvido via **`NormativaScoreMacroRepository`** — com **`DATABASE_URL`** + migração **`0015`** lê **`qdi.normativa_score_macro_dimensao`** (vigência); sem DB usa constantes em **`src/domain/value_objects/score.py`**. Catálogo **37** perguntas, idempotência, migrações **`0001`…`0015`** (incl. **`0012`** LGPD/WORM; **`0013`/`0014`** CNAE em **`qdi`**; **`0015`** pesos macro versionados), **`0011`** M12, **header `X-Trace-Id`**, WORM/OTEL, **`/normativa/validar-ancora`**, **`GET /referencia/cnae/subclasses`** (JWT + `DATABASE_URL`).
 - **Consultoria:** `ConsultoriaService` com frente **M07** (“Prioridade por gaps do score”) quando há `ScoreCompleto`; cronograma 5 fases; matriz com **NT CGNFS-e** na linha Jurídico (M08); checklist ABNT 10 itens.
 - **Front-end:** identidade **QualiDiagIQ / Tributiq** (`public/brand`, componentes marca); cartões sociais **1200×630** (`opengraph-image` / `twitter-image`); wizard (tipos + telefone M09 + **datalist CNAE** passo 2 + links API); **`/abnt-framework`**, **`/metodologia`**, **`/termos`**, **`/privacidade`**; dashboard **M05**; detalhe radar/heatmap/**timeline** **M06**; **M12** PATCH + **If-Match**.
 - **Testes:** pytest (ver **`make test`**); integração **`test_manifesto_pesos_publico`**; **`test_m07_prioridade_checklist`**; WORM inclui UPDATE **`checklist_m12_estado`** pós-finalizado; Playwright **`wizard-post`** + smoke — ordem de rotas §14.
@@ -50,7 +50,7 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 | Área | Escolha do projeto |
 |------|-------------------|
 | Backend | Python 3.12+, FastAPI 0.115+, Pydantic v2, Clean Architecture (`src/domain`, `application`, `infrastructure`, `presentation`) |
-| DB local | PostgreSQL via Docker; migrações `src/infrastructure/db/migrations/` (**`0001`…`0012`**) + `init.sql` na raiz |
+| DB local | PostgreSQL via Docker; migrações `src/infrastructure/db/migrations/` (**`0001`…`0015`**) + `init.sql` na raiz |
 | Front | Next.js 14 App Router, Tailwind, shadcn/ui, Recharts |
 | PDF | WeasyPrint (Python) + Jinja2 (`src/infrastructure/adapters/pdf_generator_weasyprint.py`) |
 | Testes | pytest, pytest-asyncio; Playwright (`frontend/e2e/`) |
@@ -98,11 +98,11 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 
 | Caminho | Responsabilidade |
 |---------|------------------|
-| `src/domain/value_objects/score.py` | **`PESOS_MACRO_DIMENSAO_SCORE_GERAL`**, `pesos_macro_dimensao_para_dict_iso()` — fonte única da agregação do score geral (M02/M03) |
+| `src/domain/value_objects/score.py` | **`PESOS_MACRO_DIMENSAO_SCORE_GERAL`** (fallback sem DB), `pesos_macro_dimensao_para_dict_iso()` — agregação do score geral; com **`DATABASE_URL`** + **0015** a HTTP usa Postgres via `NormativaScoreMacroRepository` |
 | `src/domain/entities/diagnostico.py` | `Respondente.telefone` opcional (M09) |
 | `src/application/services/consultoria_service.py` | M07 frente gaps; matriz M08; checklist ABNT M12 |
 | `src/application/use_cases/calcular_score_use_case.py` | Consome pesos macro do domain |
-| `src/infrastructure/db/migrations/` | **`0001`…`0012`** (`0012` LGPD aceite + WORM; `0011` M12; `0009` telefone) |
+| `src/infrastructure/db/migrations/` | **`0001`…`0015`** (`0012` LGPD + WORM; `0011` M12; `0013`/`0014` CNAE; **`0015`** normativa pesos macro `qdi.normativa_score_macro_dimensao`) |
 | `docs/HANDOFF_PLANO_MVP_FECHADO.md` | Plano mestre gate MVP fechado |
 | `docs/operacao/SMOKE_MVP_FECHADO.md` | Smoke manual A.3 |
 | `docs/CHANGELOG_MVP.md` | Registro de entregas MVP |
@@ -224,7 +224,7 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 | pytest, cobertura ≥ 80% | **OK** (`make test`; script auditoria fora do pytest) |
 | mypy `src` | **OK** |
 | ruff + black | Rodar **`make format`** ao fechar sessão |
-| Playwright | Smoke (landing, **`/metodologia`**, **`/termos`**, **`/privacidade`**, wizard, login) + **`wizard-post`** + **`dashboard-list`**; opcional **`test:e2e:wizard-normativa`** (P8 com flag) |
+| Playwright | Smoke (landing, **`/metodologia`**, **`/termos`**, **`/privacidade`**, wizard, login) + **`wizard-post`** + **`wizard-edge-cases`** (multipla/opções vazias/voltar passo) + **`dashboard-list`**; opcional **`test:e2e:wizard-normativa`** (P8 com flag). Passo 2 do wizard exige selects (**porte**, **regime**, **setor_macro**, **UF**) nos E2E. |
 | Calibração score (campo real) | **NÃO** |
 
 **OpenAPI JSON (export local):** não depende de servidor HTTP — usar **`make openapi-export`** (escreve `docs/api/openapi.generated.json`, ignorado no git). Útil para diff antes de PR que mexa em routers/schemas. Integração adicional: `tests/integration/test_openapi_public_endpoints_shapes.py` valida shapes dos endpoints públicos P1.

@@ -83,6 +83,18 @@ def pergunta_multipla() -> Pergunta:
     )
 
 
+@pytest.fixture
+def pergunta_checklist() -> Pergunta:
+    return Pergunta(
+        codigo="Q-CL",
+        dimensao=Dimensao.OPERACIONAL,
+        texto="Checklist",
+        peso=1.0,
+        tipo=TipoPergunta.CHECKLIST,
+        multipla_total=3,
+    )
+
+
 class TestPergunta:
     def test_deve_rejeitar_pergunta_com_peso_negativo(self):
         with pytest.raises(ValueError, match=r"Peso não pode ser negativo"):
@@ -249,3 +261,93 @@ class TestResposta:
             valor_bruto='["a","b"]',
         )
         assert resposta.calcular_pontuacao(pergunta_multipla) == 50.0
+
+    def test_calculo_pontuacao_multipla_lista_vazia_zero_pontos(self, pergunta_multipla):
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto="[]",
+        )
+        assert resposta.calcular_pontuacao(pergunta_multipla) == 0.0
+
+    def test_calculo_pontuacao_multipla_string_csv(self, pergunta_multipla):
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto="x, y",
+        )
+        assert resposta.calcular_pontuacao(pergunta_multipla) == 50.0
+
+    def test_calculo_pontuacao_multipla_exige_multipla_total(self, pergunta_multipla):
+        p_sem_total = Pergunta(
+            codigo="Q-M2",
+            dimensao=Dimensao.FISCAL,
+            texto="Múltipla sem total",
+            peso=1.0,
+            tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            multipla_total=None,
+        )
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto=["a"],
+        )
+        with pytest.raises(ValueError, match=r"multipla_total"):
+            resposta.calcular_pontuacao(p_sem_total)
+
+    def test_calculo_pontuacao_multipla_rejeita_mais_itens_que_total(self, pergunta_multipla):
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto='["a","b","c","d","e"]',
+        )
+        with pytest.raises(ValueError, match=r"Mais itens selecionados"):
+            resposta.calcular_pontuacao(pergunta_multipla)
+
+    def test_calculo_pontuacao_checklist_mesma_logica_multipla(self, pergunta_checklist):
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.CHECKLIST,
+            valor_bruto=["opt_1", "opt_2"],
+        )
+        assert resposta.calcular_pontuacao(pergunta_checklist) == pytest.approx(200.0 / 3.0)
+
+    def test_extrair_lista_json_invalido_nao_lista(self, pergunta_multipla):
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto='{"x":1}',
+        )
+        with pytest.raises(ValueError, match=r"lista"):
+            resposta.calcular_pontuacao(pergunta_multipla)
+
+    def test_calculo_pontuacao_numerica_limites(self) -> None:
+        resposta_num = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.NUMERICA,
+            valor_bruto=50,
+        )
+        p_num = Pergunta(
+            codigo="Q-N",
+            dimensao=Dimensao.FISCAL,
+            texto="N",
+            peso=1.0,
+            tipo=TipoPergunta.NUMERICA,
+        )
+        assert resposta_num.calcular_pontuacao(p_num) == 50.0
+
+        resposta_fora = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.NUMERICA,
+            valor_bruto=101,
+        )
+        with pytest.raises(ValueError, match=r"entre 0 e 100"):
+            resposta_fora.calcular_pontuacao(p_num)

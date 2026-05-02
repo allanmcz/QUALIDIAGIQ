@@ -29,6 +29,8 @@ jobs:
       APP_ENV: development
       # Plano ANALISE §B1 — Postgres local para integration (WORM, API ASGI).
       QDI_POSTGRES_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      # Quando definido, o job executa `scripts/verify_mvp_schema.py` em modo strict (0015 + CNAE).
+      POSTGRES_CI_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +51,13 @@ jobs:
 
       - name: Instalar pacote em modo editável + dev-deps
         run: pip install -e ".[dev]"
+
+      - name: Schema MVP strict (Postgres — 0015 + CNAE)
+        if: ${{ env.POSTGRES_CI_URL != '' }}
+        env:
+          QDI_POSTGRES_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          QDI_VERIFY_SCHEMA_STRICT_CNAE: "1"
+        run: python scripts/verify_mvp_schema.py
 
       - name: Ruff (lint)
         run: ruff check src/ tests/

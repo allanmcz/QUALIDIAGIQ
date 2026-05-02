@@ -345,7 +345,35 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       )}
 
       {rankingGaps.length > 0 && (
-        <div className="grid md:grid-cols-2 gap-8 mb-10">
+        <div className="space-y-8 mb-10">
+          <section
+            aria-labelledby="m05-ranking-gaps-heading"
+            className="rounded-xl border bg-card px-4 py-5 sm:px-6 sm:py-6 shadow-sm"
+          >
+            <h2 id="m05-ranking-gaps-heading" className="text-lg font-semibold tracking-tight mb-4">
+              Ranking explícito de gaps (M05)
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Ordem: menor score por dimensão primeiro — espelha o mesmo conjunto usado no heatmap e no gráfico de barras.
+            </p>
+            <ol className="list-decimal list-inside space-y-2 text-sm sm:text-base">
+              {rankingGaps.map((row, idx) => (
+                <li key={row.dimensao} className="marker:font-semibold">
+                  <span className="capitalize font-medium text-foreground">{row.dimensao}</span>
+                  <span className="text-muted-foreground"> — score </span>
+                  <span className="tabular-nums font-semibold text-foreground">
+                    {row.valor.toFixed(1)}
+                  </span>
+                  <span className="text-muted-foreground"> / 100</span>
+                  {idx === 0 ? (
+                    <span className="sr-only"> (prioridade máxima — maior gap)</span>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <div className="grid md:grid-cols-2 gap-8">
           <Card>
             <CardHeader>
               <CardTitle>Heatmap rápido por dimensão (M05)</CardTitle>
@@ -395,6 +423,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+          </div>
         </div>
       )}
 
@@ -422,15 +451,25 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 ))}
               </tbody>
             </table>
-            <div className="mt-8 rounded-xl border bg-muted/20 p-4 sm:p-6">
-              <p className="text-sm font-semibold mb-5 tracking-tight">
+            <div
+              className="mt-8 rounded-xl border border-border/80 bg-muted/25 p-5 sm:p-7"
+              role="region"
+              aria-label="Linha do tempo do cronograma em cinco fases (M06)"
+            >
+              <p
+                id="m06-timeline-heading"
+                className="text-sm font-semibold mb-6 tracking-tight text-foreground"
+              >
                 Linha do tempo (M06 — visão rápida)
               </p>
-              <ol className="relative ml-2 border-l-2 border-primary/45 space-y-10 pl-8 sm:pl-10">
+              <ol
+                className="relative ml-2 border-l-[3px] border-primary/70 space-y-12 pl-8 sm:pl-11"
+                aria-labelledby="m06-timeline-heading"
+              >
                 {(data.cronograma ?? []).map((linha, idx) => (
                   <li key={linha.fase} className="relative scroll-mt-4">
                     <span
-                      className="absolute -left-[25px] sm:-left-[29px] top-1 flex h-3.5 w-3.5 rounded-full bg-primary shadow-sm ring-[3px] ring-background"
+                      className="absolute -left-[26px] sm:-left-[30px] top-1 flex h-4 w-4 rounded-full bg-primary shadow-md ring-[3px] ring-background"
                       aria-hidden
                     />
                     <span className="sr-only">

@@ -188,6 +188,7 @@
       "peso": 8.5,
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 5.1",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cap. 5.1 — Eixo 1 (Plan)",
       "condicao": null
     },
     {
@@ -198,6 +199,7 @@
       "peso": 8.5,
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 6.1",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cap. 6.1 — Eixo 2 (Plan + Check); ISO 31000",
       "condicao": null
     },
     {
@@ -208,6 +210,7 @@
       "peso": 9.0,
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 7.1",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cap. 7.1 — Eixos 3+4 (Do)",
       "condicao": null
     },
     {
@@ -218,6 +221,7 @@
       "peso": 8.0,
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 9",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cap. 9 — Eixo 6 (Check)",
       "condicao": null
     },
     {
@@ -228,6 +232,7 @@
       "peso": 7.5,
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 10",
+      "pilar_abnt": "ABNT NBR 17301:2026 — cap. 10 — Eixo 7 (Act) + Programa Confia (RFB)",
       "condicao": null
     },
     {

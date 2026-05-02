@@ -105,3 +105,44 @@ def test_post_diagnostico_replay_retorna_header_e_nao_reexecuta_use_case() -> No
         app.dependency_overrides.clear()
 
     assert mock_uc.execute.call_count == 1
+
+
+def test_post_diagnostico_mesma_chave_tenant_diferente_executa_duas_vezes() -> None:
+    """Chave composta inclui Authorization — tenant distinto não deve receber replay alheio."""
+    mock_uc_a = _mock_use_case_sucesso()
+    mock_uc_b = _mock_use_case_sucesso()
+    tid_a = uuid.uuid4()
+    tid_b = uuid.uuid4()
+    uid = uuid.uuid4()
+    idem = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc_a
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_a)
+    headers_a = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid_a),
+        "Idempotency-Key": idem,
+    }
+
+    try:
+        r_a = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=headers_a)
+        assert r_a.status_code == 201
+        assert r_a.headers.get("X-Idempotent-Replay") is None
+    finally:
+        app.dependency_overrides.clear()
+
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc_b
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_b)
+    headers_b = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid_b),
+        "Idempotency-Key": idem,
+    }
+
+    try:
+        r_b = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=headers_b)
+        assert r_b.status_code == 201
+        assert r_b.headers.get("X-Idempotent-Replay") is None
+    finally:
+        app.dependency_overrides.clear()
+
+    assert mock_uc_a.execute.call_count == 1
+    assert mock_uc_b.execute.call_count == 1

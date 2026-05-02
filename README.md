@@ -40,6 +40,24 @@ make test
 
 Se o Ollama não estiver disponível, o fluxo de diagnóstico segue com mensagem amigável de fallback na recomendação IA.
 
+Env opcional: **`OLLAMA_TIMEOUT_SECONDS`** (default `30`) — tempo máximo de espera pela API REST do Ollama (`src/infrastructure/adapters/llm_ollama.py`).
+
+### OpenTelemetry (traços)
+
+Ative com **`OTEL_TRACING_ENABLED=true`** e aponte **`OTEL_EXPORTER_OTLP_ENDPOINT`** para um collector OTLP/HTTP (porta típica **4318**, path `/v1/traces`). Exemplo local com [otelcol](https://opentelemetry.io/docs/collector/) em Docker:
+
+```yaml
+# excerpt docker-compose.collector.yml — apenas ilustrativo
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: ["--config=/etc/otelcol.yaml"]
+    ports:
+      - "4318:4318"
+```
+
+Variáveis lidas em runtime: `OTEL_TRACING_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` (formato `chave=valor,chave2=valor2`). Ver `src/infrastructure/config/settings.py`.
+
 ## 📂 Estrutura do Projeto
 
 ```
