@@ -1,13 +1,37 @@
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
+
+const tributiqBrand = {
+  navy: "#0D1B4B",
+  "navy-soft": "#1A2A6B",
+  "navy-deep": "#070F2E",
+  orange: "#F26E2A",
+  "orange-soft": "#F89A6B",
+  "orange-deep": "#C8541C",
+  white: "#FFFFFF",
+  "gray-50": "#F8F9FA",
+  "gray-100": "#F1F3F5",
+  "gray-200": "#E5E7EB",
+  "gray-400": "#9CA3AF",
+  "gray-700": "#374151",
+  "gray-900": "#111827",
+};
+
+const scoreLevels = {
+  indefinido: "#9CA3AF",
+  baixo: "#DC2626",
+  medio: "#EAB308",
+  alto: "#16A34A",
+  excelente: "#0D7F3F",
+};
 
 const config = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-	],
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -52,11 +76,24 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        brand: tributiqBrand,
+        score: scoreLevels,
+      },
+      fontFamily: {
+        display: ["Inter", "Montserrat", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        card: "0.75rem",
+        pill: "9999px",
+      },
+      boxShadow: {
+        card: "0 1px 3px rgba(13,27,75,0.06), 0 4px 12px rgba(13,27,75,0.04)",
+        popover: "0 10px 30px rgba(13,27,75,0.15)",
+        elevated: "0 20px 50px rgba(13,27,75,0.20)",
       },
       keyframes: {
         "accordion-down": {
@@ -75,6 +112,6 @@ const config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config
+} satisfies Config;
 
-export default config
+export default config;

@@ -1,32 +1,45 @@
 #!/usr/bin/env bash
-# QualiDiagIQ — inicialização e bateria de QA local (PLANO_COMPLETO_HANDOFF §5).
+#
+# QualiDiagIQ — CLI único: Docker (dev/stop/logs/status), QA local e pipeline full.
+# Documentação: INICIAR_APP/README.md
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$ROOT"
+# shellcheck source=lib/qdi-env.sh
+source "$SCRIPT_DIR/lib/qdi-env.sh"
+qdi_cd_root "$SCRIPT_DIR"
 
 export POSTGRES_CI_URL="${POSTGRES_CI_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"
 
 usage() {
   cat <<'EOF'
-Uso: iniciar-app.sh <comando>
+QualiDiagIQ — INICIAR_APP/iniciar-app.sh
 
-  deps          make install + npm ci (frontend)
-  backend       make qa-backend (ruff + mypy + pytest)
-  integration   migrações SQL + pytest tests/integration/
-  frontend      npm ci + lint + playwright + test:e2e
-  dev           docker compose up -d
-  stop          docker compose down
-  full          deps + backend + integration + frontend (ver SKIP_* abaixo)
+Docker / ambiente
+  (omitido)   Equivale a: dev
+  dev         docker compose up -d --remove-orphans (db + api + web)
+  stop        docker compose down
+  logs        docker compose logs -f (Ctrl+C só para o tail; containers continuam)
+  status      docker compose ps
 
-Variáveis:
-  POSTGRES_CI_URL      URL Postgres (default porta compose 60322)
-  SKIP_DEPS=1          full: pula deps
-  SKIP_INTEGRATION=1   full: pula integration
-  SKIP_FRONTEND=1      full: pula frontend
+Qualidade / pipeline
+  deps        make install + npm ci (frontend)
+  backend     make qa-backend (ruff + mypy + pytest)
+  integration Migrações SQL + pytest tests/integration/ (precisa Postgres; psql)
+  frontend    npm ci + lint + Playwright E2E
+  full        deps → backend → integration → frontend (SKIP_* abaixo)
 
-Documentação: INICIAR_APP/README.md
+Ajuda
+  help | -h | --help   Esta mensagem
+
+Variáveis
+  POSTGRES_CI_URL       Postgres para integration (default compose :60322)
+  SKIP_DEPS=1           full: sem deps
+  SKIP_INTEGRATION=1    full: sem integration
+  SKIP_FRONTEND=1       full: sem frontend
+
+Docs: INICIAR_APP/README.md
 EOF
 }
 
@@ -56,7 +69,12 @@ run_frontend() {
   npm run test:e2e
 }
 
-cmd="${1:-help}"
+run_dev() {
+  docker compose up -d --remove-orphans
+  qdi_print_service_info
+}
+
+cmd="${1:-dev}"
 case "$cmd" in
   help|-h|--help)
     usage
@@ -74,11 +92,16 @@ case "$cmd" in
     run_frontend
     ;;
   dev)
-    docker compose up -d
-    echo "→ API http://localhost:60000/docs · Web http://localhost:60001 · DB porta 60322"
+    run_dev
     ;;
   stop)
     docker compose down
+    ;;
+  logs)
+    docker compose logs -f
+    ;;
+  status)
+    docker compose ps
     ;;
   full)
     if [[ "${SKIP_DEPS:-0}" != "1" ]]; then

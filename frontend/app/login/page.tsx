@@ -1,15 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { getApiUrl } from "@/lib/api/config"
+import { Suspense, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { getApiUrlForFetch } from "@/lib/api/config"
+import { mensagemErroHttp } from "@/lib/api/http_errors"
+import { destinoSeguroAposLogin } from "@/lib/auth/safe_redirect_after_login"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("allan@tributolab.com.br")
   const [password, setPassword] = useState("admin123")
   const [error, setError] = useState("")
@@ -21,24 +24,33 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const base = getApiUrl().replace(/\/$/, "")
+      const base = getApiUrlForFetch().replace(/\/$/, "")
       const res = await fetch(`${base}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       })
 
+      const raw = await res.text()
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || "Falha na autenticação")
+        throw new Error(mensagemErroHttp(res.status, raw))
       }
 
-      const data = await res.json()
+      let data: { access_token?: string; nome?: string | null }
+      try {
+        data = JSON.parse(raw) as { access_token?: string; nome?: string | null }
+      } catch {
+        throw new Error(mensagemErroHttp(res.status, raw))
+      }
+      if (!data.access_token || typeof data.access_token !== "string") {
+        throw new Error("Resposta de login sem token. Confira a versão da API.")
+      }
       // Salva em localStorage (apenas para o MVP/Dev)
       localStorage.setItem("admin_token", data.access_token)
       localStorage.setItem("admin_nome", data.nome || "Admin")
-      
-      router.push("/dashboard")
+
+      const destino = destinoSeguroAposLogin(searchParams.get("redirect"))
+      router.push(destino)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Falha na autenticação")
     } finally {
@@ -51,7 +63,10 @@ export default function LoginPage() {
       <Card className="w-[400px]">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">QualiDiagIQ B2B</CardTitle>
-          <CardDescription>Acesse o painel do consultor</CardDescription>
+          <CardDescription>
+            Acesse o painel do consultor. Conta corporativa após cadastro no ecossistema Tributiq — o login
+            desbloqueia gravar o diagnóstico na API e a fase 2 (painel).
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -88,5 +103,19 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen w-full items-center justify-center bg-slate-50 text-muted-foreground">
+          Carregando…
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   )
 }

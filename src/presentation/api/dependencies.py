@@ -155,29 +155,42 @@ def get_gerar_questionario_adaptativo_use_case() -> GerarQuestionarioAdaptativoU
 
 
 def perfil_empresa_para_questionario(
-    cnpj: Annotated[str, Query(min_length=14, max_length=14)],
     razao_social: Annotated[str, Query(min_length=1, max_length=255)],
     porte: Annotated[PorteEmpresa, Query()],
     regime: Annotated[RegimeTributario, Query()],
     cnae_principal: Annotated[str, Query(min_length=7, max_length=7)],
     uf: Annotated[str, Query(min_length=2, max_length=2)],
     setor_macro: Annotated[SetorMacro, Query()],
+    cnpj: Annotated[
+        str,
+        Query(
+            max_length=14,
+            description="CNPJ 14 dígitos ou omitido/vazio se não informado.",
+        ),
+    ] = "",
 ) -> EmpresaInfo:
     """
     Monta `EmpresaInfo` a partir de query params (mesmas regras do POST, sem máscara).
 
     Base: docs/refs/05_QUESTIONARIO_v1.md — perfil para filtro condicional.
     """
-    if not cnpj.isdigit():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="CNPJ deve conter apenas dígitos",
-        )
-    if len(set(cnpj)) == 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="CNPJ inválido",
-        )
+    cnpj_clean = (cnpj or "").strip()
+    if cnpj_clean != "":
+        if not cnpj_clean.isdigit():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CNPJ deve conter apenas dígitos",
+            )
+        if len(cnpj_clean) != 14:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CNPJ deve ter 14 dígitos ou ficar vazio",
+            )
+        if len(set(cnpj_clean)) == 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CNPJ inválido",
+            )
     ufu = uf.upper()
     if ufu not in _UFS_VALIDAS_QUERY:
         raise HTTPException(
@@ -190,7 +203,7 @@ def perfil_empresa_para_questionario(
             detail="CNAE principal deve conter 7 dígitos",
         )
     return EmpresaInfo(
-        cnpj=cnpj,
+        cnpj=cnpj_clean,
         razao_social=razao_social.strip(),
         porte=porte,
         regime=regime,

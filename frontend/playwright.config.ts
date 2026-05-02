@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Porta fixa evita colisão com outro `next dev` comum em :3000 no host. */
+/** Porta fixa evita colisão com outro serviço no host (Next QDI usa :3010 por padrão). */
 const e2ePort = process.env.PLAYWRIGHT_PORT ?? "3333";
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${e2ePort}`;

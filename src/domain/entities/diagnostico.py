@@ -81,7 +81,7 @@ class SetorMacro(Enum):
 class EmpresaInfo:
     """Informações de identificação da empresa-cliente (snapshot no momento do diagnóstico)."""
 
-    cnpj: str  # 14 dígitos sem máscara
+    cnpj: str  # 14 dígitos sem máscara, ou "" se não informado (fluxo sem identificação cadastral)
     razao_social: str
     porte: PorteEmpresa
     regime: RegimeTributario
@@ -90,8 +90,10 @@ class EmpresaInfo:
     setor_macro: SetorMacro
 
     def __post_init__(self) -> None:
-        if len(self.cnpj) != 14 or not self.cnpj.isdigit():
-            raise ValueError("CNPJ deve conter exatamente 14 dígitos numéricos")
+        if self.cnpj == "":
+            pass
+        elif len(self.cnpj) != 14 or not self.cnpj.isdigit():
+            raise ValueError("CNPJ deve conter exatamente 14 dígitos numéricos ou ficar vazio")
         if len(self.uf) != 2:
             raise ValueError("UF deve ter 2 caracteres (ex: SP, RJ)")
 

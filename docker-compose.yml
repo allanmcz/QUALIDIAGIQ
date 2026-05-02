@@ -25,6 +25,17 @@ services:
     networks:
       - qdi-network
 
+  # SMTP de desenvolvimento — a API no container deve usar SMTP_HOST=mailpit (não localhost).
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: qdi-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - qdi-network
+
   api:
     build:
       context: .
@@ -34,12 +45,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       APP_ENV: development
       APP_RELOAD: "true"
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/postgres
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      # Next no compose exposto em :60001 — precisa constar no CORS (senão fetch → "Failed to fetch").
+      CORS_ALLOWED_ORIGINS: http://localhost:3010,http://127.0.0.1:3010,http://localhost:60001,http://127.0.0.1:60001,http://localhost:3333,http://127.0.0.1:3333
+      # :- evita WARN do Compose quando as variáveis não existem no host (LLM é opcional em dev).
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "60000:8000"
     volumes:
@@ -53,14 +71,26 @@ services:
     image: node:20-alpine
     container_name: qdi-web
     restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
     working_dir: /app
     ports:
-      - "60001:3000"
+      - "60001:3010"
+    # Web: proxy same-origin (/api-backend → api:8000). NEXT_PUBLIC_* vem do Compose; no host (npm run dev) use .env.local se precisar.
+    environment:
+      API_PROXY_TARGET: http://api:8000
+      NEXT_PUBLIC_API_URL: /api-backend
     volumes:
       - ./frontend:/app
     networks:
       - qdi-network
-    command: ["sh", "-c", "if [ -f package.json ]; then npm install && npm run dev; else echo 'frontend ainda nao inicializado — rode: cd frontend && npx create-next-app@14 . --ts --tailwind --app'; tail -f /dev/null; fi"]
+    command:
+      [
+        "sh",
+        "-c",
+        "if [ -f package.json ]; then npm install && npm run dev -- -H 0.0.0.0 -p 3010; else echo 'frontend ainda nao inicializado — rode: cd frontend && npx create-next-app@14 . --ts --tailwind --app'; tail -f /dev/null; fi",
+      ]
 
 volumes:
   qdi-db-data:

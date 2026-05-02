@@ -4,7 +4,7 @@
  * Base: GET /diagnosticos/metodologia e GET /diagnosticos/manifesto-pesos (FastAPI).
  */
 
-import { getApiUrl } from "./config";
+import { getApiUrlForFetch } from "./config";
 
 export type MetodologiaPublic = {
   versao_normativa: string;
@@ -48,7 +48,7 @@ async function parseJson<T>(res: Response): Promise<T> {
 }
 
 export async function fetchMetodologiaPublic(): Promise<MetodologiaPublic> {
-  const base = getApiUrl().replace(/\/$/, "");
+  const base = getApiUrlForFetch().replace(/\/$/, "");
   const res = await fetch(`${base}/diagnosticos/metodologia`, {
     headers: { Accept: "application/json" },
   });
@@ -56,7 +56,7 @@ export async function fetchMetodologiaPublic(): Promise<MetodologiaPublic> {
 }
 
 export async function fetchManifestoPesosPublic(): Promise<ManifestoPesosPublic> {
-  const base = getApiUrl().replace(/\/$/, "");
+  const base = getApiUrlForFetch().replace(/\/$/, "");
   const res = await fetch(`${base}/diagnosticos/manifesto-pesos`, {
     headers: { Accept: "application/json" },
   });

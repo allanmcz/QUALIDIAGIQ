@@ -77,7 +77,13 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             try:
                 from weasyprint import CSS, HTML
 
-                return bytes(HTML(string=html_out).write_pdf(stylesheets=[CSS(filename=css_path)]))
+                # base_url: file URI para WeasyPrint resolver `assets/...` no template
+                base_url = self.templates_dir.resolve().as_uri() + "/"
+                return bytes(
+                    HTML(string=html_out, base_url=base_url).write_pdf(
+                        stylesheets=[CSS(filename=css_path)]
+                    )
+                )
             except Exception as e:
                 # Caso a biblioteca não consiga carregar no ambiente local devido a dependências OS
                 # Retorna um PDF dummy (ou bytes simples) para não quebrar testes E2E

@@ -69,6 +69,20 @@ async def test_get_questionario_adaptativo(async_client):
 
 
 @pytest.mark.asyncio
+async def test_get_questionario_sem_cnpj_query_vazio_200(async_client):
+    """CNPJ opcional no GET — perfil fiscal sem identificação cadastral."""
+    url = (
+        "/diagnosticos/questionario"
+        "?cnpj=&razao_social=Lead+Sem+CNPJ"
+        "&porte=micro&regime=simples_nacional&cnae_principal=1234567&uf=SP&setor_macro=comercio"
+    )
+    response = await async_client.get(url)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] >= 1
+
+
+@pytest.mark.asyncio
 async def test_get_questionario_publico_sem_jwt_200(async_client):
     """GET é público (catálogo filtrado — sem dados de tenant)."""
     url = (

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   fetchManifestoPesosPublic,
   fetchMetodologiaPublic,
@@ -10,6 +11,9 @@ import {
   type MetodologiaPublic,
 } from "@/lib/api/metodologia_public";
 import { getApiUrl } from "@/lib/api/config";
+
+/** Itens por página na tabela do catálogo (evita ~30 linhas de uma vez só). */
+const CATALOGO_PAGE_SIZE = 10;
 
 function TabelaPesosMacro({ titulo, pesos }: { titulo: string; pesos: Record<string, number> }) {
   const linhas = Object.entries(pesos).sort(([a], [b]) => a.localeCompare(b));
@@ -43,6 +47,28 @@ export default function MetodologiaPage() {
   const [manifesto, setManifesto] = useState<ManifestoPesosPublic | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [paginaCatalogo, setPaginaCatalogo] = useState(0);
+
+  const perguntasOrdenadas = useMemo(() => {
+    if (!manifesto?.perguntas?.length) return [];
+    return [...manifesto.perguntas].sort((a, b) => a.codigo.localeCompare(b.codigo));
+  }, [manifesto]);
+
+  const totalPaginasCatalogo = Math.max(1, Math.ceil(perguntasOrdenadas.length / CATALOGO_PAGE_SIZE));
+  const paginaCatalogoVisivel = Math.min(
+    Math.max(0, paginaCatalogo),
+    Math.max(0, totalPaginasCatalogo - 1),
+  );
+  const inicioCatalogo = paginaCatalogoVisivel * CATALOGO_PAGE_SIZE;
+  const perguntasPagina = perguntasOrdenadas.slice(inicioCatalogo, inicioCatalogo + CATALOGO_PAGE_SIZE);
+
+  useEffect(() => {
+    setPaginaCatalogo(0);
+  }, [manifesto?.versao_manifesto, manifesto?.versao_catalogo, manifesto?.perguntas?.length]);
+
+  useEffect(() => {
+    setPaginaCatalogo((p) => Math.min(Math.max(0, p), Math.max(0, totalPaginasCatalogo - 1)));
+  }, [totalPaginasCatalogo]);
 
   useEffect(() => {
     let cancel = false;
@@ -124,9 +150,10 @@ export default function MetodologiaPage() {
           <p className="font-medium">Não foi possível contactar a API.</p>
           <p className="mt-1">{erro}</p>
           <p className="mt-2 text-xs opacity-90">
-            Confira se o backend está no ar e se <code className="bg-background/50 px-1 rounded">NEXT_PUBLIC_API_URL</code>{" "}
-            aponta para a base correta (padrão compose: <code className="bg-background/50 px-1 rounded">http://localhost:60000</code>
-            ).
+            Compose web (:60001) usa proxy <code className="bg-background/50 px-1 rounded">/api-backend</code>. Fora
+            disso, prefira <code className="bg-background/50 px-1 rounded">http://127.0.0.1:60000</code> (evita IPv6
+            com <code className="bg-background/50 px-1 rounded">localhost</code> no macOS). Teste:{" "}
+            <code className="bg-background/50 px-1 rounded">curl http://127.0.0.1:60000/health</code>.
           </p>
         </div>
       )}
@@ -172,9 +199,13 @@ export default function MetodologiaPage() {
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{manifesto.nota_calibracao_m02}</p>
           </div>
           <TabelaPesosMacro titulo="Pesos macro (manifesto — espelho do domínio)" pesos={manifesto.pesos_macro_dimensao} />
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h3 className="text-lg font-semibold">Catálogo ({manifesto.perguntas.length} itens)</h3>
-            <div className="overflow-x-auto rounded-md border max-h-[min(480px,60vh)] overflow-y-auto">
+            <p className="text-xs text-muted-foreground">
+              Lista paginada ({CATALOGO_PAGE_SIZE} por página) para leitura — o mesmo catálogo é filtrado no
+              wizard conforme perfil da empresa (M01).
+            </p>
+            <div className="overflow-x-auto rounded-md border max-h-[min(520px,70vh)] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
@@ -186,20 +217,56 @@ export default function MetodologiaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...manifesto.perguntas]
-                    .sort((a, b) => a.codigo.localeCompare(b.codigo))
-                    .map((p) => (
-                      <tr key={p.codigo} className="border-t">
-                        <td className="p-2 font-mono text-xs whitespace-nowrap">{p.codigo}</td>
-                        <td className="p-2 font-mono text-xs">{p.dimensao}</td>
-                        <td className="p-2 font-mono text-xs">{p.tipo}</td>
-                        <td className="p-2 text-right tabular-nums">{p.peso}</td>
-                        <td className="p-2 text-xs text-muted-foreground max-w-xs">{p.base_legal ?? "—"}</td>
-                      </tr>
-                    ))}
+                  {perguntasPagina.map((p) => (
+                    <tr key={p.codigo} className="border-t">
+                      <td className="p-2 font-mono text-xs whitespace-nowrap">{p.codigo}</td>
+                      <td className="p-2 font-mono text-xs">{p.dimensao}</td>
+                      <td className="p-2 font-mono text-xs">{p.tipo}</td>
+                      <td className="p-2 text-right tabular-nums">{p.peso}</td>
+                      <td className="p-2 text-xs text-muted-foreground max-w-xs">{p.base_legal ?? "—"}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
+            {perguntasOrdenadas.length > CATALOGO_PAGE_SIZE && (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+                  Mostrando {inicioCatalogo + 1}–{Math.min(inicioCatalogo + perguntasPagina.length, perguntasOrdenadas.length)}{" "}
+                  de {perguntasOrdenadas.length} · Página {paginaCatalogoVisivel + 1} de {totalPaginasCatalogo}
+                </p>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaCatalogoVisivel <= 0}
+                    onClick={() =>
+                      setPaginaCatalogo((p) => {
+                        const cur = Math.min(Math.max(0, p), Math.max(0, totalPaginasCatalogo - 1));
+                        return Math.max(0, cur - 1);
+                      })
+                    }
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaCatalogoVisivel >= totalPaginasCatalogo - 1}
+                    onClick={() =>
+                      setPaginaCatalogo((p) => {
+                        const cur = Math.min(Math.max(0, p), Math.max(0, totalPaginasCatalogo - 1));
+                        return Math.min(Math.max(0, totalPaginasCatalogo - 1), cur + 1);
+                      })
+                    }
+                  >
+                    Seguinte
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}

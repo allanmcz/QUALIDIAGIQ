@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAccessToken, getApiUrl } from "@/lib/api/config";
+import { getAccessToken, getApiUrlForFetch } from "@/lib/api/config";
 
 type AcaoChecklist = {
   descricao: string;
@@ -129,7 +129,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     let cancel = false;
     (async () => {
       const token = getAccessToken();
-      const base = getApiUrl().replace(/\/$/, "");
+      const base = getApiUrlForFetch().replace(/\/$/, "");
       try {
         const res = await fetch(`${base}/diagnosticos/${id}`, {
           headers: {
@@ -214,7 +214,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
   const refetchDetalhe = useCallback(async () => {
     const token = getAccessToken();
-    const base = getApiUrl().replace(/\/$/, "");
+    const base = getApiUrlForFetch().replace(/\/$/, "");
     const res = await fetch(`${base}/diagnosticos/${id}`, {
       headers: {
         Accept: "application/json",
@@ -243,7 +243,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       void (async () => {
         const v = versaoOtimistaRef.current;
         if (v == null) return;
-        const base = getApiUrl().replace(/\/$/, "");
+        const base = getApiUrlForFetch().replace(/\/$/, "");
         const res = await fetch(`${base}/diagnosticos/${id}/checklist-m12-autoconf`, {
           method: "PATCH",
           headers: {

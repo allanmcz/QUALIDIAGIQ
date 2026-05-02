@@ -1,4 +1,4 @@
-import { getApiUrl } from "./config";
+import { getApiUrlForFetch } from "./config";
 
 export type ValidarAncoraResponse = {
   valido: boolean;
@@ -9,7 +9,7 @@ export type ValidarAncoraResponse = {
  * Protótipo Lexiq — âncora normativa no texto (endpoint público, sem JWT).
  */
 export async function postValidarAncora(texto: string): Promise<ValidarAncoraResponse> {
-  const base = getApiUrl().replace(/\/$/, "");
+  const base = getApiUrlForFetch().replace(/\/$/, "");
   const res = await fetch(`${base}/normativa/validar-ancora`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

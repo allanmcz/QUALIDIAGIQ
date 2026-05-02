@@ -32,9 +32,31 @@ OPENAPI_EXAMPLES_POST_DIAGNOSTICO: dict[str, dict[str, Any]] = {
             "respondente": {
                 "email": "fiscal@empresa.com.br",
                 "nome": "Fulano da Silva",
-                "telefone": "5511999998888",
+                "telefone": "11999998888",
             },
             "respostas": [{"pergunta_id": _EXEMPLO_PERGUNTA_UUID, "valor": 4}],
+            "plano": "gratuito",
+            "aceite_termos_privacidade": True,
+        },
+    },
+    "sem_cnpj": {
+        "summary": "Sem CNPJ — razão social e perfil fiscal apenas",
+        "description": "Campo empresa.cnpj vazio ou omitido (LGPD — fluxo sem identificação cadastral obrigatória).",
+        "value": {
+            "empresa": {
+                "cnpj": "",
+                "razao_social": "Empresa Anônima Exemplo LTDA",
+                "porte": "medio",
+                "regime": "lucro_presumido",
+                "cnae_principal": "6201501",
+                "uf": "SP",
+                "setor_macro": "servicos",
+            },
+            "respondente": {
+                "email": "contador@escritorio.com.br",
+                "nome": "Maria Souza",
+            },
+            "respostas": [{"pergunta_id": _EXEMPLO_PERGUNTA_UUID, "valor": 3}],
             "plano": "gratuito",
             "aceite_termos_privacidade": True,
         },

@@ -26,14 +26,37 @@ class RespondenteSchema(BaseModel):
     cargo: str | None = None
     telefone: str | None = Field(
         default=None,
-        max_length=32,
-        description="Telefone opcional do respondente (M09 lead B2B; LGPD por finalidade).",
+        max_length=15,
+        description=(
+            "Telefone opcional, apenas dígitos: DDD + número (10 ou 11 dígitos), sem DDI (+55). "
+            "M09 lead B2B; LGPD por finalidade."
+        ),
     )
+
+    @field_validator("telefone", mode="before")
+    @classmethod
+    def normalizar_telefone_br_sem_ddi(cls, v: object) -> str | None:
+        """Remove máscara e valida comprimento típico BR (fixo ou celular)."""
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        digitos = "".join(c for c in str(v) if c.isdigit())
+        if len(digitos) == 0:
+            return None
+        if len(digitos) not in (10, 11):
+            raise ValueError("Telefone sem DDI: informe DDD + número (10 ou 11 dígitos).")
+        return digitos
 
 
 class EmpresaSchema(BaseModel):
     cnpj: str = Field(
-        ..., description="CNPJ com exatos 14 dígitos numéricos", min_length=14, max_length=14
+        default="",
+        max_length=14,
+        description=(
+            "CNPJ com 14 dígitos numéricos (sem máscara), ou string vazia se o respondente não informar "
+            "(LGPD — minimização de dados no fluxo self-service)."
+        ),
     )
     razao_social: str
     porte: PorteEmpresa
@@ -47,14 +70,17 @@ class EmpresaSchema(BaseModel):
     @field_validator("cnpj")
     @classmethod
     def validar_cnpj(cls, v: str) -> str:
-        if not v.isdigit():
+        raw = (v or "").strip()
+        if raw == "":
+            return ""
+        if not raw.isdigit():
             raise ValueError("CNPJ deve conter apenas números")
-        if len(v) != 14:
-            raise ValueError("CNPJ deve conter exatos 14 dígitos")
+        if len(raw) != 14:
+            raise ValueError("CNPJ deve conter exatos 14 dígitos ou ficar vazio")
         # Validação simplificada para o MVP. Em produção, incluir cálculo dos dígitos verificadores.
-        if len(set(v)) == 1:
+        if len(set(raw)) == 1:
             raise ValueError("CNPJ não pode conter todos os dígitos iguais")
-        return v
+        return raw
 
     @field_validator("uf")
     @classmethod

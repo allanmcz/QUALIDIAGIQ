@@ -16,12 +16,13 @@ install: ## Cria .venv e instala dependências
 	@echo "✅ Ambiente Python pronto. Ative com: source $(VENV)/bin/activate"
 
 dev: ## Sobe ambiente de dev (db + api + web)
-	docker compose up -d
+	docker compose up -d --remove-orphans
 	@echo ""
 	@echo "✅ Ambiente subindo:"
 	@echo "  → API:  http://localhost:60000/docs (mapa host 60000 → container 8000)"
-	@echo "  → Web:  http://localhost:60001 (mapa host 60001 → container 3000)"
+	@echo "  → Web:  http://localhost:60001 (mapa host 60001 → container 3010)"
 	@echo "  → DB:   postgres://postgres:postgres@localhost:60322/postgres"
+	@echo "  → Mailpit (SMTP OTP): API usa host mailpit:1025 · UI http://127.0.0.1:8025"
 	@echo ""
 	@echo "Logs:    make logs"
 	@echo "Parar:   make down"

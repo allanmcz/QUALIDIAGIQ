@@ -6,9 +6,41 @@ import { Footer } from "@/components/layout/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const ogImage = "/brand/QDI-NB1-logo-completo.png";
+
+/** OG/Twitter absolutos; em produção definir NEXT_PUBLIC_SITE_URL (ex.: https://app.tributiq.com.br). */
+const metadataBase = new URL(process.env["NEXT_PUBLIC_SITE_URL"] ?? "http://localhost:3010");
+
 export const metadata: Metadata = {
+  metadataBase,
   title: "QualiDiagIQ | Diagnóstico Tributário ABNT NBR 17301",
-  description: "Descubra a maturidade tributária da sua empresa frente à Reforma do Consumo.",
+  description:
+    "Descubra a maturidade tributária da sua empresa frente à Reforma do Consumo (EC 132/2023, LC 214/2025).",
+  icons: {
+    icon: [{ url: "/brand/QDI-NB2-icone-app.png", type: "image/png" }],
+    apple: "/brand/QDI-NB2-icone-app.png",
+  },
+  openGraph: {
+    title: "QualiDiagIQ | Diagnóstico Tributário ABNT NBR 17301",
+    description:
+      "Maturidade tributária frente à Reforma do Consumo e ABNT NBR 17301:2026 — ecossistema Tributiq.",
+    locale: "pt_BR",
+    type: "website",
+    images: [
+      {
+        url: ogImage,
+        width: 512,
+        height: 512,
+        alt: "QualiDiagIQ",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "QualiDiagIQ | Diagnóstico Tributário",
+    description: "Reforma do Consumo e compliance ABNT NBR 17301:2026.",
+    images: [ogImage],
+  },
 };
 
 export default function RootLayout({
@@ -20,9 +52,7 @@ export default function RootLayout({
     <html lang="pt-BR" className="antialiased">
       <body className={`${inter.className} min-h-screen flex flex-col`}>
         <Header />
-        <main className="flex-1 flex flex-col">
-          {children}
-        </main>
+        <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
       </body>
     </html>

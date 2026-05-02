@@ -7,22 +7,23 @@ export const metadata = {
 
 export default function WizardPage() {
   return (
-    <div className="flex-1 flex flex-col p-4 py-8 md:py-16 bg-muted/10">
-      <div className="container max-w-4xl mx-auto space-y-8">
-        
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center p-2 bg-accent/10 rounded-full text-accent mb-2">
-            <ShieldCheck className="w-6 h-6" />
+    <div className="flex min-h-0 flex-1 flex-col bg-muted/10 p-4 py-4 md:py-8">
+      <div className="container mx-auto flex min-h-0 flex-1 flex-col gap-4 max-w-4xl md:gap-5">
+        <div className="text-center space-y-2 shrink-0">
+          <div className="inline-flex items-center justify-center p-2 bg-accent/10 rounded-full text-accent mb-1">
+            <ShieldCheck className="w-5 h-5 md:w-6 md:h-6" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             Análise de Maturidade Tributária
           </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Descubra em 3 passos simples o nível de aderência da sua empresa às novas normas e identifique pontos críticos de melhoria.
+          <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto leading-snug">
+            Diagnóstico em 3 passos — Reforma do Consumo e ABNT NBR 17301:2026.
           </p>
         </div>
 
-        <WizardForm />
+        <div className="flex flex-col flex-1 min-h-0">
+          <WizardForm />
+        </div>
         
       </div>
     </div>

@@ -58,7 +58,11 @@ class Settings(BaseSettings):
     )
 
     cors_allowed_origins: str = Field(
-        default="http://localhost:3000,http://127.0.0.1:3000",
+        default=(
+            "http://localhost:3010,http://127.0.0.1:3010,"
+            "http://localhost:60001,http://127.0.0.1:60001,"
+            "http://localhost:3333,http://127.0.0.1:3333"
+        ),
         validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS"),
     )
 
@@ -89,7 +93,7 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         partes = [p.strip() for p in self.cors_allowed_origins.split(",") if p.strip()]
-        return partes if partes else ["http://localhost:3000"]
+        return partes if partes else ["http://localhost:3010"]
 
     @property
     def sync_database_url(self) -> str | None:

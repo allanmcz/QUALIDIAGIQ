@@ -1,5 +1,5 @@
 import type { EmpresaData } from "../schemas/wizard";
-import { getApiUrl } from "./config";
+import { getApiUrlForFetch } from "./config";
 
 export type PerguntaCatalogo = {
   id: string;
@@ -22,7 +22,7 @@ export type QuestionarioDisponivel = {
 /** Monta query string alinhada ao GET `/diagnosticos/questionario` (endpoint público). */
 export function buildQuestionarioSearchParams(empresa: EmpresaData): URLSearchParams {
   const p = new URLSearchParams();
-  p.set("cnpj", empresa.cnpj.replace(/\D/g, ""));
+  p.set("cnpj", (empresa.cnpj || "").replace(/\D/g, ""));
   p.set("razao_social", empresa.razao_social.trim());
   p.set("porte", empresa.porte);
   p.set("regime", empresa.regime);
@@ -35,7 +35,7 @@ export function buildQuestionarioSearchParams(empresa: EmpresaData): URLSearchPa
 export async function fetchQuestionarioAdaptativo(
   empresa: EmpresaData
 ): Promise<QuestionarioDisponivel> {
-  const base = getApiUrl().replace(/\/$/, "");
+  const base = getApiUrlForFetch().replace(/\/$/, "");
   const qs = buildQuestionarioSearchParams(empresa).toString();
   const res = await fetch(`${base}/diagnosticos/questionario?${qs}`, {
     method: "GET",

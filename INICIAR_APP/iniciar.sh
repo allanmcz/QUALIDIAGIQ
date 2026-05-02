@@ -1,50 +1,53 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# QualiDiagIQ — modo “painel”: sobe o Docker, valida /health, imprime URLs e segue os logs.
+# Ctrl+C → docker compose down (para todo o stack).
+#
+# Para só subir sem logs: ./INICIAR_APP/iniciar-app.sh dev
+# Para logs sem derrubar ao sair: ./INICIAR_APP/iniciar-app.sh logs  (Ctrl+C só encerra o tail)
 
-# Cores para o output
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/qdi-env.sh
+source "$SCRIPT_DIR/lib/qdi-env.sh"
+qdi_cd_root "$SCRIPT_DIR"
+
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-echo -e "${GREEN}=================================================${NC}"
-echo -e "${GREEN}   Iniciando o Ambiente QualiDiagIQ (MVP)        ${NC}"
-echo -e "${GREEN}=================================================${NC}"
-
-# Função para encerrar os processos em background quando o script for parado (Ctrl+C)
 cleanup() {
-    echo -e "\n${RED}Encerrando os serviços...${NC}"
-    kill $BACKEND_PID
-    kill $FRONTEND_PID
-    echo -e "${GREEN}Serviços encerrados com sucesso!${NC}"
-    exit 0
+  echo -e "\n${RED}Encerrando containers (docker compose down)...${NC}"
+  docker compose down
+  echo -e "${GREEN}Ambiente encerrado.${NC}"
+  exit 0
 }
 
-# Captura o sinal SIGINT (Ctrl+C) e chama a função cleanup
-trap cleanup SIGINT
+trap cleanup SIGINT SIGTERM
 
-# 1. Iniciar o Backend (FastAPI)
-echo -e "${BLUE}[BACKEND]${NC} Iniciando a API (FastAPI) na porta 8000..."
-make dev &
-BACKEND_PID=$!
+echo -e "${GREEN}=================================================${NC}"
+echo -e "${GREEN}   QualiDiagIQ — Docker + logs (MVP)             ${NC}"
+echo -e "${GREEN}=================================================${NC}"
 
-# Aguarda 3 segundos para o backend respirar
-sleep 3
+echo -e "${BLUE}[STACK]${NC} make dev (PostgreSQL + API + Next)…"
+make dev
 
-# 2. Iniciar o Frontend (Next.js)
-echo -e "${YELLOW}[FRONTEND]${NC} Iniciando a Interface Web (Next.js) na porta 3000..."
-cd frontend
-npm run dev &
-FRONTEND_PID=$!
-cd ..
+echo -e "\n${BLUE}[CHECK]${NC} GET http://127.0.0.1:60000/health …"
+if qdi_health_probe 4; then
+  echo -e "${GREEN}✓ API OK (health).${NC}"
+else
+  echo -e "${YELLOW}⚠ API ainda não respondeu — normal nos primeiros segundos; veja os logs.${NC}"
+fi
 
 echo -e "\n${GREEN}=================================================${NC}"
-echo -e "${GREEN} Tudo pronto! A aplicação está rodando.${NC}"
-echo -e " Frontend (Wizard): ${BLUE}http://localhost:3000${NC}"
-echo -e " Backend (Swagger): ${YELLOW}http://localhost:8000/docs${NC}"
+echo -e "${GREEN}Ambiente${NC}"
+qdi_print_service_info
 echo -e "${GREEN}=================================================${NC}"
-echo -e "Pressione [Ctrl+C] a qualquer momento para parar ambos os serviços."
+echo -e "Seguindo ${BLUE}docker compose logs -f${NC}. ${YELLOW}Ctrl+C${NC} encerra os **containers**."
+echo -e "Só tail sem derrubar stack: ${BLUE}./INICIAR_APP/iniciar-app.sh logs${NC}"
+echo ""
 
-# Espera os processos terminarem (o que previne o script de fechar sozinho)
-wait $BACKEND_PID
-wait $FRONTEND_PID
+docker compose logs -f

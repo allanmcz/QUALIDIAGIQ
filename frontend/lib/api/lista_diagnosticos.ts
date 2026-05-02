@@ -1,4 +1,4 @@
-import { getAccessToken, getApiUrl } from "./config";
+import { getAccessToken, getApiUrlForFetch } from "./config";
 
 /** Resposta de GET /diagnosticos/ (lista resumida por tenant). */
 export type DiagnosticoResumoApi = {
@@ -24,7 +24,7 @@ export async function fetchDiagnosticosResumo(
   if (!token) {
     throw new Error("Sessão necessária: faça login em /login.");
   }
-  const base = getApiUrl().replace(/\/$/, "");
+  const base = getApiUrlForFetch().replace(/\/$/, "");
   const url = new URL(`${base}/diagnosticos/`);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));

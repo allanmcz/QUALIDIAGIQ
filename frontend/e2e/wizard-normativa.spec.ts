@@ -152,8 +152,11 @@ const enabled = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
     await expect(page.getByRole("status")).toContainText(/Aceito/i);
     expect(normativaHits).toBeGreaterThanOrEqual(1);
 
+    await expect(page.getByTestId("wizard-pergunta-atual")).toBeVisible();
     await page.getByRole("radio", { name: /^Sim$/i }).first().check();
-    await page.getByRole("radio", { name: /3 - escala/i }).check();
+    await page.getByRole("button", { name: "Seguir" }).click();
+    await expect(page.getByText(/Pergunta escala E2E/i)).toBeVisible();
+    await page.getByRole("radio", { name: /^3$/ }).check();
     await page.getByRole("button", { name: /Finalizar Diagnóstico/i }).click();
     await page.waitForURL("**/sucesso**", { timeout: 15_000 });
   });

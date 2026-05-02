@@ -30,6 +30,18 @@ class TestEmpresaInfo:
         assert empresa.cnpj == "12345678000199"
         assert empresa.uf == "SP"
 
+    def test_permite_cnpj_vazio_quando_nao_informado(self):
+        empresa = EmpresaInfo(
+            cnpj="",
+            razao_social="Cliente sem CNPJ no passo 1",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.SERVICOS,
+        )
+        assert empresa.cnpj == ""
+
     @pytest.mark.parametrize("cnpj_invalido", ["1234567800019", "123456780001999"])
     def test_deve_rejeitar_cnpj_com_comprimento_invalido(self, cnpj_invalido):
         with pytest.raises(ValueError, match=r"CNPJ deve conter exatamente 14 dígitos numéricos"):

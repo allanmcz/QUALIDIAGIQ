@@ -53,35 +53,56 @@ export const UFS_BR = [
   "TO",
 ] as const;
 
+/** Texto do `<option value="">` e validação dos selects do perfil empresa (wizard passo 2). */
+export const MENSAGEM_SELECT_PERFIL_EMPRESA = "Selecione a opção.";
+
+const PORTES_EMPRESA = ["micro", "pequeno", "medio", "grande", "enterprise"] as const;
+const REGIMES_TRIBUTARIOS = ["simples_nacional", "lucro_presumido", "lucro_real", "mei"] as const;
+const SETORES_MACRO = ["comercio", "industria", "servicos", "agro", "consumo"] as const;
+
+function zSelectPerfilEmpresa(valoresPermitidos: readonly string[]) {
+  return z.string().refine((val) => val !== "" && valoresPermitidos.includes(val), {
+    message: MENSAGEM_SELECT_PERFIL_EMPRESA,
+  });
+}
+
 export const EmpresaSchema = z.object({
+  /** Vazio = não informar CNPJ (self-service / LGPD). Se preenchido, valida DV. */
   cnpj: z
     .string()
-    .min(14, "CNPJ incompleto")
     .transform((val) => val.replace(/\D/g, ""))
-    .refine((val) => validaCNPJ(val), "CNPJ inválido"),
+    .refine((val) => val.length === 0 || val.length === 14, "CNPJ deve ter 14 dígitos ou ficar em branco")
+    .refine((val) => val.length === 0 || validaCNPJ(val), "CNPJ inválido"),
   razao_social: z.string().min(3, "Razão social deve ter no mínimo 3 caracteres"),
-  porte: z.enum(["micro", "pequeno", "medio", "grande", "enterprise"], {
-    message: "Selecione o porte da empresa",
-  }),
-  regime: z.enum(["simples_nacional", "lucro_presumido", "lucro_real", "mei"], {
-    message: "Selecione o regime tributário",
-  }),
+  porte: zSelectPerfilEmpresa(PORTES_EMPRESA),
+  regime: zSelectPerfilEmpresa(REGIMES_TRIBUTARIOS),
   cnae_principal: z
     .string()
     .min(7, "CNAE deve conter 7 dígitos numéricos")
     .max(7)
     .regex(/^\d+$/, "CNAE apenas números"),
-  uf: z.enum(UFS_BR, { message: "Selecione um Estado (UF)" }),
-  setor_macro: z.enum(["comercio", "industria", "servicos", "agro", "consumo"], {
-    message: "Selecione o setor de atuação",
-  }),
+  uf: zSelectPerfilEmpresa(UFS_BR),
+  setor_macro: zSelectPerfilEmpresa(SETORES_MACRO),
 });
 
 export const RespondenteSchema = z.object({
   nome: z.string().min(2, "Nome é obrigatório"),
   email: z.string().email("E-mail inválido"),
-  /** M09 — lead B2B opcional (API aceita máx. 32 caracteres). */
-  telefone: z.string().max(32, "Telefone muito longo").optional(),
+  /**
+   * M09 — opcional. Armazenado só com dígitos (DDD + número), sem DDI (+55).
+   * 10 dígitos (fixo) ou 11 (celular com 9 na frente).
+   */
+  telefone: z
+    .string()
+    .optional()
+    .transform((raw) => {
+      if (raw == null || String(raw).trim() === "") return undefined;
+      const d = String(raw).replace(/\D/g, "");
+      return d.length === 0 ? undefined : d;
+    })
+    .refine((v) => v === undefined || v.length === 10 || v.length === 11, {
+      message: "Telefone: DDD + número com 10 ou 11 dígitos (sem código do país).",
+    }),
 });
 
 export const RespostaSchema = z.object({
@@ -100,5 +121,7 @@ export const DiagnosticoPayloadSchema = z.object({
 });
 
 export type DiagnosticoPayload = z.infer<typeof DiagnosticoPayloadSchema>;
+/** Valores do formulário wizard (entrada Zod — alinha `react-hook-form` + `zodResolver`). */
+export type DiagnosticoPayloadFormInput = z.input<typeof DiagnosticoPayloadSchema>;
 export type EmpresaData = z.infer<typeof EmpresaSchema>;
 export type RespondenteData = z.infer<typeof RespondenteSchema>;
