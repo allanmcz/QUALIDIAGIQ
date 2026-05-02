@@ -24,7 +24,9 @@ Estas decisões **já foram tomadas** pelo Allan (produto); a engenharia pode as
 | LLM em runtime | **LangChain/LangGraph + Ollama** em conjunto (**ADR-007**); fallback HTTP documentado | 2026-05-02 | Secção 8 · variável `QDI_LLM_BACKEND` |
 | Schema baseline MVP | Migrações **0015** e **0016** aplicadas no ambiente alvo (CNAE/macros + `locale_relatorio` / WORM PDF) | 2026-05-02 | `init.sql`, `make verify-schema-mvp`, SQL verificação MVP — **estado:** aplicadas (**confirmado Allan**) |
 
-**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, tag de release). Na secção 1 já constam como **feitas / confirmadas**: migrações **0015** e **0016**, e **idioma do relatório PDF** (**pt-BR** + **en**).
+**O que ainda não está no «já fechado» (propositadamente):** **tag Git**, **release MVP** (versão/nome) e **linha em `CHANGELOG_MVP`** — **não definidos**; dependem de decisão explícita do Allan (momento de corte e identificador). Enquanto isso, a linha correspondente na **secção 1** permanece **`[ ]`**.
+
+**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, **tag/release/changelog**). Na secção 1 já constam como **feitas / confirmadas**: migrações **0015** e **0016**, e **idioma do relatório PDF** (**pt-BR** + **en**).
 
 ---
 
@@ -38,7 +40,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **1** | P5 — ambiente espelho WeasyPrint | Allan (aprova critério “igual a prod”) | Engenharia / Ops — replicação de imagem, env, fontes |
 | **1** | P6 — RLS smoke 2 tenants no Supabase **real** | Allan (aceita evidência “passou”) | Quem tem **credenciais Supabase** (Allan ou Ops) — ver runbooks em `docs/operacao/` |
 | **1** | Migrações schema MVP até **0016** (incl. `locale_relatorio`; **0015** CNAE/macros onde aplicável) — **estado:** **0015** e **0016** aplicadas | Allan (autoriza release/schema) | Allan, Ops ou pipeline — `psql` / `make verify-schema-mvp-strict` · `scripts/verify_mvp_schema.py` |
-| **1** | Tag / release MVP + `CHANGELOG_MVP` | Allan (momento e número) | Allan ou CI — git tag, entrada no changelog |
+| **1** | Tag / release MVP + `CHANGELOG_MVP` — **estado:** **não definido** | Allan (momento, nome da tag e critério de corte) | Allan ou CI — git tag, entrada no changelog **após** fecho desta decisão |
 | **2** | Parecer **`/termos`** e **`/privacidade`** | Allan (aceita ou pede revisão) | **Advogado** (externo ou jurídico da casa) |
 | **2** | Retenção telefone + alinhamento legal | Allan + **jurídico** (política de dados) | Jurídico (texto) + Eng (campos/API se mudar) |
 | **2** | Canal titular / DPO operacional | Allan (aprova contacto público) | Jurídico (copy DPO) + Ops/site (publicação) |
@@ -70,7 +72,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [ ] | **P6 — RLS** smoke dois tenants no **projeto Supabase real** (não só CI local) | `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` + evidência de execução no projeto; procedimento RLS detalhado pode estar em artefacto Ops | | |
 | [x] | Migrações aplicadas no ambiente alvo até **`0016`** (**0015** CNAE + pesos macro; **0016** `locale_relatorio` + WORM) | `make verify-schema-mvp-strict`, `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql` | 2026-05-02 | **0015** e **0016** aplicadas no ambiente alvo (confirmado Allan). Revalidar após novo ambiente ou restore. |
 | [x] | **PDF — idioma** do relatório definido (**pt-BR** + **en**) e instrumentado (`locale_relatorio`, i18n WeasyPrint, wizard/API) | OpenAPI `locale_relatorio`, wizard, `src/infrastructure/pdf/relatorio_pdf_i18n.py` | 2026-05-02 | Política de produto fechada (confirmado Allan). **en** = rótulos PDF; blocos dinâmicos (matriz, checklist, cronograma) podem seguir em PT até tradução. |
-| [ ] | **Tag / release** MVP + linha em `docs/CHANGELOG_MVP.md` | `docs/HANDOFF_PLANO_MVP_FECHADO.md` §8 | | |
+| [ ] | **Tag / release** MVP + linha em `docs/CHANGELOG_MVP.md` | `docs/HANDOFF_PLANO_MVP_FECHADO.md` §8 | | **Ainda não definido** — sem tag Git, sem versão de release acordada nem entrada no changelog; Allan define momento e identificador (ex. `v1.0.0-mvp`). |
 
 ---
 
