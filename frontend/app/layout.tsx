@@ -6,9 +6,10 @@ import { Footer } from "@/components/layout/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const ogImage = "/brand/QDI-NB1-logo-completo.png";
-
-/** OG/Twitter absolutos; em produção definir NEXT_PUBLIC_SITE_URL (ex.: https://app.tributiq.com.br). */
+/**
+ * OG/Twitter: imagem 1200×630 gerada por `opengraph-image.tsx` / `twitter-image.tsx`.
+ * Em produção definir NEXT_PUBLIC_SITE_URL (ex.: https://app.tributiq.com.br).
+ */
 const metadataBase = new URL(process.env["NEXT_PUBLIC_SITE_URL"] ?? "http://localhost:3010");
 
 export const metadata: Metadata = {
@@ -26,20 +27,11 @@ export const metadata: Metadata = {
       "Maturidade tributária frente à Reforma do Consumo e ABNT NBR 17301:2026 — ecossistema Tributiq.",
     locale: "pt_BR",
     type: "website",
-    images: [
-      {
-        url: ogImage,
-        width: 512,
-        height: 512,
-        alt: "QualiDiagIQ",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "QualiDiagIQ | Diagnóstico Tributário",
     description: "Reforma do Consumo e compliance ABNT NBR 17301:2026.",
-    images: [ogImage],
   },
 };
 

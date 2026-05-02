@@ -1,11 +1,14 @@
 from datetime import datetime
 from pathlib import Path
 
+import structlog
 from jinja2 import Environment, FileSystemLoader
 
 from src.application.ports.pdf_generator import PdfGeneratorPort
 from src.domain.entities.diagnostico import Diagnostico
 from src.domain.value_objects.score import ScoreCompleto
+
+logger = structlog.get_logger(__name__)
 
 
 class WeasyPrintPdfGenerator(PdfGeneratorPort):
@@ -87,7 +90,11 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             except Exception as e:
                 # Caso a biblioteca não consiga carregar no ambiente local devido a dependências OS
                 # Retorna um PDF dummy (ou bytes simples) para não quebrar testes E2E
-                print(f"Aviso: weasyprint não disponível ({e}). Retornando PDF mockado.")
+                logger.warning(
+                    "weasyprint_indisponivel_pdf_mock",
+                    erro=str(e),
+                    exc_info=True,
+                )
                 return b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
 
         pdf_bytes = await asyncio.to_thread(_render)
