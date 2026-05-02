@@ -33,7 +33,7 @@ logger = structlog.get_logger(__name__)
 _VALIDADE_MINUTOS_CODIGO = 10
 
 router = APIRouter(prefix="/auth", tags=["Autenticação B2B"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=12, deprecated="auto")
 
 
 class LoginRequest(BaseModel):
@@ -97,7 +97,9 @@ def create_access_token(
         "tenant_id": str(tenant_id),
         "exp": expire,
     }
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload, settings.jwt_secret_key.get_secret_value(), algorithm=settings.jwt_algorithm
+    )
 
 
 def create_self_service_access_token(*, email_norm: str) -> tuple[str, int]:
@@ -112,7 +114,11 @@ def create_self_service_access_token(*, email_norm: str) -> tuple[str, int]:
         "scope": SELF_SERVICE_DIAGNOSTICO_SCOPE,
         "exp": expire,
     }
-    token = jwt.encode(payload_jwt, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    token = jwt.encode(
+        payload_jwt,
+        settings.jwt_secret_key.get_secret_value(),
+        algorithm=settings.jwt_algorithm,
+    )
     return token, int(minutes * 60)
 
 

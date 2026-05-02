@@ -20,7 +20,9 @@ from typing import TYPE_CHECKING, Any, cast
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
+from src.infrastructure.config.settings import get_settings
 from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
+from src.presentation.api.jwt_tenant_extract import tenant_id_from_bearer_authorization
 
 if TYPE_CHECKING:
     from cachetools import TTLCache
@@ -87,11 +89,20 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         engine = getattr(request.app.state, "idempotency_engine", None)
         ttl_sec = int(getattr(request.app.state, "idempotency_ttl_seconds", 3600))
 
+        settings = get_settings()
+        tenant_id = tenant_id_from_bearer_authorization(
+            request.headers.get("authorization"),
+            settings.jwt_secret_key.get_secret_value(),
+            [settings.jwt_algorithm],
+        )
+
         hit: CorpoCacheadoIdempotencia | None = None
         if engine is not None:
             from src.infrastructure.idempotency.postgres_backend import idempotency_get
 
-            hit = await asyncio.to_thread(idempotency_get, cast("Engine", engine), composta)
+            hit = await asyncio.to_thread(
+                idempotency_get, cast("Engine", engine), composta, tenant_id
+            )
         elif composta in self._cache:
             hit = self._cache[composta]
 
@@ -149,6 +160,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     composta,
                     cached,
                     ttl_sec,
+                    tenant_id,
                 )
             elif composta not in self._cache:
                 self._cache[composta] = cached

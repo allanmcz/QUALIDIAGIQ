@@ -138,7 +138,7 @@ async def get_current_user_tenant(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            settings.jwt_secret_key,
+            settings.jwt_secret_key.get_secret_value(),
             algorithms=[settings.jwt_algorithm],
         )
         sub = payload.get("sub")
@@ -183,7 +183,7 @@ async def get_self_service_diagnostico_claims(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            settings.jwt_secret_key,
+            settings.jwt_secret_key.get_secret_value(),
             algorithms=[settings.jwt_algorithm],
         )
     except (jwt.PyJWTError, ValueError) as e:

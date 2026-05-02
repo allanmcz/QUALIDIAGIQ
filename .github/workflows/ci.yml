@@ -68,6 +68,11 @@ jobs:
       - name: Pytest (unit + integration)
         run: PYTHONPATH=. pytest
 
+      - name: Cobertura mínima domain (≥85%)
+        run: |
+          PYTHONPATH=. coverage run --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q
+          coverage report --include='src/domain/*' --fail-under=85 --show-missing
+
   frontend-e2e:
     runs-on: ubuntu-latest
     defaults:

@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 
+from src.infrastructure.config.logging import configurar_logging
 from src.infrastructure.config.settings import Settings, get_settings
 from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
 from src.presentation.api.middleware.public_rate_limit import PublicRateLimitMiddleware
@@ -73,6 +74,16 @@ def _instrumentar_otel(app: FastAPI, settings: Settings) -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Ciclo de vida da aplicação (startup e shutdown)."""
     settings = get_settings()
+    configurar_logging(settings.app_env)
+    dsn_sentry = (settings.sentry_dsn or "").strip()
+    if dsn_sentry:
+        import sentry_sdk
+
+        sentry_sdk.init(
+            dsn=dsn_sentry,
+            traces_sample_rate=0.1,
+            environment=(settings.app_env or "development").strip(),
+        )
     engine = None
     sync_url = settings.sync_database_url
     if sync_url:

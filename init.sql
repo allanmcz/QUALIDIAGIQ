@@ -19,4 +19,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0016_locale_relatorio_pdf.sql
 \i /docker-entrypoint-initdb.d/migrations/0017_empresa_faixa_faturamento_opcional.sql
 \i /docker-entrypoint-initdb.d/migrations/0018_dev_admin_senha_admin123.sql
+\i /docker-entrypoint-initdb.d/migrations/0019_rls_completo.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

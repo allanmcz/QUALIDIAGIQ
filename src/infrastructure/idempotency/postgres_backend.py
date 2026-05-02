@@ -15,19 +15,23 @@ from sqlalchemy import text
 from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
 
 if TYPE_CHECKING:
+    import uuid
+
     from sqlalchemy.engine import Engine
 
 
-def idempotency_get(engine: Engine, chave_hash: str) -> CorpoCacheadoIdempotencia | None:
+def idempotency_get(
+    engine: Engine, chave_hash: str, tenant_id: uuid.UUID
+) -> CorpoCacheadoIdempotencia | None:
     """Recupera corpo cacheado se existir e não expirou."""
     with engine.connect() as conn:
         row = (
             conn.execute(
                 text(
                     "SELECT status_code, body, headers_json FROM idempotency_responses "
-                    "WHERE chave_hash = :h AND expira_em > now()"
+                    "WHERE chave_hash = :h AND tenant_id = :tid AND expira_em > now()"
                 ),
-                {"h": chave_hash},
+                {"h": chave_hash, "tid": str(tenant_id)},
             )
             .mappings()
             .first()
@@ -50,6 +54,7 @@ def idempotency_put(
     chave_hash: str,
     cached: CorpoCacheadoIdempotencia,
     ttl_seconds: int,
+    tenant_id: uuid.UUID,
 ) -> None:
     """Grava ou substitui entrada (upsert por chave_hash)."""
     headers_obj = dict(cached.headers)
@@ -60,15 +65,16 @@ def idempotency_put(
         conn.execute(
             text("""
                 INSERT INTO idempotency_responses (
-                  chave_hash, status_code, body, headers_json, expira_em
+                  chave_hash, status_code, body, headers_json, expira_em, tenant_id
                 ) VALUES (
-                  :h, :sc, :body, CAST(:hdr AS jsonb), :expira
+                  :h, :sc, :body, CAST(:hdr AS jsonb), :expira, :tid
                 )
                 ON CONFLICT (chave_hash) DO UPDATE SET
                   status_code = EXCLUDED.status_code,
                   body = EXCLUDED.body,
                   headers_json = EXCLUDED.headers_json,
                   expira_em = EXCLUDED.expira_em,
+                  tenant_id = EXCLUDED.tenant_id,
                   criado_em = now()
                 """),
             {
@@ -77,6 +83,7 @@ def idempotency_put(
                 "body": body,
                 "hdr": json.dumps(headers_obj),
                 "expira": expira,
+                "tid": str(tenant_id),
             },
         )
 

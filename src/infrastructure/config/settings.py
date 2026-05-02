@@ -10,7 +10,7 @@ from functools import lru_cache
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,9 +34,21 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("SUPABASE_ANON_KEY", "SUPABASE_KEY"),
     )
 
-    jwt_secret_key: str = Field(
-        default="",
+    jwt_secret_key: SecretStr = Field(
+        default_factory=lambda: SecretStr(""),
         validation_alias=AliasChoices("JWT_SECRET_KEY"),
+    )
+
+    #: SMTP para validação em produção (evita mailpit/localhost em APP_ENV=production).
+    smtp_host: str = Field(
+        default="127.0.0.1",
+        validation_alias=AliasChoices("SMTP_HOST"),
+    )
+
+    #: Sentry SDK — vazio desativa envio (Sprint 11 handoff).
+    sentry_dsn: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("SENTRY_DSN"),
     )
     jwt_algorithm: str = Field(default="HS256", validation_alias=AliasChoices("JWT_ALGORITHM"))
     jwt_expire_minutes: int = Field(
@@ -154,14 +166,41 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _jwt_secret_minimo(self) -> Self:
         """Em development permite fallback local; fora disso exige chave forte."""
-        key = self.jwt_secret_key.strip()
+        key = self.jwt_secret_key.get_secret_value().strip()
         if len(key) >= 32:
-            self.jwt_secret_key = key
-        elif self.app_env == "development":
-            self.jwt_secret_key = "dev-only-secret-min-32-chars-qdi-local!!"
+            self.jwt_secret_key = SecretStr(key)
+        elif (self.app_env or "").strip().lower() == "development":
+            self.jwt_secret_key = SecretStr("dev-only-secret-min-32-chars-qdi-local!!")
         else:
             raise ValueError(
                 "JWT_SECRET_KEY deve ter ao menos 32 caracteres ou defina APP_ENV=development."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _producao_segredos_obrigatorios(self) -> Self:
+        """
+        Sprint 11 — validações adicionais quando APP_ENV=production.
+
+        Falha na inicialização se segredos ou endpoints de desenvolvimento persistirem.
+        """
+        if (self.app_env or "").strip().lower() != "production":
+            return self
+        jwt_val = self.jwt_secret_key.get_secret_value().strip()
+        if len(jwt_val) < 32:
+            raise ValueError("JWT_SECRET_KEY deve ter ao menos 32 caracteres em producao.")
+        sup_url = self.supabase_url.strip()
+        if not sup_url.startswith("https://"):
+            raise ValueError("SUPABASE_URL deve iniciar com https:// em producao.")
+        if not self.supabase_key.strip():
+            raise ValueError("SUPABASE_ANON_KEY ou SUPABASE_KEY nao pode ser vazio em producao.")
+        if self.database_url is None or not str(self.database_url).strip():
+            raise ValueError("DATABASE_URL e obrigatorio em producao.")
+        host = self.smtp_host.strip().lower()
+        if host in ("localhost", "127.0.0.1", "mailpit", "::1"):
+            raise ValueError(
+                "SMTP_HOST nao pode apontar para ambiente local em producao "
+                "(localhost, 127.0.0.1, mailpit)."
             )
         return self
 

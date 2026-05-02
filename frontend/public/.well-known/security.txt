@@ -1,0 +1,6 @@
+Contact: mailto:security@tributiq.example
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: pt-BR, en
+Canonical: https://qualidiagiq.example/.well-known/security.txt
+
+# Substituir security@tributiq.example e URL canônica antes da produção.

@@ -122,6 +122,27 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     if fn != 1:
         erros.append("Função public.qdi_jwt_tenant_id ausente (necessária para políticas RLS).")
 
+    idem_tid = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'idempotency_responses'
+          AND column_name = 'tenant_id'
+    """)
+    if idem_tid != 1:
+        erros.append(
+            "Coluna public.idempotency_responses.tenant_id ausente (aplique migração 0019)."
+        )
+
+    adm_rls = await conn.fetchval("""
+        SELECT c.relrowsecurity
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'admins'
+    """)
+    if adm_rls is not True:
+        erros.append("RLS não habilitada em public.admins (migração 0019_rls_completo).")
+
     return erros
 
 

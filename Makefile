@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict
+.PHONY: help install dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets
 
 PYTHON := python3.12
 VENV := .venv
@@ -36,6 +36,13 @@ logs: ## Acompanha logs em tempo real
 
 test: ## Roda todos os testes com cobertura
 	PYTHONPATH=. $(VENV)/bin/pytest
+
+test-domain: ## Cobertura mínima 85% em src/domain (princípio §10 do .cursorrules)
+	PYTHONPATH=. $(VENV)/bin/coverage run --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q
+	$(VENV)/bin/coverage report --include='src/domain/*' --fail-under=85 --show-missing
+
+audit-secrets: ## Heurística anti-padrões S-01 (segredos em fonte)
+	@bash scripts/audit_secrets.sh
 
 test-watch: ## Roda testes em modo watch (precisa pytest-watch)
 	PYTHONPATH=. $(VENV)/bin/pytest -f

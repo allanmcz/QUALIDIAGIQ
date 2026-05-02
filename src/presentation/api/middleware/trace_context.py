@@ -8,12 +8,18 @@ Analogia: equivale a um GUID de sessão Oracle gravado em package context —
 
 from __future__ import annotations
 
+import base64
+import binascii
+import json
+import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.infrastructure.config.settings import get_settings
+
+_std_log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from starlette.middleware.base import RequestResponseEndpoint
@@ -37,6 +43,22 @@ class TraceContextMiddleware(BaseHTTPMiddleware):
                 span = trace.get_current_span()
                 if span.is_recording():
                     span.set_attribute("qualidiagiq.trace_id_http", tid)
+                    auth_raw = request.headers.get("authorization")
+                    if auth_raw and str(auth_raw).strip().lower().startswith("bearer "):
+                        token = str(auth_raw).strip()[7:].strip().split()[0]
+                        parts = token.split(".")
+                        if len(parts) >= 2:
+                            pad = "=" * (-len(parts[1]) % 4)
+                            payload_b = base64.urlsafe_b64decode(parts[1] + pad)
+                            payload = json.loads(payload_b.decode("utf-8"))
+                            claim_tid = payload.get("tenant_id")
+                            if claim_tid:
+                                span.set_attribute("tenant_id", str(claim_tid))
+            except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
+                _std_log.warning(
+                    "otel_tenant_claim_decode_falhou",
+                    extra={"erro": str(e)},
+                )
             except Exception:
                 pass
         response.headers["X-Trace-Id"] = tid

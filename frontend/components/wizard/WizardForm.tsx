@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -880,12 +881,6 @@ export function WizardForm() {
         <div className="flex w-full justify-between gap-4 text-sm text-muted-foreground font-medium">
           <span className="min-w-0 truncate">
             Passo {step} de {TOTAL_STEPS}
-            {step === 3 && totalPerguntas > 0 && (
-              <span className="text-foreground/80">
-                {" "}
-                · Pergunta {indicePerguntaAtual + 1} de {totalPerguntas}
-              </span>
-            )}
           </span>
           <span className="shrink-0 tabular-nums">{Math.round(progressBarPercent)}% Concluído</span>
         </div>
@@ -1083,6 +1078,12 @@ export function WizardForm() {
                     </p>
                   )}
                 </div>
+                <p className="text-center text-sm md:text-base text-muted-foreground leading-relaxed pt-3 border-t border-border/60">
+                  Em{" "}
+                  <strong className="text-foreground font-semibold">cerca de 15 minutos</strong>,
+                  identifique lacunas frente à Reforma Tributária do Consumo (EC 132/2023, LC 214/2025) e
+                  receba um plano de ação objetivo para sua empresa.
+                </p>
               </div>
             )}
 
@@ -1430,17 +1431,32 @@ export function WizardForm() {
                     data-testid="wizard-pergunta-atual"
                     className="mx-auto flex min-h-0 w-full max-w-xl flex-col justify-start space-y-3 rounded-lg border bg-muted/20 p-4 sm:p-5"
                   >
-                    <Label className="text-base font-semibold text-foreground/90 leading-tight block">
-                      {indicePerguntaAtual + 1}. {perguntas[indicePerguntaAtual].texto}{" "}
-                      <span className="text-muted-foreground font-normal text-xs">
-                        ({perguntas[indicePerguntaAtual].codigo})
-                      </span>
-                    </Label>
-                    {perguntas[indicePerguntaAtual].base_legal && (
-                      <p className="text-xs text-muted-foreground">
-                        Base legal (referência): {perguntas[indicePerguntaAtual].base_legal}
-                      </p>
-                    )}
+                    <p
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      className="text-sm font-medium text-muted-foreground"
+                    >
+                      Pergunta {indicePerguntaAtual + 1} de {totalPerguntas}
+                    </p>
+                    <div className="flex items-start gap-2">
+                      <Label className="text-base font-semibold text-foreground/90 leading-tight block flex-1 min-w-0">
+                        {indicePerguntaAtual + 1}. {perguntas[indicePerguntaAtual].texto}{" "}
+                        <span className="text-muted-foreground font-normal text-xs">
+                          ({perguntas[indicePerguntaAtual].codigo})
+                        </span>
+                      </Label>
+                      {perguntas[indicePerguntaAtual].base_legal ? (
+                        <button
+                          type="button"
+                          className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          title={perguntas[indicePerguntaAtual].base_legal ?? ""}
+                          aria-label={`Base legal: ${perguntas[indicePerguntaAtual].base_legal}`}
+                        >
+                          <Info className="h-5 w-5" aria-hidden />
+                        </button>
+                      ) : null}
+                    </div>
                     {tipoEhEscalaLikert15(perguntas[indicePerguntaAtual].tipo) && (
                       <p className="text-sm text-muted-foreground leading-snug">
                         Escala Likert (1 a 5): 1 = menor aderência, 5 = maior aderência à prática perguntada.

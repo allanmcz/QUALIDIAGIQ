@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from unittest.mock import MagicMock
+from uuid import UUID
 
 import pytest
 
 from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
 from src.infrastructure.idempotency.postgres_backend import idempotency_get, idempotency_put
+
+_TID = UUID("00000000-0000-0000-0000-000000000000")
 
 
 @pytest.fixture
@@ -47,11 +50,11 @@ def mock_engine() -> MagicMock:
 
 
 def test_idempotency_get_miss(mock_engine: MagicMock) -> None:
-    assert idempotency_get(mock_engine, "miss") is None
+    assert idempotency_get(mock_engine, "miss", _TID) is None
 
 
 def test_idempotency_get_hit(mock_engine: MagicMock) -> None:
-    hit = idempotency_get(mock_engine, "hit")
+    hit = idempotency_get(mock_engine, "hit", _TID)
     assert hit is not None
     assert hit.status_code == 201
     assert hit.body == b'{"ok":true}'
@@ -65,5 +68,5 @@ def test_idempotency_put_executa_insert(mock_engine: MagicMock) -> None:
         headers=(("Content-Type", "application/json"),),
     )
     conn = mock_engine.connect.return_value.__enter__.return_value
-    idempotency_put(mock_engine, "abc123", cached, ttl_seconds=60)
+    idempotency_put(mock_engine, "abc123", cached, 60, _TID)
     assert conn.execute.call_count >= 2
