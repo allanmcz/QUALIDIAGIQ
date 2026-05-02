@@ -7,8 +7,19 @@ Versões internas podem usar data `YYYY-MM-DD` até adoção de semver de produt
 
 ## [Unreleased]
 
+- _(Sem alterações pendentes de lançamento; usar esta secção para patches após **1.0**.)_
+
+---
+
+## [1.0.0] — MVP QualiDiagIQ — 2026
+
+**Momento:** ano **2026** · **Número de release:** **1.0** (semver da tag: **`v1.0.0`**).  
+Alinha ao checklist Allan — secção 1 (tag/release MVP + changelog).
+
+### Resumo executivo do baseline nomeado
+
 - **Handoff plano 02/05/2026 (execução técnica agente):** `GET /referencia/cnae/subclasses` (JWT + `DATABASE_URL`); wizard com datalist autocomplete CNAE; **`make verify-schema-mvp-strict`** / `--strict-cnae` no script; SQL MVP bloco CNAE opcional; decisões **D1/D3/D5** registadas como adiadas; **D4** parcial. Itens só humanos/externos permanecem: sign-off PDF **P5**, smoke Supabase real **P6**, jurídico, **M08** editorial, Beta SHOULD/COULD.
-- **Produção:** aplicar migrações até **0014** (ou **0012** mínimo se CNAE adiado); evidência: **`make verify-schema-mvp`** ou **`make verify-schema-mvp-strict`** + contagens `qdi.cnae_subclasse` (1332); smoke **Supabase** conforme runbook RLS e `docs/operacao/GAP_ANALYSIS_RLS_P6_2026-05-02.md`.
+- **Produção:** aplicar migrações até **0015** para pesos macro em DB (ou **0014** se CNAE + **0012** mínimo conforme operação); evidência: **`make verify-schema-mvp`** ou **`make verify-schema-mvp-strict`** + contagens `qdi.cnae_subclasse` (1332) quando CNAE ativo; smoke **Supabase** conforme runbook RLS e `docs/operacao/GAP_ANALYSIS_RLS_P6_2026-05-02.md`.
 - **P5:** sign-off humano no checklist PDF após revisão visual em ambiente com WeasyPrint (ajustes técnicos Ciclo Q já no template/CSS).
 
 ### 2026-05-02 — Ciclo Q (handoff autorizado)
@@ -23,6 +34,10 @@ Versões internas podem usar data `YYYY-MM-DD` até adoção de semver de produt
 
 - `scripts/verify_mvp_schema.py` + alvo **`make verify-schema-mvp`** — checagem somente leitura de colunas **0011/0012**, RLS e `qdi_jwt_tenant_id`.
 - `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql` — mesmo contrato via SQL Editor Supabase.
+
+### Pós-Ciclo Q — backlog autónomo 02/05/2026 (engenharia)
+
+- Migração **`0015`** (pesos macro `qdi.normativa_score_macro_dimensao`); `init.sql`; endpoints metodologia/manifesto com Postgres quando `DATABASE_URL`; CI `verify-schema-mvp-strict`; Ollama `OLLAMA_TIMEOUT_SECONDS`; ADR-006 deps IA; pilares **Q-ABNT-*** no catálogo; E2E `wizard-edge-cases`; `docs/operacao/` versionado no Git.
 
 ---
 
