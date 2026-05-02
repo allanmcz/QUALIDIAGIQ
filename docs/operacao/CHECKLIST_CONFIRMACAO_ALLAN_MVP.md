@@ -19,12 +19,12 @@ Estas decisões **já foram tomadas** pelo Allan (produto); a engenharia pode as
 | Identificação empresa | **D2** — CNPJ obrigatório | (doc D*) | mesmo documento |
 | M12 checklist | **D6** — persistido conforme desenho | (doc D*) | mesmo documento |
 | PDF — captação de lead (bloco explícito) | Mostrar **apenas e-mail e telefone**; sem nome nem cargo nesse bloco | 2026-05-02 | Template `relatorio_diagnostico.html`, fluxo wizard |
-| PDF — idioma | **pt-BR** padrão; **en** opcional para rótulos do PDF (`locale_relatorio`); conteúdo dinâmico pode permanecer em PT até tradução completa | 2026-05-02 | Migração **`0016_locale_relatorio_pdf.sql`**, API + wizard |
+| PDF — idioma | **pt-BR** padrão; **en** opcional para rótulos do PDF (`locale_relatorio`); conteúdo dinâmico pode permanecer em PT até tradução completa — **definição fechada pelo produto** | 2026-05-02 | Migração **`0016`**, API + wizard + WeasyPrint (`relatorio_pdf_i18n.py`) — **estado:** definido e implementado (**confirmado Allan**) |
 | PDF — motor | **WeasyPrint** como **único** gerador deste relatório (sem Puppeteer) | 2026-05-02 | `pdf_generator_weasyprint.py`; linha **[x]** na secção 8 |
 | LLM em runtime | **LangChain/LangGraph + Ollama** em conjunto (**ADR-007**); fallback HTTP documentado | 2026-05-02 | Secção 8 · variável `QDI_LLM_BACKEND` |
 | Schema baseline MVP | Migrações **0015** e **0016** aplicadas no ambiente alvo (CNAE/macros + `locale_relatorio` / WORM PDF) | 2026-05-02 | `init.sql`, `make verify-schema-mvp`, SQL verificação MVP — **estado:** aplicadas (**confirmado Allan**) |
 
-**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, tag de release). Migrações **0015** e **0016** já constam como **feitas** na linha correspondente da secção 1.
+**Distinção importante:** o quadro acima é **decisão de produto/arquitetura**. Continua **pendente de execução/evidência operacional** o que está na **secção 1** (ex.: sign-off contábil P5, espelho WeasyPrint, smoke RLS no Supabase real, tag de release). Na secção 1 já constam como **feitas / confirmadas**: migrações **0015** e **0016**, e **idioma do relatório PDF** (**pt-BR** + **en**).
 
 ---
 
@@ -47,7 +47,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **3** | **D4** URL canónica produção | **Allan** (assinatura da URL final) | Ops / Eng — DNS, `NEXT_PUBLIC_*`, CORS |
 | **3** | **D5** Billing Plus/Pro | **Allan** | Eng / financeiro — gateway quando existir |
 | **3** | PDF — **captação de lead** no relatório (bloco explícito) | **Allan** (**fechado 2026-05-02**) | Eng — apenas **e-mail + telefone** no bloco lead do PDF; nome/cargo fora desse bloco |
-| **3** | PDF — **idioma** relatório | **Allan** (**fechado 2026-05-02**) | Eng — **pt-BR** padrão + **en** (labels EN; conteúdo dinâmico pode permanecer PT até tradução completa); campo `locale_relatorio`, migração **0016** |
+| **3** | PDF — **idioma** relatório — **definido e confirmado** | **Allan** (**fechado 2026-05-02**) | Eng — **pt-BR** padrão + **en** (labels EN; conteúdo dinâmico pode permanecer PT até tradução completa); campo `locale_relatorio`, migração **0016** |
 | **3** | PDF — **motor de geração** | **Allan** (**fechado 2026-05-02**) | Eng — **WeasyPrint** único (sem Puppeteer) |
 | **4** | **M08** revisão editorial (NTs, dispositivos) | Allan (aceita cobertura) | Revisor **interno ou externo** com perfil fiscal/editorial |
 | **4** | **M03** manifesto revisto por tributarista | Allan (aceita texto público) | **Advogado / tributarista externo** (recomendado MoSCoW) |
@@ -69,6 +69,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [ ] | **P5 — PDF** ambiente espelho produção WeasyPrint (B.3) | mesmo + `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` | | |
 | [ ] | **P6 — RLS** smoke dois tenants no **projeto Supabase real** (não só CI local) | `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` + evidência de execução no projeto; procedimento RLS detalhado pode estar em artefacto Ops | | |
 | [x] | Migrações aplicadas no ambiente alvo até **`0016`** (**0015** CNAE + pesos macro; **0016** `locale_relatorio` + WORM) | `make verify-schema-mvp-strict`, `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql` | 2026-05-02 | **0015** e **0016** aplicadas no ambiente alvo (confirmado Allan). Revalidar após novo ambiente ou restore. |
+| [x] | **PDF — idioma** do relatório definido (**pt-BR** + **en**) e instrumentado (`locale_relatorio`, i18n WeasyPrint, wizard/API) | OpenAPI `locale_relatorio`, wizard, `src/infrastructure/pdf/relatorio_pdf_i18n.py` | 2026-05-02 | Política de produto fechada (confirmado Allan). **en** = rótulos PDF; blocos dinâmicos (matriz, checklist, cronograma) podem seguir em PT até tradução. |
 | [ ] | **Tag / release** MVP + linha em `docs/CHANGELOG_MVP.md` | `docs/HANDOFF_PLANO_MVP_FECHADO.md` §8 | | |
 
 ---
@@ -96,7 +97,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 **Complemento PDF (mesmo pacote de decisão 2026-05-02):**
 
 - **Lead no PDF:** bloco explícito = **só e-mail e telefone**; nome/cargo **fora** desse bloco; dados completos no fluxo/API conforme modelo **atual**.
-- **Idioma:** **pt-BR** por defeito; **en** para rótulos do PDF; matriz/checklist/cronograma dinâmicos podem seguir em PT até tradução.
+- **Idioma:** **pt-BR** por defeito; **en** para rótulos do PDF; matriz/checklist/cronograma dinâmicos podem seguir em PT até tradução — **definição confirmada** pelo produto (ver linha correspondente na secção 1).
 - **Motor:** **WeasyPrint** único para este artefacto.
 
 ---
