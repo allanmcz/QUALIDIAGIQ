@@ -10,7 +10,7 @@ export type PoweredByBrainProps = {
 export function PoweredByBrain({ className }: PoweredByBrainProps) {
   return (
     <p className={cn("text-xs text-muted-foreground", className)}>
-      <span className="font-medium text-brand-navy">Tributiq Brain</span>
+      <span className="font-medium text-brand-navy">Powered by Tributiq Brain</span>
       <span> — inteligência normativa versionada (contexto Lexiq).</span>
     </p>
   );

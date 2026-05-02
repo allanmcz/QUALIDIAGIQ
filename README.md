@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./frontend/public/brand/QDI-NB1-logo-completo.png" alt="QualiDiagIQ" width="320" />
+  <img src="./frontend/public/brand/QDI-NB1-logo-completo.jpg" alt="QualiDiagIQ" width="320" />
 </p>
 <p align="center"><em>Diagnóstico tributário automatizado para a Reforma do Consumo (EC 132/2023, LC 214/2025)</em></p>
 

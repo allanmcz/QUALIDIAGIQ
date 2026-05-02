@@ -13,7 +13,7 @@ export function Footer() {
           <EndorsedBadge />
         </div>
         <p className="text-center text-sm text-muted-foreground md:text-left">
-          &copy; {ano} Tributiq. Todos os direitos reservados.
+          &copy; {ano} QualiDiagIQ · produto Tributiq. Todos os direitos reservados.
         </p>
         <nav
           className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground"

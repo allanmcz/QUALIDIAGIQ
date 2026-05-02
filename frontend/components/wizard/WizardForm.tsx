@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -172,20 +173,85 @@ export function WizardForm() {
     control,
     trigger,
     watch,
+    clearErrors,
     formState: { errors },
     getValues,
     reset,
   } = form;
 
   const [cnaeSugestoes, setCnaeSugestoes] = useState<CnaeSubclasseItem[]>([]);
-  const cnaeBusca = watch("empresa.cnae_principal");
+  /** Texto no input (código ou busca por descrição); o formulário só guarda 7 dígitos após seleção/blur válido. */
+  const [cnaeBuscaTexto, setCnaeBuscaTexto] = useState("");
+  const cnaeBuscaTextoRef = useRef("");
+  const [cnaeListaAberta, setCnaeListaAberta] = useState(false);
+  const cnaeBlurFecharTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cnaeAnchorRef = useRef<HTMLDivElement>(null);
+  /** Posição em viewport (fixed) — portal evita cortes por overflow/transform do Card/animações. */
+  const [cnaePopoverBox, setCnaePopoverBox] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+  /** Evita sobrescrever a digitação: só alinha com RHF ao entrar no passo 2 (não a cada mudança de `getValues`). */
+  const stepAnteriorCnaeRef = useRef<number | null>(null);
+
+  const atualizarPosicaoListaCnae = useCallback(() => {
+    const el = cnaeAnchorRef.current;
+    if (!el || !cnaeListaAberta || cnaeSugestoes.length === 0 || step !== 2) {
+      setCnaePopoverBox(null);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    const margin = 10;
+    const vw = window.innerWidth;
+    const minW = Math.min(420, vw - 2 * margin);
+    const maxW = Math.min(Math.max(r.width, minW), vw - 2 * margin);
+    let left = r.left;
+    if (left + maxW > vw - margin) {
+      left = Math.max(margin, vw - margin - maxW);
+    }
+    if (left < margin) left = margin;
+    setCnaePopoverBox({ top: r.bottom + 6, left, width: maxW });
+  }, [cnaeListaAberta, cnaeSugestoes.length, step]);
+
+  useLayoutEffect(() => {
+    if (step !== 2 || !cnaeListaAberta || cnaeSugestoes.length === 0) {
+      setCnaePopoverBox(null);
+      return;
+    }
+    atualizarPosicaoListaCnae();
+    window.addEventListener("scroll", atualizarPosicaoListaCnae, true);
+    window.addEventListener("resize", atualizarPosicaoListaCnae);
+    return () => {
+      window.removeEventListener("scroll", atualizarPosicaoListaCnae, true);
+      window.removeEventListener("resize", atualizarPosicaoListaCnae);
+    };
+  }, [step, cnaeListaAberta, cnaeSugestoes, atualizarPosicaoListaCnae]);
+
+  useEffect(() => {
+    if (step !== 2) {
+      setCnaeSugestoes([]);
+      setCnaeListaAberta(false);
+      stepAnteriorCnaeRef.current = step;
+      return;
+    }
+    const anterior = stepAnteriorCnaeRef.current;
+    stepAnteriorCnaeRef.current = step;
+    if (anterior !== 2) {
+      const v = getValues("empresa.cnae_principal") ?? "";
+      setCnaeBuscaTexto(v);
+      cnaeBuscaTextoRef.current = v;
+    }
+    // getValues omitido de deps de propósito — só queremos o snapshot ao transitar para o passo 2.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sincronizar apenas mudança de `step`
+  }, [step]);
 
   useEffect(() => {
     if (step !== 2) {
       setCnaeSugestoes([]);
       return;
     }
-    const bruto = (cnaeBusca ?? "").trim();
+    const bruto = (cnaeBuscaTexto ?? "").trim();
     const soDigitos = bruto.replace(/\D/g, "").slice(0, 7);
     const q = soDigitos.length >= 2 ? soDigitos : bruto.length >= 2 ? bruto : "";
     if (q.length < 2) {
@@ -198,7 +264,13 @@ export function WizardForm() {
         .catch(() => setCnaeSugestoes([]));
     }, 380);
     return () => clearTimeout(t);
-  }, [cnaeBusca, step]);
+  }, [cnaeBuscaTexto, step]);
+
+  useEffect(() => {
+    return () => {
+      if (cnaeBlurFecharTimerRef.current != null) clearTimeout(cnaeBlurFecharTimerRef.current);
+    };
+  }, []);
 
   /** Perfil empresa (passo 2): selects sem valor real exibem placeholder com o mesmo tom do UF. */
   const empresaPerfil = watch("empresa");
@@ -300,7 +372,8 @@ export function WizardForm() {
   useEffect(() => {
     if (!draftHydrated) return;
 
-    let timeout: ReturnType<typeof setTimeout>;
+    /** DOM retorna handle numérico; tipagem Node (`Timeout`) conflita em builds Next — usar number. */
+    let timeout: number | undefined;
 
     const persist = () => {
       if (skipPersistRef.current) return;
@@ -316,7 +389,7 @@ export function WizardForm() {
     };
 
     const runDebounced = () => {
-      window.clearTimeout(timeout);
+      if (timeout !== undefined) window.clearTimeout(timeout);
       timeout = window.setTimeout(persist, 400);
     };
 
@@ -328,7 +401,7 @@ export function WizardForm() {
 
     return () => {
       sub.unsubscribe();
-      window.clearTimeout(timeout);
+      if (timeout !== undefined) window.clearTimeout(timeout);
     };
   }, [
     draftHydrated,
@@ -984,10 +1057,16 @@ export function WizardForm() {
                         />
                       )}
                     />
-                    <Label htmlFor="lgpd" className="font-normal text-sm leading-snug cursor-pointer">
-                      Declaro que li e aceito o tratamento dos dados informados para elaboração do
-                      diagnóstico, nos termos da LGPD (Lei 13.709/2018). Consulte a{" "}
-                      <Link href="/privacidade" className="text-primary underline">
+                    <Label
+                      htmlFor="lgpd"
+                      className="block w-full min-w-0 font-normal text-sm leading-relaxed cursor-pointer text-left"
+                    >
+                      Declaro que li e aceito o tratamento dos dados informados para elaboração do diagnóstico,
+                      nos termos da LGPD (Lei 13.709/2018). Consulte a{" "}
+                      <Link
+                        href="/privacidade"
+                        className="text-primary underline underline-offset-2 hover:text-primary/90 inline"
+                      >
                         política de privacidade (QDI)
                       </Link>
                       .
@@ -1128,26 +1207,133 @@ export function WizardForm() {
 
                 <div className="space-y-2 border-t border-border/60 pt-5">
                   <Label htmlFor="cnae_principal">CNAE principal (7 dígitos) *</Label>
-                  <datalist id="cnae-sugestoes-wizard">
-                    {cnaeSugestoes.map((s) => (
-                      <option key={s.subclasse_id} value={s.subclasse_id}>
-                        {s.descricao}
-                      </option>
-                    ))}
-                  </datalist>
-                  <Input
-                    id="cnae_principal"
-                    placeholder="1234567 ou busque por texto"
-                    list="cnae-sugestoes-wizard"
-                    autoComplete="off"
-                    {...register("empresa.cnae_principal")}
-                    className={errors.empresa?.cnae_principal ? "border-destructive" : ""}
+                  <Controller
+                    name="empresa.cnae_principal"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <div ref={cnaeAnchorRef} className="relative z-20 w-full min-w-0">
+                        <Input
+                          id="cnae_principal"
+                          placeholder="1234567 ou busque por texto (ex.: varejo)"
+                          autoComplete="off"
+                          aria-autocomplete="list"
+                          aria-expanded={cnaeListaAberta && cnaeSugestoes.length > 0}
+                          aria-controls="cnae-sugestoes-wizard-listbox"
+                          value={cnaeBuscaTexto}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            cnaeBuscaTextoRef.current = v;
+                            setCnaeBuscaTexto(v);
+                            const temLetras = /[a-zA-ZÀ-ÿ]/i.test(v);
+                            const soDigitos = v.replace(/\D/g, "").slice(0, 7);
+                            if (temLetras) {
+                              field.onChange("");
+                            } else {
+                              field.onChange(soDigitos);
+                            }
+                          }}
+                          onFocus={() => {
+                            if (cnaeBlurFecharTimerRef.current != null) {
+                              clearTimeout(cnaeBlurFecharTimerRef.current);
+                              cnaeBlurFecharTimerRef.current = null;
+                            }
+                            setCnaeListaAberta(true);
+                          }}
+                          onBlur={() => {
+                            field.onBlur();
+                            const v = cnaeBuscaTextoRef.current;
+                            const d = v.replace(/\D/g, "").slice(0, 7);
+                            const temLetras = /[a-zA-ZÀ-ÿ]/i.test(v);
+                            if (!temLetras && d.length === 7) {
+                              field.onChange(d);
+                              cnaeBuscaTextoRef.current = d;
+                              setCnaeBuscaTexto(d);
+                              clearErrors("empresa.cnae_principal");
+                            } else if (temLetras) {
+                              field.onChange("");
+                              /* Mantém o texto de busca para continuar a pesquisa ou clicar na lista. */
+                            } else if (!temLetras && d.length > 0 && d.length < 7) {
+                              field.onChange(d);
+                              cnaeBuscaTextoRef.current = d;
+                              setCnaeBuscaTexto(d);
+                            } else if (!temLetras && d.length === 0) {
+                              field.onChange("");
+                              cnaeBuscaTextoRef.current = "";
+                              setCnaeBuscaTexto("");
+                            }
+                            cnaeBlurFecharTimerRef.current = setTimeout(() => {
+                              setCnaeListaAberta(false);
+                            }, 200);
+                          }}
+                          className={fieldState.error ? "border-destructive" : ""}
+                        />
+                        {typeof document !== "undefined" &&
+                        cnaeListaAberta &&
+                        cnaeSugestoes.length > 0 &&
+                        cnaePopoverBox != null
+                          ? createPortal(
+                              <ul
+                                id="cnae-sugestoes-wizard-listbox"
+                                role="listbox"
+                                data-testid="cnae-sugestoes-lista"
+                                style={{
+                                  position: "fixed",
+                                  top: cnaePopoverBox.top,
+                                  left: cnaePopoverBox.left,
+                                  width: cnaePopoverBox.width,
+                                  boxSizing: "border-box",
+                                }}
+                                className={cn(
+                                  "z-[300] max-h-[min(18rem,50vh)] overflow-y-auto overscroll-contain rounded-md border",
+                                  "border-border bg-popover p-0 text-popover-foreground shadow-lg",
+                                )}
+                              >
+                                {cnaeSugestoes.map((s) => (
+                                  <li
+                                    key={s.subclasse_id}
+                                    role="presentation"
+                                    className="border-b border-border/40 last:border-b-0"
+                                  >
+                                    <button
+                                      type="button"
+                                      role="option"
+                                      aria-selected={false}
+                                      className={cn(
+                                        "flex w-full min-w-0 flex-col gap-0.5 px-3 py-2.5 text-left text-sm transition-colors",
+                                        "hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:outline-none",
+                                      )}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                      }}
+                                      onClick={() => {
+                                        field.onChange(s.subclasse_id);
+                                        cnaeBuscaTextoRef.current = s.subclasse_id;
+                                        setCnaeBuscaTexto(s.subclasse_id);
+                                        clearErrors("empresa.cnae_principal");
+                                        setCnaeListaAberta(false);
+                                      }}
+                                    >
+                                      <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-foreground">
+                                        {s.subclasse_id}
+                                      </span>
+                                      <span className="min-w-0 whitespace-normal break-words text-xs leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                                        {s.descricao}
+                                      </span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>,
+                              document.body,
+                            )
+                          : null}
+                      </div>
+                    )}
                   />
                   <p className="text-xs text-muted-foreground leading-snug">
                     Digite pelo menos 2 caracteres (início do código de 7 dígitos ou parte da descrição da
-                    atividade) para ver sugestões da tabela oficial{" "}
+                    atividade). As sugestões aparecem <strong className="font-medium text-foreground">abaixo do campo</strong>,
+                    com rolagem e texto completo. Tabela oficial{" "}
                     <abbr title="Classificação Nacional de Atividades Econômicas">CNAE</abbr> 2.3 (CONCLA/IBGE).
-                    Você também pode informar os sete dígitos manualmente.
                   </p>
                   {errors.empresa?.cnae_principal && (
                     <p className="text-sm text-destructive">{errors.empresa.cnae_principal.message}</p>

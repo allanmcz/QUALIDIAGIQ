@@ -16,7 +16,10 @@ export type WordmarkProps = {
  */
 export function Wordmark({ size = "md", className }: WordmarkProps) {
   return (
-    <span className={cn("qdi-wordmark inline-flex items-baseline", sizeClass[size], className)}>
+    <span
+      data-testid="wordmark"
+      className={cn("qdi-wordmark inline-flex items-baseline", sizeClass[size], className)}
+    >
       <span className="qdi-prefix">QualiDiag</span>
       <span className="qdi-suffix">IQ</span>
     </span>

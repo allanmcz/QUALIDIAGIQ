@@ -94,7 +94,7 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
         piores_dimensoes=piores_template,
     )
 
-    assert "assets/QDI-NB1-logo-completo.png" in html
+    assert "assets/QDI-NB1-logo-completo.jpg" in html
     assert "M04_SECAO: capa_identificacao" in html
     assert "M04_SECAO: sintese_executiva" in html
     assert "M04_SECAO: tecnico_detalhamento_dimensoes" in html

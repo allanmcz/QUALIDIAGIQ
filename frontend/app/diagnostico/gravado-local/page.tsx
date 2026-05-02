@@ -26,7 +26,11 @@ import {
   clearPendingDiagnosticoFromStorage,
   loadPendingDiagnosticoFromStorage,
 } from "@/lib/wizard/pending_diagnostico";
-import { saveSelfServiceDiagnosticoResultado } from "@/lib/wizard/self_service_result";
+import {
+  saveSelfServiceDiagnosticoResultado,
+  scoresPorDimensaoFromApiScore,
+  type ScorePorDimensaoItem,
+} from "@/lib/wizard/self_service_result";
 import { clearWizardDraft } from "@/lib/wizard/wizard_draft";
 
 /** Normaliza `score.score_geral.valor` (API pode serializar número ou string). */
@@ -50,6 +54,7 @@ function respostaApiParaResultado(data: unknown): {
   empresa_razao_social: string;
   locale_relatorio: string;
   score_geral: number | null;
+  scores_por_dimensao: ScorePorDimensaoItem[];
 } | null {
   if (!data || typeof data !== "object") return null;
   const o = data as Record<string, unknown>;
@@ -66,8 +71,10 @@ function respostaApiParaResultado(data: unknown): {
   if (id === null || typeof status !== "string") return null;
   if (typeof empresa_razao_social !== "string") return null;
   const loc = typeof locale_relatorio === "string" ? locale_relatorio : "pt-BR";
-  const score_geral = extrairValorScoreGeral(o["score"]);
-  return { id, status, empresa_razao_social, locale_relatorio: loc, score_geral };
+  const scoreRaw = o["score"];
+  const score_geral = extrairValorScoreGeral(scoreRaw);
+  const scores_por_dimensao = scoresPorDimensaoFromApiScore(scoreRaw);
+  return { id, status, empresa_razao_social, locale_relatorio: loc, score_geral, scores_por_dimensao };
 }
 
 export default function DiagnosticoGravadoLocalPage() {
@@ -132,7 +139,11 @@ export default function DiagnosticoGravadoLocalPage() {
       if (!resumo) {
         throw new Error("Resposta da API em formato inesperado.");
       }
-      saveSelfServiceDiagnosticoResultado(resumo);
+      const score_api =
+        raw !== null && typeof raw === "object" && "score" in raw
+          ? (raw as Record<string, unknown>)["score"]
+          : undefined;
+      saveSelfServiceDiagnosticoResultado({ ...resumo, score_api });
       clearPendingDiagnosticoFromStorage();
       clearWizardDraft();
       router.push("/diagnostico/concluido-self-service");

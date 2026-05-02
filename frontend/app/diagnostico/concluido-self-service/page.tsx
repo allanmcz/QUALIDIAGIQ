@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { rotuloDimensao } from "@/lib/wizard/dimensao_labels";
 import {
   loadSelfServiceDiagnosticoResultado,
   type SelfServiceDiagnosticoResultado,
@@ -62,8 +63,10 @@ export default function DiagnosticoConcluidoSelfServicePage() {
   const scoreTexto = scoreValor !== null ? `${scoreValor.toFixed(1)} / 100` : "indisponível nesta resposta";
   const nivelTexto = rotuloNivelMaturidade(scoreValor);
 
+  const linhasDimensao = dados.scores_por_dimensao ?? [];
+
   return (
-    <div className="container max-w-xl py-10 px-4 space-y-8">
+    <div className="container max-w-2xl py-10 px-4 space-y-8">
       <div className="flex justify-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-accent">
           <CheckCircle2 className="h-8 w-8" aria-hidden />
@@ -81,9 +84,12 @@ export default function DiagnosticoConcluidoSelfServicePage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Resultado do diagnóstico</CardTitle>
-          <CardDescription>Score e nível de maturidade tributária (mesmo critério do relatório)</CardDescription>
+          <CardDescription>
+            Score geral e notas por dimensão (mesmo critério do relatório e do motor M03 — LC 214/2025 em contexto de
+            maturidade organizacional).
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="space-y-4 text-sm">
           <p>
             <span className="font-medium text-foreground">Empresa:</span> {dados.empresa_razao_social}
           </p>
@@ -91,7 +97,7 @@ export default function DiagnosticoConcluidoSelfServicePage() {
             <p className="text-base font-semibold text-foreground tabular-nums">Score geral: {scoreTexto}</p>
             {nivelTexto ? (
               <p className="text-sm text-muted-foreground">
-                Nível de maturidade:{" "}
+                Nível de maturidade geral:{" "}
                 <span className="font-medium text-foreground">{nivelTexto}</span>
               </p>
             ) : (
@@ -101,7 +107,56 @@ export default function DiagnosticoConcluidoSelfServicePage() {
               </p>
             )}
           </div>
-          <p className="text-muted-foreground text-xs">
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Por dimensão</p>
+            {linhasDimensao.length > 0 ? (
+              <div className="rounded-lg border border-border overflow-hidden">
+                <table className="w-full text-sm caption-bottom">
+                  <thead>
+                    <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                      <th className="px-3 py-2 font-medium">Dimensão</th>
+                      <th className="px-3 py-2 font-medium text-right w-[5.5rem]">Nota</th>
+                      <th className="px-3 py-2 font-medium text-right min-w-[7rem]">Nível</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/80">
+                    {linhasDimensao.map((linha) => {
+                      const nv = rotuloNivelMaturidade(linha.valor);
+                      return (
+                        <tr key={linha.dimensao} className="bg-background">
+                          <td className="px-3 py-2.5 align-top">
+                            <span className="font-medium text-foreground leading-snug">
+                              {rotuloDimensao(linha.dimensao)}
+                            </span>
+                            {linha.peso_total_aplicado != null && Number.isFinite(linha.peso_total_aplicado) ? (
+                              <span className="mt-0.5 block text-[11px] text-muted-foreground tabular-nums">
+                                Peso aplicado no diagnóstico: {linha.peso_total_aplicado.toFixed(1)}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums font-medium text-foreground align-top">
+                            {linha.valor.toFixed(1)}
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-muted-foreground align-top">
+                            {nv ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground leading-relaxed">
+                O breakdown por dimensão não está disponível nesta sessão (diagnóstico gravado antes desta melhoria ou
+                resposta sem <span className="font-mono">score.score_por_dimensao</span>). Faça um novo diagnóstico
+                self-service para ver todas as linhas.
+              </p>
+            )}
+          </div>
+
+          <p className="text-muted-foreground text-xs leading-relaxed">
             Situação: <span className="font-medium text-foreground">{dados.status}</span>
             {" · "}
             ID: <span className="font-mono break-all">{dados.id}</span>
@@ -109,12 +164,12 @@ export default function DiagnosticoConcluidoSelfServicePage() {
             Relatório: {dados.locale_relatorio}
           </p>
         </CardContent>
-        <CardFooter className="flex-col gap-2 sm:flex-row">
-          <Button asChild className="w-full">
+        <CardFooter className="flex flex-col gap-2 sm:flex-row sm:justify-stretch">
+          <Button asChild variant="outline" className="w-full bg-transparent">
             <Link href="/">Voltar ao início</Link>
           </Button>
-          <Button asChild variant="outline" className="w-full bg-transparent">
-            <Link href="/login?redirect=/wizard">Entrar no painel B2B</Link>
+          <Button asChild className="w-full">
+            <Link href="/login?redirect=/wizard">Cadastrar ou entrar</Link>
           </Button>
         </CardFooter>
       </Card>

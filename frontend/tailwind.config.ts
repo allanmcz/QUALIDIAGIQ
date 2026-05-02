@@ -80,7 +80,18 @@ const config = {
         score: scoreLevels,
       },
       fontFamily: {
-        display: ["Inter", "Montserrat", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-inter)",
+          "var(--font-montserrat)",
+          "system-ui",
+          "sans-serif",
+        ],
+        display: [
+          "var(--font-inter)",
+          "var(--font-montserrat)",
+          "system-ui",
+          "sans-serif",
+        ],
         mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       borderRadius: {

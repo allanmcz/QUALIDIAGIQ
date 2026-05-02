@@ -1,0 +1,17 @@
+{
+  "name": "QualiDiagIQ",
+  "short_name": "QualiDiagIQ",
+  "description": "Diagnóstico tributário frente à Reforma do Consumo (EC 132/2023, LC 214/2025) e ABNT NBR 17301 — ecossistema Tributiq.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0D1B4B",
+  "icons": [
+    {
+      "src": "/brand/QDI-NB2-icone-app.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

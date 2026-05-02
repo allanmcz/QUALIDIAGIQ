@@ -70,7 +70,9 @@ class SelfServiceTokenRequest(BaseModel):
     """Troca código OTP (mesmo fluxo de /verificar-email/solicitar) por JWT para POST /diagnosticos/self-service."""
 
     email: EmailStr
-    codigo: str = Field(min_length=4, max_length=8, description="Código numérico recebido por e-mail")
+    codigo: str = Field(
+        min_length=4, max_length=8, description="Código numérico recebido por e-mail"
+    )
 
 
 class SelfServiceTokenResponse(BaseModel):

@@ -1,10 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+  weight: ["500", "600", "700", "800"],
+});
 
 /**
  * OG/Twitter: imagem 1200×630 gerada por `opengraph-image.tsx` / `twitter-image.tsx`.
@@ -14,12 +25,13 @@ const metadataBase = new URL(process.env["NEXT_PUBLIC_SITE_URL"] ?? "http://loca
 
 export const metadata: Metadata = {
   metadataBase,
+  manifest: "/manifest.json",
   title: "QualiDiagIQ | Diagnóstico Tributário ABNT NBR 17301",
   description:
     "Descubra a maturidade tributária da sua empresa frente à Reforma do Consumo (EC 132/2023, LC 214/2025).",
   icons: {
-    icon: [{ url: "/brand/QDI-NB2-icone-app.png", type: "image/png" }],
-    apple: "/brand/QDI-NB2-icone-app.png",
+    icon: [{ url: "/brand/QDI-NB2-icone-app.jpg", type: "image/jpeg" }],
+    apple: "/brand/QDI-NB2-icone-app.jpg",
   },
   openGraph: {
     title: "QualiDiagIQ | Diagnóstico Tributário ABNT NBR 17301",
@@ -41,8 +53,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="antialiased">
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
+    <html lang="pt-BR" className={`${inter.variable} ${montserrat.variable} antialiased`}>
+      <body className="min-h-screen flex flex-col font-sans">
         <Header />
         <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
