@@ -383,3 +383,18 @@ class DiagnosticoResponse(BaseModel):
     versao_otimista: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CnaeSubclasseItemSchema(BaseModel):
+    """Uma subclass CNAE 2.3 (7 dígitos) para autocomplete."""
+
+    subclasse_id: str = Field(..., min_length=7, max_length=7, pattern=r"^\d{7}$")
+    descricao: str = Field(..., min_length=1)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class CnaeBuscaResponse(BaseModel):
+    """Resposta paginada leve do GET `/referencia/cnae/subclasses`."""
+
+    itens: list[CnaeSubclasseItemSchema]

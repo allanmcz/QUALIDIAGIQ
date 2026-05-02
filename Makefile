@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp
+.PHONY: help install dev down logs test lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict
 
 PYTHON := python3.12
 VENV := .venv
@@ -60,6 +60,10 @@ mvp-gate: ## Subconjunto checklist MVP: smoke API + schema 0012 + RLS dois tenan
 verify-schema-mvp: ## Verifica 0012/M11 + RLS no Postgres (DATABASE_URL ou QDI_POSTGRES_TEST_URL; default local :60322)
 	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
 	$(VENV)/bin/python scripts/verify_mvp_schema.py
+
+verify-schema-mvp-strict: ## Como verify-schema-mvp + CNAE 0013/0014 (1332 subclasses, extensões pg_trgm/pgcrypto)
+	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
+	QDI_VERIFY_SCHEMA_STRICT_CNAE=1 $(VENV)/bin/python scripts/verify_mvp_schema.py
 
 openapi-export: ## Gera docs/api/openapi.generated.json a partir do schema FastAPI (gitignored)
 	PYTHONPATH=. $(VENV)/bin/python scripts/export_openapi_json.py

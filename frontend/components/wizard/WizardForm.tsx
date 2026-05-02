@@ -28,6 +28,7 @@ import {
 } from "@/lib/schemas/wizard";
 import { cn } from "@/lib/utils";
 import { mascaraTelefoneBR } from "@/lib/utils/mascaraTelefoneBr";
+import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { postDiagnostico } from "@/lib/api/diagnostico";
 import { getAccessToken, getApiUrl } from "@/lib/api/config";
 import { postValidarAncora } from "@/lib/api/normativa";
@@ -151,6 +152,33 @@ export function WizardForm() {
     getValues,
     reset,
   } = form;
+
+  const [cnaeSugestoes, setCnaeSugestoes] = useState<CnaeSubclasseItem[]>([]);
+  const cnaeBusca = watch("empresa.cnae_principal");
+
+  useEffect(() => {
+    if (step !== 2) {
+      setCnaeSugestoes([]);
+      return;
+    }
+    const bruto = (cnaeBusca ?? "").trim();
+    const soDigitos = bruto.replace(/\D/g, "").slice(0, 7);
+    const q = soDigitos.length >= 2 ? soDigitos : bruto.length >= 2 ? bruto : "";
+    if (q.length < 2) {
+      setCnaeSugestoes([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      if (!getAccessToken()) {
+        setCnaeSugestoes([]);
+        return;
+      }
+      void fetchCnaeSubclasses(q, 12)
+        .then((r) => setCnaeSugestoes(r.itens))
+        .catch(() => setCnaeSugestoes([]));
+    }, 380);
+    return () => clearTimeout(t);
+  }, [cnaeBusca, step]);
 
   /** Perfil empresa (passo 2): selects sem valor real exibem placeholder com o mesmo tom do UF. */
   const empresaPerfil = watch("empresa");
@@ -887,12 +915,25 @@ export function WizardForm() {
 
                 <div className="space-y-2">
                   <Label htmlFor="cnae_principal">CNAE Principal (7 dígitos) *</Label>
+                  <datalist id="cnae-sugestoes-wizard">
+                    {cnaeSugestoes.map((s) => (
+                      <option key={s.subclasse_id} value={s.subclasse_id}>
+                        {s.descricao}
+                      </option>
+                    ))}
+                  </datalist>
                   <Input
                     id="cnae_principal"
-                    placeholder="1234567"
+                    placeholder="1234567 ou busque por texto"
+                    list="cnae-sugestoes-wizard"
+                    autoComplete="off"
                     {...register("empresa.cnae_principal")}
                     className={errors.empresa?.cnae_principal ? "border-destructive" : ""}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Com sessão ativa e API com Postgres (DATABASE_URL), digite 2+ caracteres para sugestões
+                    CONCLA/IBGE (GET /referencia/cnae/subclasses).
+                  </p>
                   {errors.empresa?.cnae_principal && (
                     <p className="text-sm text-destructive">{errors.empresa.cnae_principal.message}</p>
                   )}

@@ -75,6 +75,13 @@ def create_app() -> FastAPI:
                 "Ver ADR UX no repositório .github quando integrar baseline Lexiq oficial."
             ),
         },
+        {
+            "name": "Referência CNAE",
+            "description": (
+                "Consulta somente leitura CNAE 2.3 (schema qdi, CONCLA/IBGE). "
+                "Requer Bearer JWT e DATABASE_URL no backend."
+            ),
+        },
     ]
 
     app = FastAPI(
@@ -124,11 +131,12 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "qualidiagiq"}
 
     # Registrar os Routers do Domínio
-    from src.presentation.api.routers import auth_router, normativa_router
+    from src.presentation.api.routers import auth_router, cnae_router, normativa_router
 
     app.include_router(diagnostico_router.router)
     app.include_router(auth_router.router)
     app.include_router(normativa_router.router)
+    app.include_router(cnae_router.router)
 
     if settings.otel_tracing_enabled:
         _instrumentar_otel(app, settings.otel_service_name)

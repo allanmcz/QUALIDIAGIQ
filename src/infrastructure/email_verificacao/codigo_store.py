@@ -18,7 +18,7 @@ _MAX_EMAILS: Final[int] = 20_000
 _CODIGO_TTL_SEC: Final[int] = 600  # 10 min
 _RATE_SEGUNDOS: Final[int] = 45
 
-_codigos = TTLCache(maxsize=_MAX_EMAILS, ttl=_CODIGO_TTL_SEC)
+_codigos: TTLCache[str, str] = TTLCache(maxsize=_MAX_EMAILS, ttl=_CODIGO_TTL_SEC)
 _ultimo_envio: TTLCache[str, float] = TTLCache(maxsize=_MAX_EMAILS, ttl=_CODIGO_TTL_SEC)
 _lock = threading.Lock()
 

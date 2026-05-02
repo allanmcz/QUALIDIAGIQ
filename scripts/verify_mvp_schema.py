@@ -6,6 +6,8 @@ Uso (uma das opções):
   DATABASE_URL=postgresql://user:pass@host:5432/db python scripts/verify_mvp_schema.py
   QDI_POSTGRES_TEST_URL=postgresql://... python scripts/verify_mvp_schema.py
   python scripts/verify_mvp_schema.py postgresql://user:pass@host:5432/db
+  QDI_VERIFY_SCHEMA_STRICT_CNAE=1 make verify-schema-mvp
+  python scripts/verify_mvp_schema.py --strict-cnae postgresql://...
 
 Aceita URL com prefixo ``postgresql+asyncpg://`` (normaliza para asyncpg).
 
@@ -27,78 +29,133 @@ def _dsn_normalizado(raw: str) -> str:
     return raw.strip().replace("postgresql+asyncpg://", "postgresql://", 1)
 
 
-async def _verificar(conn_dsn: str) -> list[str]:
+def _parse_argv(argv: list[str]) -> tuple[str | None, bool]:
+    strict_cnae = os.environ.get("QDI_VERIFY_SCHEMA_STRICT_CNAE", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    dsn: str | None = None
+    for a in argv:
+        if a == "--strict-cnae":
+            strict_cnae = True
+        elif not a.startswith("-"):
+            dsn = a
+    return dsn, strict_cnae
+
+
+async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     erros: list[str] = []
-    conn = await asyncpg.connect(conn_dsn, timeout=10)
 
-    try:
-        aceite = await conn.fetchval("""
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = 'diagnosticos'
-              AND column_name = 'aceite_termos_privacidade_em'
-            """)
-        if aceite != 1:
-            erros.append(
-                "Coluna public.diagnosticos.aceite_termos_privacidade_em ausente "
-                "(aplique migração 0012 ou equivalente)."
-            )
+    aceite = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'aceite_termos_privacidade_em'
+    """)
+    if aceite != 1:
+        erros.append(
+            "Coluna public.diagnosticos.aceite_termos_privacidade_em ausente "
+            "(aplique migração 0012 ou equivalente)."
+        )
 
-        m12 = await conn.fetchval("""
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = 'diagnosticos'
-              AND column_name = 'checklist_m12_estado'
-            """)
-        if m12 != 1:
-            erros.append("Coluna public.diagnosticos.checklist_m12_estado ausente (migração 0011).")
+    m12 = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'checklist_m12_estado'
+    """)
+    if m12 != 1:
+        erros.append("Coluna public.diagnosticos.checklist_m12_estado ausente (migração 0011).")
 
-        rls = await conn.fetchval("""
-            SELECT c.relrowsecurity
-            FROM pg_class c
-            JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relname = 'diagnosticos'
-            """)
-        if rls is not True:
-            erros.append(
-                "RLS não habilitada em public.diagnosticos (ver migração 0003_rls_policies.sql)."
-            )
+    rls = await conn.fetchval("""
+        SELECT c.relrowsecurity
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'diagnosticos'
+    """)
+    if rls is not True:
+        erros.append(
+            "RLS não habilitada em public.diagnosticos (ver migração 0003_rls_policies.sql)."
+        )
 
-        n_pol = await conn.fetchval("""
-            SELECT count(*)::int
-            FROM pg_policies
-            WHERE schemaname = 'public' AND tablename = 'diagnosticos'
-            """)
-        if (n_pol or 0) < 4:
-            erros.append(
-                f"Esperadas políticas RLS em diagnosticos (>=4); encontradas: {n_pol or 0}."
-            )
+    n_pol = await conn.fetchval("""
+        SELECT count(*)::int
+        FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'diagnosticos'
+    """)
+    if (n_pol or 0) < 4:
+        erros.append(f"Esperadas políticas RLS em diagnosticos (>=4); encontradas: {n_pol or 0}.")
 
-        fn = await conn.fetchval("""
-            SELECT 1
-            FROM pg_proc p
-            JOIN pg_namespace n ON n.oid = p.pronamespace
-            WHERE n.nspname = 'public' AND p.proname = 'qdi_jwt_tenant_id'
-            """)
-        if fn != 1:
-            erros.append("Função public.qdi_jwt_tenant_id ausente (necessária para políticas RLS).")
-    finally:
-        await conn.close()
+    fn = await conn.fetchval("""
+        SELECT 1
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'qdi_jwt_tenant_id'
+    """)
+    if fn != 1:
+        erros.append("Função public.qdi_jwt_tenant_id ausente (necessária para políticas RLS).")
 
     return erros
 
 
-def main() -> int:
-    raw_url = (
-        (sys.argv[1] if len(sys.argv) > 1 else None)
-        or os.environ.get("DATABASE_URL")
-        or os.environ.get("QDI_POSTGRES_TEST_URL")
+async def _verificar_strict_cnae(conn: asyncpg.Connection) -> list[str]:
+    erros: list[str] = []
+
+    for ext in ("pg_trgm", "pgcrypto"):
+        ex = await conn.fetchval(
+            "SELECT 1 FROM pg_extension WHERE extname = $1",
+            ext,
+        )
+        if ex != 1:
+            erros.append(
+                f"Extensão PostgreSQL '{ext}' ausente (necessária para migração 0013 CNAE)."
+            )
+
+    tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'qdi' AND table_name = 'cnae_subclasse'
+    """)
+    if tbl != 1:
+        erros.append("Tabela qdi.cnae_subclasse ausente (aplique migrações 0013 e 0014).")
+        return erros
+
+    cnt = await conn.fetchval(
+        "SELECT count(*)::int FROM qdi.cnae_subclasse WHERE deleted_at IS NULL"
     )
+    esperado = 1332
+    if (cnt or 0) != esperado:
+        erros.append(
+            f"Contagem qdi.cnae_subclasse (sem deleted_at) esperada {esperado}; encontrada {cnt!r}."
+        )
+
+    return erros
+
+
+async def _verificar(conn_dsn: str, *, strict_cnae: bool) -> list[str]:
+    conn = await asyncpg.connect(conn_dsn, timeout=10)
+    try:
+        erros = await _verificar_nucleo(conn)
+        if strict_cnae:
+            erros.extend(await _verificar_strict_cnae(conn))
+        return erros
+    finally:
+        await conn.close()
+
+
+def main() -> int:
+    dsn_arg, strict_cnae = _parse_argv(sys.argv[1:])
+    raw_url = dsn_arg or os.environ.get("DATABASE_URL") or os.environ.get("QDI_POSTGRES_TEST_URL")
     if not raw_url:
         print(
             "Defina DATABASE_URL, QDI_POSTGRES_TEST_URL ou passe a DSN como argumento.",
+            file=sys.stderr,
+        )
+        print(
+            "Modo CNAE estrito: --strict-cnae ou QDI_VERIFY_SCHEMA_STRICT_CNAE=1",
             file=sys.stderr,
         )
         return 1
@@ -106,7 +163,7 @@ def main() -> int:
     dsn = _dsn_normalizado(raw_url)
 
     try:
-        erros = asyncio.run(_verificar(dsn))
+        erros = asyncio.run(_verificar(dsn, strict_cnae=strict_cnae))
     except Exception as exc:
         print(f"Falha de conexão ou execução: {exc}", file=sys.stderr)
         return 1
@@ -117,7 +174,10 @@ def main() -> int:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    print("Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id).")
+    msg = "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id)."
+    if strict_cnae:
+        msg += " Modo strict CNAE: extensões + 1332 subclasses vigentes."
+    print(msg)
     return 0
 
 

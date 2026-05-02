@@ -17,6 +17,7 @@ from supabase import Client, create_client
 
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
+from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
@@ -29,6 +30,9 @@ from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGe
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
+from src.infrastructure.repositories.postgres_cnae_subclasse_repository import (
+    PostgresCnaeSubclasseRepository,
+)
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
@@ -233,6 +237,26 @@ def get_email_service() -> SmtpEmailAdapter:
 def get_llm_service() -> OllamaLlmAdapter:
     """Injeta o serviço de IA."""
     return OllamaLlmAdapter()
+
+
+def get_buscar_cnae_subclasses_use_case(
+    _auth: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+) -> BuscarCnaeSubclasses:
+    """
+    Lookup CNAE via Postgres (`DATABASE_URL`).
+
+    RLS nas tabelas `qdi.*` aplica-se a roles Supabase; a API usa conexão de serviço
+    tipicamente com permissão SELECT já concedida nas migrações 0013/0014.
+    """
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Consulta CNAE indisponível: configure DATABASE_URL no serviço da API.",
+        )
+    repo = PostgresCnaeSubclasseRepository(dsn=dsn)
+    return BuscarCnaeSubclasses(repo=repo)
 
 
 def get_realizar_diagnostico_use_case(
