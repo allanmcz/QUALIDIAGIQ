@@ -15,10 +15,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  clearSelfServiceDiagnosticoResultado,
   loadSelfServiceDiagnosticoResultado,
   type SelfServiceDiagnosticoResultado,
 } from "@/lib/wizard/self_service_result";
+
+/** Mesmas faixas do domínio (NivelMaturidade) — rótulo para leitura executiva. */
+function rotuloNivelMaturidade(score: number | null | undefined): string | null {
+  if (score === null || score === undefined || !Number.isFinite(score)) return null;
+  if (score <= 20) return "Crítico";
+  if (score <= 40) return "Inicial";
+  if (score <= 60) return "Intermediário";
+  if (score <= 80) return "Avançado";
+  return "Exemplar";
+}
 
 export default function DiagnosticoConcluidoSelfServicePage() {
   const router = useRouter();
@@ -32,7 +41,8 @@ export default function DiagnosticoConcluidoSelfServicePage() {
       return;
     }
     setDados(r);
-    clearSelfServiceDiagnosticoResultado();
+    // Não limpar sessionStorage aqui: em React 18 Strict Mode o efeito roda 2x em dev e o segundo
+    // mount perderia os dados. O próximo POST self-service sobrescreve a mesma chave.
   }, [router]);
 
   if (dados === undefined) {
@@ -45,10 +55,12 @@ export default function DiagnosticoConcluidoSelfServicePage() {
     return null;
   }
 
-  const scoreTexto =
-    dados.score_geral !== null && dados.score_geral !== undefined
-      ? `${dados.score_geral.toFixed(1)} / 100`
-      : "em processamento";
+  const scoreValor =
+    dados.score_geral !== null && dados.score_geral !== undefined && Number.isFinite(dados.score_geral)
+      ? dados.score_geral
+      : null;
+  const scoreTexto = scoreValor !== null ? `${scoreValor.toFixed(1)} / 100` : "indisponível nesta resposta";
+  const nivelTexto = rotuloNivelMaturidade(scoreValor);
 
   return (
     <div className="container max-w-xl py-10 px-4 space-y-8">
@@ -68,20 +80,33 @@ export default function DiagnosticoConcluidoSelfServicePage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Resumo</CardTitle>
-          <CardDescription>Identificador e score calculado pela API</CardDescription>
+          <CardTitle className="text-lg">Resultado do diagnóstico</CardTitle>
+          <CardDescription>Score e nível de maturidade tributária (mesmo critério do relatório)</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
+        <CardContent className="space-y-3 text-sm">
           <p>
             <span className="font-medium text-foreground">Empresa:</span> {dados.empresa_razao_social}
           </p>
-          <p>
-            <span className="font-medium text-foreground">Score geral:</span>{" "}
-            <span className="tabular-nums">{scoreTexto}</span>
-          </p>
+          <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1">
+            <p className="text-base font-semibold text-foreground tabular-nums">Score geral: {scoreTexto}</p>
+            {nivelTexto ? (
+              <p className="text-sm text-muted-foreground">
+                Nível de maturidade:{" "}
+                <span className="font-medium text-foreground">{nivelTexto}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Se o score não aparecer, atualize a página ou confira a versão da API — o JSON deve incluir{" "}
+                <span className="font-mono text-[11px]">score.score_geral.valor</span>.
+              </p>
+            )}
+          </div>
           <p className="text-muted-foreground text-xs">
-            ID: <span className="font-mono break-all">{dados.id}</span> · idioma relatório:{" "}
-            {dados.locale_relatorio}
+            Situação: <span className="font-medium text-foreground">{dados.status}</span>
+            {" · "}
+            ID: <span className="font-mono break-all">{dados.id}</span>
+            {" · "}
+            Relatório: {dados.locale_relatorio}
           </p>
         </CardContent>
         <CardFooter className="flex-col gap-2 sm:flex-row">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -42,6 +42,18 @@ import {
 import { montarRotulosMultiplaEscolha } from "@/lib/wizard/multiplaLabels";
 
 const TOTAL_STEPS = 3;
+
+/**
+ * Reserva linha para erro de validação — evita que uma coluna “puxe” o alinhamento vertical
+ * do grid quando só um campo falha (ex.: Porte × Regime).
+ */
+function SlotMensagemErroCampo({ children }: { children?: ReactNode }) {
+  return (
+    <div className="min-h-[1.375rem] text-sm leading-tight text-destructive" aria-live="polite">
+      {children}
+    </div>
+  );
+}
 
 /** API pode devolver tipo com variações — unifica para o wizard não cair no ramo errado (ex.: ternária). */
 function normalizarTipoPerguntaWizard(tipo: string | undefined): string {
@@ -786,9 +798,9 @@ export function WizardForm() {
         step === 3 ? "flex-1 gap-3" : "space-y-6",
       )}
     >
-      <div className={cn("space-y-2", step === 3 && "shrink-0")}>
-        <div className="flex justify-between text-sm text-muted-foreground font-medium">
-          <span>
+      <div className={cn("w-full min-w-0 space-y-2", step === 3 && "shrink-0")}>
+        <div className="flex w-full justify-between gap-4 text-sm text-muted-foreground font-medium">
+          <span className="min-w-0 truncate">
             Passo {step} de {TOTAL_STEPS}
             {step === 3 && totalPerguntas > 0 && (
               <span className="text-foreground/80">
@@ -797,9 +809,9 @@ export function WizardForm() {
               </span>
             )}
           </span>
-          <span>{Math.round(progressBarPercent)}% Concluído</span>
+          <span className="shrink-0 tabular-nums">{Math.round(progressBarPercent)}% Concluído</span>
         </div>
-        <Progress value={progressBarPercent} className="h-2" />
+        <Progress value={progressBarPercent} className="w-full" />
       </div>
 
       <div
@@ -820,7 +832,10 @@ export function WizardForm() {
           )}
         >
         <CardHeader
-          className={cn("space-y-1 bg-muted/30 border-b shrink-0", step === 3 && "py-3 md:py-4")}
+          className={cn(
+            "space-y-1 bg-muted/30 border-b shrink-0",
+            step === 3 ? "py-3 md:py-4" : "px-6 pb-4 pt-6 sm:px-6",
+          )}
         >
           <CardTitle className={cn("text-primary", step === 3 ? "text-xl md:text-2xl" : "text-2xl")}>
             {step === 1 && "Identificação Inicial"}
@@ -840,9 +855,9 @@ export function WizardForm() {
         <CardContent
           ref={painelPerguntasRef}
           className={cn(
-            "pt-6",
-            step === 3 &&
-              "flex flex-1 flex-col min-h-0 overflow-y-auto overscroll-contain pt-4 pb-2 md:pb-3",
+            step === 3
+              ? "flex flex-1 flex-col min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-2 md:pb-3 md:px-6"
+              : "px-6 pb-4 pt-6 sm:px-6",
           )}
         >
           <form
@@ -988,12 +1003,12 @@ export function WizardForm() {
             )}
 
             {step === 2 && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <span className="sr-only" aria-live="polite">
                   {catalogLoading ? "Carregando questionário adaptativo." : ""}
                 </span>
                 {!getAccessToken() && (
-                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground md:text-sm">
+                  <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground md:text-sm leading-relaxed">
                     Sem login corporativo você pode concluir o assistente; na última pergunta,{" "}
                     <span className="font-medium text-foreground">Gerar diagnóstico</span> guarda as respostas e abre
                     a etapa seguinte: confirmação do e-mail (código) para gravar na nuvem ou login B2B para o painel
@@ -1005,13 +1020,12 @@ export function WizardForm() {
                     {catalogError}
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="porte">Porte da empresa (faturamento anual) *</Label>
-                    <p className="text-xs text-muted-foreground leading-snug">
-                      Classificação por receita bruta dos últimos 12 meses (autodeclarada — não substitui
-                      enquadramento legal).
-                    </p>
+                {/* Grid com colunas alinhadas: labels na mesma linha, selects na mesma linha; erros em faixa de altura fixa */}
+                <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2 md:items-start">
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Label htmlFor="porte" className="text-foreground">
+                      Porte da empresa (faturamento anual) *
+                    </Label>
                     <select
                       id="porte"
                       className={classSelectPerfil(
@@ -1028,12 +1042,14 @@ export function WizardForm() {
                       <option value="medio">Médio — faturamento anual até R$ 500 milhões</option>
                       <option value="grande">Grande — faturamento anual acima de R$ 500 milhões</option>
                     </select>
-                    {errors.empresa?.porte && (
-                      <p className="text-sm text-destructive">{errors.empresa.porte.message}</p>
-                    )}
+                    <SlotMensagemErroCampo>
+                      {errors.empresa?.porte ? errors.empresa.porte.message : null}
+                    </SlotMensagemErroCampo>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="regime">Regime Tributário *</Label>
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Label htmlFor="regime" className="text-foreground">
+                      Regime tributário *
+                    </Label>
                     <select
                       id="regime"
                       className={classSelectPerfil(
@@ -1050,15 +1066,21 @@ export function WizardForm() {
                       <option value="lucro_real">Lucro Real</option>
                       <option value="mei">MEI</option>
                     </select>
-                    {errors.empresa?.regime && (
-                      <p className="text-sm text-destructive">{errors.empresa.regime.message}</p>
-                    )}
+                    <SlotMensagemErroCampo>
+                      {errors.empresa?.regime ? errors.empresa.regime.message : null}
+                    </SlotMensagemErroCampo>
                   </div>
                 </div>
+                <p className="-mt-1 text-xs text-muted-foreground leading-snug md:col-span-2">
+                  Porte: classificação por receita bruta dos últimos 12 meses (autodeclarada — não substitui
+                  enquadramento legal).
+                </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="setor_macro">Setor Macro *</Label>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2 md:items-start">
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Label htmlFor="setor_macro" className="text-foreground">
+                      Setor macro *
+                    </Label>
                     <select
                       id="setor_macro"
                       className={classSelectPerfil(
@@ -1076,12 +1098,14 @@ export function WizardForm() {
                       <option value="agro">Agro</option>
                       <option value="consumo">Consumo</option>
                     </select>
-                    {errors.empresa?.setor_macro && (
-                      <p className="text-sm text-destructive">{errors.empresa.setor_macro.message}</p>
-                    )}
+                    <SlotMensagemErroCampo>
+                      {errors.empresa?.setor_macro ? errors.empresa.setor_macro.message : null}
+                    </SlotMensagemErroCampo>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="uf">UF *</Label>
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Label htmlFor="uf" className="text-foreground">
+                      UF *
+                    </Label>
                     <select
                       id="uf"
                       className={classSelectPerfil(!!errors.empresa?.uf, selectPerfilVazio(empresaPerfil.uf))}
@@ -1096,14 +1120,14 @@ export function WizardForm() {
                         </option>
                       ))}
                     </select>
-                    {errors.empresa?.uf && (
-                      <p className="text-sm text-destructive">{errors.empresa.uf.message}</p>
-                    )}
+                    <SlotMensagemErroCampo>
+                      {errors.empresa?.uf ? errors.empresa.uf.message : null}
+                    </SlotMensagemErroCampo>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cnae_principal">CNAE Principal (7 dígitos) *</Label>
+                <div className="space-y-2 border-t border-border/60 pt-5">
+                  <Label htmlFor="cnae_principal">CNAE principal (7 dígitos) *</Label>
                   <datalist id="cnae-sugestoes-wizard">
                     {cnaeSugestoes.map((s) => (
                       <option key={s.subclasse_id} value={s.subclasse_id}>

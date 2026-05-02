@@ -251,8 +251,12 @@ class ManifestoPesosResponse(BaseModel):
             "example": {
                 "versao_manifesto": "2026-04-30",
                 "versao_catalogo": "v1-doc-05-full-37",
-                "formula_score_geral": "Para cada dimensao: media ponderada...",
-                "nota_calibracao_m02": "M02 - ...",
+                "formula_score_geral": (
+                    "Em cada dimensão, média ponderada das respostas; score geral: agregação ponderada."
+                ),
+                "nota_calibracao_m02": (
+                    "Pesos e faixas determinísticos; versão do manifesto identifica o critério aplicado."
+                ),
                 "pesos_macro_dimensao": {"fiscal": 1.5, "tecnologica": 1.3},
                 "perguntas": [
                     {
@@ -270,12 +274,17 @@ class ManifestoPesosResponse(BaseModel):
     versao_manifesto: str = "2026-04-30"
     versao_catalogo: str
     formula_score_geral: str = (
-        "Para cada dimensão: média ponderada das respostas pelo peso da pergunta. "
-        "Score geral: média ponderada dos valores por dimensão usando pesos_macro_dimensao."
+        "Em cada dimensão (Fiscal, Estratégica, Contábil, Financeira, Operacional, Tecnológica e "
+        "Compliance ABNT NBR 17301), calculamos uma média ponderada das respostas aplicáveis ao seu "
+        "perfil, usando o peso de cada pergunta do catálogo. O score geral (0 a 100) é a média "
+        "ponderada desses resultados dimensionais, segundo os pesos macro publicados nesta página — "
+        "critério único e auditável para todos os diagnósticos na mesma versão do produto."
     )
     nota_calibracao_m02: str = (
-        "M02 - Faixas de maturidade 0-100 e pesos sao deterministicos; calibracao "
-        "fina por segmento apos coorte real (Beta)."
+        "As faixas de maturidade e os pesos são definidos de forma determinística e documentada, "
+        "garantindo repetibilidade entre execuções. Evoluções por segmento ou porte podem ser "
+        "incorporadas em versões futuras do manifesto, sempre com identificação de versão — sua "
+        "organização sabe exatamente qual critério fundamentou o relatório recebido."
     )
     pesos_macro_dimensao: dict[str, float]
     perguntas: list[ManifestoPesoPerguntaSchema]
@@ -298,12 +307,10 @@ class MetodologiaResponse(BaseModel):
                     "tecnologica": 1.3,
                 },
                 "nota_metodologica": (
-                    "pesos_macro_dimensao_score_geral ponderam apenas a agregação do score "
-                    "a partir das médias por dimensão; dentro de cada dimensão usam-se os pesos "
-                    "do catálogo (ver GET /diagnosticos/manifesto-pesos)."
+                    "Índice 0 a 100 por dimensões; agregação com pesos macro; catálogo público de perguntas."
                 ),
                 "recomendacoes_gaps_criticos": [
-                    "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
+                    "Dimensão fiscal baixa: revisar cadastros e cenários CBS/IBS com apoio especializado.",
                 ],
             }
         }

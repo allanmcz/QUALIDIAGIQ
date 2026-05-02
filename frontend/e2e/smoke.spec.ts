@@ -24,7 +24,7 @@ test.describe("Smoke QDI", () => {
 
   test("/metodologia exibe título (API opcional no CI)", async ({ page }) => {
     await page.goto("/metodologia");
-    await expect(page.getByRole("heading", { name: /Metodologia e manifesto de pesos/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Como calculamos a sua maturidade tributária/i })).toBeVisible();
   });
 
   test("/termos exibe título MVP", async ({ page }) => {

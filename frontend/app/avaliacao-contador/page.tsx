@@ -34,7 +34,7 @@ export default function AvaliacaoContadorPage() {
           <span className="text-sm font-medium text-foreground shrink-0">Conferir agora:</span>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
             <Link href="/metodologia" className="text-primary font-semibold underline underline-offset-4">
-              Metodologia e manifesto (site)
+              Metodologia e pesos (site)
             </Link>
             <Link href="/abnt-framework" className="text-primary font-semibold underline underline-offset-4">
               Framework ABNT (contexto)
@@ -79,7 +79,7 @@ export default function AvaliacaoContadorPage() {
         <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
           <li>
             <Link href="/metodologia" className="text-primary underline font-medium">
-              Metodologia e manifesto no site
+              Metodologia e pesos no site
             </Link>
           </li>
           <li>

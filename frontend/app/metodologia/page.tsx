@@ -14,6 +14,21 @@ import {
 /** Itens por página na tabela do catálogo (evita ~30 linhas de uma vez só). */
 const CATALOGO_PAGE_SIZE = 10;
 
+/** Rótulos comerciais PT-BR (slug da API → texto para diretoria/contabilidade). */
+const ROTULO_DIMENSAO: Record<string, string> = {
+  fiscal: "Fiscal",
+  estrategica: "Estratégica",
+  contabil: "Contábil",
+  financeira: "Financeira",
+  operacional: "Operacional",
+  tecnologica: "Tecnológica",
+  compliance_abnt_17301: "Compliance ABNT NBR 17301",
+};
+
+function rotuloDimensao(slug: string): string {
+  return ROTULO_DIMENSAO[slug] ?? slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function TabelaPesosMacro({ titulo, pesos }: { titulo: string; pesos: Record<string, number> }) {
   const linhas = Object.entries(pesos).sort(([a], [b]) => a.localeCompare(b));
   return (
@@ -24,13 +39,13 @@ function TabelaPesosMacro({ titulo, pesos }: { titulo: string; pesos: Record<str
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left p-3 font-medium">Dimensão</th>
-              <th className="text-right p-3 font-medium">Peso macro</th>
+              <th className="text-right p-3 font-medium">Peso no resultado final</th>
             </tr>
           </thead>
           <tbody>
             {linhas.map(([dim, peso]) => (
               <tr key={dim} className="border-t">
-                <td className="p-3 text-sm capitalize">{dim.replace(/_/g, " ")}</td>
+                <td className="p-3 text-sm">{rotuloDimensao(dim)}</td>
                 <td className="p-3 text-right tabular-nums">{peso}</td>
               </tr>
             ))}
@@ -106,23 +121,27 @@ export default function MetodologiaPage() {
 
       <header className="space-y-4">
         <p className="text-xs uppercase tracking-wide text-accent font-semibold">
-          Transparência que vira vantagem competitiva
+          Metodologia auditável · QualiDiagIQ
         </p>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-          Como o QualiDiagIQ calcula a sua maturidade tributária
+          Como calculamos a sua maturidade tributária
         </h1>
+        <p className="text-lg font-medium text-foreground max-w-3xl">
+          Critérios públicos, pesos explícitos e base legal por pergunta — o mesmo motor que gera o seu
+          relatório executivo.
+        </p>
         <p className="text-muted-foreground leading-relaxed max-w-3xl text-base">
-          Mostramos <strong className="text-foreground font-medium">o que entra no diagnóstico</strong>,{" "}
-          <strong className="text-foreground font-medium">com que peso</strong> e{" "}
-          <strong className="text-foreground font-medium">em qual base legal</strong> — o mesmo critério
-          aplicado ao seu relatório. Assim, diretoria e contabilidade ganham previsibilidade e defesa de
-          posição frente à <strong className="text-foreground font-medium">Reforma do Consumo</strong>{" "}
-          (EC 132/2023, LC 214/2025) e ao referencial{" "}
-          <strong className="text-foreground font-medium">ABNT NBR 17301:2026</strong>.
+          Aqui você vê <strong className="text-foreground font-medium">o que avaliamos</strong>,{" "}
+          <strong className="text-foreground font-medium">com que importância relativa</strong> e{" "}
+          <strong className="text-foreground font-medium">em qual fundamento normativo</strong>, alinhados à{" "}
+          <strong className="text-foreground font-medium">Reforma do Consumo</strong> (EC 132/2023, LC
+          214/2025) e ao referencial <strong className="text-foreground font-medium">ABNT NBR 17301:2026</strong>
+          — diferencial para governança, auditoria interna e decisões de investimento em adequação (CBS/IBS,
+          processos e tecnologia).
         </p>
         <p className="text-sm text-muted-foreground max-w-3xl">
-          Os números abaixo são atualizados automaticamente para refletir a versão vigente do produto — a
-          mesma usada no assistente de diagnóstico quando você responde ao questionário.
+          Os valores são carregados da versão ativa do produto e coincidem com o assistente de diagnóstico no
+          momento em que você conclui o questionário.
         </p>
       </header>
 
@@ -145,20 +164,25 @@ export default function MetodologiaPage() {
       {!carregando && meta && (
         <section className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
           <div>
-            <h2 className="text-xl font-semibold text-foreground">Base normativa e versão do critério</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{meta.versao_normativa}</p>
+            <h2 className="text-xl font-semibold text-foreground">Referência normativa e critério de score</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Âncora de compliance: <span className="font-medium text-foreground">{meta.versao_normativa}</span>
+            </p>
           </div>
           <TabelaPesosMacro
-            titulo="Peso de cada dimensão no resultado final (0 a 100)"
+            titulo="Importância relativa de cada dimensão no índice final (0 a 100)"
             pesos={meta.pesos_macro_dimensao_score_geral}
           />
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Como interpretamos o diagnóstico</h3>
+            <h3 className="text-lg font-semibold">Leitura executiva do modelo</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{meta.nota_metodologica}</p>
           </div>
           {meta.recomendacoes_gaps_criticos.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">O que merece atenção prioritária</h3>
+              <h3 className="text-lg font-semibold">Sinais para priorizar próximos passos</h3>
+              <p className="text-xs text-muted-foreground">
+                Orientações ilustrativas geradas pelo produto — não substituem assessoria jurídica ou contábil.
+              </p>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 {meta.recomendacoes_gaps_criticos.map((r, i) => (
                   <li key={`${i}-${r.slice(0, 24)}`}>{r}</li>
@@ -172,7 +196,7 @@ export default function MetodologiaPage() {
       {!carregando && manifesto && (
         <section className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap gap-4 justify-between items-baseline">
-            <h2 className="text-xl font-semibold text-foreground">Perguntas, pesos e base legal</h2>
+            <h2 className="text-xl font-semibold text-foreground">Manifesto de perguntas e transparência fiscal</h2>
             <p className="text-xs text-muted-foreground">
               Versão do questionário:{" "}
               <span className="font-medium text-foreground">{manifesto.versao_catalogo}</span>
@@ -182,11 +206,11 @@ export default function MetodologiaPage() {
             </p>
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">De onde vem o número final</h3>
+            <h3 className="text-lg font-semibold">Da resposta ao índice final</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{manifesto.formula_score_geral}</p>
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Equilíbrio entre dimensões</h3>
+            <h3 className="text-lg font-semibold">Previsibilidade e evolução do critério</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{manifesto.nota_calibracao_m02}</p>
           </div>
           <TabelaPesosMacro titulo="Pesos por dimensão (detalhamento)" pesos={manifesto.pesos_macro_dimensao} />
@@ -214,7 +238,7 @@ export default function MetodologiaPage() {
                   {perguntasPagina.map((p) => (
                     <tr key={p.codigo} className="border-t">
                       <td className="p-2 text-xs whitespace-nowrap font-medium">{p.codigo}</td>
-                      <td className="p-2 text-xs capitalize">{p.dimensao.replace(/_/g, " ")}</td>
+                      <td className="p-2 text-xs">{rotuloDimensao(p.dimensao)}</td>
                       <td className="p-2 text-xs capitalize">{p.tipo.replace(/_/g, " ")}</td>
                       <td className="p-2 text-right tabular-nums">{p.peso}</td>
                       <td className="p-2 text-xs text-muted-foreground max-w-xs">{p.base_legal ?? "—"}</td>

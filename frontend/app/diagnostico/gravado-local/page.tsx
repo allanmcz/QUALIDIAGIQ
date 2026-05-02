@@ -29,6 +29,20 @@ import {
 import { saveSelfServiceDiagnosticoResultado } from "@/lib/wizard/self_service_result";
 import { clearWizardDraft } from "@/lib/wizard/wizard_draft";
 
+/** Normaliza `score.score_geral.valor` (API pode serializar número ou string). */
+function extrairValorScoreGeral(score: unknown): number | null {
+  if (!score || typeof score !== "object") return null;
+  const sg = (score as Record<string, unknown>)["score_geral"];
+  if (!sg || typeof sg !== "object") return null;
+  const v = (sg as Record<string, unknown>)["valor"];
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v.trim());
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 /** Extrai campos exibidos na página de conclusão a partir da resposta JSON da API. */
 function respostaApiParaResultado(data: unknown): {
   id: string;
@@ -39,22 +53,20 @@ function respostaApiParaResultado(data: unknown): {
 } | null {
   if (!data || typeof data !== "object") return null;
   const o = data as Record<string, unknown>;
-  const id = o["id"];
+  const idRaw = o["id"];
+  const id =
+    typeof idRaw === "string"
+      ? idRaw
+      : typeof idRaw === "number" && Number.isFinite(idRaw)
+        ? String(idRaw)
+        : null;
   const status = o["status"];
   const empresa_razao_social = o["empresa_razao_social"];
   const locale_relatorio = o["locale_relatorio"];
-  if (typeof id !== "string" || typeof status !== "string") return null;
+  if (id === null || typeof status !== "string") return null;
   if (typeof empresa_razao_social !== "string") return null;
   const loc = typeof locale_relatorio === "string" ? locale_relatorio : "pt-BR";
-  let score_geral: number | null = null;
-  const score = o["score"];
-  if (score && typeof score === "object") {
-    const sg = (score as Record<string, unknown>)["score_geral"];
-    if (sg && typeof sg === "object") {
-      const v = (sg as Record<string, unknown>)["valor"];
-      if (typeof v === "number" && Number.isFinite(v)) score_geral = v;
-    }
-  }
+  const score_geral = extrairValorScoreGeral(o["score"]);
   return { id, status, empresa_razao_social, locale_relatorio: loc, score_geral };
 }
 

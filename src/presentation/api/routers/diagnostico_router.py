@@ -376,13 +376,22 @@ async def obter_metodologia(
         versao_normativa="ABNT NBR 17301:2026",
         pesos_macro_dimensao_score_geral=pesos_macro_iso,
         nota_metodologica=(
-            "pesos_macro_dimensao_score_geral ponderam apenas a agregação do score "
-            "a partir das médias por dimensão; dentro de cada dimensão usam-se os pesos "
-            "do catálogo (ver GET /diagnosticos/manifesto-pesos)."
+            "O QualiDiagIQ produz um índice único de 0 a 100 — maturidade tributária frente à Reforma "
+            "do Consumo (EC 132/2023, LC 214/2025), com âncora metodológica na ABNT NBR 17301:2026. "
+            "Para cada dimensão avaliada, calculamos um resultado a partir das suas respostas ao "
+            "questionário, usando os pesos individuais do catálogo (totalmente públicos no manifesto "
+            "de perguntas). Em seguida, combinamos esses resultados dimensionais com pesos estratégicos "
+            "macro — por exemplo, maior peso na dimensão fiscal, por concentrar exposição normativa e "
+            "operacional na transição para CBS/IBS. O mesmo critério é aplicado a todos os diagnósticos "
+            "na mesma versão do produto, permitindo comparabilidade e auditoria."
         ),
         recomendacoes_gaps_criticos=[
-            "Se o score Fiscal for < 40, recomenda-se auditoria imediata.",
-            "Se o score Tecnológico for < 50, sugere-se adoção de ERP atualizado.",
+            "Dimensão fiscal com resultado baixo: priorize revisão de cadastros tributários, "
+            "classificações e cenários CBS/IBS com apoio contábil ou consultoria especializada — "
+            "pistas de trabalho, não substituem parecer jurídico.",
+            "Dimensão tecnológica com resultado baixo: avalie integração entre ERP e registros fiscais "
+            "e a robustez dos dados para sustentar o novo arcaboço — frequentemente gargalo em projetos "
+            "de adequação.",
         ],
     )
 

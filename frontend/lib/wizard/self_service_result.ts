@@ -29,12 +29,18 @@ export function loadSelfServiceDiagnosticoResultado(): SelfServiceDiagnosticoRes
     const data: unknown = JSON.parse(raw);
     if (!data || typeof data !== "object") return null;
     const o = data as Record<string, unknown>;
-    const id = o["id"];
+    const idRaw = o["id"];
+    const id =
+      typeof idRaw === "string"
+        ? idRaw
+        : typeof idRaw === "number" && Number.isFinite(idRaw)
+          ? String(idRaw)
+          : null;
     const status = o["status"];
     const empresa_razao_social = o["empresa_razao_social"];
     const locale_relatorio = o["locale_relatorio"];
     const score_geral = o["score_geral"];
-    if (typeof id !== "string" || typeof status !== "string") return null;
+    if (id === null || typeof status !== "string") return null;
     if (typeof empresa_razao_social !== "string") return null;
     if (typeof locale_relatorio !== "string") return null;
     const score =

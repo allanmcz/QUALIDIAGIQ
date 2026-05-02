@@ -14,11 +14,11 @@ function Progress({
     <ProgressPrimitive.Root
       value={value}
       data-slot="progress"
-      className={cn("flex flex-wrap gap-3", className)}
+      className={cn("flex w-full min-w-0 flex-col gap-2", className)}
       {...props}
     >
       {children}
-      <ProgressTrack>
+      <ProgressTrack className="h-2">
         <ProgressIndicator />
       </ProgressTrack>
     </ProgressPrimitive.Root>

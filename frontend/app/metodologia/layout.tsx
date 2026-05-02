@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Como funciona o diagnóstico | QualiDiagIQ",
+  title: "Metodologia e pesos | QualiDiagIQ",
   description:
-    "Entenda de forma clara como avaliamos a maturidade tributária da sua empresa frente à Reforma do Consumo e à ABNT NBR 17301:2026 — critérios transparentes e auditáveis.",
+    "Critérios públicos do diagnóstico tributário: pesos por dimensão, perguntas e base legal (EC 132/2023, LC 214/2025, ABNT NBR 17301:2026). Transparência para diretoria e contabilidade.",
 };
 
 export default function MetodologiaLayout({

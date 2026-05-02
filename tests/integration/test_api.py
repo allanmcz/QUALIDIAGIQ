@@ -45,7 +45,9 @@ async def test_manifesto_pesos_publico(async_client):
     assert len(body["perguntas"]) >= 1
     assert body["pesos_macro_dimensao"]["fiscal"] == 1.5
     assert body["perguntas"][0]["codigo"]
-    assert "M02" in body.get("nota_calibracao_m02", "")
+    nota_cal = body.get("nota_calibracao_m02", "")
+    assert "determinística" in nota_cal
+    assert "manifesto" in nota_cal.lower()
 
 
 @pytest.mark.asyncio
