@@ -81,6 +81,13 @@
           "type": ["array", "null"],
           "items": { "type": "string" }
         },
+        "rotulos_escala": {
+          "type": ["array", "null"],
+          "minItems": 5,
+          "maxItems": 5,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Somente tipo escala_1_5 — rótulos PT-BR para os valores 1 a 5 (esquerda=pior maturidade)."
+        },
         "pilar_abnt": {
           "type": "string",
           "minLength": 1,

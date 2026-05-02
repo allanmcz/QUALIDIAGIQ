@@ -65,6 +65,8 @@ class Pergunta:
     multipla_total: int | None = None
     # Rótulos opcionais vindos do catálogo JSON (Lexiq / editorial).
     opcoes: tuple[str, ...] | None = None
+    # Para ESCALA_1_5: exatamente 5 textos (valor 1 … 5), opcional — UI usa default de maturidade se ausente.
+    rotulos_escala: tuple[str, ...] | None = None
     # Opcional — vínculo editorial com pilares da ABNT NBR 17301:2026 (ex.: cláusula / tema).
     pilar_abnt: str | None = None
     id: UUID = field(default_factory=uuid4)

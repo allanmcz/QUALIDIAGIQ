@@ -34,6 +34,7 @@ import { postDiagnostico } from "@/lib/api/diagnostico";
 import { getAccessToken } from "@/lib/api/config";
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
+import { rotulosEscalaParaPergunta } from "@/lib/wizard/escalaLabels";
 import { STORAGE_PENDING_DIAGNOSTICO } from "@/lib/wizard/pending_diagnostico";
 import {
   clearWizardDraft,
@@ -451,24 +452,28 @@ export function WizardForm() {
     const t = normalizarTipoPerguntaWizard(p.tipo);
 
     if (t === "escala_1_5") {
+      const rotulos = rotulosEscalaParaPergunta(p.rotulos_escala);
       return (
-        <div
-          className="flex flex-wrap gap-2 sm:gap-3 pt-2"
-          role="group"
-          aria-label="Resposta em escala de 1 a 5"
-        >
+        <div className="flex flex-col gap-2 pt-2" role="group" aria-label="Resposta em escala de 1 a 5">
           {[1, 2, 3, 4, 5].map((n) => (
             <Label
               key={n}
-              className={`${rowClass} min-w-[2.75rem] shrink-0 justify-center px-3 py-2.5`}
+              className={`${rowClass} w-full flex-wrap items-start gap-3 py-3 sm:items-center`}
             >
-              <input
-                type="radio"
-                value={String(n)}
-                className="w-4 h-4 text-primary focus:ring-primary"
-                {...register(base)}
-              />
-              <span className="font-normal text-sm tabular-nums">{n}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <input
+                  type="radio"
+                  value={String(n)}
+                  className="h-4 w-4 text-primary focus:ring-primary"
+                  {...register(base)}
+                />
+                <span className="inline-flex min-w-[1.5rem] justify-center rounded-md bg-muted px-2 py-0.5 text-sm font-semibold tabular-nums text-foreground">
+                  {n}
+                </span>
+              </div>
+              <span className="min-w-0 flex-1 text-sm font-normal leading-snug text-foreground">
+                {rotulos[n - 1]}
+              </span>
             </Label>
           ))}
         </div>

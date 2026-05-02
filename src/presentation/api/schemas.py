@@ -205,6 +205,13 @@ class QuestionarioPerguntaItemSchema(BaseModel):
     base_legal: str | None = None
     multipla_total: int | None = None
     opcoes: list[str] | None = None
+    rotulos_escala: list[str] | None = Field(
+        default=None,
+        description=(
+            "Somente escala_1_5: exatamente 5 rótulos para valores 1 a 5 (catálogo); "
+            "se omitido, o cliente aplica rótulos padrão de maturidade."
+        ),
+    )
     pilar_abnt: str | None = Field(
         default=None,
         description="Referência opcional ao pilar/tema ABNT NBR 17301:2026 vinculado à pergunta.",

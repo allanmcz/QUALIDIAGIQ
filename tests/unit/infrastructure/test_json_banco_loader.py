@@ -87,6 +87,69 @@ def test_carregar_perguntas_condicional(tmp_path) -> None:
     assert c.setores_permitidos is not None
 
 
+def test_escala_1_5_com_rotulos_escala_cinco_itens() -> None:
+    lista = carregar_banco_mvp()
+    abnt1 = next(p for p in lista if p.codigo == "Q-ABNT-001")
+    assert abnt1.tipo == TipoPergunta.ESCALA_1_5
+    assert abnt1.rotulos_escala is not None
+    assert len(abnt1.rotulos_escala) == 5
+    assert "Maduro" in abnt1.rotulos_escala[4]
+
+
+def test_rotulos_escala_tamanho_invalido_erro(tmp_path) -> None:
+    p = tmp_path / "bad_scale.json"
+    p.write_text(
+        json.dumps(
+            {
+                "versao_catalogo": "t",
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Escala?",
+                        "peso": 1.0,
+                        "tipo": "escala_1_5",
+                        "base_legal": None,
+                        "condicao": None,
+                        "rotulos_escala": ["a", "b", "c"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="exatamente 5"):
+        carregar_perguntas_de_arquivo(p)
+
+
+def test_rotulos_escala_so_para_escala_erro(tmp_path) -> None:
+    p = tmp_path / "bad_bin.json"
+    p.write_text(
+        json.dumps(
+            {
+                "versao_catalogo": "t",
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Bin?",
+                        "peso": 1.0,
+                        "tipo": "binaria",
+                        "base_legal": None,
+                        "condicao": None,
+                        "rotulos_escala": ["1", "2", "3", "4", "5"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="escala_1_5"):
+        carregar_perguntas_de_arquivo(p)
+
+
 def test_carregar_lista_vazia_erro(tmp_path) -> None:
     p = tmp_path / "empty.json"
     p.write_text(

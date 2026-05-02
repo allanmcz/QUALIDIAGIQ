@@ -94,6 +94,25 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
         if isinstance(opcoes_raw, list) and opcoes_raw:
             opcoes = tuple(str(x) for x in opcoes_raw)
 
+        rotulos_escala_raw = item.get("rotulos_escala")
+        rotulos_escala: tuple[str, ...] | None = None
+        if rotulos_escala_raw is not None:
+            if not isinstance(rotulos_escala_raw, list):
+                raise ValueError(f"perguntas[{i}]: 'rotulos_escala' deve ser lista ou null.")
+            tupla = tuple(str(x).strip() for x in rotulos_escala_raw)
+            if len(tupla) != 5:
+                raise ValueError(
+                    f"perguntas[{i}]: 'rotulos_escala' deve ter exatamente 5 strings (valores 1 a 5). "
+                    f"Recebido: {len(tupla)}."
+                )
+            if any(not x for x in tupla):
+                raise ValueError(f"perguntas[{i}]: 'rotulos_escala' não pode conter string vazia.")
+            rotulos_escala = tupla
+        if tipo != TipoPergunta.ESCALA_1_5 and rotulos_escala is not None:
+            raise ValueError(
+                f"perguntas[{i}]: 'rotulos_escala' só é permitido quando tipo é escala_1_5 (código {codigo})."
+            )
+
         pilar_raw = item.get("pilar_abnt")
         pilar_abnt: str | None = None
         if pilar_raw is not None and str(pilar_raw).strip():
@@ -111,6 +130,7 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
                 condicao=condicao,
                 multipla_total=multipla_total,
                 opcoes=opcoes,
+                rotulos_escala=rotulos_escala,
                 pilar_abnt=pilar_abnt,
             )
         )

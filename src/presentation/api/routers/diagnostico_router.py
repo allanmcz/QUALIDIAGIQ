@@ -465,6 +465,7 @@ async def obter_questionario_adaptativo(
             base_legal=p.base_legal,
             multipla_total=p.multipla_total,
             opcoes=list(p.opcoes) if p.opcoes else None,
+            rotulos_escala=list(p.rotulos_escala) if p.rotulos_escala else None,
             pilar_abnt=p.pilar_abnt,
         )
         for p in lista

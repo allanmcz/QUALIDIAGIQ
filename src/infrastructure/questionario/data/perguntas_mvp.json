@@ -188,7 +188,14 @@
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 5.1",
       "pilar_abnt": "ABNT NBR 17301:2026 — cap. 5.1 — Eixo 1 (Plan)",
-      "condicao": null
+      "condicao": null,
+      "rotulos_escala": [
+        "Inexistente — não há prática reconhecível",
+        "Incipiente — pontual, sem formalização",
+        "Parcial — existe, mas cobertura ou evidências incompletas",
+        "Estruturado — formalizado, recorrente e conhecido pela equipe",
+        "Maduro — evidências, monitoramento e melhoria contínua"
+      ]
     },
     {
       "id": "5bd89013-2b3f-5c73-8a73-9351e114f14c",
@@ -199,7 +206,14 @@
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 6.1",
       "pilar_abnt": "ABNT NBR 17301:2026 — cap. 6.1 — Eixo 2 (Plan + Check); ISO 31000",
-      "condicao": null
+      "condicao": null,
+      "rotulos_escala": [
+        "Inexistente — não há prática reconhecível",
+        "Incipiente — pontual, sem formalização",
+        "Parcial — existe, mas cobertura ou evidências incompletas",
+        "Estruturado — formalizado, recorrente e conhecido pela equipe",
+        "Maduro — evidências, monitoramento e melhoria contínua"
+      ]
     },
     {
       "id": "9c1e9918-4856-5798-8797-37efacde4ff7",
@@ -210,7 +224,14 @@
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 7.1",
       "pilar_abnt": "ABNT NBR 17301:2026 — cap. 7.1 — Eixos 3+4 (Do)",
-      "condicao": null
+      "condicao": null,
+      "rotulos_escala": [
+        "Inexistente — não há prática reconhecível",
+        "Incipiente — pontual, sem formalização",
+        "Parcial — existe, mas cobertura ou evidências incompletas",
+        "Estruturado — formalizado, recorrente e conhecido pela equipe",
+        "Maduro — evidências, monitoramento e melhoria contínua"
+      ]
     },
     {
       "id": "4c00b243-fd49-5402-8163-b2613d2c987e",
@@ -221,7 +242,14 @@
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 9",
       "pilar_abnt": "ABNT NBR 17301:2026 — cap. 9 — Eixo 6 (Check)",
-      "condicao": null
+      "condicao": null,
+      "rotulos_escala": [
+        "Inexistente — não há prática reconhecível",
+        "Incipiente — pontual, sem formalização",
+        "Parcial — existe, mas cobertura ou evidências incompletas",
+        "Estruturado — formalizado, recorrente e conhecido pela equipe",
+        "Maduro — evidências, monitoramento e melhoria contínua"
+      ]
     },
     {
       "id": "62589a5f-b918-5ee3-baaa-b636023dcb2c",
@@ -232,7 +260,14 @@
       "tipo": "escala_1_5",
       "base_legal": "ABNT NBR 17301:2026 cap. 10",
       "pilar_abnt": "ABNT NBR 17301:2026 — cap. 10 — Eixo 7 (Act) + Programa Confia (RFB)",
-      "condicao": null
+      "condicao": null,
+      "rotulos_escala": [
+        "Inexistente — não há prática reconhecível",
+        "Incipiente — pontual, sem formalização",
+        "Parcial — existe, mas cobertura ou evidências incompletas",
+        "Estruturado — formalizado, recorrente e conhecido pela equipe",
+        "Maduro — evidências, monitoramento e melhoria contínua"
+      ]
     },
     {
       "id": "3203f8ac-ba35-560d-bf95-1a1952b534ec",

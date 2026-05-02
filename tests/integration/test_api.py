@@ -68,6 +68,10 @@ async def test_get_questionario_adaptativo(async_client):
     assert data["total"] == len(data["perguntas"])
     assert data["total"] >= 1
     assert data["perguntas"][0]["codigo"] == "Q-EST-001"
+    abnt1 = next(p for p in data["perguntas"] if p["codigo"] == "Q-ABNT-001")
+    assert abnt1["tipo"] == "escala_1_5"
+    assert abnt1.get("rotulos_escala") is not None
+    assert len(abnt1["rotulos_escala"]) == 5
 
 
 @pytest.mark.asyncio
