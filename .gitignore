@@ -72,6 +72,9 @@ docs/*
 !docs/operacao/
 !docs/operacao/**
 
+# Handoff plano MVP fechado (exceção — versionado; restante docs/ segue ignorado)
+!docs/HANDOFF_PLANO_MVP_FECHADO.md
+
 # Cursor IDE caches
 .cursor/cache/
 .cursor/.tmp/
