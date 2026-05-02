@@ -85,6 +85,8 @@ class FaixaFaturamentoDeclarada(Enum):
 
     Valores em R$ para segmentação / benchmark; não substitui escrituração nem auditoria.
     Marcos alinhados a faixas usuais de enquadramento (ex.: limites do Simples Nacional, LC 123/2006).
+
+    Documentação produto/convenção MVP: docs/operacao/FAIXA_FATURAMENTO_AUTODECLARADA.md.
     """
 
     ATE_360_MIL = "ate_360_mil"

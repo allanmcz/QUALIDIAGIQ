@@ -22,7 +22,7 @@ Esta decisão **não** reabre D2 (CNPJ permanece obrigatório no fluxo declarado
 |----|------|--------|-------------------|-----------------|
 | **D1** | Free self-service vs B2B logado | **Fechado p/ Allan (2026-05-02)** | Diagnóstico **contínuo sem login no início**; **POST persiste com sessão B2B**; utilizador pode **cadastrar-se para consultor** ou **seguir sozinho**, com **opt-in** para contacto/CRM quando aplicável. | Wizard/copy + eventual checkbox ou passo dedicado; revisão jurídica textos; POST/auth mantêm contrato actual até refactor explícito. |
 | **D2** | CNPJ opcional no Free | Fechado p/ Allan | **CNPJ obrigatório** (14 dígitos) na API e wizard. | Nenhuma mudança até decisão explícita em contrário. |
-| **D3** | Faturamento / setor fino | **Adiado pós-MVP (2026-05-02)** | Catálogo usa `setor_macro`; sem mudança de escopo nesta data. | Schema + UI futuros. |
+| **D3** | Faturamento / setor fino | **Adiado pós-MVP (2026-05-02)** — *faixa opcional entregue* | Catálogo usa `setor_macro`. **Complemento:** faixa de faturamento bruto anual **opcional** (autodeclaração), slugs + convenção de limites — ver **`docs/operacao/FAIXA_FATURAMENTO_AUTODECLARADA.md`**. Não reabre “setor fino” nem simulações numéricas nesta data. | Migração **0017**, wizard, API, WORM. |
 | **D4** | URL canônica dev/stage/prod | **Parcial** | `RUNBOOK_DEPLOY_ROLLBACK.md`, `frontend/.env.production.example`, `NEXT_PUBLIC_SITE_URL` documentados. Falta URL final de produção assinada por Ops. | CORS + secrets ambiente alvo. |
 | **D5** | Billing Plus/Pro | **Adiado (2026-05-02)** | Sem gateway no código; reavaliar após tração MVP. | Stripe/outro = roadmap Beta. |
 | **D6** | Persistir M12 | Feito | Coluna `checklist_m12_estado` + PATCH dedicado. | — |

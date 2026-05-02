@@ -8,6 +8,7 @@
 |-----------|-----|
 | **[CHECKLIST_CONFIRMACAO_ALLAN_MVP.md](./CHECKLIST_CONFIRMACAO_ALLAN_MVP.md)** | Checklist rastreável (Git): mapa *Quem decide / Quem executa*, P5/P6, jurídico, D\*, M02/M03/M08, Beta. |
 | [DECISOES_PRODUTO_MVP_D1_D5.md](./DECISOES_PRODUTO_MVP_D1_D5.md) | Registro vivo das decisões D1–D5. |
+| [FAIXA_FATURAMENTO_AUTODECLARADA.md](./FAIXA_FATURAMENTO_AUTODECLARADA.md) | Faixa de faturamento opcional: slugs, convenção de limites MVP, LGPD, relação com porte. |
 | [STATUS_JURIDICO_MVP.md](../legal/STATUS_JURIDICO_MVP.md) | Processo jurídico MVP (termos/privacidade). |
 
 ## Deploy, smoke e schema
