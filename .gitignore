@@ -68,6 +68,10 @@ docs/*
 !docs/contabilidade/
 !docs/contabilidade/**
 
+# Operação — runbooks, smoke, SQL de verificação (exceção — versionados)
+!docs/operacao/
+!docs/operacao/**
+
 # Cursor IDE caches
 .cursor/cache/
 .cursor/.tmp/

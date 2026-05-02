@@ -1,0 +1,3 @@
+versao_catalogo: v1-doc-05-full-37
+JSON: 37 códigos | MD: 37 códigos | interseção: 37
+OK — conjuntos coincidentes.
