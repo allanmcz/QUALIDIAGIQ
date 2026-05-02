@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function WizardPage() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-muted/10 p-4 py-4 md:py-8">
+    <div className="flex min-h-0 flex-1 flex-col bg-muted/10 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] pt-4 md:px-4 md:pb-12 md:pt-8">
       <div className="container mx-auto flex min-h-0 flex-1 flex-col gap-4 max-w-4xl md:gap-5">
         <div className="text-center space-y-2 shrink-0">
           <div className="inline-flex items-center justify-center p-2 bg-accent/10 rounded-full text-accent mb-1">

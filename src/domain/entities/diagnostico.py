@@ -65,8 +65,7 @@ class PorteEmpresa(Enum):
     MICRO = "micro"  # até R$ 360 mil
     PEQUENO = "pequeno"  # até R$ 4,8 mi
     MEDIO = "medio"  # R$ 4,8 mi a R$ 500 mi (PwC: "menores")
-    GRANDE = "grande"  # R$ 500 mi a R$ 5 bi (PwC: faixa intermediária)
-    ENTERPRISE = "enterprise"  # > R$ 5 bi (PwC: "grande porte")
+    GRANDE = "grande"  # a partir de R$ 500 mi (faixa superior única no assistente MVP)
 
 
 class SetorMacro(Enum):

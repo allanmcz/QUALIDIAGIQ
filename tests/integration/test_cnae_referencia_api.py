@@ -1,13 +1,12 @@
 """
 Testes HTTP — GET /referencia/cnae/subclasses (M01 + P6/G2).
 
-Requer token; requer DATABASE_URL com migrações 0013/0014 para 200 com dados.
+Endpoint público (somente leitura); DATABASE_URL + migrações 0013/0014 para 200 com dados.
 """
 
 from __future__ import annotations
 
 import os
-import uuid
 
 import asyncpg
 import pytest
@@ -15,7 +14,6 @@ from httpx import ASGITransport, AsyncClient
 
 from src.infrastructure.config.settings import get_settings
 from src.presentation.api.main import app
-from tests.conftest import cabecalho_auth_bearer
 
 POSTGRES_URL = os.environ.get(
     "QDI_POSTGRES_TEST_URL",
@@ -32,9 +30,9 @@ async def async_client():
 
 class TestCnaeReferenciaApi:
     @pytest.mark.asyncio
-    async def test_sem_bearer_retorna_401(self, async_client: AsyncClient) -> None:
+    async def test_sem_bearer_nao_retorna_401(self, async_client: AsyncClient) -> None:
         r = await async_client.get("/referencia/cnae/subclasses?q=6201")
-        assert r.status_code == 401
+        assert r.status_code != 401, r.text
 
     @pytest.mark.asyncio
     async def test_sem_database_url_retorna_503(
@@ -43,8 +41,7 @@ class TestCnaeReferenciaApi:
         monkeypatch.delenv("DATABASE_URL", raising=False)
         get_settings.cache_clear()
         try:
-            h = cabecalho_auth_bearer()
-            r = await async_client.get("/referencia/cnae/subclasses?q=6201", headers=h)
+            r = await async_client.get("/referencia/cnae/subclasses?q=6201")
             assert r.status_code == 503
             det = r.json().get("detail", "")
             texto = det if isinstance(det, str) else str(det)
@@ -59,8 +56,7 @@ class TestCnaeReferenciaApi:
         monkeypatch.setenv("DATABASE_URL", POSTGRES_URL)
         get_settings.cache_clear()
         try:
-            h = cabecalho_auth_bearer()
-            r = await async_client.get("/referencia/cnae/subclasses?q=6", headers=h)
+            r = await async_client.get("/referencia/cnae/subclasses?q=6")
             assert r.status_code == 422
         finally:
             get_settings.cache_clear()
@@ -78,10 +74,7 @@ class TestCnaeReferenciaApi:
                 await conn.close()
             except Exception:
                 pytest.skip("Postgres ou tabela qdi.cnae_subclasse indisponível")
-            uid = uuid.uuid4()
-            tid = uuid.uuid4()
-            h = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)
-            r = await async_client.get("/referencia/cnae/subclasses?q=6201&limite=5", headers=h)
+            r = await async_client.get("/referencia/cnae/subclasses?q=6201&limite=5")
             assert r.status_code == 200
             body = r.json()
             assert "itens" in body

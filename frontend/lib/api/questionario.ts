@@ -31,9 +31,6 @@ export function buildQuestionarioSearchParams(empresa: EmpresaData): URLSearchPa
   p.set("cnae_principal", empresa.cnae_principal);
   p.set("uf", empresa.uf.toUpperCase());
   p.set("setor_macro", empresa.setor_macro);
-  if (empresa.faixa_faturamento) {
-    p.set("faixa_faturamento", empresa.faixa_faturamento);
-  }
   return p;
 }
 

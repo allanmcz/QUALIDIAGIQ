@@ -5,7 +5,7 @@ Camada: Infrastructure
 Implementa: CnaeSubclasseConsultaPort
 
 Nota: conexão usa papel com permissão SELECT (tipicamente postgres em dev ou pool serviço em prod).
-RLS Supabase para role authenticated não se aplica ao superuser — endpoint HTTP já exige JWT.
+RLS Supabase para role authenticated não se aplica ao superuser — endpoint HTTP é público (somente leitura).
 """
 
 from __future__ import annotations

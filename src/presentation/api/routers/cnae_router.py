@@ -1,21 +1,18 @@
 """Rotas HTTP — lookup CNAE 2.3 (referência global).
 
 Camada: Presentation
-Requer Bearer JWT (mesmo contrato dos demais endpoints autenticados).
+Público (somente leitura): o wizard M01 pode ser preenchido sem login; o autocomplete não deve depender de JWT.
+Rate limit: prefixo `/referencia/cnae` em ``PublicRateLimitMiddleware``.
 """
 
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID  # noqa: TC003
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses  # noqa: TC001
-from src.presentation.api.dependencies import (
-    get_buscar_cnae_subclasses_use_case,
-    get_current_user_tenant,
-)
+from src.presentation.api.dependencies import get_buscar_cnae_subclasses_use_case
 from src.presentation.api.schemas import CnaeBuscaResponse, CnaeSubclasseItemSchema
 
 router = APIRouter(prefix="/referencia/cnae", tags=["Referência CNAE"])
@@ -27,11 +24,10 @@ router = APIRouter(prefix="/referencia/cnae", tags=["Referência CNAE"])
     summary="Buscar subclasses CNAE (autocomplete)",
     description=(
         "Consulta somente leitura em `qdi.cnae_subclasse` (CONCLA/IBGE). "
-        "Exige `DATABASE_URL` no backend. Base: Resolução CONCLA nº 02/2023."
+        "Não exige autenticação. Exige `DATABASE_URL` no backend. Base: Resolução CONCLA nº 02/2023."
     ),
 )
 async def buscar_subclasses_cnae(
-    _auth: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
     use_case: Annotated[BuscarCnaeSubclasses, Depends(get_buscar_cnae_subclasses_use_case)],
     q: Annotated[
         str,

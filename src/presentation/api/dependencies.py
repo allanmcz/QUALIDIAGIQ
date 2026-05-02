@@ -339,14 +339,12 @@ def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter:
     )
 
 
-def get_buscar_cnae_subclasses_use_case(
-    _auth: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
-) -> BuscarCnaeSubclasses:
+def get_buscar_cnae_subclasses_use_case() -> BuscarCnaeSubclasses:
     """
     Lookup CNAE via Postgres (`DATABASE_URL`).
 
-    RLS nas tabelas `qdi.*` aplica-se a roles Supabase; a API usa conexão de serviço
-    tipicamente com permissão SELECT já concedida nas migrações 0013/0014.
+    Rota pública (wizard sem login). RLS nas tabelas `qdi.*` aplica-se a roles Supabase;
+    a API usa conexão de serviço com SELECT nas migrações 0013/0014.
     """
     settings = get_settings()
     dsn = settings.sync_database_url

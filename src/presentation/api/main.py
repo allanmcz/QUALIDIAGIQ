@@ -109,7 +109,7 @@ def create_app() -> FastAPI:
             "name": "Referência CNAE",
             "description": (
                 "Consulta somente leitura CNAE 2.3 (schema qdi, CONCLA/IBGE). "
-                "Requer Bearer JWT e DATABASE_URL no backend."
+                "Público; exige DATABASE_URL no backend. Rate limit por IP (middleware público)."
             ),
         },
     ]

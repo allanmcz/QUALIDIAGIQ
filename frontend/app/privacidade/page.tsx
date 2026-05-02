@@ -28,11 +28,6 @@ export default function PrivacidadePage() {
           formulário; respostas ao questionário; métricas de uso técnico (logs), quando aplicável.
         </li>
         <li>
-          <strong>Faturamento (opcional):</strong> quando o respondente escolhe uma faixa de faturamento
-          bruto anual no assistente, o valor é tratado como autodeclaração para segmentação estatística /
-          relatório — não é valor contábil auditado nem substitui escrituração fiscal.
-        </li>
-        <li>
           <strong>Telefone do respondente (opcional):</strong> quando informado, utilizado para contato
           comercial B2B relacionado ao diagnóstico; mantido pelo mesmo período de retenção do registro do
           diagnóstico no PostgreSQL (Supabase); exclusão e titularidade conforme canal definido em produção.

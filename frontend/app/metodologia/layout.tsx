@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Metodologia e pesos | QualiDiagIQ",
+  title: "Como funciona o diagnóstico | QualiDiagIQ",
   description:
-    "Transparência M03 — pesos macro do score geral e manifesto público por pergunta (LC 214/2025 art. 5º, ABNT NBR 17301:2026).",
+    "Entenda de forma clara como avaliamos a maturidade tributária da sua empresa frente à Reforma do Consumo e à ABNT NBR 17301:2026 — critérios transparentes e auditáveis.",
 };
 
 export default function MetodologiaLayout({

@@ -28,7 +28,6 @@ OPENAPI_EXAMPLES_POST_DIAGNOSTICO: dict[str, dict[str, Any]] = {
                 "cnae_principal": "1234567",
                 "uf": "SP",
                 "setor_macro": "comercio",
-                "faixa_faturamento": "entre_360_mil_e_4_8_mi",
             },
             "respondente": {
                 "email": "fiscal@empresa.com.br",

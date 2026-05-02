@@ -2,7 +2,7 @@
 INSERT INTO admins (email, hashed_password, nome, tenant_id)
 VALUES (
     'allan@tributolab.com.br',
-    '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
+    '$2b$12$wMvBNbLK1tmotwrvNSz4rOHkM8F7AQMbMzV6Fdq4h71z1BZVj7Cyi',
     'Admin Tributiq',
     '33333333-3333-4333-8333-333333333333'::uuid
 )

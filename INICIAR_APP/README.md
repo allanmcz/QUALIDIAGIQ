@@ -6,14 +6,16 @@ Scripts para **subir o ambiente Docker** e rodar a **bateria de QA** local (alin
 
 | Script | Quando usar |
 |--------|----------------|
-| **`iniciar.sh`** | Dia a dia com **feedback visual**: sobe o stack, testa `/health`, imprime URLs e fica em **`docker compose logs -f`**. **Ctrl+C = `compose down`** (para tudo). |
+| **`iniciar.sh`** | Dia a dia com **feedback visual**: chama **`make dev`** (Compose `up -d --build`, igual ao `iniciar-app.sh dev`), testa `/health`, imprime URLs e fica em **`docker compose logs -f`**. **Ctrl+C = `compose down`** (para tudo). |
 | **`iniciar-app.sh`** | **CLI completo**: `dev` / `stop` / `logs` / `status`, pipeline `deps` · `backend` · `integration` · `frontend` · `full`. **Ctrl+C em `logs`** só encerra o tail. |
+| **`parar-app.sh`** | **Só parar o Docker**: `docker compose down` na raiz do repo (atalho explícito; mesmo efeito que `make down` ou `iniciar-app.sh stop`). Opção `-v` remove volumes (zera Postgres local). |
 
 Texto comum de URLs e dicas fica em **`lib/qdi-env.sh`** (uma única fonte).
 
 ```bash
-chmod +x INICIAR_APP/iniciar.sh INICIAR_APP/iniciar-app.sh   # uma vez
+chmod +x INICIAR_APP/iniciar.sh INICIAR_APP/iniciar-app.sh INICIAR_APP/parar-app.sh   # uma vez
 ./INICIAR_APP/iniciar-app.sh help
+./INICIAR_APP/parar-app.sh          # encerra stack
 ```
 
 ## Portas (host)
@@ -32,8 +34,8 @@ No Compose, o browser fala com **`/api-backend/*`** no mesmo host (**proxy** no 
 
 | Comando | Ação |
 |---------|------|
-| *(nenhum)* ou `dev` | `docker compose up -d --remove-orphans` |
-| `stop` | `docker compose down` |
+| *(nenhum)* ou `dev` | `docker compose up -d --build --remove-orphans` (reconstrói imagens quando o contexto de build mudou; evita API com deps antigas do `pyproject.toml`) |
+| `stop` | `docker compose down` (atalho dedicado: **`./INICIAR_APP/parar-app.sh`**) |
 | `logs` | `docker compose logs -f` |
 | `status` | `docker compose ps` |
 
@@ -69,7 +71,9 @@ Antes de `integration`: suba o DB (`./INICIAR_APP/iniciar-app.sh dev`) ou aponte
 
 ## Makefile
 
-- `make dev` / `make down` / `make logs` — equivalentes diretos ao Compose (os scripts chamam ou complementam isso).
+- `make dev` — `docker compose up -d --build --remove-orphans` (usado por **`iniciar.sh`** e espelhado por **`iniciar-app.sh dev`**).
+- `make down` — igual a `./INICIAR_APP/parar-app.sh` (sem apagar volumes).
+- `make logs` — equivalente direto ao Compose.
 
 ## Testes manuais rápidos
 

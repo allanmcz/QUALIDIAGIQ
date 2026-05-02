@@ -18,8 +18,8 @@ QualiDiagIQ — INICIAR_APP/iniciar-app.sh
 
 Docker / ambiente
   (omitido)   Equivale a: dev
-  dev         docker compose up -d --remove-orphans (db + api + web)
-  stop        docker compose down
+  dev         docker compose up -d --build --remove-orphans (db + api + web; rebuild se Dockerfile/pyproject mudaram)
+  stop        docker compose down (atalho: ./INICIAR_APP/parar-app.sh)
   logs        docker compose logs -f (Ctrl+C só para o tail; containers continuam)
   status      docker compose ps
 
@@ -70,7 +70,8 @@ run_frontend() {
 }
 
 run_dev() {
-  docker compose up -d --remove-orphans
+  # --build: evita imagem da API “congelada” sem deps novas do pyproject.toml (ex.: langchain-ollama).
+  docker compose up -d --build --remove-orphans
   qdi_print_service_info
 }
 

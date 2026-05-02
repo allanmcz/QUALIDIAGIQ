@@ -165,8 +165,7 @@
       "condicao": {
         "portes_permitidos": [
           "medio",
-          "grande",
-          "enterprise"
+          "grande"
         ]
       }
     },
@@ -403,8 +402,7 @@
         ],
         "portes_permitidos": [
           "medio",
-          "grande",
-          "enterprise"
+          "grande"
         ]
       }
     },
@@ -422,8 +420,7 @@
         ],
         "portes_permitidos": [
           "medio",
-          "grande",
-          "enterprise"
+          "grande"
         ]
       }
     },
@@ -441,8 +438,7 @@
         ],
         "portes_permitidos": [
           "medio",
-          "grande",
-          "enterprise"
+          "grande"
         ]
       }
     },
@@ -460,8 +456,7 @@
         ],
         "portes_permitidos": [
           "medio",
-          "grande",
-          "enterprise"
+          "grande"
         ]
       }
     },
@@ -479,8 +474,7 @@
         ],
         "portes_permitidos": [
           "medio",
-          "grande",
-          "enterprise"
+          "grande"
         ]
       }
     }

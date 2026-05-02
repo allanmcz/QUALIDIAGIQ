@@ -2,7 +2,7 @@
 Rate limiting leve para rotas públicas (por IP e janela de 1 minuto).
 
 Camada: Presentation
-Endpoints: prefixos normativa + manifesto/metodologia/questionário (GET/públicos).
+Endpoints: prefixos normativa + manifesto/metodologia/questionário + CNAE referência (GET/públicos).
 
 Analogia: quota por sessão no Oracle — aqui em memória por processo (MVP).
 """
@@ -38,6 +38,8 @@ def _grupo_rota_publica(path: str) -> str | None:
         return "public_diag_catalogo"
     if path in ("/diagnosticos/manifesto-pesos", "/diagnosticos/metodologia"):
         return "public_diag_catalogo"
+    if path.startswith("/referencia/cnae"):
+        return "public_cnae"
     return None
 
 

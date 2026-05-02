@@ -12,6 +12,7 @@ from typing import Annotated, Any, cast
 from uuid import UUID
 
 import jwt
+import psycopg2
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.context import CryptContext
@@ -87,12 +88,10 @@ async def login(request: LoginRequest) -> LoginResponse:
     user: dict[str, Any] | None = None
 
     try:
-        if settings_login.ci_playwright_integrated and settings_login.sync_database_url:
-            row = buscar_admin_por_email_postgres(
-                str(request.email),
-                settings_login.sync_database_url,
-            )
-            user = row
+        dsn_login = settings_login.sync_database_url
+        # Com DATABASE_URL (Compose, CI, etc.) a tabela `admins` está no Postgres — evita REST Supabase em :54321 inexistente no container.
+        if dsn_login:
+            user = buscar_admin_por_email_postgres(str(request.email), dsn_login)
         else:
             client = get_supabase_client()
             response = client.table("admins").select("*").eq("email", str(request.email)).execute()
@@ -106,7 +105,32 @@ async def login(request: LoginRequest) -> LoginResponse:
                 detail="E-mail ou senha incorretos",
             )
 
-        if not pwd_context.verify(request.password, str(user["hashed_password"])):
+        hash_bruto = user.get("hashed_password")
+        if hash_bruto is None or str(hash_bruto).strip() == "":
+            logger.error("admin_sem_hashed_password", email=request.email)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Cadastro de administrador incompleto (senha não definida). Recrie o usuário.",
+            )
+        hash_norm = str(hash_bruto).strip()
+
+        try:
+            senha_ok = pwd_context.verify(request.password, hash_norm)
+        except ValueError as e:
+            logger.exception(
+                "login_hash_bcrypt_invalido",
+                email=request.email,
+                erro=str(e),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    "Hash de senha do administrador é inválido ou incompatível com o bcrypt atual. "
+                    "Gere nova senha com: python -m src.scripts.criar_admin (ou atualize o registro em `admins`)."
+                ),
+            ) from e
+
+        if not senha_ok:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="E-mail ou senha incorretos",
@@ -120,8 +144,15 @@ async def login(request: LoginRequest) -> LoginResponse:
                 detail="Configuração de tenant ausente para este usuário",
             )
 
-        tenant_id = UUID(str(raw_tid))
-        user_id = UUID(str(user["id"]))
+        try:
+            tenant_id = UUID(str(raw_tid))
+            user_id = UUID(str(user["id"]))
+        except ValueError as e:
+            logger.exception("login_uuid_admin_invalido", erro=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Registro de administrador com identificador inválido no banco.",
+            ) from e
 
         access_token = create_access_token(
             subject_user_id=user_id,
@@ -134,11 +165,30 @@ async def login(request: LoginRequest) -> LoginResponse:
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.exception("login_falhou", erro=str(e))
+    except psycopg2.Error as e:
+        logger.exception("login_postgres_erro", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Autenticação indisponível: não foi possível consultar o cadastro no PostgreSQL. "
+                "Confira DATABASE_URL (host/porta; na API em Docker use «db», no host use localhost e a porta "
+                "publicada, ex.: 60322) e se as migrações criaram a tabela `admins`."
+            ),
+        ) from e
+    except jwt.PyJWTError as e:
+        logger.exception("login_jwt_emit_erro", erro=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno ao autenticar",
+            detail="Falha ao emitir o token de sessão. Confira JWT_SECRET_KEY e JWT_ALGORITHM no servidor.",
+        ) from e
+    except Exception as e:
+        logger.exception("login_falhou", tipo=type(e).__name__, erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Erro interno ao autenticar. Veja os logs da API (evento login_falhou). "
+                "Se não usa DATABASE_URL, confira SUPABASE_URL/SUPABASE_ANON_KEY e conectividade."
+            ),
         ) from e
 
 

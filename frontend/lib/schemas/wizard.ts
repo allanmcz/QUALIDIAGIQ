@@ -52,31 +52,9 @@ export const UFS_BR = [
 /** Texto do `<option value="">` e validação dos selects do perfil empresa (wizard passo 2). */
 export const MENSAGEM_SELECT_PERFIL_EMPRESA = "Selecione a opção.";
 
-const PORTES_EMPRESA = ["micro", "pequeno", "medio", "grande", "enterprise"] as const;
+const PORTES_EMPRESA = ["micro", "pequeno", "medio", "grande"] as const;
 const REGIMES_TRIBUTARIOS = ["simples_nacional", "lucro_presumido", "lucro_real", "mei"] as const;
 const SETORES_MACRO = ["comercio", "industria", "servicos", "agro", "consumo"] as const;
-
-/** Faixa de faturamento bruto anual autodeclarada (opcional) — slugs alinhados à API Python. */
-export const FAIXAS_FATURAMENTO_OPCIONAL = [
-  "ate_360_mil",
-  "entre_360_mil_e_4_8_mi",
-  "entre_4_8_mi_e_10_mi",
-  "entre_10_mi_e_60_mi",
-  "entre_60_mi_e_100_mi",
-  "entre_100_mi_e_500_mi",
-  "acima_500_mi",
-] as const;
-
-/** Rótulos PT-BR para o `<select>` do wizard (passo empresa). */
-export const ROTULOS_FAIXA_FATURAMENTO: Record<(typeof FAIXAS_FATURAMENTO_OPCIONAL)[number], string> = {
-  ate_360_mil: "Até R$ 360 mil",
-  entre_360_mil_e_4_8_mi: "De R$ 360 mil a R$ 4,8 milhões",
-  entre_4_8_mi_e_10_mi: "De R$ 4,8 milhões a R$ 10 milhões",
-  entre_10_mi_e_60_mi: "De R$ 10 milhões a R$ 60 milhões",
-  entre_60_mi_e_100_mi: "De R$ 60 milhões a R$ 100 milhões",
-  entre_100_mi_e_500_mi: "De R$ 100 milhões a R$ 500 milhões",
-  acima_500_mi: "Acima de R$ 500 milhões",
-};
 
 function zSelectPerfilEmpresa(valoresPermitidos: readonly string[]) {
   return z.string().refine((val) => val !== "" && valoresPermitidos.includes(val), {
@@ -101,11 +79,6 @@ export const EmpresaSchema = z.object({
     .regex(/^\d+$/, "CNAE apenas números"),
   uf: zSelectPerfilEmpresa(UFS_BR),
   setor_macro: zSelectPerfilEmpresa(SETORES_MACRO),
-  /** Opcional — omitir ou vazio = não informar (LGPD / minimização). */
-  faixa_faturamento: z
-    .union([z.literal(""), z.enum(FAIXAS_FATURAMENTO_OPCIONAL)])
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? undefined : v)),
 });
 
 export const RespondenteSchema = z.object({

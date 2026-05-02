@@ -170,7 +170,7 @@ def main() -> None:
         7.5,
         "ternaria",
         "LC 214/2025 art. 5º; art. 415",
-        {"portes_permitidos": ["medio", "grande", "enterprise"]},
+        {"portes_permitidos": ["medio", "grande"]},
     )
     add(
         "Q-OPER-003",
@@ -327,7 +327,7 @@ def main() -> None:
     # --- Lucro real avançado (proxy: porte médio+ — doc original cita faturamento > 100M) ---
     lr_cond = {
         "regimes_permitidos": ["lucro_real"],
-        "portes_permitidos": ["medio", "grande", "enterprise"],
+        "portes_permitidos": ["medio", "grande"],
     }
     add(
         "Q-REAL-001",

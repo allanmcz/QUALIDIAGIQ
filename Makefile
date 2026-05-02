@@ -15,8 +15,8 @@ install: ## Cria .venv e instala dependências
 	@echo ""
 	@echo "✅ Ambiente Python pronto. Ative com: source $(VENV)/bin/activate"
 
-dev: ## Sobe ambiente de dev (db + api + web)
-	docker compose up -d --remove-orphans
+dev: ## Sobe ambiente de dev (db + api + web); --build alinha deps do pyproject na imagem da API
+	docker compose up -d --build --remove-orphans
 	@echo ""
 	@echo "✅ Ambiente subindo:"
 	@echo "  → API:  http://localhost:60000/docs (mapa host 60000 → container 8000)"

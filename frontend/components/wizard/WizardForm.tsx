@@ -21,9 +21,7 @@ import { Progress } from "@/components/ui/progress";
 
 import {
   DiagnosticoPayloadSchema,
-  FAIXAS_FATURAMENTO_OPCIONAL,
   MENSAGEM_SELECT_PERFIL_EMPRESA,
-  ROTULOS_FAIXA_FATURAMENTO,
   type DiagnosticoPayload,
   type DiagnosticoPayloadFormInput,
   UFS_BR,
@@ -36,6 +34,11 @@ import { getAccessToken, getApiUrl } from "@/lib/api/config";
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
 import { STORAGE_PENDING_DIAGNOSTICO } from "@/lib/wizard/pending_diagnostico";
+import {
+  clearWizardDraft,
+  loadWizardDraft,
+  saveWizardDraft,
+} from "@/lib/wizard/wizard_draft";
 import { montarRotulosMultiplaEscolha } from "@/lib/wizard/multiplaLabels";
 
 const TOTAL_STEPS = 3;
@@ -76,8 +79,16 @@ export function WizardForm() {
   const [normaCarregando, setNormaCarregando] = useState(false);
   /** Índice da pergunta exibida no passo 3 (uma por página). */
   const [indicePerguntaAtual, setIndicePerguntaAtual] = useState(0);
+  /**
+   * Sem JWT: após «Gerar diagnóstico» o payload fica em sessionStorage e mostramos o passo de «gravar e avançar».
+   */
+  const [diagnosticoGeradoLocalmente, setDiagnosticoGeradoLocalmente] = useState(false);
   /** Área rolável do questionário — volta ao topo a cada pergunta para não “ficar” no fim do scroll. */
   const painelPerguntasRef = useRef<HTMLDivElement>(null);
+  /** Evita gravar rascunho durante hidratação inicial (restore). */
+  const skipPersistRef = useRef(false);
+  /** Após ler/restaurar sessionStorage — só então passamos a persistir alterações. */
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   useEffect(() => {
     setTokenChecked(true);
@@ -110,6 +121,7 @@ export function WizardForm() {
         setApiError(null);
         await postDiagnostico(payload);
         sessionStorage.removeItem(STORAGE_PENDING_DIAGNOSTICO);
+        clearWizardDraft();
         if (!cancelled) router.replace("/sucesso");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Falha ao gravar diagnóstico na API.";
@@ -134,7 +146,6 @@ export function WizardForm() {
         cnae_principal: "",
         uf: "",
         setor_macro: "",
-        faixa_faturamento: "",
       },
       respondente: {
         nome: "",
@@ -174,10 +185,6 @@ export function WizardForm() {
       return;
     }
     const t = setTimeout(() => {
-      if (!getAccessToken()) {
-        setCnaeSugestoes([]);
-        return;
-      }
       void fetchCnaeSubclasses(q, 12)
         .then((r) => setCnaeSugestoes(r.itens))
         .catch(() => setCnaeSugestoes([]));
@@ -200,6 +207,168 @@ export function WizardForm() {
     if (t === "multipla_escolha" || t === "checklist") return [];
     return "";
   };
+
+  /**
+   * Restaura passo, questionário e respostas após navegação externa (ex.: política de privacidade).
+   * Não disputa com o fluxo «JWT + diagnóstico pendente» que faz POST automático e redirect.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    const skipRestore =
+      typeof window !== "undefined" &&
+      !!getAccessToken() &&
+      !!sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO);
+
+    if (skipRestore) {
+      setDraftHydrated(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    skipPersistRef.current = true;
+
+    void (async () => {
+      try {
+        const draft = loadWizardDraft();
+        if (!draft) return;
+
+        if (draft.step < 3) {
+          reset({
+            ...draft.form,
+            respostas: Array.isArray(draft.form.respostas) ? draft.form.respostas : [],
+          });
+          setStep(draft.step);
+          setIndicePerguntaAtual(draft.indicePerguntaAtual);
+          setDiagnosticoGeradoLocalmente(draft.diagnosticoGeradoLocalmente);
+          return;
+        }
+
+        setCatalogLoading(true);
+        try {
+          const q = await fetchQuestionarioAdaptativo(draft.form.empresa);
+          if (cancelled) return;
+          const map = new Map(draft.form.respostas.map((r) => [r.pergunta_id, r.valor]));
+          const merged = q.perguntas.map((pg) => ({
+            pergunta_id: pg.id,
+            valor: map.has(pg.id) ? map.get(pg.id)! : valorInicialPorTipo(pg.tipo),
+          }));
+          setPerguntas(q.perguntas);
+          reset({
+            ...draft.form,
+            respostas: merged,
+          });
+          setStep(3);
+          setIndicePerguntaAtual(
+            Math.min(draft.indicePerguntaAtual, Math.max(0, q.perguntas.length - 1)),
+          );
+          setDiagnosticoGeradoLocalmente(draft.diagnosticoGeradoLocalmente);
+        } catch {
+          if (!cancelled) {
+            setPerguntas([]);
+            setStep(2);
+            reset({
+              ...draft.form,
+              respostas: [],
+            });
+            setIndicePerguntaAtual(0);
+            setDiagnosticoGeradoLocalmente(false);
+          }
+        } finally {
+          if (!cancelled) setCatalogLoading(false);
+        }
+      } finally {
+        if (!cancelled) {
+          skipPersistRef.current = false;
+          setDraftHydrated(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reset]);
+
+  /** Persiste rascunho com debounce — mesma origem que «Voltar ao diagnóstico» na política de privacidade. */
+  useEffect(() => {
+    if (!draftHydrated) return;
+
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const persist = () => {
+      if (skipPersistRef.current) return;
+      if (typeof window === "undefined") return;
+      if (getAccessToken() && sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO)) return;
+
+      saveWizardDraft({
+        v: 1,
+        step,
+        indicePerguntaAtual,
+        diagnosticoGeradoLocalmente,
+        form: getValues(),
+      });
+    };
+
+    const runDebounced = () => {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(persist, 400);
+    };
+
+    runDebounced();
+
+    const sub = watch(() => {
+      runDebounced();
+    });
+
+    return () => {
+      sub.unsubscribe();
+      window.clearTimeout(timeout);
+    };
+  }, [
+    draftHydrated,
+    watch,
+    getValues,
+    step,
+    indicePerguntaAtual,
+    diagnosticoGeradoLocalmente,
+  ]);
+
+  /** Grava imediatamente ao sair da página (evita perder rascunho se o debounce não disparou). */
+  useEffect(() => {
+    if (!draftHydrated) return;
+
+    const flush = () => {
+      if (skipPersistRef.current) return;
+      if (typeof window === "undefined") return;
+      if (getAccessToken() && sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO)) return;
+      saveWizardDraft({
+        v: 1,
+        step,
+        indicePerguntaAtual,
+        diagnosticoGeradoLocalmente,
+        form: getValues(),
+      });
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [
+    draftHydrated,
+    getValues,
+    step,
+    indicePerguntaAtual,
+    diagnosticoGeradoLocalmente,
+  ]);
 
   const renderPerguntaInput = (p: PerguntaCatalogo, index: number) => {
     const base = `respostas.${index}.valor` as const;
@@ -382,6 +551,7 @@ export function WizardForm() {
         const q = await fetchQuestionarioAdaptativo(empresa);
         setPerguntas(q.perguntas);
         setIndicePerguntaAtual(0);
+        setDiagnosticoGeradoLocalmente(false);
         reset({
           ...getValues(),
           respostas: q.perguntas.map((pg) => ({
@@ -437,6 +607,16 @@ export function WizardForm() {
   const voltarWizard = () => {
     if (isSubmitting) return;
     setApiError(null);
+    if (step === 3 && diagnosticoGeradoLocalmente) {
+      setDiagnosticoGeradoLocalmente(false);
+      try {
+        sessionStorage.removeItem(STORAGE_PENDING_DIAGNOSTICO);
+      } catch {
+        /* ignore */
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (step === 3 && indicePerguntaAtual > 0) {
       setIndicePerguntaAtual((x) => x - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -516,7 +696,37 @@ export function WizardForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+    if (!getAccessToken()) {
+      await gerarDiagnosticoLocalmente();
+      return;
+    }
     await onSubmit();
+  };
+
+  /** Valida, persiste em sessionStorage e exibe o passo «gravar e avançar» (sem JWT). */
+  const gerarDiagnosticoLocalmente = async () => {
+    const payload = await montarPayloadDiagnosticoValidado();
+    if (!payload) return;
+    try {
+      sessionStorage.setItem(STORAGE_PENDING_DIAGNOSTICO, JSON.stringify(payload));
+    } catch {
+      setApiError(
+        "Não foi possível guardar o diagnóstico no navegador (sessionStorage). Verifique modo privado ou espaço em disco.",
+      );
+      return;
+    }
+    setApiError(null);
+    setDiagnosticoGeradoLocalmente(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  /** Após `gerarDiagnosticoLocalmente`: login B2B; ao voltar ao wizard o POST é automático (useEffect). */
+  const irParaLoginAposGeracao = async () => {
+    if (!sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO)) {
+      await irParaLoginComDiagnosticoPendente();
+      return;
+    }
+    router.push("/login?redirect=/wizard");
   };
 
   /** Guarda o payload, redireciona ao login; ao voltar com JWT o envio à API é automático. */
@@ -539,9 +749,7 @@ export function WizardForm() {
     if (!payload) return;
 
     if (!getAccessToken()) {
-      setApiError(
-        "Para gravar na API é necessário cadastro/login B2B. Use «Entrar para gravar diagnóstico».",
-      );
+      setApiError("Sessão ausente — use «Gerar diagnóstico» e depois «Entrar para gravar e avançar».");
       return;
     }
 
@@ -549,6 +757,7 @@ export function WizardForm() {
       setIsSubmitting(true);
       setApiError(null);
       await postDiagnostico(payload);
+      clearWizardDraft();
       router.push("/sucesso");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Ocorreu um erro ao enviar o diagnóstico.";
@@ -565,6 +774,7 @@ export function WizardForm() {
       : totalPerguntas > 0
         ? ((2 + (indicePerguntaAtual + 1) / totalPerguntas) / TOTAL_STEPS) * 100
         : (step / TOTAL_STEPS) * 100;
+  const progressBarPercent = diagnosticoGeradoLocalmente ? 100 : progress;
   const hasToken = tokenChecked && !!getAccessToken();
   const ultimaPerguntaDoQuestionario =
     step === 3 && totalPerguntas > 0 && indicePerguntaAtual >= totalPerguntas - 1;
@@ -593,17 +803,17 @@ export function WizardForm() {
           >
             {catalogLoading ? "Carregando perguntas…" : "Próxima Etapa"}
           </Button>
-        ) : ultimaPerguntaDoQuestionario && !hasToken ? (
+        ) : diagnosticoGeradoLocalmente && !hasToken ? (
           <Button
             type="button"
-            onClick={() => void irParaLoginComDiagnosticoPendente()}
+            onClick={() => void irParaLoginAposGeracao()}
             disabled={isSubmitting || totalPerguntas === 0}
             className={cn(
               "bg-accent text-accent-foreground hover:bg-accent/90",
               clsBotao,
             )}
           >
-            Entrar para gravar diagnóstico
+            Entrar para gravar e avançar
           </Button>
         ) : (
           <Button
@@ -617,9 +827,11 @@ export function WizardForm() {
           >
             {isSubmitting
               ? "Enviando…"
-              : ultimaPerguntaDoQuestionario
-                ? "Finalizar Diagnóstico"
-                : "Seguir"}
+              : ultimaPerguntaDoQuestionario && !hasToken
+                ? "Gerar diagnóstico"
+                : ultimaPerguntaDoQuestionario
+                  ? "Finalizar Diagnóstico"
+                  : "Seguir"}
           </Button>
         )}
       </>
@@ -644,9 +856,9 @@ export function WizardForm() {
               </span>
             )}
           </span>
-          <span>{Math.round(progress)}% Concluído</span>
+          <span>{Math.round(progressBarPercent)}% Concluído</span>
         </div>
-        <Progress value={progress} className="h-2" />
+        <Progress value={progressBarPercent} className="h-2" />
       </div>
 
       <div
@@ -661,7 +873,9 @@ export function WizardForm() {
             "min-h-0",
             step === 3
               ? "flex flex-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-transparent py-0 text-card-foreground shadow-none ring-0"
-              : "border-primary/10 shadow-lg",
+              : // Passos 1–2: Card padrão usa overflow-hidden — com flex min-h-0 no layout pai,
+                // o rodapé (Voltar / Próxima) era cortado. visible permite o fluxo rolar no documento.
+                "overflow-visible border-primary/10 shadow-lg",
           )}
         >
         <CardHeader
@@ -678,7 +892,7 @@ export function WizardForm() {
             {step === 2 &&
               "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). A conclusão persiste na API após autenticação."}
             {step === 3 &&
-              "Uma pergunta por tela — Seguir / Voltar. Na última pergunta: login para gravar na API; a fase 2 (painel) continua após cadastro/login. Links no bloco recolhível."}
+              "Uma pergunta por tela — Seguir / Voltar. Na última pergunta sem sessão: primeiro «Gerar diagnóstico»; depois «Entrar para gravar e avançar» na API (painel consultor). Com login, «Finalizar Diagnóstico» grava direto."}
           </CardDescription>
         </CardHeader>
 
@@ -842,7 +1056,8 @@ export function WizardForm() {
                     Você pode preencher o assistente sem sessão. Para{" "}
                     <span className="font-medium text-foreground">gravar o diagnóstico na API</span>, na
                     última pergunta use{" "}
-                    <span className="font-medium text-foreground">Entrar para gravar diagnóstico</span>{" "}
+                    <span className="font-medium text-foreground">Gerar diagnóstico</span> e em seguida{" "}
+                    <span className="font-medium text-foreground">Entrar para gravar e avançar</span>{" "}
                     (cadastro/login B2B).
                   </div>
                 )}
@@ -853,7 +1068,11 @@ export function WizardForm() {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="porte">Porte da Empresa *</Label>
+                    <Label htmlFor="porte">Porte da empresa (faturamento anual) *</Label>
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Classificação por receita bruta dos últimos 12 meses (autodeclarada — não substitui
+                      enquadramento legal).
+                    </p>
                     <select
                       id="porte"
                       className={classSelectPerfil(
@@ -865,11 +1084,10 @@ export function WizardForm() {
                       <option value="" disabled>
                         {MENSAGEM_SELECT_PERFIL_EMPRESA}
                       </option>
-                      <option value="micro">Micro (Até R$ 360 mil)</option>
-                      <option value="pequeno">Pequeno (Até R$ 4,8 mi)</option>
-                      <option value="medio">Médio (Até R$ 500 mi)</option>
-                      <option value="grande">Grande (Até R$ 5 bi)</option>
-                      <option value="enterprise">Enterprise (Acima de R$ 5 bi)</option>
+                      <option value="micro">Micro — faturamento anual até R$ 360 mil</option>
+                      <option value="pequeno">Pequeno — faturamento anual até R$ 4,8 milhões</option>
+                      <option value="medio">Médio — faturamento anual até R$ 500 milhões</option>
+                      <option value="grande">Grande — faturamento anual acima de R$ 500 milhões</option>
                     </select>
                     {errors.empresa?.porte && (
                       <p className="text-sm text-destructive">{errors.empresa.porte.message}</p>
@@ -897,30 +1115,6 @@ export function WizardForm() {
                       <p className="text-sm text-destructive">{errors.empresa.regime.message}</p>
                     )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="faixa_faturamento">Faturamento bruto anual (opcional)</Label>
-                  <select
-                    id="faixa_faturamento"
-                    className={cn(
-                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    )}
-                    {...register("empresa.faixa_faturamento")}
-                  >
-                    <option value="">Prefiro não informar</option>
-                    {FAIXAS_FATURAMENTO_OPCIONAL.map((slug) => (
-                      <option key={slug} value={slug}>
-                        {ROTULOS_FAIXA_FATURAMENTO[slug]}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    Faixa autodeclarada para segmentação do relatório; não substitui escrituração fiscal nem auditoria.
-                  </p>
-                  {errors.empresa?.faixa_faturamento && (
-                    <p className="text-sm text-destructive">{errors.empresa.faixa_faturamento.message}</p>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -986,9 +1180,11 @@ export function WizardForm() {
                     {...register("empresa.cnae_principal")}
                     className={errors.empresa?.cnae_principal ? "border-destructive" : ""}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Com sessão ativa e API com Postgres (DATABASE_URL), digite 2+ caracteres para sugestões
-                    CONCLA/IBGE (GET /referencia/cnae/subclasses).
+                  <p className="text-xs text-muted-foreground leading-snug">
+                    Digite pelo menos 2 caracteres (início do código de 7 dígitos ou parte da descrição da
+                    atividade) para ver sugestões da tabela oficial{" "}
+                    <abbr title="Classificação Nacional de Atividades Econômicas">CNAE</abbr> 2.3 (CONCLA/IBGE).
+                    Você também pode informar os sete dígitos manualmente.
                   </p>
                   {errors.empresa?.cnae_principal && (
                     <p className="text-sm text-destructive">{errors.empresa.cnae_principal.message}</p>
@@ -1052,12 +1248,26 @@ export function WizardForm() {
                       </div>
                     </div>
                   )}
-                  {!hasToken && ultimaPerguntaDoQuestionario && (
-                    <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground md:text-sm">
-                      O diagnóstico só é registrado na API após{" "}
-                      <span className="font-medium text-foreground">cadastro e login</span>. Use «Entrar para
-                      gravar diagnóstico» — o envio ocorre logo após a autenticação. A fase 2 (painel
-                      consultor) fica disponível com a mesma sessão.
+                  {diagnosticoGeradoLocalmente && !hasToken && (
+                    <div
+                      role="status"
+                      className="rounded-lg border border-accent/35 bg-accent/5 px-4 py-4 space-y-2 text-sm text-muted-foreground leading-relaxed"
+                    >
+                      <p className="font-semibold text-foreground">Diagnóstico gerado</p>
+                      <p>
+                        Respostas validadas ({totalPerguntas} pergunta
+                        {totalPerguntas === 1 ? "" : "s"}).
+                        {empresaPerfil.razao_social ? (
+                          <>
+                            {" "}
+                            Referência:{" "}
+                            <span className="font-medium text-foreground">{empresaPerfil.razao_social}</span>.
+                          </>
+                        ) : null}{" "}
+                        O próximo passo é autenticar-se para <strong className="text-foreground">gravar na API</strong>{" "}
+                        e avançar ao painel. Use o botão «Entrar para gravar e avançar». «Voltar» revisa as respostas e
+                        descarta este passo gerado.
+                      </p>
                     </div>
                   )}
                   {apiError && (
@@ -1098,7 +1308,9 @@ export function WizardForm() {
                     </div>
                   </details>
                 </div>
-                {totalPerguntas > 0 && indicePerguntaAtual < totalPerguntas && (
+                {totalPerguntas > 0 &&
+                  indicePerguntaAtual < totalPerguntas &&
+                  !diagnosticoGeradoLocalmente && (
                   <div
                     key={perguntas[indicePerguntaAtual].id}
                     data-testid="wizard-pergunta-atual"
@@ -1134,7 +1346,7 @@ export function WizardForm() {
         </CardContent>
 
         {step !== 3 ? (
-          <CardFooter className="flex w-full min-w-0 shrink-0 flex-wrap justify-between gap-3 border-t bg-muted/10 p-6">
+          <CardFooter className="flex w-full min-w-0 shrink-0 flex-wrap justify-between gap-3 border-t bg-muted/10 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] sm:pb-6">
             {renderBotoesNavegacao({ larguraCheiaEmMobile: false })}
           </CardFooter>
         ) : null}

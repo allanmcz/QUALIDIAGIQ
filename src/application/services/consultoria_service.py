@@ -242,11 +242,7 @@ class ConsultoriaService:
             )
         )
 
-        if diagnostico.empresa.porte in (
-            PorteEmpresa.MEDIO,
-            PorteEmpresa.GRANDE,
-            PorteEmpresa.ENTERPRISE,
-        ):
+        if diagnostico.empresa.porte in (PorteEmpresa.MEDIO, PorteEmpresa.GRANDE):
             frentes.append(
                 FrenteTrabalho(
                     nome="TI / ERP / Sistema Fiscal",

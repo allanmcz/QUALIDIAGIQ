@@ -10,7 +10,6 @@ import {
   type ManifestoPesosPublic,
   type MetodologiaPublic,
 } from "@/lib/api/metodologia_public";
-import { getApiUrl } from "@/lib/api/config";
 
 /** Itens por página na tabela do catálogo (evita ~30 linhas de uma vez só). */
 const CATALOGO_PAGE_SIZE = 10;
@@ -31,7 +30,7 @@ function TabelaPesosMacro({ titulo, pesos }: { titulo: string; pesos: Record<str
           <tbody>
             {linhas.map(([dim, peso]) => (
               <tr key={dim} className="border-t">
-                <td className="p-3 font-mono text-xs">{dim}</td>
+                <td className="p-3 text-sm capitalize">{dim.replace(/_/g, " ")}</td>
                 <td className="p-3 text-right tabular-nums">{peso}</td>
               </tr>
             ))}
@@ -83,7 +82,7 @@ export default function MetodologiaPage() {
         }
       } catch (e) {
         if (!cancel) {
-          setErro(e instanceof Error ? e.message : "Falha ao carregar dados da API.");
+          setErro(e instanceof Error ? e.message : "Verifique sua conexão e tente novamente.");
           setMeta(null);
           setManifesto(null);
         }
@@ -97,81 +96,69 @@ export default function MetodologiaPage() {
     };
   }, []);
 
-  const baseApi = getApiUrl().replace(/\/$/, "");
-
   return (
     <div className="container max-w-5xl py-10 space-y-10">
       <div>
-        <Link href="/wizard" className="text-sm text-primary hover:underline">
-          ← Wizard de diagnóstico
+        <Link href="/wizard" className="text-sm text-primary hover:underline font-medium">
+          ← Iniciar diagnóstico
         </Link>
       </div>
 
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
-          Transparência metodológica (M03)
+      <header className="space-y-4">
+        <p className="text-xs uppercase tracking-wide text-accent font-semibold">
+          Transparência que vira vantagem competitiva
         </p>
-        <h1 className="text-3xl font-bold tracking-tight">Metodologia e manifesto de pesos</h1>
-        <p className="text-muted-foreground leading-relaxed max-w-3xl">
-          Conteúdo obtido em tempo real dos endpoints públicos da API QualiDiagIQ — mesmo motor usado no
-          cálculo do score (sem JWT). Fontes normativas de referência: EC 132/2023, LC 214/2025, ABNT NBR
-          17301:2026.
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+          Como o QualiDiagIQ calcula a sua maturidade tributária
+        </h1>
+        <p className="text-muted-foreground leading-relaxed max-w-3xl text-base">
+          Mostramos <strong className="text-foreground font-medium">o que entra no diagnóstico</strong>,{" "}
+          <strong className="text-foreground font-medium">com que peso</strong> e{" "}
+          <strong className="text-foreground font-medium">em qual base legal</strong> — o mesmo critério
+          aplicado ao seu relatório. Assim, diretoria e contabilidade ganham previsibilidade e defesa de
+          posição frente à <strong className="text-foreground font-medium">Reforma do Consumo</strong>{" "}
+          (EC 132/2023, LC 214/2025) e ao referencial{" "}
+          <strong className="text-foreground font-medium">ABNT NBR 17301:2026</strong>.
         </p>
-        <p className="text-sm text-muted-foreground">
-          JSON bruto:{" "}
-          <a
-            href={`${baseApi}/diagnosticos/metodologia`}
-            className="text-primary underline font-medium"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            /diagnosticos/metodologia
-          </a>
-          {" · "}
-          <a
-            href={`${baseApi}/diagnosticos/manifesto-pesos`}
-            className="text-primary underline font-medium"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            /diagnosticos/manifesto-pesos
-          </a>
+        <p className="text-sm text-muted-foreground max-w-3xl">
+          Os números abaixo são atualizados automaticamente para refletir a versão vigente do produto — a
+          mesma usada no assistente de diagnóstico quando você responde ao questionário.
         </p>
       </header>
 
       {carregando && (
         <p className="text-sm text-muted-foreground" aria-live="polite">
-          Carregando metodologia e manifesto…
+          Preparando o conteúdo para você…
         </p>
       )}
 
       {erro && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          <p className="font-medium">Não foi possível contactar a API.</p>
-          <p className="mt-1">{erro}</p>
-          <p className="mt-2 text-xs opacity-90">
-            Compose web (:60001) usa proxy <code className="bg-background/50 px-1 rounded">/api-backend</code>. Fora
-            disso, prefira <code className="bg-background/50 px-1 rounded">http://127.0.0.1:60000</code> (evita IPv6
-            com <code className="bg-background/50 px-1 rounded">localhost</code> no macOS). Teste:{" "}
-            <code className="bg-background/50 px-1 rounded">curl http://127.0.0.1:60000/health</code>.
+          <p className="font-medium text-foreground">Conteúdo temporariamente indisponível</p>
+          <p className="mt-1">
+            Não foi possível carregar os dados agora. Atualize a página ou tente de novo em alguns instantes.
           </p>
+          <p className="mt-2 text-xs text-muted-foreground">{erro}</p>
         </div>
       )}
 
       {!carregando && meta && (
-        <section className="space-y-6 rounded-xl border bg-card p-6">
+        <section className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
           <div>
-            <h2 className="text-xl font-semibold">Referência normativa declarada</h2>
+            <h2 className="text-xl font-semibold text-foreground">Base normativa e versão do critério</h2>
             <p className="mt-1 text-sm text-muted-foreground">{meta.versao_normativa}</p>
           </div>
-          <TabelaPesosMacro titulo="Pesos macro — agregação do score geral (0–100)" pesos={meta.pesos_macro_dimensao_score_geral} />
+          <TabelaPesosMacro
+            titulo="Peso de cada dimensão no resultado final (0 a 100)"
+            pesos={meta.pesos_macro_dimensao_score_geral}
+          />
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Nota metodológica</h3>
+            <h3 className="text-lg font-semibold">Como interpretamos o diagnóstico</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{meta.nota_metodologica}</p>
           </div>
           {meta.recomendacoes_gaps_criticos.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Alertas heurísticos (leitura executiva)</h3>
+              <h3 className="text-lg font-semibold">O que merece atenção prioritária</h3>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 {meta.recomendacoes_gaps_criticos.map((r, i) => (
                   <li key={`${i}-${r.slice(0, 24)}`}>{r}</li>
@@ -183,35 +170,42 @@ export default function MetodologiaPage() {
       )}
 
       {!carregando && manifesto && (
-        <section className="space-y-6 rounded-xl border bg-card p-6">
+        <section className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap gap-4 justify-between items-baseline">
-            <h2 className="text-xl font-semibold">Manifesto por pergunta</h2>
-            <p className="text-xs text-muted-foreground font-mono">
-              catálogo {manifesto.versao_catalogo} · manifesto {manifesto.versao_manifesto}
+            <h2 className="text-xl font-semibold text-foreground">Perguntas, pesos e base legal</h2>
+            <p className="text-xs text-muted-foreground">
+              Versão do questionário:{" "}
+              <span className="font-medium text-foreground">{manifesto.versao_catalogo}</span>
+              {" · "}
+              Versão dos pesos aplicados:{" "}
+              <span className="font-medium text-foreground">{manifesto.versao_manifesto}</span>
             </p>
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Fórmula do score geral</h3>
+            <h3 className="text-lg font-semibold">De onde vem o número final</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{manifesto.formula_score_geral}</p>
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Calibração (M02)</h3>
+            <h3 className="text-lg font-semibold">Equilíbrio entre dimensões</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{manifesto.nota_calibracao_m02}</p>
           </div>
-          <TabelaPesosMacro titulo="Pesos macro (manifesto — espelho do domínio)" pesos={manifesto.pesos_macro_dimensao} />
+          <TabelaPesosMacro titulo="Pesos por dimensão (detalhamento)" pesos={manifesto.pesos_macro_dimensao} />
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold">Catálogo ({manifesto.perguntas.length} itens)</h3>
+            <h3 className="text-lg font-semibold">
+              Catálogo completo ({manifesto.perguntas.length}{" "}
+              {manifesto.perguntas.length === 1 ? "pergunta" : "perguntas"})
+            </h3>
             <p className="text-xs text-muted-foreground">
-              Lista paginada ({CATALOGO_PAGE_SIZE} por página) para leitura — o mesmo catálogo é filtrado no
-              wizard conforme perfil da empresa (M01).
+              Lista para consulta ({CATALOGO_PAGE_SIZE} por página). No diagnóstico, só entram as perguntas
+              compatíveis com o perfil da sua empresa — porte, regime, setor e UF.
             </p>
             <div className="overflow-x-auto rounded-md border max-h-[min(520px,70vh)] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
-                    <th className="text-left p-2 font-medium">Código</th>
+                    <th className="text-left p-2 font-medium">Ref.</th>
                     <th className="text-left p-2 font-medium">Dimensão</th>
-                    <th className="text-left p-2 font-medium">Tipo</th>
+                    <th className="text-left p-2 font-medium">Formato</th>
                     <th className="text-right p-2 font-medium">Peso</th>
                     <th className="text-left p-2 font-medium">Base legal</th>
                   </tr>
@@ -219,9 +213,9 @@ export default function MetodologiaPage() {
                 <tbody>
                   {perguntasPagina.map((p) => (
                     <tr key={p.codigo} className="border-t">
-                      <td className="p-2 font-mono text-xs whitespace-nowrap">{p.codigo}</td>
-                      <td className="p-2 font-mono text-xs">{p.dimensao}</td>
-                      <td className="p-2 font-mono text-xs">{p.tipo}</td>
+                      <td className="p-2 text-xs whitespace-nowrap font-medium">{p.codigo}</td>
+                      <td className="p-2 text-xs capitalize">{p.dimensao.replace(/_/g, " ")}</td>
+                      <td className="p-2 text-xs capitalize">{p.tipo.replace(/_/g, " ")}</td>
                       <td className="p-2 text-right tabular-nums">{p.peso}</td>
                       <td className="p-2 text-xs text-muted-foreground max-w-xs">{p.base_legal ?? "—"}</td>
                     </tr>
@@ -271,9 +265,9 @@ export default function MetodologiaPage() {
         </section>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        <Link href="/abnt-framework" className="text-primary underline">
-          M11 — framework ABNT no produto
+      <p className="text-sm text-muted-foreground">
+        <Link href="/abnt-framework" className="text-primary underline font-medium">
+          Saiba como o QualiDiagIQ alinha o produto à ABNT NBR 17301
         </Link>
       </p>
     </div>

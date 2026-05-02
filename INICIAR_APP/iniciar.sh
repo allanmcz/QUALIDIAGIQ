@@ -3,6 +3,8 @@
 # QualiDiagIQ — modo “painel”: sobe o Docker, valida /health, imprime URLs e segue os logs.
 # Ctrl+C → docker compose down (para todo o stack).
 #
+# Stack: `make dev` (= docker compose up -d --build --remove-orphans). Mesmo critério do iniciar-app.sh dev.
+#
 # Para só subir sem logs: ./INICIAR_APP/iniciar-app.sh dev
 # Para logs sem derrubar ao sair: ./INICIAR_APP/iniciar-app.sh logs  (Ctrl+C só encerra o tail)
 
@@ -32,7 +34,7 @@ echo -e "${GREEN}=================================================${NC}"
 echo -e "${GREEN}   QualiDiagIQ — Docker + logs (MVP)             ${NC}"
 echo -e "${GREEN}=================================================${NC}"
 
-echo -e "${BLUE}[STACK]${NC} make dev (PostgreSQL + API + Next)…"
+echo -e "${BLUE}[STACK]${NC} make dev — Compose com ${YELLOW}--build${NC} se Dockerfile/pyproject mudaram (PostgreSQL + API + Next)…"
 make dev
 
 echo -e "\n${BLUE}[CHECK]${NC} GET http://127.0.0.1:60000/health …"

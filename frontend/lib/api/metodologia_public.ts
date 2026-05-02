@@ -1,7 +1,5 @@
 /**
- * Clientes HTTP para endpoints públicos M03 — sem JWT.
- *
- * Base: GET /diagnosticos/metodologia e GET /diagnosticos/manifesto-pesos (FastAPI).
+ * Carrega metodologia e manifesto de pesos (rotas públicas de consulta do produto).
  */
 
 import { getApiUrlForFetch } from "./config";

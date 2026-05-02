@@ -1,8 +1,9 @@
 """
-Lookup de administrador B2B na tabela `admins` do Postgres (CI integrado).
+Lookup de administrador B2B na tabela `admins` do Postgres.
 
 Camada: Infrastructure
-Usado quando Supabase não está disponível no pipeline, mantendo o mesmo contrato de senha bcrypt.
+Usado quando há ``DATABASE_URL`` (Docker Compose, CI): o login não depende do REST Supabase em :54321.
+Mesmo contrato de senha bcrypt que ``passlib`` na rota ``POST /auth/login``.
 """
 
 from __future__ import annotations
