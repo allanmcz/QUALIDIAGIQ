@@ -12,7 +12,7 @@ export function Footer() {
           <Wordmark size="sm" />
           <EndorsedBadge />
         </div>
-        <p className="text-center text-sm text-muted-foreground md:text-left">
+        <p className="text-sm text-muted-foreground">
           &copy; {ano} QualiDiagIQ · produto Tributiq. Todos os direitos reservados.
         </p>
         <nav

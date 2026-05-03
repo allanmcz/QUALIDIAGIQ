@@ -104,8 +104,12 @@
   * {
     @apply border-border;
   }
+  /**
+   * Tipografia padrão: justificação + hifenização (pt-BR via `lang` no `<html>`).
+   * Componentes com `text-left` / `text-center` / `text-end` sobrepõem onde o layout exigir.
+   */
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased text-justify hyphens-auto;
     font-family: var(--font-display);
   }
 

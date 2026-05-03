@@ -8,12 +8,12 @@ export default function Home() {
     <div className="flex-1 flex flex-col items-center p-4 py-12 md:py-20">
       <section className="container max-w-6xl w-full">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-center md:gap-12">
-          <div className="space-y-8 text-center md:col-span-7 md:text-left">
+          <div className="space-y-8 md:col-span-7">
             <div className="space-y-4">
               <h1 className="text-4xl font-extrabold tracking-tight text-primary md:text-5xl lg:text-6xl">
                 QualiDiag<span className="text-accent">IQ</span>
               </h1>
-              <p className="mx-auto max-w-2xl text-xl font-medium text-muted-foreground md:mx-0 md:text-2xl">
+              <p lang="pt-BR" className="mx-auto max-w-2xl text-xl font-medium text-muted-foreground md:mx-0 md:text-2xl">
                 Descubra a maturidade e conformidade tributária da sua empresa frente à{" "}
                 <strong className="text-foreground">Reforma do Consumo (EC 132/2023)</strong>.
               </p>
@@ -35,7 +35,7 @@ export default function Home() {
                   <Link href="/metodologia">Conhecer a Metodologia</Link>
                 </Button>
               </div>
-              <p className="mx-auto max-w-xl text-center text-sm text-muted-foreground md:mx-0 md:text-left">
+              <p className="mx-auto max-w-xl text-sm text-muted-foreground md:mx-0">
                 Use <strong className="text-foreground">Entrar</strong> no canto superior direito para o painel B2B
                 (histórico, PDF, checklist). Ou inicie o diagnóstico gratuito acima.
               </p>
@@ -49,7 +49,7 @@ export default function Home() {
       </section>
 
       <div className="container max-w-4xl border-t pt-12 mt-4 md:mt-16">
-        <div className="grid grid-cols-1 gap-8 pt-4 text-left md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 pt-4 md:grid-cols-3">
           <div className="space-y-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <ShieldCheck className="h-6 w-6" />
