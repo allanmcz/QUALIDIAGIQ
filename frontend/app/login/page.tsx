@@ -2,7 +2,8 @@
 
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { getApiUrlForFetch } from "@/lib/api/config"
+import { ADMIN_NOME_STORAGE_KEY, ADMIN_TOKEN_STORAGE_KEY, getApiUrlForFetch } from "@/lib/api/config"
+import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events"
 import { mensagemErroHttp } from "@/lib/api/http_errors"
 import { destinoSeguroAposLogin } from "@/lib/auth/safe_redirect_after_login"
 import { Button } from "@/components/ui/button"
@@ -46,8 +47,9 @@ function LoginPageContent() {
         throw new Error("Resposta de login sem token. Confira a versão da API.")
       }
       // Salva em localStorage (apenas para o MVP/Dev)
-      localStorage.setItem("admin_token", data.access_token)
-      localStorage.setItem("admin_nome", data.nome || "Admin")
+      localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.access_token)
+      localStorage.setItem(ADMIN_NOME_STORAGE_KEY, data.nome || "Admin")
+      window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))
 
       const destino = destinoSeguroAposLogin(searchParams.get("redirect"))
       router.push(destino)

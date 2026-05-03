@@ -34,10 +34,12 @@ export function getApiUrlForFetch(): string {
   return "http://127.0.0.1:60000";
 }
 
-const TOKEN_KEY = "admin_token";
+/** Chaves `localStorage` — fluxo B2B MVP (`/login` → painel). */
+export const ADMIN_TOKEN_STORAGE_KEY = "admin_token";
+export const ADMIN_NOME_STORAGE_KEY = "admin_nome";
 
 /** JWT salvo pelo fluxo de login MVP (`/login`). */
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
 }

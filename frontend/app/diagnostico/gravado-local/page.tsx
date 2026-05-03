@@ -264,11 +264,11 @@ export default function DiagnosticoGravadoLocalPage() {
             </Button>
           </div>
         </CardContent>
-        <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-stretch">
-          <Button asChild size="lg" variant="outline" className="w-full bg-transparent">
+        <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-3">
+          <Button asChild size="lg" variant="outline" className="w-full min-w-0 bg-transparent sm:flex-1">
             <Link href={loginHref}>Entrar ou cadastrar — painel B2B</Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="w-full bg-transparent">
+          <Button asChild variant="outline" size="lg" className="w-full min-w-0 sm:flex-1">
             <Link href="/wizard">Revisar no assistente</Link>
           </Button>
         </CardFooter>

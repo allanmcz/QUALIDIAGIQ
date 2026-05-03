@@ -1,5 +1,6 @@
 import type { DiagnosticoPayload } from "../schemas/wizard";
 import { getAccessToken, getApiUrlForFetch } from "./config";
+import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
 /**
  * Cria diagnóstico na API FastAPI — persistência em PostgreSQL (Supabase), isolada por `tenant_id` do JWT (RLS).
@@ -49,6 +50,10 @@ export async function postDiagnostico(payload: DiagnosticoPayload) {
     return await res.json();
   } catch (error) {
     console.error("Falha ao enviar diagnóstico:", error);
+    if (isLikelyNetworkFetchFailure(error)) {
+      const tecnico = error instanceof Error ? error.message : String(error);
+      throw new Error(`${mensagemConectividadeApiParaUsuario(base)} Detalhe: ${tecnico}`);
+    }
     throw error;
   }
 }

@@ -164,11 +164,15 @@ export default function DiagnosticoConcluidoSelfServicePage() {
             Relatório: {dados.locale_relatorio}
           </p>
         </CardContent>
-        <CardFooter className="flex flex-col gap-2 sm:flex-row sm:justify-stretch">
-          <Button asChild variant="outline" className="w-full bg-transparent">
+        {/*
+          Card raiz tem overflow-hidden: em sm:flex-row, dois filhos w-full estouram a largura
+          e o segundo botão (login) era cortado. sm:flex-1 + min-w-0 reparte o espaço sem overflow.
+        */}
+        <CardFooter className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+          <Button asChild variant="outline" className="w-full min-w-0 bg-transparent sm:flex-1">
             <Link href="/">Voltar ao início</Link>
           </Button>
-          <Button asChild className="w-full">
+          <Button asChild className="w-full min-w-0 sm:flex-1">
             <Link href="/login?redirect=/wizard">Cadastrar ou entrar</Link>
           </Button>
         </CardFooter>

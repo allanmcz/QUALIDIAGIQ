@@ -33,7 +33,7 @@ export function HeroIllustration({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-xl border border-border shadow-card",
+        "relative w-full overflow-hidden rounded-xl border border-border bg-muted/35 shadow-card ring-1 ring-foreground/10",
         className,
       )}
     >
@@ -44,7 +44,7 @@ export function HeroIllustration({
         height={1080}
         priority={priority}
         sizes="(max-width: 768px) 100vw, 42vw"
-        className="h-auto w-full max-h-[min(380px,52vh)] object-cover object-center md:max-h-[460px]"
+        className="relative z-10 h-auto w-full max-h-[min(380px,52vh)] object-cover object-center md:max-h-[460px]"
       />
     </div>
   );

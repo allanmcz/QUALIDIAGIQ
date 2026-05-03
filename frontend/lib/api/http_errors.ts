@@ -2,6 +2,27 @@
  * Mensagens de erro HTTP quando o corpo pode ser JSON (FastAPI), texto simples ou HTML (proxy/502).
  */
 
+/** Erros típicos do `fetch` no browser quando não há resposta HTTP (CORS, DNS, API caída, TLS). */
+export function isLikelyNetworkFetchFailure(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return /failed to fetch|networkerror|load failed|network request failed/i.test(msg);
+}
+
+/**
+ * Texto acionável para o utilizador quando `fetch` falha antes de HTTP (ex.: «Failed to fetch»).
+ *
+ * @param baseUrl — valor já resolvido de `getApiUrlForFetch()` (sem barra final), para mostrar no UI.
+ */
+export function mensagemConectividadeApiParaUsuario(baseUrl: string): string {
+  return (
+    `Não houve resposta da API em «${baseUrl}». Verifique: (1) serviço da API no ar ` +
+    `(\`docker compose ps\`, GET \`/health\`); (2) URL acessível **no browser** — no Compose use ` +
+    `NEXT_PUBLIC_API_URL=/api-backend (não use http://api:8000 no .env do Next); ` +
+    `(3) CORS: o URL do front (origem) deve constar em CORS_ALLOWED_ORIGINS na API; ` +
+    `(4) firewall/VPN.`
+  );
+}
+
 function detalheFastApi(detail: unknown): string | null {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
