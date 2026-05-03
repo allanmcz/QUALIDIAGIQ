@@ -16,7 +16,7 @@ test.describe("Dashboard lista B2B (API integrada CI)", () => {
     await page.getByRole("button", { name: /Entrar no Dashboard/i }).click();
 
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: /Assessoria B2B/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Painel de Diagnósticos/i })).toBeVisible();
     await expect(page.getByText("Empresa Lista CI Integrado SA")).toBeVisible();
     await expect(page.getByText(/68\.5\/100/)).toBeVisible();
   });
