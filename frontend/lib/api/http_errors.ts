@@ -21,7 +21,7 @@ export function mensagemConectividadeApiParaUsuario(baseUrl: string): string {
     return (
       `Não houve resposta ao proxy «${base}» (Next → FastAPI). ` +
       `(1) API no ar: \`docker compose ps\` e GET \`/health\` na porta publicada (ex.: \`http://127.0.0.1:60000/health\`). ` +
-      `(2) **API_PROXY_TARGET** no **processo** que corre o Next (ficheiro \`frontend/next.config.mjs\` → rewrites): ` +
+      `(2) **API_PROXY_TARGET** no **processo** que corre o Next (proxy em \`app/api-backend/[[...slug]]/route.ts\`): ` +
       `no host com \`npm run dev\`, ex. \`API_PROXY_TARGET=http://127.0.0.1:60000\` em \`.env.local\`; ` +
       `no serviço \`web\` do Compose use \`http://api:8000\`. **Reinicie o Next** após mudar o env. ` +
       `(3) \`NEXT_PUBLIC_API_URL=/api-backend\` no cliente. ` +

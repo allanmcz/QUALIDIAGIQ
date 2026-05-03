@@ -31,7 +31,7 @@ export default defineConfig({
         timeout: 120_000,
         env: {
           ...process.env,
-          /** Sem isto, `NEXT_PUBLIC_API_URL=/api-backend` não tem rewrite e o painel falha em E2E. */
+          /** Sem isto, o proxy `app/api-backend/...` não alcança a API e o painel falha em E2E. */
           API_PROXY_TARGET: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:60000",
           ...(wizardNormativaE2E ? { NEXT_PUBLIC_WIZARD_NORMATIVA: "true" } : {}),
         },

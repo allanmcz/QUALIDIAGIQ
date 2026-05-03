@@ -27,7 +27,7 @@ chmod +x INICIAR_APP/iniciar.sh INICIAR_APP/iniciar-app.sh INICIAR_APP/parar-app
 | Postgres | `postgresql://postgres:postgres@127.0.0.1:60322/postgres` |
 | Mailpit (OTP dev) | UI http://127.0.0.1:8025 · SMTP interno `mailpit:1025` |
 
-No Compose, o browser fala com **`/api-backend/*`** no mesmo host (**proxy** no Next → API interna `api:8000`). Detalhes: `frontend/next.config.mjs`, `docker-compose.yml`.
+No Compose, o browser fala com **`/api-backend/*`** no mesmo host (**Route Handler** em `frontend/app/api-backend/[[...slug]]/route.ts` → API interna `api:8000` via `API_PROXY_TARGET`). Detalhes: `docker-compose.yml`.
 
 ### Variáveis no `.env` da raiz (opcional)
 

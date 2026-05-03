@@ -14,13 +14,13 @@ export function getApiUrl(): string {
   );
 }
 
-/** Portas típicas de dev Next/Playwright no QDI — mesmo host + `/api-backend` evita CORS (exige `API_PROXY_TARGET` no `next dev`). */
+/** Portas típicas de dev Next/Playwright no QDI — mesmo host + `/api-backend` evita CORS (proxy + `API_PROXY_TARGET`). */
 const PORTAS_DEV_PROXY_API_BACKEND = new Set(["3000", "3010", "3333", "60001"]);
 
 /**
  * Base para chamadas `fetch` no cliente quando o env pode estar desatualizado no bundle.
  * Em `localhost|127.0.0.1` nas portas de dev acima, força o proxy same-origin `/api-backend`
- * (alinhado a `allowedDevOrigins` em `next.config.mjs` e CORS da API).
+ * (alinhado a `allowedDevOrigins` em `next.config.mjs`; upstream via `app/api-backend/[[...slug]]/route.ts`).
  */
 export function getApiUrlForFetch(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();

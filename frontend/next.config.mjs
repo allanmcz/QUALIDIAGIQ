@@ -1,31 +1,3 @@
-import fs from "node:fs";
-
-/** Indica processo dentro de container Linux típico (Docker / OrbStack). */
-function isLikelyDockerContainer() {
-  try {
-    return fs.existsSync("/.dockerenv");
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Alvo interno do proxy (servidor Next → FastAPI).
- * - Compose serviço `web`: `API_PROXY_TARGET=http://api:8000` (obrigatório no container).
- * - `npm run dev` no **host** (sem .env): assume API publicada em `127.0.0.1:60000` (mapa do compose).
- * - `next build`: não infere — use env na plataforma ou BFF.
- * - Dentro de Docker **sem** `API_PROXY_TARGET`: não inventa `127.0.0.1` (seria o próprio container).
- */
-function resolveApiProxyTarget() {
-  const explicit = process.env.API_PROXY_TARGET?.trim();
-  if (explicit) return explicit;
-  if (process.env.NODE_ENV === "production") return undefined;
-  if (isLikelyDockerContainer()) return undefined;
-  return "http://127.0.0.1:60000";
-}
-
-const apiProxyTarget = resolveApiProxyTarget();
-
 /**
  * Origem da API para CSP `connect-src` em produção (evita «Failed to fetch» quando
  * `NEXT_PUBLIC_API_URL` é http(s) absoluto e não same-origin).
@@ -72,15 +44,9 @@ const nextConfig = {
     "http://localhost:60001",
   ],
   /**
-   * Mesmo host que o browser → sem CORS. O cliente usa NEXT_PUBLIC_API_URL=/api-backend;
-   * o Node encaminha para API_PROXY_TARGET (rede Docker).
+   * Proxy `/api-backend` → FastAPI: `app/api-backend/[[...slug]]/route.ts` + `API_PROXY_TARGET`.
+   * Fase F §F2 modesta — CSP completa deixa para ADR cookie/BFF (.github/adr/ADR-004).
    */
-  async rewrites() {
-    if (!apiProxyTarget) return [];
-    const base = apiProxyTarget.replace(/\/$/, "");
-    return [{ source: "/api-backend/:path*", destination: `${base}/:path*` }];
-  },
-  /** Fase F §F2 modesta — CSP completa deixa para ADR cookie/BFF (.github/adr/ADR-004). */
   async headers() {
     const isProd = process.env.NODE_ENV === "production";
     const securityHeaders = [
