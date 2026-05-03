@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getConclusaoSelfServiceVisualizacao } from "@/lib/api/self_service_diagnostico";
 import { rotuloDimensao } from "@/lib/wizard/dimensao_labels";
-import {
-  loadSelfServiceDiagnosticoResultado,
-  type SelfServiceDiagnosticoResultado,
-} from "@/lib/wizard/self_service_result";
+import type { SelfServiceDiagnosticoResultado } from "@/lib/wizard/self_service_result";
 
 /** Mesmas faixas do domínio (NivelMaturidade) — rótulo para leitura executiva. */
 function rotuloNivelMaturidade(score: number | null | undefined): string | null {
@@ -30,21 +28,43 @@ function rotuloNivelMaturidade(score: number | null | undefined): string | null 
   return "Exemplar";
 }
 
-export default function DiagnosticoConcluidoSelfServicePage() {
+function DiagnosticoConcluidoSelfServiceConteudo() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [dados, setDados] = useState<SelfServiceDiagnosticoResultado | null | undefined>(undefined);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    const r = loadSelfServiceDiagnosticoResultado();
-    if (!r) {
+    const id = searchParams.get("diagnostico_id")?.trim() ?? "";
+    const token = searchParams.get("leitura_token")?.trim() ?? "";
+    if (!id || !token) {
       setDados(null);
-      router.replace("/");
+      setErro(null);
       return;
     }
-    setDados(r);
-    // Não limpar sessionStorage aqui: em React 18 Strict Mode o efeito roda 2x em dev e o segundo
-    // mount perderia os dados. O próximo POST self-service sobrescreve a mesma chave.
-  }, [router]);
+    let cancelado = false;
+    void (async () => {
+      setErro(null);
+      try {
+        const r = await getConclusaoSelfServiceVisualizacao(id, token);
+        if (!cancelado) setDados(r);
+      } catch (e) {
+        if (!cancelado) {
+          setDados(null);
+          setErro(e instanceof Error ? e.message : "Não foi possível carregar o diagnóstico.");
+        }
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (dados === null && erro === null) {
+      router.replace("/");
+    }
+  }, [dados, erro, router]);
 
   if (dados === undefined) {
     return (
@@ -53,6 +73,18 @@ export default function DiagnosticoConcluidoSelfServicePage() {
   }
 
   if (dados === null) {
+    if (erro) {
+      return (
+        <div className="container max-w-lg py-16 space-y-4 text-center">
+          <p className="text-sm text-destructive" role="alert">
+            {erro}
+          </p>
+          <Button type="button" variant="outline" onClick={() => router.replace("/")}>
+            Voltar ao início
+          </Button>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -77,7 +109,7 @@ export default function DiagnosticoConcluidoSelfServicePage() {
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Diagnóstico gravado na nuvem</h1>
         <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
           O questionário foi associado ao e-mail confirmado e armazenado no ambiente self-service. O painel
-          completo (histórico, PDF, M12) continua ligado à conta B2B Tributiq, se desejar evoluir depois.
+          completo (histórico, PDF, M12) continua ligado à sua conta na plataforma Tributiq, se desejar evoluir depois.
         </p>
       </div>
 
@@ -86,7 +118,7 @@ export default function DiagnosticoConcluidoSelfServicePage() {
           <CardTitle className="text-lg">Resultado do diagnóstico</CardTitle>
           <CardDescription>
             Score geral e notas por dimensão (mesmo critério do relatório e do motor M03 — LC 214/2025 em contexto de
-            maturidade organizacional).
+            maturidade organizacional). Dados obtidos do servidor (PostgreSQL).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
@@ -102,8 +134,7 @@ export default function DiagnosticoConcluidoSelfServicePage() {
               </p>
             ) : (
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Se o score não aparecer, atualize a página ou confira a versão da API — o JSON deve incluir{" "}
-                <span className="font-mono text-[11px]">score.score_geral.valor</span>.
+                Se o score não aparecer, confira a versão da API — o JSON deve incluir score agregado persistido.
               </p>
             )}
           </div>
@@ -149,9 +180,7 @@ export default function DiagnosticoConcluidoSelfServicePage() {
               </div>
             ) : (
               <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground leading-relaxed">
-                O breakdown por dimensão não está disponível nesta sessão (diagnóstico gravado antes desta melhoria ou
-                resposta sem <span className="font-mono">score.score_por_dimensao</span>). Faça um novo diagnóstico
-                self-service para ver todas as linhas.
+                O breakdown por dimensão não está disponível nesta resposta.
               </p>
             )}
           </div>
@@ -178,5 +207,17 @@ export default function DiagnosticoConcluidoSelfServicePage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function DiagnosticoConcluidoSelfServicePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container max-w-lg py-16 text-center text-sm text-muted-foreground">Carregando…</div>
+      }
+    >
+      <DiagnosticoConcluidoSelfServiceConteudo />
+    </Suspense>
   );
 }

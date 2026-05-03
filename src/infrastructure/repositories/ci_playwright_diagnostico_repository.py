@@ -32,7 +32,7 @@ _ID_LISTA_CI = UUID("22222222-2222-4222-a222-222222222222")
 
 
 def _seed_diagnostico_demo() -> Diagnostico:
-    """Um diagnóstico finalizado visível na listagem B2B (mesmo tenant do admin seed CI)."""
+    """Um diagnóstico finalizado visível na listagem do painel (mesmo tenant do admin seed CI)."""
     return Diagnostico(
         id=_ID_LISTA_CI,
         tenant_id=_TENANT_PADRAO_CI,

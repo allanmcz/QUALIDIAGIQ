@@ -15,14 +15,14 @@ Script auxiliar: `npm run test:e2e:integrado` (ajuste env conforme o host; reque
 
 ## Armazenamento local (MVP)
 
-O wizard usa **`localStorage`** para rascunho (`wizard_draft`) e fila pós-OTP (`pending_diagnostico`), conforme implementação em `lib/wizard/*`. É uma **exceção conscientemente MVP**: dados ficam no browser até envio à API; roadmap BFF/cookie HttpOnly está em **ADR-004**. Não colocar tokens JWT ou segredos nessas chaves.
+O wizard usa **`localStorage`** para rascunho de UX (`wizard_draft`), pendente legado pós-login (`pending_diagnostico`) e token de resgate OAuth (`rascunho_resgate_token`), conforme `lib/wizard/*` e `.cursor/rules/qdi-storage-policy.mdc`. **Não** usar `sessionStorage` em fluxo novo (há migração única session→local onde ainda existir legado). Diagnóstico concluído self-service: dados na **BD** + **GET** `/diagnosticos/self-service/conclusao-visualizacao` (query `diagnostico_id` + `leitura_token`). Roadmap: autosave do wizard na API e cookies httpOnly (**ADR-004**). Não colocar JWT ou segredos em chaves de rascunho.
 
 | Chave / API | Tecnologia | Uso resumido |
 |-------------|------------|--------------|
 | `wizard_draft` | `localStorage` | Rascunho do wizard (passos 1–2 e estado parcial). |
-| `pending_diagnostico` | `localStorage` | Payload enfileirado após OTP / antes do POST autenticado. |
-| `admin_token`, `admin_nome` | `localStorage` | Sessão painel pós-login B2B (MVP — não é modelo-alvo produção). |
-| `sessionStorage` (chave interna) | `sessionStorage` | Payload diagnóstico quando o fluxo redireciona a login antes do POST — ver `lib/wizard/pending_diagnostico.ts`. |
+| `pending_diagnostico` | `localStorage` | Payload pendente legado até POST autenticado (migrar para rascunho BD quando possível). |
+| `qdi_rascunho_resgate_token_v1` | `localStorage` | Token opaco da BD após «Entrar» (redirect perde o `#`). |
+| `admin_token`, `admin_nome` | `localStorage` | Sessão do painel após login na plataforma (MVP — não é modelo-alvo produção). |
 
 ## Stack-alvo
 
@@ -102,6 +102,6 @@ frontend/
 
 ## Notas
 
-- **Armazenamento no navegador (excepção MVP):** o fluxo actual usa **`localStorage`** para o token do painel após login (`admin_token`, `admin_nome`) e **`sessionStorage`** para o payload do diagnóstico quando o utilizador é enviado ao login antes do POST (`frontend/lib/wizard/pending_diagnostico.ts`). Isto **não** é o modelo-alvo de produção (cookies httpOnly + backend); está documentado nas páginas de login e deve ser substituído num roadmap de hardening.
+- **Armazenamento no navegador (MVP):** `localStorage` para painel e caches de wizard descritos na tabela acima; **proibido** `sessionStorage` em código novo. Resultado pós-conclusão self-service vem da **API** (PostgreSQL), não de storage de sessão.
 - **Tenant ID** em produção deve vir de JWT/cookies seguros — não confiar só em storage JS para dados sensíveis.
 - **PDF** é gerado server-side (FastAPI + WeasyPrint), não client-side.

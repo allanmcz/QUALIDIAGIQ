@@ -248,7 +248,7 @@ Parecer jurídico em **privacidade** e **termos de uso** “oficiais” (hoje MV
 
 | # | Tema | Observação |
 |---|------|------------|
-| D1 | Free self-service vs B2B logado | Narrativa + fluxo (wizard já menciona lead B2B). |
+| D1 | Free self-service vs conta na plataforma | Narrativa + fluxo (wizard alinhado ao léxico da plataforma). |
 | D2 | CNPJ opcional no Free | API ainda **exige** CNPJ 14 dígitos. |
 | D3 | Faturamento / setor detalhado | Schema + UI. |
 | D4 | URL canônica dev/stage/prod | Deploy docs. |

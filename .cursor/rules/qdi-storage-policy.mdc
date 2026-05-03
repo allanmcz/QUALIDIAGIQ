@@ -1,0 +1,34 @@
+---
+description: Política de armazenamento no navegador vs persistência PostgreSQL (QDI)
+globs: "frontend/**/*.{ts,tsx}"
+alwaysApply: true
+---
+
+# QDI — Política de persistência (memória do projeto)
+
+## Regra principal
+
+1. **`sessionStorage` está proibido** para fluxo de produto (não introduzir novas chaves; migrar/remover legado).
+2. **Estado de negócio canónico** (diagnóstico, rascunho OTP, resultado pós-conclusão) **só em PostgreSQL**, exposto pela **API FastAPI**.
+3. **`localStorage`** — uso restrito e documentado:
+   - **Sessão painel** (`admin_token`, etc.): MVP até cookies httpOnly (ver README front).
+   - **Cache UX do wizard** (rascunho de formulário, pendente legado pós-login, token de resgate OAuth): **não** substitui BD; há migração única `sessionStorage` → `localStorage` em `frontend/lib/wizard/browser_storage_migrate.ts`.
+   - **Roadmap:** autosave do wizard na BD (rascunho incremental) para reduzir dependência de `localStorage`.
+
+## Fluxos obrigatórios (servidor)
+
+| Dado | Onde persiste |
+|------|----------------|
+| Payload antes do OTP | `diagnostico_rascunhos_self_service` |
+| Diagnóstico final self-service | `diagnosticos` (tenant self-service) |
+| Página «concluído» sem JWT | `diagnostico_leitura_publica_self_service` + **GET** `/diagnosticos/self-service/conclusao-visualizacao` |
+
+## Anti-padrões
+
+- Gravar resultado final do diagnóstico **só** em `sessionStorage` / `localStorage` como fonte de verdade.
+- Novos `sessionStorage.setItem` no frontend sem ADR e remoção planead do legado.
+
+## Cruzamento
+
+- `.cursor/rules/qdi-gravacao-diagnostico-email.mdc`
+- Migração `0024_diagnostico_leitura_publica_self_service.sql`

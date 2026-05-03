@@ -75,7 +75,7 @@ function CadastroPageContent() {
     <div className="flex h-screen w-full items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-[400px]">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Criar conta B2B</CardTitle>
+          <CardTitle className="text-2xl font-bold">Criar conta na plataforma</CardTitle>
           <CardDescription>
             Nome, e-mail e senha — mesmo acesso ao painel de diagnósticos que o login. Senha com no mínimo 8
             caracteres.

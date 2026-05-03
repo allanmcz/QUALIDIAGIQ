@@ -63,13 +63,17 @@ function zSelectPerfilEmpresa(valoresPermitidos: readonly string[]) {
 }
 
 export const EmpresaSchema = z.object({
-  /** Cadastro da empresa no diagnóstico: 14 dígitos + DV (alinhado à API). */
+  /**
+   * CNPJ opcional: vazio = sem vínculo PJ; se preenchido, 14 dígitos + DV (alinhado à API/domain).
+   * Regra de produto versionada em `.cursor/rules/qdi-cnpj-opcional.mdc` — não exigir de novo sem ADR.
+   */
   cnpj: z
     .string()
-    .min(1, "CNPJ é obrigatório para o cadastro da empresa")
-    .transform((val) => val.replace(/\D/g, ""))
-    .refine((val) => val.length === 14, "CNPJ deve ter 14 dígitos")
-    .refine((val) => validaCNPJ(val), "CNPJ inválido"),
+    .transform((val) => (val ?? "").replace(/\D/g, ""))
+    .refine((val) => val === "" || val.length === 14, {
+      message: "CNPJ deve ter 14 dígitos ou ficar em branco",
+    })
+    .refine((val) => val === "" || validaCNPJ(val), { message: "CNPJ inválido" }),
   razao_social: z.string().min(3, "Razão social deve ter no mínimo 3 caracteres"),
   porte: zSelectPerfilEmpresa(PORTES_EMPRESA),
   regime: zSelectPerfilEmpresa(REGIMES_TRIBUTARIOS),

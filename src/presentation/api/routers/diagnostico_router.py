@@ -5,8 +5,10 @@ Camada: Presentation
 Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 """
 
-from datetime import datetime
-from typing import Annotated
+import asyncio
+import secrets
+from datetime import UTC, datetime
+from typing import Annotated, Any
 from uuid import UUID
 
 import psycopg2
@@ -14,6 +16,7 @@ import structlog
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, status
 
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
+from src.application.ports.email_service import EmailServicePort
 from src.application.use_cases.anexar_relatorio_otimista import (
     AnexarRelatorioOtimista,
     ComandoAnexarRelatorioOtimista,
@@ -48,12 +51,22 @@ from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
     versao_catalogo_lida,
 )
+from src.infrastructure.repositories.postgres_diagnostico_leitura_publica_self_service import (
+    buscar_diagnostico_conclusao_publica_sync,
+    inserir_leitura_publica_self_service_sync,
+)
+from src.infrastructure.repositories.postgres_rascunho_self_service import (
+    buscar_rascunho_ativo_por_token_sync,
+    inserir_rascunho_sync,
+    marcar_rascunho_consumido_sync,
+)
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
     get_atualizar_quadro_implantacao_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
+    get_email_service,
     get_gerar_questionario_adaptativo_use_case,
     get_realizar_diagnostico_use_case,
     get_self_service_diagnostico_claims,
@@ -63,6 +76,10 @@ from src.presentation.api.dependencies import (
 )
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.schemas import (
+    ConcluirRascunhoDiagnosticoSelfServiceRequest,
+    DiagnosticoConclusaoPublicaDimensaoSchema,
+    DiagnosticoConclusaoSelfServicePublicoResponse,
+    DiagnosticoRascunhoResumoResponse,
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
     IniciarDiagnosticoRequest,
@@ -74,14 +91,63 @@ from src.presentation.api.schemas import (
     PatchRelatorioPdfRequest,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
+    RascunhoDiagnosticoSelfServiceResponse,
     ScoreCompletoSchema,
     ScoreDimensaoSchema,
     VincularLeadsSelfServiceResponse,
+    VincularRascunhoContaPlataformaRequest,
 )
 
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
 
 logger = structlog.get_logger(__name__)
+
+_VALIDADE_OTP_MINUTOS = 10
+
+
+def _mascarar_email_norm(email_norm: str) -> str:
+    """Exibe domínio completo e ofusca o local-part (LGPD / UX)."""
+    if "@" not in email_norm:
+        return "***"
+    local, _, dom = email_norm.partition("@")
+    if len(local) <= 1:
+        return f"*@{dom}"
+    return f"{local[0]}***@{dom}"
+
+
+async def _enviar_otp_verificacao_para_email(
+    email_norm: str,
+    email_service: EmailServicePort,
+) -> str:
+    """Gera OTP, envia via SMTP e regista em ``codigo_store`` (paridade com /auth/verificar-email/solicitar)."""
+    settings = get_settings()
+    if not codigo_store.pode_reenviar(email_norm):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Aguarde alguns segundos antes de pedir novo código.",
+        )
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
+    ok = await email_service.enviar_codigo_verificacao_email(
+        email_norm, codigo, _VALIDADE_OTP_MINUTOS
+    )
+    if settings.app_env == "development":
+        logger.info(
+            "email_verificacao_codigo_dev_rascunho",
+            email=email_norm,
+            codigo=codigo,
+            smtp_ok=ok,
+        )
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Não foi possível enviar o e-mail. Se a API roda no Docker: confira se o serviço "
+                "mailpit está no ar (make dev) e SMTP_HOST=mailpit. No host: Mailpit em "
+                "127.0.0.1:1025 e SMTP_HOST=127.0.0.1. Mensagens de dev: http://127.0.0.1:8025 ."
+            ),
+        )
+    codigo_store.registrar_envio(email_norm, codigo)
+    return f"Código enviado. Válido por {_VALIDADE_OTP_MINUTOS} minutos."
 
 
 def _plano_efetivo_para_criacao(
@@ -161,7 +227,7 @@ def _aceite_lgpd_para_http(diagnostico: Diagnostico) -> datetime | None:
 
 
 def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
-    """Monta linha da listagem B2B (P7 — sem recomputar checklist/matriz)."""
+    """Monta linha da listagem do painel (P7 — sem recomputar checklist/matriz)."""
     return DiagnosticoResumoSchema(
         id=diagnostico.id,
         empresa_razao_social=diagnostico.empresa.razao_social,
@@ -234,6 +300,41 @@ def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema |
     )
 
 
+def _conclusao_publica_row_para_schema(
+    row: dict[str, Any],
+) -> DiagnosticoConclusaoSelfServicePublicoResponse:
+    """Monta resposta pública a partir da linha ``diagnosticos`` (JSONB ``score_completo``)."""
+    sc_raw = row.get("score_completo")
+    score_geral: float | None = None
+    items: list[DiagnosticoConclusaoPublicaDimensaoSchema] = []
+    if isinstance(sc_raw, dict):
+        try:
+            snap = ScoreCompleto.desde_dict(sc_raw)
+            score_geral = snap.score_geral.valor
+            for dim, sn in snap.score_por_dimensao.items():
+                items.append(
+                    DiagnosticoConclusaoPublicaDimensaoSchema(
+                        dimensao=dim.value,
+                        valor=sn.valor,
+                        peso_total_aplicado=sn.peso_total_aplicado,
+                    )
+                )
+        except (KeyError, TypeError, ValueError):
+            pass
+    loc_raw = row.get("locale_relatorio")
+    loc = str(loc_raw).strip() if loc_raw is not None else "pt-BR"
+    if not loc:
+        loc = "pt-BR"
+    return DiagnosticoConclusaoSelfServicePublicoResponse(
+        id=UUID(str(row["id"])),
+        status=str(row["status"]),
+        empresa_razao_social=str(row["empresa_razao_social"]),
+        locale_relatorio=loc,
+        score_geral=score_geral,
+        scores_por_dimensao=items,
+    )
+
+
 async def _executar_criar_diagnostico_core(
     *,
     tenant_id: UUID,
@@ -241,7 +342,7 @@ async def _executar_criar_diagnostico_core(
     use_case: RealizarDiagnostico,
     perfil_limite: str | None,
 ) -> DiagnosticoResponse:
-    """Núcleo compartilhado entre POST autenticado B2B e POST self-service (JWT após OTP)."""
+    """Núcleo compartilhado entre POST com conta na plataforma e POST self-service (JWT após OTP)."""
     empresa_domain = EmpresaInfo(
         cnpj=payload.empresa.cnpj,
         razao_social=payload.empresa.razao_social,
@@ -410,6 +511,285 @@ async def criar_diagnostico_self_service(
     )
 
 
+@router.post(
+    "/rascunho-self-service",
+    response_model=RascunhoDiagnosticoSelfServiceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Gravar rascunho do diagnóstico na base (antes do OTP)",
+    description=(
+        "Persiste o mesmo corpo de **POST /diagnosticos/self-service** na tabela de rascunhos e envia OTP. "
+        "O cliente deve guardar apenas o **resgate_token** (fragmento de URL ou memória de curto prazo) — "
+        "não usar o payload completo em sessionStorage como etapa final. "
+        "**Idempotency-Key** obrigatório (middleware)."
+    ),
+)
+async def criar_rascunho_diagnostico_self_service(
+    payload: Annotated[
+        IniciarDiagnosticoRequest,
+        Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
+    ],
+    email_service: Annotated[EmailServicePort, Depends(get_email_service)],
+) -> RascunhoDiagnosticoSelfServiceResponse:
+    """Grava JSON do assistente no Postgres (tenant self-service) e dispara verificação de e-mail."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Rascunho indisponível: configure DATABASE_URL na API.",
+        )
+    tenant_ss = settings.self_service_tenant_id
+    email_norm = codigo_store.normalizar_email(str(payload.respondente.email))
+    payload_dict = payload.model_dump(mode="json")
+    try:
+        token_plain, expira_em = await asyncio.to_thread(
+            inserir_rascunho_sync,
+            dsn,
+            tenant_id=tenant_ss,
+            email_norm=email_norm,
+            payload_dict=payload_dict,
+        )
+    except psycopg2.Error as e:
+        logger.exception("rascunho_self_service_insert_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível gravar o rascunho no PostgreSQL.",
+        ) from e
+
+    mensagem = await _enviar_otp_verificacao_para_email(email_norm, email_service)
+    return RascunhoDiagnosticoSelfServiceResponse(
+        resgate_token=token_plain,
+        mensagem=mensagem,
+        expira_em=expira_em if expira_em.tzinfo else expira_em.replace(tzinfo=UTC),
+    )
+
+
+@router.get(
+    "/rascunho-self-service/resumo",
+    response_model=DiagnosticoRascunhoResumoResponse,
+    summary="Resumo do rascunho (token opaco)",
+    description=(
+        "Metadados mínimos para a página de confirmação. **Header obrigatório:** "
+        "`X-Rascunho-Token` com o valor devolvido por POST /diagnosticos/rascunho-self-service."
+    ),
+)
+async def resumo_rascunho_diagnostico_self_service(
+    x_rascunho_token: Annotated[str, Header(alias="X-Rascunho-Token")],
+) -> DiagnosticoRascunhoResumoResponse:
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Rascunho indisponível: configure DATABASE_URL na API.",
+        )
+    row = await asyncio.to_thread(
+        buscar_rascunho_ativo_por_token_sync, dsn, x_rascunho_token.strip()
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rascunho inválido, expirado ou já utilizado.",
+        )
+    pj = row.get("payload_json")
+    if not isinstance(pj, dict):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Formato de rascunho inconsistente.",
+        )
+    emp = pj.get("empresa")
+    razao = (
+        str(emp.get("razao_social", "")).strip() if isinstance(emp, dict) else ""
+    ) or "(sem razão social)"
+    email_norm = str(row.get("email_norm") or "")
+    exp_raw = row.get("expira_em")
+    if exp_raw is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Rascunho sem expiração.",
+        )
+    exp_dt = (
+        exp_raw
+        if isinstance(exp_raw, datetime)
+        else datetime.fromisoformat(str(exp_raw).replace("Z", "+00:00"))
+    )
+    if exp_dt.tzinfo is None:
+        exp_dt = exp_dt.replace(tzinfo=UTC)
+    return DiagnosticoRascunhoResumoResponse(
+        empresa_razao_social=razao,
+        email_mascarado=_mascarar_email_norm(email_norm),
+        respondente_email=str(email_norm),
+        expira_em=exp_dt,
+    )
+
+
+@router.post(
+    "/rascunho-self-service/concluir",
+    response_model=DiagnosticoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Concluir rascunho com OTP (grava diagnóstico final)",
+    description=(
+        "Valida o código enviado por e-mail, materializa **POST /diagnosticos/self-service** a partir "
+        "do JSON guardado no rascunho e marca o rascunho como consumido. **Idempotency-Key** obrigatório."
+    ),
+)
+async def concluir_rascunho_diagnostico_self_service(
+    body: ConcluirRascunhoDiagnosticoSelfServiceRequest,
+    use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+) -> DiagnosticoResponse:
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Operação indisponível: configure DATABASE_URL na API.",
+        )
+    row = await asyncio.to_thread(
+        buscar_rascunho_ativo_por_token_sync, dsn, body.resgate_token.strip()
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rascunho inválido, expirado ou já utilizado.",
+        )
+    email_norm = str(row["email_norm"])
+    codigo_limpo = body.codigo.strip().replace(" ", "")
+    if not codigo_limpo.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código deve conter apenas números.",
+        )
+    if not codigo_store.validar_e_consumir(email_norm, codigo_limpo):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código inválido ou expirado. Solicite um novo código.",
+        )
+    row2 = await asyncio.to_thread(
+        buscar_rascunho_ativo_por_token_sync, dsn, body.resgate_token.strip()
+    )
+    if not row2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rascunho inválido, expirado ou já utilizado.",
+        )
+    pj = row2.get("payload_json")
+    if not isinstance(pj, dict):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Formato de rascunho inconsistente.",
+        )
+    payload = IniciarDiagnosticoRequest.model_validate(pj)
+    if codigo_store.normalizar_email(str(payload.respondente.email)) != email_norm:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inconsistência entre rascunho e respondente.",
+        )
+    tenant_ss = settings.self_service_tenant_id
+    out = await _executar_criar_diagnostico_core(
+        tenant_id=tenant_ss,
+        payload=payload,
+        use_case=use_case,
+        perfil_limite=None,
+    )
+    try:
+        await asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row2["id"])))
+    except psycopg2.Error as e:
+        logger.exception("rascunho_self_service_consumir_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Diagnóstico criado, mas falhou ao fechar o rascunho — contacte suporte.",
+        ) from e
+    try:
+        leitura_plain = await asyncio.to_thread(
+            inserir_leitura_publica_self_service_sync,
+            dsn,
+            out.id,
+            tenant_ss,
+        )
+    except psycopg2.Error as e:
+        logger.exception("leitura_publica_self_service_insert_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Diagnóstico gravado, mas falhou ao emitir token de visualização — contacte suporte.",
+        ) from e
+    return out.model_copy(update={"leitura_token": leitura_plain})
+
+
+@router.post(
+    "/rascunho-self-service/vincular-conta",
+    response_model=DiagnosticoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Materializar rascunho no tenant da conta (JWT)",
+    description=(
+        "Exige **Bearer** da conta na plataforma. O e-mail do respondente no rascunho deve ser **igual** "
+        "ao e-mail do admin (LGPD / prova de posse). **Idempotency-Key** obrigatório."
+    ),
+)
+async def vincular_rascunho_conta_plataforma(
+    body: VincularRascunhoContaPlataformaRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+) -> DiagnosticoResponse:
+    user_id, tenant_id, perfil_conta = current
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Operação indisponível: configure DATABASE_URL na API.",
+        )
+    row = await asyncio.to_thread(
+        buscar_rascunho_ativo_por_token_sync, dsn, body.resgate_token.strip()
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rascunho inválido, expirado ou já utilizado.",
+        )
+    try:
+        email_admin = buscar_email_admin_por_id_e_tenant_postgres(user_id, tenant_id, dsn)
+    except psycopg2.Error as e:
+        logger.exception("vincular_rascunho_email_lookup_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível validar o consultor no PostgreSQL.",
+        ) from e
+    if not email_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token não corresponde a um consultor com e-mail resolvível.",
+        )
+    email_admin_norm = codigo_store.normalizar_email(email_admin)
+    pj = row.get("payload_json")
+    if not isinstance(pj, dict):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Formato de rascunho inconsistente.",
+        )
+    payload = IniciarDiagnosticoRequest.model_validate(pj)
+    email_resp = codigo_store.normalizar_email(str(payload.respondente.email))
+    if email_resp != email_admin_norm:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="O e-mail do respondente no rascunho deve ser o mesmo da sua conta na plataforma.",
+        )
+    out = await _executar_criar_diagnostico_core(
+        tenant_id=tenant_id,
+        payload=payload,
+        use_case=use_case,
+        perfil_limite=perfil_conta,
+    )
+    try:
+        await asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row["id"])))
+    except psycopg2.Error as e:
+        logger.exception("vincular_rascunho_consumir_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Diagnóstico criado, mas falhou ao fechar o rascunho — contacte suporte.",
+        ) from e
+    return out
+
+
 @router.get(
     "/metodologia",
     response_model=MetodologiaResponse,
@@ -529,15 +909,61 @@ async def obter_questionario_adaptativo(
     )
 
 
+@router.get(
+    "/self-service/conclusao-visualizacao",
+    response_model=DiagnosticoConclusaoSelfServicePublicoResponse,
+    summary="Visualização pública do diagnóstico concluído (self-service)",
+    description=(
+        "Endpoint **público** (sem JWT). Exige ``diagnostico_id`` e ``leitura_token`` devolvidos por "
+        "**POST /diagnosticos/rascunho-self-service/concluir** (token persistido em PostgreSQL, TTL ~7 dias). "
+        "Não expõe checklist/PDF — apenas snapshot executivo alinhado à página de conclusão."
+    ),
+)
+async def obter_conclusao_self_service_publica(
+    diagnostico_id: Annotated[
+        UUID, Query(description="UUID do diagnóstico gravado no tenant self-service.")
+    ],
+    leitura_token: Annotated[
+        str,
+        Query(
+            min_length=16,
+            description="Token opaco devolvido no campo `leitura_token` da resposta de concluir.",
+        ),
+    ],
+) -> DiagnosticoConclusaoSelfServicePublicoResponse:
+    """Lê diagnóstico da BD após validar o token de leitura (sem armazenamento no navegador como fonte)."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Operação indisponível: configure DATABASE_URL na API.",
+        )
+    tenant_ss = settings.self_service_tenant_id
+    row = await asyncio.to_thread(
+        buscar_diagnostico_conclusao_publica_sync,
+        dsn,
+        diagnostico_id=diagnostico_id,
+        tenant_id_esperado=tenant_ss,
+        token_plain=leitura_token.strip(),
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Diagnóstico não encontrado ou token inválido/expirado.",
+        )
+    return _conclusao_publica_row_para_schema(row)
+
+
 @router.post(
     "/vincular-leads-self-service",
     response_model=VincularLeadsSelfServiceResponse,
     status_code=status.HTTP_200_OK,
-    summary="Vincular diagnósticos gratuitos (self-service) ao tenant B2B",
+    summary="Vincular diagnósticos gratuitos (self-service) ao tenant da conta na plataforma",
     description=(
         "Reatribui ao tenant do JWT as linhas em `diagnosticos` gravadas no tenant self-service "
         "(fluxo OTP), com `respondente_email` igual ao e-mail do consultor em `admins` e plano gratuito. "
-        "Resolve o caso em que o lead concluiu o assistente antes de entrar no painel B2B. "
+        "Resolve o caso em que o lead concluiu o assistente antes de iniciar sessão no painel. "
         "**Idempotency-Key** obrigatório (mesmo middleware dos outros POST sob `/diagnosticos/`)."
     ),
 )

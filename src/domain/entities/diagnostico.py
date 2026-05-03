@@ -129,7 +129,9 @@ class Respondente:
     email: str
     nome: str | None = None
     cargo: str | None = None  # CFO, Contador, Dono, Diretor TI, etc.
-    telefone: str | None = None  # M09 — lead B2B opcional (persistência quando coluna existir)
+    telefone: str | None = (
+        None  # M09 — lead na plataforma opcional (persistência quando coluna existir)
+    )
 
 
 @dataclass

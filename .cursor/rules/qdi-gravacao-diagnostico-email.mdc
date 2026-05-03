@@ -1,0 +1,35 @@
+---
+description: Gravação do diagnóstico sem conta na plataforma — vínculo ao e-mail, OTP self-service e recuperação após cadastro
+globs: "**/*"
+alwaysApply: true
+---
+
+# QDI — Gravação do diagnóstico e vínculo ao e-mail (regra de produto)
+
+## Decisão (Allan — não contradizer na copy nem reverter sem ADR)
+
+1. **Gravar o diagnóstico na API não exige** conta na plataforma **antes** do assistente: o utilizador pode concluir o wizard **sem sessão** de painel consultor.
+2. **Vínculo principal sem conta na plataforma:** ao concluir o wizard **sem sessão**, o corpo é persistido na BD como **rascunho** — `POST /diagnosticos/rascunho-self-service` (Idempotency-Key) → OTP (`/auth/verificar-email/solicitar` para reenvio) → **`POST /diagnosticos/rascunho-self-service/concluir`** materializa o diagnóstico no tenant self-service. Alternativa legada: JWT self-service + `POST /diagnosticos/self-service`. Ver `frontend/app/diagnostico/confirmar-gravacao/page.tsx` e `frontend/lib/api/self_service_diagnostico.ts`.
+3. **Com sessão na plataforma (Bearer painel):** `POST /diagnosticos/` grava direto no tenant do utilizador (fluxo alternativo, não exclusivo).
+4. **Recuperação após cadastro ou login:** (i) rascunho ainda aberto: **`POST /diagnosticos/rascunho-self-service/vincular-conta`** com Bearer + `resgate_token` (e-mail respondente = e-mail do admin); (ii) diagnósticos já no tenant self-service: **`POST /diagnosticos/vincular-leads-self-service`**.
+
+## Copy e UX (obrigatório alinhar)
+
+- **Não** afirmar que «gravar na API exige login após cadastro» na plataforma como **única** forma — isso **nega** o self-service por e-mail.
+- Formular sempre os **dois** caminhos: **(A)** confirmar e-mail com código e gravar (self-service); **(B)** com sessão na plataforma para gravar direto ou para vincular depois.
+
+## Onde está no código (rasto)
+
+- API: `src/presentation/api/routers/diagnostico_router.py` (`/rascunho-self-service`, `/rascunho-self-service/concluir`, `/rascunho-self-service/vincular-conta`, `/self-service`, `/vincular-leads-self-service`), `auth_router.py` (token self-service).
+- Front: `WizardForm.tsx` → `/diagnostico/confirmar-gravacao#token`, `confirmar-gravacao/page.tsx`, `gravado-local` (redirect legado), `pending_diagnostico.ts` / `rascunho_resgate_token.ts` (cache **localStorage** + migração; ver `.cursor/rules/qdi-storage-policy.mdc`), página concluído via **GET** `conclusao-visualizacao` + query (dados na BD).
+
+## Anti-padrão (proibido)
+
+- Mensagens que imponham login na plataforma **antes** de qualquer persistência na BD, ignorando rascunho + OTP.
+- Remover rascunho self-service sem substituir por persistência equivalente na API.
+- Termo **«B2B»** em textos de produto/UI — usar **«conta na plataforma»** (ver `.cursor/rules/qdi-lexico-plataforma.mdc`).
+
+## Cruzamento
+
+- **CNPJ opcional:** `.cursor/rules/qdi-cnpj-opcional.mdc`
+- **D1 produto:** `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md`

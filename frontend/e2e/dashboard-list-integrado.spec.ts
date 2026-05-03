@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
  */
 const integrado = process.env.PLAYWRIGHT_INTEGRATED === "1";
 
-test.describe("Dashboard lista B2B (API integrada CI)", () => {
+test.describe("Dashboard lista (API integrada CI)", () => {
   test.skip(!integrado, "defina PLAYWRIGHT_INTEGRATED=1, NEXT_PUBLIC_API_URL e suba API + Next");
 
   test("login → lista diagnósticos (sem mock)", async ({ page }) => {

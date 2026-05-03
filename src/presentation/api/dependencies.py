@@ -265,7 +265,7 @@ def get_diagnostico_repository() -> DiagnosticoRepository:
 
 def get_lead_diagnostico_vinculo_port() -> LeadDiagnosticoVinculoPort:
     """
-    Reatribuição self-service → tenant B2B.
+    Reatribuição self-service → tenant da conta na plataforma.
 
     Com ``DATABASE_URL`` (DSN síncrono), UPDATE via Postgres. Sem DSN e com modo CI Playwright,
     altera o dict in-process (legado sem Postgres).

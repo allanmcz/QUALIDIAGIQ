@@ -28,7 +28,7 @@ export default function SucessoPage() {
           <h2 className="text-center text-xl font-semibold text-foreground">Fase 2 — após cadastro e login</h2>
           <p className="text-center text-sm leading-relaxed text-muted-foreground">
             O acesso completo ao painel consultor (histórico, detalhe por diagnóstico, checklist M12, etc.)
-            permanece ligado à sua conta B2B Tributiq. Se ainda não tiver cadastro corporativo, utilize o
+            permanece ligado à sua conta na plataforma Tributiq. Se ainda não tiver cadastro, utilize o
             canal acordado com o time Tributiq.
           </p>
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">

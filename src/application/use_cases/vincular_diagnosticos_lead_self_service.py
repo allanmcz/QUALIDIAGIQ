@@ -1,5 +1,5 @@
 """
-Caso de uso: trazer diagnósticos gratuitos (self-service / OTP) para o tenant B2B do consultor.
+Caso de uso: trazer diagnósticos gratuitos (self-service / OTP) para o tenant da conta na plataforma do consultor.
 
 Camada: Application
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ComandoVincularDiagnosticosLeadSelfService:
-    """E-mail já normalizado; tenants explícitos (origem self-service + destino B2B)."""
+    """E-mail já normalizado; tenants explícitos (origem self-service + destino conta na plataforma)."""
 
     email_admin_normalizado: str
     tenant_destino: UUID

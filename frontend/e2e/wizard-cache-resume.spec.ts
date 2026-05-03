@@ -49,10 +49,10 @@ const pendingDiagnosticoValido = {
   aceite_termos_privacidade: true,
 };
 
-test.describe("Wizard — retomada de cache (sessionStorage)", () => {
+test.describe("Wizard — retomada de cache (localStorage)", () => {
   test("com rascunho: exibe diálogo com copy e botões Continuar / Reiniciar", async ({ page }) => {
     await page.addInitScript((payload: { key: string; value: string }) => {
-      window.sessionStorage.setItem(payload.key, payload.value);
+      window.localStorage.setItem(payload.key, payload.value);
     }, { key: STORAGE_WIZARD_DRAFT, value: JSON.stringify(draftComProgresso) });
 
     await page.goto("/wizard");
@@ -63,7 +63,7 @@ test.describe("Wizard — retomada de cache (sessionStorage)", () => {
     await expect(dialog).toBeVisible();
 
     await expect(
-      dialog.getByText(/Há dados do assistente guardados apenas na sessão atual desta aba/i),
+      dialog.getByText(/Há dados do assistente em cache local neste navegador/i),
     ).toBeVisible();
     await expect(dialog.getByText(/Rascunho do wizard/i)).toBeVisible();
     await expect(dialog.getByRole("button", { name: /^Continuar$/ })).toBeVisible();
@@ -72,7 +72,7 @@ test.describe("Wizard — retomada de cache (sessionStorage)", () => {
 
   test("com diagnóstico pendente: lista conclusão aguardando login", async ({ page }) => {
     await page.addInitScript((payload: { key: string; value: string }) => {
-      window.sessionStorage.setItem(payload.key, payload.value);
+      window.localStorage.setItem(payload.key, payload.value);
     }, {
       key: STORAGE_PENDING_DIAGNOSTICO,
       value: JSON.stringify(pendingDiagnosticoValido),
@@ -85,15 +85,15 @@ test.describe("Wizard — retomada de cache (sessionStorage)", () => {
     });
     await expect(dialog).toBeVisible();
     await expect(
-      dialog.getByText(/Conclusão aguardando cadastro ou login para gravar na API/i),
+      dialog.getByText(/Rascunho legado no navegador ou fluxo de confirmação/i),
     ).toBeVisible();
     await expect(dialog.getByText(/LGPD: trata-se de cache local/i)).toBeVisible();
   });
 
   test("com rascunho e pendente: exibe ambos os itens e nota de «Continuar»", async ({ page }) => {
     await page.addInitScript((payload: { draft: string; pending: string }) => {
-      window.sessionStorage.setItem("qdi_wizard_draft_v1", payload.draft);
-      window.sessionStorage.setItem("qdi_pending_post_diagnostico_v1", payload.pending);
+      window.localStorage.setItem("qdi_wizard_draft_v1", payload.draft);
+      window.localStorage.setItem("qdi_pending_post_diagnostico_v1", payload.pending);
     }, {
       draft: JSON.stringify(draftComProgresso),
       pending: JSON.stringify(pendingDiagnosticoValido),
@@ -107,18 +107,18 @@ test.describe("Wizard — retomada de cache (sessionStorage)", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(/Rascunho do wizard/i)).toBeVisible();
     await expect(
-      dialog.getByText(/Conclusão aguardando cadastro ou login para gravar na API/i),
+      dialog.getByText(/Rascunho legado no navegador ou fluxo de confirmação/i),
     ).toBeVisible();
     await expect(
       dialog.getByText(/«Continuar» restaura o rascunho do assistente/i),
     ).toBeVisible();
   });
 
-  test("Reiniciar diagnóstico fecha o diálogo e remove o rascunho do sessionStorage", async ({
+  test("Reiniciar diagnóstico fecha o diálogo e remove o rascunho do localStorage", async ({
     page,
   }) => {
     await page.addInitScript((payload: { key: string; value: string }) => {
-      window.sessionStorage.setItem(payload.key, payload.value);
+      window.localStorage.setItem(payload.key, payload.value);
     }, { key: STORAGE_WIZARD_DRAFT, value: JSON.stringify(draftComProgresso) });
 
     await page.goto("/wizard");
@@ -131,7 +131,7 @@ test.describe("Wizard — retomada de cache (sessionStorage)", () => {
     await dialog.getByRole("button", { name: /Reiniciar diagnóstico/i }).click();
 
     await expect(dialog).toBeHidden();
-    const draftRestante = await page.evaluate((k) => window.sessionStorage.getItem(k), STORAGE_WIZARD_DRAFT);
+    const draftRestante = await page.evaluate((k) => window.localStorage.getItem(k), STORAGE_WIZARD_DRAFT);
     expect(draftRestante).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 /**
- * POST /diagnosticos/vincular-leads-self-service — traz diagnósticos OTP (mesmo e-mail) para o tenant B2B.
+ * POST /diagnosticos/vincular-leads-self-service — traz diagnósticos OTP (mesmo e-mail) para o tenant da conta na plataforma.
  */
 import { getAccessToken, getApiUrlForFetch } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";

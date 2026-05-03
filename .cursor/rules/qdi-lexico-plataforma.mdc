@@ -1,0 +1,10 @@
+---
+description: Léxico QDI — evitar «B2B» em copy; usar «conta na plataforma»
+globs: "**/*"
+alwaysApply: true
+---
+
+# QDI — Léxico (conta na plataforma)
+
+- Em **textos de produto** (UI, Swagger `summary`/`description` em PT, documentação operacional para Allan): **não** usar o termo **B2B**. Preferir **«conta na plataforma»**, **«sessão na plataforma»**, **«login na plataforma»**, **«cadastro na plataforma»**, conforme o contexto.
+- **Identificadores de código** (`CadastroConsultorB2BRequest`, `QDI_CADASTRO_CONSULTOR_B2B_HABILITADO`, nomes de função) podem manter o sufixo técnico até refactor explícito — não são copy.

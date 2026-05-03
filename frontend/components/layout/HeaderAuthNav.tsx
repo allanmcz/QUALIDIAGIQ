@@ -13,7 +13,7 @@ import {
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
 
 /**
- * Sessão B2B (JWT em localStorage) — só no cabeçalho global.
+ * Sessão com conta na plataforma (JWT em localStorage) — só no cabeçalho global.
  * Estado inicial «convidado» evita placeholder «…» preso em hidratação; `useLayoutEffect` corrige antes do paint.
  */
 export function HeaderAuthNav() {
@@ -62,7 +62,7 @@ export function HeaderAuthNav() {
 
   if (nome === null) {
     return (
-      <div className="flex items-center gap-1.5 sm:gap-2" role="group" aria-label="Conta consultor B2B">
+      <div className="flex items-center gap-1.5 sm:gap-2" role="group" aria-label="Conta na plataforma">
         <Button variant="outline" size="sm" asChild className="shrink-0">
           <Link href="/cadastro">Cadastrar</Link>
         </Button>

@@ -1,5 +1,5 @@
 """
-Rotas de autenticação B2B.
+Rotas de autenticação — conta na plataforma (login/cadastro consultor).
 
 Camada: Presentation
 """
@@ -35,7 +35,7 @@ logger = structlog.get_logger(__name__)
 
 _VALIDADE_MINUTOS_CODIGO = 10
 
-router = APIRouter(prefix="/auth", tags=["Autenticação B2B"])
+router = APIRouter(prefix="/auth", tags=["Conta na plataforma"])
 pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=12, deprecated="auto")
 
 
@@ -45,7 +45,7 @@ class LoginRequest(BaseModel):
 
 
 class CadastroConsultorB2BRequest(BaseModel):
-    """Cadastro mínimo para acesso ao painel B2B (consultor)."""
+    """Cadastro mínimo para acesso ao painel (conta na plataforma)."""
 
     nome: str = Field(min_length=1, max_length=255, description="Nome exibido no painel.")
     email: EmailStr
@@ -62,7 +62,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str
     nome: str | None
-    # Perfil B2B espelhado no JWT: gratuito (só plano gratuito) | avancado (plano avançado permitido).
+    # Perfil comercial espelhado no JWT: gratuito (só plano gratuito) | avancado (plano avançado permitido).
     perfil_conta: str = "gratuito"
 
 
@@ -107,7 +107,7 @@ def create_access_token(
     perfil_conta: str = "gratuito",
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Gera JWT com `sub` (id do admin), `tenant_id` e `perfil_conta` (B2B)."""
+    """Gera JWT com `sub` (id do admin), `tenant_id` e `perfil_conta` (conta na plataforma)."""
     settings = get_settings()
     expire = datetime.now(UTC) + (
         expires_delta if expires_delta is not None else timedelta(minutes=15)
@@ -299,7 +299,7 @@ async def login(request: LoginRequest) -> LoginResponse:
     "/cadastro",
     response_model=LoginResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Cadastrar consultor B2B (nome, e-mail, senha)",
+    summary="Cadastrar conta na plataforma (nome, e-mail, senha)",
     description=(
         "Cria registro em `admins` com tenant dedicado e `perfil_conta` gratuito; devolve o mesmo "
         "contrato de `POST /auth/login` (JWT). Requer PostgreSQL acessível como em login (`DATABASE_URL`) "
@@ -307,12 +307,12 @@ async def login(request: LoginRequest) -> LoginResponse:
     ),
 )
 async def cadastro_consultor_b2b(body: CadastroConsultorB2BRequest) -> LoginResponse:
-    """Cadastro público MVP — mesma base de credenciais do login B2B."""
+    """Cadastro público MVP — mesma base de credenciais do login na plataforma."""
     settings_cad = get_settings()
     if not settings_cad.cadastro_consultor_b2b_habilitado:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cadastro de consultor está desabilitado neste ambiente (QDI_CADASTRO_CONSULTOR_B2B_HABILITADO).",
+            detail="Cadastro na plataforma está desabilitado neste ambiente (QDI_CADASTRO_CONSULTOR_B2B_HABILITADO).",
         )
 
     email_norm = codigo_store.normalizar_email(str(body.email))

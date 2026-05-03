@@ -25,7 +25,7 @@ Perguntas sugeridas ao “cliente” (tu ou terceiro na sala):
 3. A **timeline / cronograma** no detalhe está legível para apresentar a sócio leigo?  
 4. O **checklist ABNT (M12)** — consegues marcar um item e ver persistência após refresh?  
 5. O **PDF** (se WeasyPrint activo): rodapé com referências **EC 132/2023**, **LC 214/2025**, **ABNT NBR 17301:2026** aparece?  
-6. O fluxo **B2B** (`/login` → lista → detalhe) é o que precisas para escritório?  
+6. O fluxo com **conta na plataforma** (`/login` → lista → detalhe) é o que precisas para escritório?  
 7. O que **falta** antes de mostrar a um cliente real (sem dados fictícios)?
 
 ---

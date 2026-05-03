@@ -63,7 +63,7 @@ docs(qdi-docs): consolidar fluxograma 8 etapas em 04_METODOLOGIA
 ## Exemplos REJEITADOS pelo hook
 
 ```
-feat: implement B2B authentication                ← inglês
+feat: implement platform authentication           ← inglês
 feat(auth): adiciona login                         ← escopo sem qdi-
 add: nova entidade                                ← tipo inválido
 qdi-domain: nova entidade                         ← falta tipo

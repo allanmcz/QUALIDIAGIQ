@@ -1,5 +1,5 @@
 """
-Lookup de administrador B2B na tabela `admins` do Postgres.
+Lookup de administrador (conta na plataforma) na tabela `admins` do Postgres.
 
 Camada: Infrastructure
 Usado quando há ``DATABASE_URL`` (Docker Compose, CI): o login não depende do REST Supabase em :54321.

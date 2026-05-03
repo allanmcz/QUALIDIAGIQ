@@ -15,7 +15,7 @@ export type DiagnosticoResumoApi = {
 
 /**
  * Lista diagnósticos do tenant logado (JWT obrigatório).
- * P7 — dashboard B2B.
+ * P7 — lista de diagnósticos no painel (conta na plataforma).
  */
 export async function fetchDiagnosticosResumo(
   limit = 100,

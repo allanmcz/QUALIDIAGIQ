@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 /**
  * Plano ANALISE §G — smoke dashboard com GET /diagnosticos/ mockado (sem API real).
  */
-test.describe("Dashboard lista B2B (mock API)", () => {
+test.describe("Dashboard lista (mock API)", () => {
   test("carrega cards a partir da API mockada", async ({ page }) => {
     await page.route("**/auth/login", async (route) => {
       if (route.request().method() !== "POST") {

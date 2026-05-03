@@ -2,7 +2,7 @@
 
 **Objetivo:** validar o fluxo crítico ponta a ponta antes de declarar MVP fechado (complementa **Fase A.3** do plano).
 
-**Pré-requisitos:** `make dev` (API + DB), front `npm run dev` ou Docker na porta web; JWT válido (login B2B).
+**Pré-requisitos:** `make dev` (API + DB), front `npm run dev` ou Docker na porta web; JWT válido (login na plataforma).
 
 ## Automatizado (CI / pytest)
 

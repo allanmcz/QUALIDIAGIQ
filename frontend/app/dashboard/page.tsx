@@ -57,7 +57,7 @@ export default function DashboardPage() {
       const r = await postVincularLeadsSelfService();
       setMsgVinculo(
         r.total_vinculados === 0
-          ? "Nenhum registro elegível: só existem diagnósticos no «pool» self-service (após OTP), plano gratuito, com e-mail do respondente igual ao do seu login B2B. Diagnósticos feitos já logado no painel não entram aqui — já estão no seu tenant."
+          ? "Nenhum registro elegível: só existem diagnósticos no «pool» self-service (após OTP), plano gratuito, com e-mail do respondente igual ao do seu login na plataforma. Diagnósticos feitos já com sessão iniciada no painel não entram aqui — já estão no seu tenant."
           : `${r.total_vinculados} diagnóstico(s) do fluxo gratuito (OTP / self-service) foram trazidos para este painel.`,
       );
       await recarregarLista();
@@ -100,9 +100,9 @@ export default function DashboardPage() {
                   className="text-xs text-muted-foreground text-left sm:text-right leading-relaxed max-w-md sm:ml-auto"
                 >
                   Use apenas se você concluiu o assistente <strong className="font-medium text-foreground">sem</strong>{" "}
-                  conta B2B: código no e-mail → gravação no ambiente self-service. A API só traz linhas em que o
+                  conta na plataforma: código no e-mail → gravação no ambiente self-service. A API só traz linhas em que o
                   e-mail do respondente é o <strong className="font-medium text-foreground">mesmo</strong> do seu
-                  login atual e o plano é gratuito. Se você já estava logado e usou «Novo diagnóstico», os itens já
+                  login atual e o plano é gratuito. Se você já estava com sessão iniciada e usou «Novo diagnóstico», os itens já
                   aparecem na lista abaixo — não precisam de importação.
                 </p>
               </div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
               /wizard
             </Link>{" "}
             (logado) ou, se você só usou o fluxo com código por e-mail (lead), clique em «Importar do fluxo OTP
-            (gratuito)» — desde que o e-mail confirmado no OTP seja o mesmo do login B2B.
+            (gratuito)» — desde que o e-mail confirmado no OTP seja o mesmo do login na plataforma.
           </p>
         )}
 

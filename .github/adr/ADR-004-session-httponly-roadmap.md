@@ -1,11 +1,11 @@
-# ADR-004 — Sessão B2B: `localStorage` (MVP) → cookie HttpOnly + refresh (meta)
+# ADR-004 — Sessão na plataforma: `localStorage` (MVP) → cookie HttpOnly + refresh (meta)
 
 Data: 2026-05-05  
 Estado: proposta / roadmap (**Fase F** — plano analise §11)
 
 ## Contexto
 
-O wizard B2B e o dashboard armazenam JWT em **`localStorage`**, expondo classe de ataques XSS a token de sessão (**LGPD**/boa prática de segurança de aplicações).
+O wizard e o dashboard (conta na plataforma) armazenam JWT em **`localStorage`**, expondo classe de ataques XSS a token de sessão (**LGPD**/boa prática de segurança de aplicações).
 
 ## Decisão atual (Beta)
 

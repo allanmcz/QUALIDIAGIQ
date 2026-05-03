@@ -1,5 +1,5 @@
 """
-Port de reatribuição de tenant (lead self-service → painel B2B).
+Port de reatribuição de tenant (lead self-service → conta na plataforma / painel).
 
 Camada: Application (contrato — Dependency Inversion Principle)
 

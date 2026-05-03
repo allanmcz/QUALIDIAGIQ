@@ -12,7 +12,7 @@ import { type NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/** Cabeçalhos repassados à API (contratos B2B e JSON). */
+/** Cabeçalhos repassados à API (contratos da plataforma e JSON). */
 const CABECALHOS_REPASSE = [
   "authorization",
   "content-type",

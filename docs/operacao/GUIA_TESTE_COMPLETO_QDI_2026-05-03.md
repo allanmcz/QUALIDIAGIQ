@@ -134,7 +134,7 @@ PLAYWRIGHT_INTEGRATED=1 npm run test:e2e:integrado
 ## 7. Testes manuais no browser (checklist curto)
 
 1. **Landing / wizard anónimo:** `http://127.0.0.1:60001/wizard` — preencher lead, LGPD, perfil, responder perguntas; se catálogo mockado com erro, ver mensagem **Catálogo incompleto** (E2E cobre caso sintético).
-2. **Login B2B:** `http://127.0.0.1:60001/login` — credenciais de dev conforme `.env` / seed do projeto.
+2. **Login na plataforma:** `http://127.0.0.1:60001/login` — credenciais de dev conforme `.env` / seed do projeto.
 3. **Dashboard lista:** `/dashboard` — lista diagnósticos.
 4. **Detalhe M05/M06/M12:** `/dashboard/diagnosticos/{id}` — radar, ranking de gaps, cronograma + timeline, checklist ABNT com **If-Match** ao marcar itens.
 5. **Metodologia pública:** `/metodologia` e API `GET /diagnosticos/metodologia` + `manifesto-pesos` (com `DATABASE_URL` na API para ler **0015**).

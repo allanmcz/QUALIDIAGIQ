@@ -75,10 +75,10 @@ function LoginPageContent() {
     <div className="flex h-screen w-full items-center justify-center bg-slate-50">
       <Card className="w-[400px]">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">QualiDiagIQ B2B</CardTitle>
+          <CardTitle className="text-2xl font-bold">QualiDiagIQ — conta na plataforma</CardTitle>
           <CardDescription>
-            Acesse o painel do consultor. Conta corporativa após cadastro no ecossistema Tributiq — o login
-            desbloqueia gravar o diagnóstico na API e a fase 2 (painel).
+            Acesse o painel. Após cadastro no ecossistema Tributiq, o login desbloqueia gravar o diagnóstico na API e a
+            fase 2 (painel).
           </CardDescription>
         </CardHeader>
         <CardContent>

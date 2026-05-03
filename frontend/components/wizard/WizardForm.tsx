@@ -34,14 +34,19 @@ import { mascaraTelefoneBR } from "@/lib/utils/mascaraTelefoneBr";
 import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { postDiagnostico } from "@/lib/api/diagnostico";
 import { ADMIN_PERFIL_CONTA_STORAGE_KEY, getAccessToken } from "@/lib/api/config";
+import {
+  postRascunhoDiagnosticoSelfService,
+  postVincularRascunhoContaPlataforma,
+} from "@/lib/api/self_service_diagnostico";
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
 import { rotulosEscalaParaPergunta } from "@/lib/wizard/escalaLabels";
 import {
   clearPendingDiagnosticoFromStorage,
+  hasPendingDiagnosticoInBrowser,
   loadPendingDiagnosticoFromStorage,
-  STORAGE_PENDING_DIAGNOSTICO,
 } from "@/lib/wizard/pending_diagnostico";
+import { loadRascunhoResgateToken } from "@/lib/wizard/rascunho_resgate_token";
 import {
   clearWizardDraft,
   loadWizardDraft,
@@ -133,7 +138,7 @@ export function WizardForm() {
   const painelPerguntasRef = useRef<HTMLDivElement>(null);
   /** Evita gravar rascunho durante hidratação inicial (restore). */
   const skipPersistRef = useRef(false);
-  /** Após ler/restaurar sessionStorage — só então passamos a persistir alterações. */
+  /** Após ler/restaurar cache local (localStorage) — só então passamos a persistir alterações. */
   const [draftHydrated, setDraftHydrated] = useState(false);
   /** Há rascunho e/ou diagnóstico pendente — pergunta continuar vs reiniciar antes de hidratar. */
   const [cacheResumePrompt, setCacheResumePrompt] = useState<{
@@ -151,27 +156,46 @@ export function WizardForm() {
   }, [step, indicePerguntaAtual]);
 
   /**
-   * Após login com `redirect=/wizard`: envia o payload guardado em sessionStorage (gravar na API).
+   * Após login com `redirect=/wizard`: vincula rascunho (token) ou envia payload legado em localStorage.
    */
   useEffect(() => {
     if (!tokenChecked) return;
-    if (!getAccessToken()) return;
-    const raw = sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO);
-    if (!raw) return;
-    let payload: DiagnosticoPayload;
-    try {
-      payload = JSON.parse(raw) as DiagnosticoPayload;
-    } catch {
-      sessionStorage.removeItem(STORAGE_PENDING_DIAGNOSTICO);
-      return;
+    const tokenJwt = getAccessToken();
+    if (!tokenJwt) return;
+
+    const rt = loadRascunhoResgateToken();
+    if (rt) {
+      let cancelled = false;
+      void (async () => {
+        try {
+          setIsSubmitting(true);
+          setApiError(null);
+          await postVincularRascunhoContaPlataforma(rt, tokenJwt);
+          clearRascunhoResgateToken();
+          clearPendingDiagnosticoFromStorage();
+          clearWizardDraft();
+          if (!cancelled) router.replace("/sucesso");
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Falha ao gravar diagnóstico na API.";
+          if (!cancelled) setApiError(msg);
+        } finally {
+          if (!cancelled) setIsSubmitting(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
+
+    const payload = loadPendingDiagnosticoFromStorage();
+    if (!payload) return;
     let cancelled = false;
     void (async () => {
       try {
         setIsSubmitting(true);
         setApiError(null);
         await postDiagnostico(payload);
-        sessionStorage.removeItem(STORAGE_PENDING_DIAGNOSTICO);
+        clearPendingDiagnosticoFromStorage();
         clearWizardDraft();
         if (!cancelled) router.replace("/sucesso");
       } catch (err: unknown) {
@@ -373,7 +397,7 @@ export function WizardForm() {
         if (temRascunho && draft) {
           await aplicarRascunhoWizard(draft);
         } else if (!getAccessToken() && loadPendingDiagnosticoFromStorage()) {
-          router.push("/diagnostico/gravado-local");
+          router.push("/diagnostico/confirmar-gravacao");
         }
       } finally {
         skipPersistRef.current = false;
@@ -407,7 +431,7 @@ export function WizardForm() {
     }
 
     const skipRestore =
-      !!getAccessToken() && !!sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO);
+      !!getAccessToken() && (hasPendingDiagnosticoInBrowser() || !!loadRascunhoResgateToken());
 
     if (skipRestore) {
       setDraftHydrated(true);
@@ -446,7 +470,7 @@ export function WizardForm() {
     const persist = () => {
       if (skipPersistRef.current) return;
       if (typeof window === "undefined") return;
-      if (getAccessToken() && sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO)) return;
+      if (getAccessToken() && (hasPendingDiagnosticoInBrowser() || loadRascunhoResgateToken())) return;
 
       saveWizardDraft({
         v: 1,
@@ -486,7 +510,7 @@ export function WizardForm() {
     const flush = () => {
       if (skipPersistRef.current) return;
       if (typeof window === "undefined") return;
-      if (getAccessToken() && sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO)) return;
+      if (getAccessToken() && (hasPendingDiagnosticoInBrowser() || loadRascunhoResgateToken())) return;
       saveWizardDraft({
         v: 1,
         step,
@@ -854,20 +878,24 @@ export function WizardForm() {
     await onSubmit();
   };
 
-  /** Valida, persiste em sessionStorage e abre a página de resumo (OTP / login B2B). */
+  /** Valida e grava rascunho na API (Postgres); redireciona para confirmação por OTP ou conta na plataforma. */
   const gerarDiagnosticoLocalmente = async () => {
     const payload = await montarPayloadDiagnosticoValidado();
     if (!payload) return;
-    try {
-      sessionStorage.setItem(STORAGE_PENDING_DIAGNOSTICO, JSON.stringify(payload));
-    } catch {
-      setApiError(
-        "Não foi possível guardar o diagnóstico no navegador (sessionStorage). Verifique modo privado ou espaço em disco.",
-      );
-      return;
-    }
     setApiError(null);
-    router.push("/diagnostico/gravado-local");
+    setIsSubmitting(true);
+    try {
+      const { resgate_token } = await postRascunhoDiagnosticoSelfService(payload);
+      clearPendingDiagnosticoFromStorage();
+      clearWizardDraft();
+      router.push(`/diagnostico/confirmar-gravacao#${encodeURIComponent(resgate_token)}`);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Falha ao gravar o rascunho na API. Tente novamente.";
+      setApiError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const onSubmit = async () => {
@@ -875,7 +903,9 @@ export function WizardForm() {
     if (!payload) return;
 
     if (!getAccessToken()) {
-      setApiError("Sessão ausente — use «Gerar diagnóstico» e confirme por e-mail ou entre com conta B2B.");
+      setApiError(
+        "Sessão ausente — use «Gerar diagnóstico» e confirme por e-mail ou entre com a sua conta na plataforma.",
+      );
       return;
     }
 
@@ -967,15 +997,19 @@ export function WizardForm() {
                 Diagnóstico em andamento neste navegador
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Há dados do assistente guardados apenas na sessão atual desta aba (sessionStorage). Deseja
-                continuar de onde parou ou iniciar um novo diagnóstico do zero?
+                Há dados do assistente em cache local neste navegador (localStorage). O diagnóstico concluído fica na
+                base de dados após confirmação por e-mail. Deseja continuar de onde parou ou iniciar um novo
+                diagnóstico do zero?
               </p>
               <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                 {cacheResumePrompt.hasDraft ? (
                   <li>Rascunho do wizard (identificação, perfil e/ou questionário).</li>
                 ) : null}
                 {cacheResumePrompt.hasPending ? (
-                  <li>Conclusão aguardando cadastro ou login para gravar na API.</li>
+                  <li>
+                    Rascunho legado no navegador ou fluxo de confirmação — abrir a página de confirmação para
+                    migrar ou concluir.
+                  </li>
                 ) : null}
               </ul>
               {cacheResumePrompt.hasDraft && cacheResumePrompt.hasPending ? (
@@ -1047,11 +1081,11 @@ export function WizardForm() {
           </CardTitle>
           <CardDescription className={cn(step === 3 && "text-xs md:text-sm leading-snug")}>
             {step === 1 &&
-              "Cadastro da empresa: CNPJ e razão social são obrigatórios (vínculo PJ ao diagnóstico). Pode concluir vários diagnósticos para a mesma empresa — cada execução gera um registro próprio (histórico e quadro de implantação por ID). Responder ao assistente não exige sessão; gravar na API exige login após cadastro B2B. LGPD: consentimento abaixo."}
+              "Cadastro da empresa: CNPJ é opcional (se informado, validamos DV e vinculamos à PJ). Razão social é obrigatória. Cada diagnóstico gera um registro próprio (histórico e quadro por ID). Responder ao assistente não exige sessão. Para gravar na nuvem **sem** conta na plataforma: confirme o **e-mail** com o código enviado (OTP) — o resultado fica ligado a esse e-mail; depois de **cadastrar ou entrar**, pode vincular esses registos à sua empresa. Com **sessão já iniciada** na plataforma, a gravação é direta. LGPD: consentimento abaixo."}
             {step === 2 &&
-              "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). A conclusão persiste na API após autenticação."}
+              "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). Ao concluir sem sessão na plataforma, o assistente **grava um rascunho na API** e segue para **OTP no e-mail**; com sessão iniciada, a gravação do diagnóstico é direta no tenant do JWT."}
             {step === 3 &&
-              "Uma pergunta por tela — Seguir / Voltar. Sem conta B2B: «Gerar diagnóstico» salva e segue para confirmar o e-mail e gravar na nuvem; com login, «Finalizar Diagnóstico» envia direto."}
+              "Uma pergunta por tela — Seguir / Voltar. Sem conta na plataforma: «Gerar diagnóstico» salva e segue para confirmar o e-mail e gravar na nuvem; com sessão iniciada, «Finalizar Diagnóstico» envia direto."}
           </CardDescription>
         </CardHeader>
 
@@ -1074,12 +1108,12 @@ export function WizardForm() {
                     Cadastro da empresa
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    CNPJ (com dígitos verificadores válidos) e razão social conforme Receita Federal.
+                    CNPJ opcional; se preenchido, use 14 dígitos com DV válidos. Razão social conforme identificação da empresa.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ *</Label>
+                    <Label htmlFor="cnpj">CNPJ (opcional)</Label>
                     <Input
                       id="cnpj"
                       placeholder="00.000.000/0000-00"
@@ -1096,7 +1130,7 @@ export function WizardForm() {
                     <Label htmlFor="razao_social">Razão Social *</Label>
                     <Input
                       id="razao_social"
-                      placeholder="Empresa Fictícia LTDA"
+                      placeholder="Informe a razão social"
                       {...register("empresa.razao_social")}
                       className={errors.empresa?.razao_social ? "border-destructive" : ""}
                     />
@@ -1111,7 +1145,7 @@ export function WizardForm() {
                     <Label htmlFor="nome">Seu Nome *</Label>
                     <Input
                       id="nome"
-                      placeholder="João da Silva"
+                      placeholder="Informe seu nome completo"
                       {...register("respondente.nome")}
                       className={errors.respondente?.nome ? "border-destructive" : ""}
                     />
@@ -1124,7 +1158,7 @@ export function WizardForm() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="joao@empresa.com.br"
+                      placeholder="nome@dominio.com.br"
                       autoComplete="email"
                       {...register("respondente.email")}
                       className={errors.respondente?.email ? "border-destructive" : ""}
@@ -1236,7 +1270,7 @@ export function WizardForm() {
                   <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground md:text-sm leading-relaxed">
                     Sem login corporativo você pode concluir o assistente; na última pergunta,{" "}
                     <span className="font-medium text-foreground">Gerar diagnóstico</span> guarda as respostas e abre
-                    a etapa seguinte: confirmação do e-mail (código) para gravar na nuvem ou login B2B para o painel
+                    a etapa seguinte: confirmação do e-mail (código) para gravar na nuvem ou login na plataforma para o painel
                     consultor.
                   </div>
                 )}

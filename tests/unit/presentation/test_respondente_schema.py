@@ -62,18 +62,28 @@ class TestRespondenteSchemaNomeObrigatorio:
         assert body.respondente.nome == "Maria"
 
 
-class TestEmpresaSchemaCnpjObrigatorio:
-    """POST /diagnosticos exige CNPJ válido (cadastro PJ no diagnóstico)."""
+class TestEmpresaSchemaCnpjOpcional:
+    """POST /diagnosticos: CNPJ opcional; se informado, DV válido (regra produto QDI)."""
 
-    def test_rejeita_cnpj_vazio(self) -> None:
+    def test_aceita_cnpj_vazio(self) -> None:
         d = _empresa_min()
         d["cnpj"] = ""
-        with pytest.raises(ValidationError) as ex:
-            EmpresaSchema.model_validate(d)
-        assert "obrigatório" in str(ex.value).lower() or "cnpj" in str(ex.value).lower()
+        e = EmpresaSchema.model_validate(d)
+        assert e.cnpj == ""
 
     def test_aceita_cnpj_mascarado_valido(self) -> None:
         d = _empresa_min()
         d["cnpj"] = "12.345.678/0001-95"
         e = EmpresaSchema.model_validate(d)
         assert e.cnpj == "12345678000195"
+
+    def test_aceita_omissao_chave_cnpj_como_vazio(self) -> None:
+        d = {k: v for k, v in _empresa_min().items() if k != "cnpj"}
+        e = EmpresaSchema.model_validate(d)
+        assert e.cnpj == ""
+
+    def test_rejeita_cnpj_parcial_quando_informado(self) -> None:
+        d = _empresa_min()
+        d["cnpj"] = "1234567800019"
+        with pytest.raises(ValidationError):
+            EmpresaSchema.model_validate(d)

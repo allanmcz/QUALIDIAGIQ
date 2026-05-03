@@ -1,4 +1,4 @@
-"""Validação do schema de cadastro B2B (Pydantic)."""
+"""Validação do schema de cadastro na plataforma (Pydantic)."""
 
 from __future__ import annotations
 

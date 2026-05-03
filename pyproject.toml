@@ -83,6 +83,9 @@ ignore = [
     "TC001",  # ports/adapters QDI: imports explícitos de ABC (BaseNormativaPort) preferidos a TYPE_CHECKING-only
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/unit/presentation/test_diagnostico_rascunho_endpoints.py" = ["SIM117"]
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]

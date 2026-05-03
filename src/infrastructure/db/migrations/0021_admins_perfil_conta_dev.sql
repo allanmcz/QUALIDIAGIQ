@@ -1,4 +1,4 @@
--- Perfil comercial do admin B2B (claim JWT `perfil_conta`) — MVP dev.
+-- Perfil comercial do admin na plataforma (claim JWT `perfil_conta`) — MVP dev.
 -- gratuito: diagnósticos apenas plano gratuito (servidor impõe).
 -- avancado: pode gravar diagnóstico avançado (todas as visões do motor previstas para esse plano).
 

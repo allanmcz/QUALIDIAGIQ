@@ -61,7 +61,7 @@ class Settings(BaseSettings):
         default=480, validation_alias=AliasChoices("JWT_EXPIRE_MINUTES")
     )
 
-    #: Tenant dedicado a diagnósticos gravados após OTP no e-mail (sem conta B2B).
+    #: Tenant dedicado a diagnósticos gravados após OTP no e-mail (sem conta na plataforma).
     self_service_tenant_id: UUID = Field(
         default=UUID("44444444-4444-4444-8444-444444444444"),
         validation_alias=AliasChoices("QDI_SELF_SERVICE_TENANT_ID"),
@@ -103,7 +103,7 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("QDI_CI_PLAYWRIGHT_INTEGRATED"),
         description=(
-            "CI/desenvolvimento: login B2B em `admins` no Postgres (exige DATABASE_URL). "
+            "CI/desenvolvimento: login na plataforma em `admins` no Postgres (exige DATABASE_URL). "
             "Com DSN, diagnósticos e vinculação OTP usam SQL direto na mesma base; o flag não pode "
             "ficar ativo sem DATABASE_URL."
         ),

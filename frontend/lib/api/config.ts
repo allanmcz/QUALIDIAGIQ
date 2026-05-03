@@ -55,7 +55,7 @@ export function getApiUrlForFetch(): string {
   return API_HOST_DEV_PADRAO;
 }
 
-/** Chaves `localStorage` — fluxo B2B MVP (`/login` → painel). */
+/** Chaves `localStorage` — sessão com conta na plataforma MVP (`/login` → painel). */
 export const ADMIN_TOKEN_STORAGE_KEY = "admin_token";
 export const ADMIN_NOME_STORAGE_KEY = "admin_nome";
 /** Espelho do claim JWT `perfil_conta` (UX apenas; servidor revalida no POST). */

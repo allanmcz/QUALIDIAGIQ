@@ -48,7 +48,7 @@ def _diag_lead(did: UUID, email: str) -> Diagnostico:
 
 
 class TestCiPlaywrightVincularLeadsSelfService:
-    """Garante que leads OTP (mesmo e-mail) migram para o tenant B2B no dict in-process."""
+    """Garante que leads OTP (mesmo e-mail) migram para o tenant da conta na plataforma no dict in-process."""
 
     @pytest.mark.asyncio
     async def test_vincular_move_gratuito_para_tenant_destino(self) -> None:

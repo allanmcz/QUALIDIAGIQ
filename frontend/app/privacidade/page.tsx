@@ -29,7 +29,7 @@ export default function PrivacidadePage() {
         </li>
         <li>
           <strong>Telefone do respondente (opcional):</strong> quando informado, utilizado para contato
-          comercial B2B relacionado ao diagnóstico; mantido pelo mesmo período de retenção do registro do
+          comercial na plataforma relacionado ao diagnóstico; mantido pelo mesmo período de retenção do registro do
           diagnóstico no PostgreSQL (Supabase); exclusão e titularidade conforme canal definido em produção.
         </li>
         <li>

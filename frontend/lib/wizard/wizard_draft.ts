@@ -1,11 +1,13 @@
 /**
- * Rascunho do wizard na sessão do navegador — evita perda ao sair para páginas
- * institucionais (ex.: política de privacidade) e voltar.
+ * Rascunho do wizard no navegador (localStorage) — evita perda ao sair para páginas
+ * institucionais e voltar. Não substitui persistência na BD (rascunho OTP / diagnóstico final).
  *
- * Escopo: mesma aba/sessão; não substitui o fluxo `STORAGE_PENDING_DIAGNOSTICO` (pós-login).
+ * Roadmap: autosave incremental na API (PostgreSQL) para eliminar dependência de storage local.
  */
 
 import type { DiagnosticoPayloadFormInput } from "@/lib/schemas/wizard";
+
+import { migrarChaveDeSessionParaLocalStorage } from "@/lib/wizard/browser_storage_migrate";
 
 export const STORAGE_WIZARD_DRAFT = "qdi_wizard_draft_v1";
 
@@ -23,8 +25,9 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 /** Lê e valida estrutura mínima; retorna null se inválido ou ausente. */
 export function loadWizardDraft(): WizardDraftV1 | null {
   if (typeof window === "undefined") return null;
+  migrarChaveDeSessionParaLocalStorage(STORAGE_WIZARD_DRAFT);
   try {
-    const raw = sessionStorage.getItem(STORAGE_WIZARD_DRAFT);
+    const raw = window.localStorage.getItem(STORAGE_WIZARD_DRAFT);
     if (!raw) return null;
     const data: unknown = JSON.parse(raw);
     if (!isRecord(data)) return null;
@@ -49,7 +52,7 @@ export function loadWizardDraft(): WizardDraftV1 | null {
 export function saveWizardDraft(draft: WizardDraftV1): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(STORAGE_WIZARD_DRAFT, JSON.stringify(draft));
+    window.localStorage.setItem(STORAGE_WIZARD_DRAFT, JSON.stringify(draft));
   } catch {
     /* quota / modo privado */
   }
@@ -58,7 +61,8 @@ export function saveWizardDraft(draft: WizardDraftV1): void {
 export function clearWizardDraft(): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.removeItem(STORAGE_WIZARD_DRAFT);
+    window.localStorage.removeItem(STORAGE_WIZARD_DRAFT);
+    window.sessionStorage.removeItem(STORAGE_WIZARD_DRAFT);
   } catch {
     /* ignore */
   }

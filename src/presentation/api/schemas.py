@@ -47,7 +47,7 @@ class RespondenteSchema(BaseModel):
         max_length=15,
         description=(
             "Telefone opcional, apenas dígitos: DDD + número (10 ou 11 dígitos), sem DDI (+55). "
-            "M09 lead B2B; LGPD por finalidade."
+            "M09 lead na plataforma; LGPD por finalidade."
         ),
     )
 
@@ -69,12 +69,12 @@ class RespondenteSchema(BaseModel):
 
 class EmpresaSchema(BaseModel):
     cnpj: str = Field(
-        ...,
+        default="",
         max_length=18,
         description=(
-            "CNPJ: 14 dígitos numéricos ou com máscara (00.000.000/0000-00). Obrigatório no POST "
-            "de diagnóstico — cadastro da empresa (vínculo PJ) junto à razão social. "
-            "Após validação, armazenado sem máscara."
+            "CNPJ: opcional. Vazio = sem cadastro PJ no diagnóstico. Se informado: 14 dígitos ou máscara "
+            "(00.000.000/0000-00), DV RFB válido; armazenado sem máscara. Regra de produto — ver "
+            "`.cursor/rules/qdi-cnpj-opcional.mdc`."
         ),
     )
     razao_social: str
@@ -98,7 +98,7 @@ class EmpresaSchema(BaseModel):
     def validar_cnpj(cls, v: str) -> str:
         raw = normalizar_cnpj_apenas_digitos(v or "")
         if raw == "":
-            raise ValueError("CNPJ é obrigatório no cadastro da empresa para o diagnóstico.")
+            return ""
         if len(raw) != 14:
             raise ValueError("CNPJ deve conter exatos 14 dígitos numéricos")
         if len(set(raw)) == 1:
@@ -180,6 +180,49 @@ class IniciarDiagnosticoRequest(BaseModel):
                 "É obrigatório aceitar o tratamento dos dados conforme a política de privacidade."
             )
         return v
+
+
+class RascunhoDiagnosticoSelfServiceResponse(BaseModel):
+    """Resposta ao gravar rascunho no servidor (token opaco devolvido uma vez)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    resgate_token: str = Field(min_length=16, max_length=512)
+    mensagem: str
+    expira_em: datetime
+
+
+class DiagnosticoRascunhoResumoResponse(BaseModel):
+    """
+    Metadados para a página de OTP.
+
+    O portador do ``X-Rascunho-Token`` já provou posse do fluxo; incluímos o e-mail em claro para
+    reenvio de código (paridade com /auth/verificar-email/solicitar).
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    empresa_razao_social: str
+    email_mascarado: str
+    respondente_email: EmailStr
+    expira_em: datetime
+
+
+class ConcluirRascunhoDiagnosticoSelfServiceRequest(BaseModel):
+    """OTP + token de resgate do rascunho persistido na BD."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    resgate_token: str = Field(min_length=16, max_length=512)
+    codigo: str = Field(min_length=4, max_length=16)
+
+
+class VincularRascunhoContaPlataformaRequest(BaseModel):
+    """Associa rascunho self-service ao tenant do JWT (e-mail do respondente = e-mail do admin)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    resgate_token: str = Field(min_length=16, max_length=512)
 
 
 class PatchRelatorioPdfRequest(BaseModel):
@@ -453,7 +496,8 @@ class VincularLeadsSelfServiceResponse(BaseModel):
     """Resposta de POST /diagnosticos/vincular-leads-self-service (reatribuição de tenant)."""
 
     total_vinculados: int = Field(
-        ge=0, description="Quantidade de diagnósticos reatribuídos ao tenant B2B."
+        ge=0,
+        description="Quantidade de diagnósticos reatribuídos ao tenant da conta na plataforma.",
     )
     diagnostico_ids: list[UUID] = Field(
         default_factory=list,
@@ -461,8 +505,37 @@ class VincularLeadsSelfServiceResponse(BaseModel):
     )
 
 
+class DiagnosticoConclusaoPublicaDimensaoSchema(BaseModel):
+    """Uma dimensão no breakdown público pós-conclusão self-service."""
+
+    dimensao: str
+    valor: float
+    peso_total_aplicado: float | None = None
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class DiagnosticoConclusaoSelfServicePublicoResponse(BaseModel):
+    """
+    Snapshot mínimo para a página pública de conclusão (sem JWT).
+
+    Dados lidos de ``diagnosticos`` após validação do token de leitura na tabela dedicada.
+    """
+
+    id: UUID
+    status: str
+    empresa_razao_social: str
+    locale_relatorio: str = Field(default="pt-BR")
+    score_geral: float | None = None
+    scores_por_dimensao: list[DiagnosticoConclusaoPublicaDimensaoSchema] = Field(
+        default_factory=list
+    )
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class DiagnosticoResumoSchema(BaseModel):
-    """Item resumido para listagem do tenant (P7 — dashboard B2B)."""
+    """Item resumido para listagem do tenant (P7 — painel)."""
 
     id: UUID
     empresa_razao_social: str
@@ -509,6 +582,13 @@ class DiagnosticoResponse(BaseModel):
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
     hash_evidencia: str | None = None
     versao_otimista: int | None = None
+    leitura_token: str | None = Field(
+        default=None,
+        description=(
+            "Presente só em POST /diagnosticos/rascunho-self-service/concluir: token opaco para "
+            "GET /diagnosticos/self-service/conclusao-visualizacao (leitura pública limitada no tempo)."
+        ),
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
