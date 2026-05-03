@@ -943,7 +943,7 @@ export function WizardForm() {
           </CardTitle>
           <CardDescription className={cn(step === 3 && "text-xs md:text-sm leading-snug")}>
             {step === 1 &&
-              "Cadastro da empresa: CNPJ e razão social são obrigatórios (vínculo PJ ao diagnóstico). Responder ao assistente não exige sessão; gravar na API exige login após cadastro B2B. LGPD: consentimento abaixo."}
+              "Cadastro da empresa: CNPJ e razão social são obrigatórios (vínculo PJ ao diagnóstico). Pode concluir vários diagnósticos para a mesma empresa — cada execução gera um registro próprio (histórico e quadro de implantação por ID). Responder ao assistente não exige sessão; gravar na API exige login após cadastro B2B. LGPD: consentimento abaixo."}
             {step === 2 &&
               "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). A conclusão persiste na API após autenticação."}
             {step === 3 &&

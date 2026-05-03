@@ -19,6 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getAccessToken, getApiUrlForFetch } from "@/lib/api/config";
 
 type AcaoChecklist = {
@@ -54,12 +56,33 @@ export type DiagnosticoDetalheApi = {
   matriz_impacto: MatrizLinha[] | null;
   cronograma: CronogramaFase[] | null;
   checklist_m12_autoconf: boolean[] | null;
+  /** Chave canónica f{i}_a{j} — comentário do consultor e meta de prazo (ISO YYYY-MM-DD). */
+  quadro_implantacao_anotacoes?: Record<string, { comentario?: string; prazo_meta?: string }> | null;
   versao_otimista: number | null;
   score: {
     score_geral: { valor: number };
     score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;
   } | null;
 };
+
+function chavesQuadroIniciais(
+  checklist: FrenteChecklist[] | null | undefined,
+  persistido: DiagnosticoDetalheApi["quadro_implantacao_anotacoes"],
+): Record<string, { comentario: string; prazo_meta: string }> {
+  const out: Record<string, { comentario: string; prazo_meta: string }> = {};
+  if (!checklist) return out;
+  checklist.forEach((f, i) => {
+    f.acoes.forEach((_, j) => {
+      const k = `f${i}_a${j}`;
+      const p = persistido?.[k];
+      out[k] = {
+        comentario: typeof p?.comentario === "string" ? p.comentario : "",
+        prazo_meta: typeof p?.prazo_meta === "string" ? p.prazo_meta : "",
+      };
+    });
+  });
+  return out;
+}
 
 function mockDiagnostico(id: string): DiagnosticoDetalheApi {
   const isAvancado = id.startsWith("7");
@@ -85,6 +108,7 @@ function mockDiagnostico(id: string): DiagnosticoDetalheApi {
       },
     ],
     checklist_m12_autoconf: null,
+    quadro_implantacao_anotacoes: null,
     versao_otimista: 1,
     score: {
       score_geral: { valor: 62 },
@@ -124,6 +148,11 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const versaoOtimistaRef = useRef<number | null>(null);
   const lastSyncedM12Ref = useRef<string | null>(null);
+  const [quadroEdits, setQuadroEdits] = useState<
+    Record<string, { comentario: string; prazo_meta: string }>
+  >({});
+  const [quadroSaving, setQuadroSaving] = useState(false);
+  const [quadroMsg, setQuadroMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -212,6 +241,11 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     }
   }, [data?.versao_otimista]);
 
+  useEffect(() => {
+    if (!data?.checklist) return;
+    setQuadroEdits(chavesQuadroIniciais(data.checklist, data.quadro_implantacao_anotacoes));
+  }, [data?.id, data?.checklist, data?.quadro_implantacao_anotacoes]);
+
   const refetchDetalhe = useCallback(async () => {
     const token = getAccessToken();
     const base = getApiUrlForFetch().replace(/\/$/, "");
@@ -229,6 +263,58 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     }
     setData(json);
   }, [id]);
+
+  const salvarQuadroImplantacao = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token || data?.status !== "finalizado") {
+      setQuadroMsg("É necessário estar autenticado e o diagnóstico finalizado.");
+      return;
+    }
+    const v = versaoOtimistaRef.current;
+    if (v == null) {
+      setQuadroMsg("Versão otimista indisponível — recarregue a página.");
+      return;
+    }
+    setQuadroSaving(true);
+    setQuadroMsg(null);
+    const base = getApiUrlForFetch().replace(/\/$/, "");
+    const body: Record<string, { comentario: string; prazo_meta: string }> = {};
+    for (const [k, val] of Object.entries(quadroEdits)) {
+      body[k] = { comentario: val.comentario, prazo_meta: val.prazo_meta.trim() };
+    }
+    try {
+      const res = await fetch(`${base}/diagnosticos/${id}/quadro-implantacao-anotacoes`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          "If-Match": String(v),
+        },
+        body: JSON.stringify({ quadro_implantacao_anotacoes: body }),
+      });
+      if (res.ok) {
+        const json = (await res.json()) as DiagnosticoDetalheApi;
+        if (json.versao_otimista != null) {
+          versaoOtimistaRef.current = json.versao_otimista;
+        }
+        setData(json);
+        setQuadroMsg("Quadro gravado.");
+        return;
+      }
+      if (res.status === 412) {
+        setQuadroMsg("Conflito de versão — recarregando…");
+        await refetchDetalhe();
+        return;
+      }
+      const t = await res.text();
+      setQuadroMsg(`Não foi possível gravar (${res.status}): ${t.slice(0, 200)}`);
+    } catch {
+      setQuadroMsg("Falha de rede ao gravar o quadro.");
+    } finally {
+      setQuadroSaving(false);
+    }
+  }, [data?.status, id, quadroEdits, refetchDetalhe]);
 
   useEffect(() => {
     if (!data || data.status !== "finalizado") return;
@@ -572,12 +658,35 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       )}
 
       <div className="space-y-8">
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <h2 className="text-2xl font-bold tracking-tight">Quadro de implantação</h2>
-          <Button variant="outline" type="button" disabled>
-            Exportar CSV (em breve)
-          </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start flex-wrap gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Quadro de implantação</h2>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Comentários e meta de prazo por ação sugerida (planejamento do consultor). Referência do
+              motor: prazo qualitativo na ficha; use os campos abaixo para data ISO e notas. Gravação
+              com lock otimista (mesma versão do painel ABNT M12).
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center shrink-0">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              disabled={quadroSaving || data.status !== "finalizado"}
+              onClick={() => void salvarQuadroImplantacao()}
+            >
+              {quadroSaving ? "Gravando…" : "Gravar quadro"}
+            </Button>
+            <Button variant="outline" type="button" disabled>
+              Exportar CSV (em breve)
+            </Button>
+          </div>
         </div>
+        {quadroMsg ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            {quadroMsg}
+          </p>
+        ) : null}
 
         <div className="flex gap-6 overflow-x-auto pb-4">
           <div className="flex-1 min-w-[320px] bg-slate-100 rounded-lg p-4">
@@ -593,9 +702,12 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                   <div className="text-xs font-bold text-slate-500 uppercase mb-2 mt-4 first:mt-0">
                     {frente.nome}
                   </div>
-                  {frente.acoes.map((acao, j) => (
+                  {frente.acoes.map((acao, j) => {
+                    const qk = `f${i}_a${j}`;
+                    const qv = quadroEdits[qk] ?? { comentario: "", prazo_meta: "" };
+                    return (
                     <Card
-                      key={j}
+                      key={`${i}-${j}-${qk}`}
                       className="mb-2 hover:border-primary/50 transition-colors"
                     >
                       <CardHeader className="p-4 pb-2">
@@ -615,7 +727,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                           </p>
                         )}
                       </CardHeader>
-                      <CardContent className="p-4 pt-0">
+                      <CardContent className="p-4 pt-0 space-y-3">
                         <div className="flex justify-between items-center mt-2">
                           <span className="text-xs text-muted-foreground">{acao.responsavel}</span>
                           <Badge
@@ -625,10 +737,50 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                             {acao.criticidade}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Prazo: {acao.prazo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Referência motor (prazo qualitativo): {acao.prazo}
+                        </p>
+                        <div className="space-y-1">
+                          <Label htmlFor={`prazo-${qk}`} className="text-xs">
+                            Prazo planejado (meta)
+                          </Label>
+                          <Input
+                            id={`prazo-${qk}`}
+                            type="date"
+                            className="h-9 text-sm bg-background"
+                            value={qv.prazo_meta}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setQuadroEdits((prev) => ({
+                                ...prev,
+                                [qk]: { ...qv, prazo_meta: v },
+                              }));
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`com-${qk}`} className="text-xs">
+                            Comentário
+                          </Label>
+                          <textarea
+                            id={`com-${qk}`}
+                            rows={3}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            placeholder="Notas de implantação, responsáveis, dependências…"
+                            value={qv.comentario}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setQuadroEdits((prev) => ({
+                                ...prev,
+                                [qk]: { ...qv, comentario: v },
+                              }));
+                            }}
+                          />
+                        </div>
                       </CardContent>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
