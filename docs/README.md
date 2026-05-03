@@ -12,7 +12,7 @@ Esta pasta concentra **documentação de produto, operação e conformidade** ve
 | **`docs/refs/`** | PRD-base, MoSCoW, questionário, metodologia (quando presentes no clone — podem exigir `git add -f` conforme política local). |
 | **`docs/01_arquitetura.md`**, **`docs/02_dominio_qdi.md`**, **`docs/00_INDICE.md`** | Arquitetura e domínio (workspace; versionação conforme `.gitignore`). |
 | **`docs/legal/`** | Status e processo jurídico MVP (quando versionado). |
-| **`_DEVELOPER/`** | **Planos de execução**, handoff próxima sessão, roadmap sprint, análises P6/`asChild`, notas de desenvolvimento. Índice: `_DEVELOPER/INDICE_PLANOS_HANDOFF.md`. |
+| **`_DEVELOPER/`** | **Planos de execução**, handoff próxima sessão, roadmap sprint, análises P6/`asChild`, notas de desenvolvimento. Índice: `_DEVELOPER/INDICE_PLANOS_HANDOFF.md`. **Pacote corte MVP 05/05/2026:** `_DEVELOPER/MVP_05052026/README.md`. |
 
 ## Ligações rápidas
 

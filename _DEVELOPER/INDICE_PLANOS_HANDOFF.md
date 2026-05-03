@@ -27,6 +27,12 @@
 | [`analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md`](./analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md) | Gap RLS / multi-tenant (P6) |
 | [`analises/p3_aschild_inventario.md`](./analises/p3_aschild_inventario.md) | Inventário `Button` + `asChild` |
 
+## Pacote de corte MVP (calendário)
+
+| Pasta | Uso |
+|-------|-----|
+| [`MVP_05052026/`](./MVP_05052026/README.md) | Avaliação gap **100%**, critérios, cronograma **03–05/05/2026**, riscos, prompt agente |
+
 ## Outros (backlog, kits, runbooks internos)
 
 - [`BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md`](./BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md)
