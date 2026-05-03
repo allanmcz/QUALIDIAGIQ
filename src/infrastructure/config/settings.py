@@ -34,6 +34,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("SUPABASE_ANON_KEY", "SUPABASE_KEY"),
     )
 
+    #: Base URL da API **no browser** (links em e-mail, fallback `/mock-storage`). Docker: `http://127.0.0.1:60000`.
+    qdi_public_api_base_url: str = Field(
+        default="http://127.0.0.1:60000",
+        validation_alias=AliasChoices("QDI_PUBLIC_API_BASE_URL"),
+    )
+
     jwt_secret_key: SecretStr = Field(
         default_factory=lambda: SecretStr(""),
         validation_alias=AliasChoices("JWT_SECRET_KEY"),

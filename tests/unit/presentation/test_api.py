@@ -69,6 +69,31 @@ def test_healthcheck():
     assert response.headers.get("X-Trace-Id")
 
 
+def test_mock_storage_pdf_inline():
+    """GET /mock-storage devolve PDF colocado no cache (fallback Storage)."""
+    import uuid
+
+    from src.infrastructure.storage.mock_pdf_bytes_cache import registrar_pdf_mock
+
+    tid = uuid.UUID("44444444-4444-4444-8444-444444444444")
+    did = uuid.UUID("090c0f6a-7fcb-4015-bdfa-37bb9a545740")
+    nome = f"{did}.pdf"
+    registrar_pdf_mock(f"{tid}/{nome}", b"%PDF-1.4 smoke")
+    r = client.get(f"/mock-storage/{tid}/{nome}")
+    assert r.status_code == 200
+    assert r.headers.get("content-type") == "application/pdf"
+    assert "inline" in (r.headers.get("content-disposition") or "").lower()
+    assert b"%PDF" in r.content
+
+
+def test_mock_storage_rejeita_traversal():
+    import uuid
+
+    tid = uuid.UUID("44444444-4444-4444-8444-444444444444")
+    r = client.get(f"/mock-storage/{tid}/..evil.pdf")
+    assert r.status_code == 400
+
+
 def test_healthcheck_repasse_x_trace_id():
     response = client.get("/health", headers={"X-Trace-Id": "trace-fixo-e2e"})
     assert response.status_code == 200

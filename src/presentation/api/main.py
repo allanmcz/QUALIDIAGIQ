@@ -173,12 +173,18 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "qualidiagiq"}
 
     # Registrar os Routers do Domínio
-    from src.presentation.api.routers import auth_router, cnae_router, normativa_router
+    from src.presentation.api.routers import (
+        auth_router,
+        cnae_router,
+        mock_storage_router,
+        normativa_router,
+    )
 
     app.include_router(diagnostico_router.router)
     app.include_router(auth_router.router)
     app.include_router(normativa_router.router)
     app.include_router(cnae_router.router)
+    app.include_router(mock_storage_router.router)
 
     if settings.otel_tracing_enabled:
         _instrumentar_otel(app, settings)

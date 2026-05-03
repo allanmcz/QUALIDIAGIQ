@@ -65,6 +65,8 @@ services:
       SUPABASE_URL: "${SUPABASE_URL:-http://127.0.0.1:54321}"
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InFkai1sb2NhbC1jb21wb3NlIn0.local-dev-placeholder}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev-docker-compose-qdi-jwt-secret-min-32-chars!!}"
+      # Links PDF no e-mail / mock-storage — porta publicada da API no host (não use http://api:8000).
+      QDI_PUBLIC_API_BASE_URL: "${QDI_PUBLIC_API_BASE_URL:-http://127.0.0.1:60000}"
       QDI_SELF_SERVICE_TENANT_ID: "${QDI_SELF_SERVICE_TENANT_ID:-44444444-4444-4444-8444-444444444444}"
       QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES: "${QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES:-30}"
       # Next no compose exposto em :60001 — precisa constar no CORS (senão fetch → "Failed to fetch").
