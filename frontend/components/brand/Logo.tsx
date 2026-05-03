@@ -7,8 +7,8 @@ export type LogoVariant = "full" | "layout-alt" | "icon" | "monoline" | "wordmar
 export type LogoSize = "sm" | "md" | "lg" | "xl";
 
 const heightsPx: Record<LogoVariant, Record<LogoSize, number>> = {
-  full: { sm: 28, md: 34, lg: 42, xl: 52 },
-  "layout-alt": { sm: 28, md: 34, lg: 42, xl: 52 },
+  full: { sm: 32, md: 40, lg: 48, xl: 56 },
+  "layout-alt": { sm: 32, md: 40, lg: 48, xl: 56 },
   icon: { sm: 24, md: 32, lg: 40, xl: 48 },
   monoline: { sm: 24, md: 32, lg: 40, xl: 48 },
   wordmark: { sm: 28, md: 34, lg: 42, xl: 52 },
@@ -40,7 +40,8 @@ function logoMaxWidthPx(variant: LogoVariant): number {
   if (variant === "wordmark") {
     return 360;
   }
-  return 300;
+  /** NB1 completo: cabeçalho legível em mobile sem estourar o flex (antes 300px ficava «minúsculo»). */
+  return 340;
 }
 
 export type LogoProps = {

@@ -25,11 +25,15 @@ export async function fetchDiagnosticosResumo(
     throw new Error("Sessão necessária: faça login em /login.");
   }
   const base = getApiUrlForFetch().replace(/\/$/, "");
-  const url = new URL(`${base}/diagnosticos/`);
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("offset", String(offset));
+  /** Não usar `new URL(relativo)` — com base `/api-backend` o browser lança «Invalid URL». */
+  const path = `${base}/diagnosticos/`;
+  const qs = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  }).toString();
+  const url = `${path}?${qs}`;
 
-  const res = await fetch(url.toString(), {
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {

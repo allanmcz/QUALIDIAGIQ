@@ -50,7 +50,15 @@ export function HeaderAuthNav() {
   };
 
   if (nome === undefined) {
-    return <span className="inline-block h-9 w-[5.5rem] shrink-0 rounded-md bg-muted/70" aria-hidden />;
+    return (
+      <span
+        className="inline-flex h-9 min-w-[5.5rem] shrink-0 items-center justify-center rounded-md border border-dashed border-border bg-transparent text-muted-foreground animate-pulse"
+        aria-busy={true}
+        aria-label="Carregando sessão"
+      >
+        …
+      </span>
+    );
   }
 
   if (nome === null) {

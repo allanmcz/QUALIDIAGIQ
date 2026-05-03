@@ -1,6 +1,6 @@
 import { HeroIllustration } from "@/components/brand/HeroIllustration";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, BarChart3, FileText, ArrowRight } from "lucide-react";
+import { ShieldCheck, BarChart3, FileText, ArrowRight, LogIn } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -19,7 +19,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex flex-col justify-center gap-4 sm:flex-row md:justify-start">
+            <div className="flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap md:justify-start">
               <Button
                 size="lg"
                 asChild
@@ -30,10 +30,20 @@ export default function Home() {
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
+              <Button size="lg" variant="outline" className="gap-2 px-8 text-md h-12" asChild>
+                <Link href="/login?redirect=/dashboard">
+                  <LogIn className="h-5 w-5 shrink-0" aria-hidden />
+                  Entrar no painel B2B
+                </Link>
+              </Button>
               <Button size="lg" variant="outline" className="px-8 text-md h-12" asChild>
                 <Link href="/metodologia">Conhecer a Metodologia</Link>
               </Button>
             </div>
+            <p className="mx-auto max-w-xl text-center text-sm text-muted-foreground md:mx-0 md:text-left">
+              Conta corporativa Tributiq: consulte histórico, PDF e checklist{" "}
+              <span className="whitespace-nowrap">sem iniciar</span> um novo diagnóstico neste momento.
+            </p>
           </div>
 
           <div className="md:col-span-5">

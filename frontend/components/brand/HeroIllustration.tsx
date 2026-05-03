@@ -33,10 +33,16 @@ export function HeroIllustration({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-xl border border-border bg-muted/35 shadow-card ring-1 ring-foreground/10",
+        "relative w-full overflow-hidden rounded-2xl border border-border/70 bg-background shadow-md",
+        "ring-1 ring-border/40",
         className,
       )}
     >
+      {/* Fundo neutro + leve vignette: evita «chapa cinza» quando o JPG é claro */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-muted/15 via-transparent to-primary/[0.04]"
+        aria-hidden
+      />
       <Image
         src={src}
         alt={alt}
@@ -44,7 +50,7 @@ export function HeroIllustration({
         height={1080}
         priority={priority}
         sizes="(max-width: 768px) 100vw, 42vw"
-        className="relative z-10 h-auto w-full max-h-[min(380px,52vh)] object-cover object-center md:max-h-[460px]"
+        className="relative z-10 h-auto w-full max-h-[min(340px,48vh)] object-contain object-center sm:max-h-[min(400px,50vh)] md:max-h-[min(440px,52vh)]"
       />
     </div>
   );
