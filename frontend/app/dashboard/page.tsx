@@ -43,7 +43,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Assessoria B2B</h1>
             <p className="text-muted-foreground">
-              Gerencie os diagnósticos e planos de ação dos seus clientes.
+              Gerencie os diagnósticos e planos de ação das empresas vinculadas.
             </p>
           </div>
           {!semSessao && itens === null && (
