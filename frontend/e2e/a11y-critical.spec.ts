@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
  * Não substitui auditoria manual; expandir regras gradualmente.
  */
 /** `/dashboard` exige JWT — páginas públicas + login cobrem o gate incremental M1. */
-const urls = ["/", "/wizard", "/metodologia", "/login"];
+const urls = ["/", "/wizard", "/metodologia", "/login", "/cadastro"];
 
 test.describe("Acessibilidade (axe — critical apenas)", () => {
   for (const path of urls) {

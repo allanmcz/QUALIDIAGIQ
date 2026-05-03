@@ -116,6 +116,15 @@ class Settings(BaseSettings):
         description="Limite por IP/minuto para rotas públicas (normativa, manifesto, metodologia, questionário).",
     )
 
+    cadastro_consultor_b2b_habilitado: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("QDI_CADASTRO_CONSULTOR_B2B_HABILITADO"),
+        description=(
+            "POST /auth/cadastro (nome, e-mail, senha) sem JWT prévio — MVP. "
+            "Defina false em produção se não quiser cadastro público."
+        ),
+    )
+
     pdf_render_timeout_seconds: float = Field(
         default=90.0,
         ge=5.0,

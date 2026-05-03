@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
@@ -106,6 +107,12 @@ function LoginPageContent() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Entrando..." : "Entrar no Dashboard"}
             </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Ainda não tem conta?{" "}
+              <Link href="/cadastro" className="text-primary font-medium underline underline-offset-2">
+                Cadastrar
+              </Link>
+            </p>
             <p className="text-xs text-muted-foreground leading-relaxed border-t pt-4 mt-4">
               MVP/desenvolvimento: sessão mantida no navegador (localStorage). Não é o modelo previsto
               para Enterprise (cookie httpOnly — ver ADR-004). Informações exibidas seguem boa-fé

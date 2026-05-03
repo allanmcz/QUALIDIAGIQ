@@ -22,6 +22,19 @@ test.describe("Smoke QDI", () => {
     ).toBeVisible();
   });
 
+  test("cadastro carrega nome, e-mail e senha", async ({ page }) => {
+    await page.goto("/cadastro");
+    await expect(page.getByLabel(/^Nome$/i)).toBeVisible();
+    await expect(page.getByLabel(/^E-mail$/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Cadastrar e entrar/i })).toBeVisible();
+  });
+
+  test("landing oferece Cadastrar e Entrar no painel", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: /^Cadastrar$/i })).toHaveAttribute("href", "/cadastro");
+    await expect(page.getByRole("link", { name: /Entrar no painel/i })).toHaveAttribute("href", "/login");
+  });
+
   test("/metodologia exibe título (API opcional no CI)", async ({ page }) => {
     await page.goto("/metodologia");
     await expect(page.getByRole("heading", { name: /Como calculamos a sua maturidade tributária/i })).toBeVisible();
