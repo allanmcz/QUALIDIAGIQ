@@ -105,12 +105,19 @@
     @apply border-border;
   }
   /**
-   * Tipografia padrão: justificação + hifenização (pt-BR via `lang` no `<html>`).
-   * Componentes com `text-left` / `text-center` / `text-end` sobrepõem onde o layout exigir.
+   * Não usar `text-justify` / `hyphens-auto` no `body`: quebra marcas, nav e flex (rios de espaço).
+   * Parágrafos longos: classe utilitária `qdi-prose-justify` ou utilitários Tailwind no bloco.
    */
   body {
-    @apply bg-background text-foreground antialiased text-justify hyphens-auto;
+    @apply bg-background text-foreground antialiased;
     font-family: var(--font-display);
+  }
+
+  /** Blocos de copy corrida (ex.: secções «sobre») — não usar em header, footer, botões nem títulos curtos. */
+  .qdi-prose-justify {
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
   }
 
   .qdi-wordmark {

@@ -13,7 +13,10 @@ export default function Home() {
               <h1 className="text-4xl font-extrabold tracking-tight text-primary md:text-5xl lg:text-6xl">
                 QualiDiag<span className="text-accent">IQ</span>
               </h1>
-              <p lang="pt-BR" className="mx-auto max-w-2xl text-xl font-medium text-muted-foreground md:mx-0 md:text-2xl">
+              <p
+                lang="pt-BR"
+                className="qdi-prose-justify mx-auto max-w-2xl text-xl font-medium text-muted-foreground md:mx-0 md:text-2xl"
+              >
                 Descubra a maturidade e conformidade tributária da sua empresa frente à{" "}
                 <strong className="text-foreground">Reforma do Consumo (EC 132/2023)</strong>.
               </p>
@@ -35,7 +38,7 @@ export default function Home() {
                   <Link href="/metodologia">Conhecer a Metodologia</Link>
                 </Button>
               </div>
-              <p className="mx-auto max-w-xl text-sm text-muted-foreground md:mx-0">
+              <p className="qdi-prose-justify mx-auto max-w-xl text-sm text-muted-foreground md:mx-0">
                 Use <strong className="text-foreground">Entrar</strong> no canto superior direito para o painel B2B
                 (histórico, PDF, checklist). Ou inicie o diagnóstico gratuito acima.
               </p>
@@ -55,7 +58,7 @@ export default function Home() {
               <ShieldCheck className="h-6 w-6" />
             </div>
             <h3 className="text-lg font-bold">Baseado na ABNT NBR 17301</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="qdi-prose-justify text-sm text-muted-foreground">
               Avaliação algorítmica alinhada com os padrões de compliance e gestão tributária brasileiros mais
               recentes.
             </p>
@@ -66,7 +69,7 @@ export default function Home() {
               <BarChart3 className="h-6 w-6" />
             </div>
             <h3 className="text-lg font-bold">Score de Maturidade</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="qdi-prose-justify text-sm text-muted-foreground">
               Obtenha uma pontuação transparente (0-100) que indica o quão preparada sua empresa está para as novas
               regras de CBS e IBS.
             </p>
@@ -77,7 +80,7 @@ export default function Home() {
               <FileText className="h-6 w-6" />
             </div>
             <h3 className="text-lg font-bold">Relatório Executivo em PDF</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="qdi-prose-justify text-sm text-muted-foreground">
               Receba um diagnóstico completo em seu e-mail com identificação de gaps críticos e recomendações de
               especialistas.
             </p>

@@ -6,7 +6,7 @@ import { HeaderAuthNav } from "@/components/layout/HeaderAuthNav";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 text-left hyphens-none backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex min-h-[4.5rem] items-center justify-between gap-3 py-2 sm:min-h-[5rem]">
         <Link
           href="/"

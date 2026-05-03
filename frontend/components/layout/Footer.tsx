@@ -6,7 +6,7 @@ import { Wordmark } from "@/components/brand/Wordmark";
 export function Footer() {
   const ano = new Date().getFullYear();
   return (
-    <footer className="border-t py-6 md:py-0">
+    <footer className="border-t py-6 text-left hyphens-none md:py-0">
       <div className="container flex flex-col items-center justify-between gap-6 md:h-auto md:min-h-16 md:flex-row md:gap-4 md:py-4">
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-4">
           <Wordmark size="sm" />
