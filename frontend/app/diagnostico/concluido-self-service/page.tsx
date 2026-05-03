@@ -106,7 +106,7 @@ function DiagnosticoConcluidoSelfServiceConteudo() {
       </div>
 
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Diagnóstico gravado na nuvem</h1>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Diagnóstico concluído</h1>
         <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
           O questionário foi associado ao e-mail confirmado e armazenado no ambiente self-service. O painel
           completo (histórico, PDF, M12) continua ligado à sua conta na plataforma Tributiq, se desejar evoluir depois.

@@ -6,9 +6,10 @@ Responsabilidade: Roteamento HTTP, conversão Pydantic -> Domain.
 """
 
 import asyncio
+import json
 import secrets
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 import psycopg2
@@ -103,6 +104,21 @@ router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
 logger = structlog.get_logger(__name__)
 
 _VALIDADE_OTP_MINUTOS = 10
+
+
+def _payload_json_como_dict(value: object) -> dict[str, Any] | None:
+    """jsonb via psycopg2 costuma vir como dict; em alguns drivers/versões pode vir como str JSON."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return cast("dict[str, Any]", value)
+    if isinstance(value, str):
+        try:
+            parsed: object = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+        return cast("dict[str, Any]", parsed) if isinstance(parsed, dict) else None
+    return None
 
 
 def _mascarar_email_norm(email_norm: str) -> str:
@@ -591,8 +607,8 @@ async def resumo_rascunho_diagnostico_self_service(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Rascunho inválido, expirado ou já utilizado.",
         )
-    pj = row.get("payload_json")
-    if not isinstance(pj, dict):
+    pj = _payload_json_como_dict(row.get("payload_json"))
+    if pj is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Formato de rascunho inconsistente.",
@@ -601,12 +617,12 @@ async def resumo_rascunho_diagnostico_self_service(
     razao = (
         str(emp.get("razao_social", "")).strip() if isinstance(emp, dict) else ""
     ) or "(sem razão social)"
-    email_norm = str(row.get("email_norm") or "")
+    email_norm = str(row.get("email_norm") or "").strip()
     exp_raw = row.get("expira_em")
     if exp_raw is None:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Rascunho sem expiração.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rascunho inválido, expirado ou já utilizado.",
         )
     exp_dt = (
         exp_raw
@@ -672,8 +688,8 @@ async def concluir_rascunho_diagnostico_self_service(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Rascunho inválido, expirado ou já utilizado.",
         )
-    pj = row2.get("payload_json")
-    if not isinstance(pj, dict):
+    pj = _payload_json_como_dict(row2.get("payload_json"))
+    if pj is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Formato de rascunho inconsistente.",
@@ -760,8 +776,8 @@ async def vincular_rascunho_conta_plataforma(
             detail="Token não corresponde a um consultor com e-mail resolvível.",
         )
     email_admin_norm = codigo_store.normalizar_email(email_admin)
-    pj = row.get("payload_json")
-    if not isinstance(pj, dict):
+    pj = _payload_json_como_dict(row.get("payload_json"))
+    if pj is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Formato de rascunho inconsistente.",

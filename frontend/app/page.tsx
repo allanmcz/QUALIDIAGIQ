@@ -39,7 +39,7 @@ export default function Home() {
                 </Button>
               </div>
               <p className="qdi-prose-justify mx-auto max-w-xl text-sm text-muted-foreground md:mx-0">
-                Acesso ao painel consultor (histórico, PDF e checklist) fica no cabeçalho.
+                Acesso ao painel de diagnósticos (histórico, PDF e checklist) é necessário Entrar ou Cadastrar-se.
               </p>
             </div>
           </div>

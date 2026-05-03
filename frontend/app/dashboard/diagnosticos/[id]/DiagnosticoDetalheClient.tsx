@@ -375,7 +375,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     <div className="container py-10">
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mb-4">
-          <Link href="/dashboard" className="text-primary hover:underline">
+          <Link href="/dashboard/diagnosticos" className="text-primary hover:underline">
             ← Voltar para Dashboard
           </Link>
           <span className="text-muted-foreground">·</span>

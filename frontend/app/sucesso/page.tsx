@@ -33,7 +33,7 @@ export default function SucessoPage() {
           </p>
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" className="w-full gap-2 sm:w-auto">
-              <Link href="/dashboard">
+              <Link href="/dashboard/diagnosticos">
                 <LayoutDashboard className="h-4 w-4" />
                 Abrir painel (fase 2)
               </Link>

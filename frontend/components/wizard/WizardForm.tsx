@@ -46,7 +46,10 @@ import {
   hasPendingDiagnosticoInBrowser,
   loadPendingDiagnosticoFromStorage,
 } from "@/lib/wizard/pending_diagnostico";
-import { loadRascunhoResgateToken } from "@/lib/wizard/rascunho_resgate_token";
+import {
+  clearRascunhoResgateToken,
+  loadRascunhoResgateToken,
+} from "@/lib/wizard/rascunho_resgate_token";
 import {
   clearWizardDraft,
   loadWizardDraft,

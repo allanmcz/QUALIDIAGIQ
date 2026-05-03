@@ -109,10 +109,15 @@ export async function getConclusaoSelfServiceVisualizacao(
   diagnosticoId: string,
   leituraToken: string,
 ): Promise<SelfServiceDiagnosticoResultado> {
-  const u = new URL(`${apiBase()}/diagnosticos/self-service/conclusao-visualizacao`);
-  u.searchParams.set("diagnostico_id", diagnosticoId.trim());
-  u.searchParams.set("leitura_token", leituraToken.trim());
-  const res = await fetch(u.toString(), { method: "GET" });
+  const qs = new URLSearchParams({
+    diagnostico_id: diagnosticoId.trim(),
+    leitura_token: leituraToken.trim(),
+  }).toString();
+  // Não usar `new URL(string)` com base relativa (`/api-backend`) — falha no browser (Invalid URL).
+  const res = await fetch(
+    `${apiBase()}/diagnosticos/self-service/conclusao-visualizacao?${qs}`,
+    { method: "GET" },
+  );
   if (!res.ok) {
     throw new Error(await mensagemErroHttp(res));
   }

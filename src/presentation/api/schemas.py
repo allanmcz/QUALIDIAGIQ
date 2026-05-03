@@ -204,7 +204,14 @@ class DiagnosticoRascunhoResumoResponse(BaseModel):
 
     empresa_razao_social: str
     email_mascarado: str
-    respondente_email: EmailStr
+    # str (não EmailStr): valor já validado em POST /rascunho-self-service; EmailStr na resposta
+    # causava 500 com e-mails aceites pelo wizard mas rejeitados pelo validador de saída (ex.: TLD dev).
+    respondente_email: str = Field(
+        ...,
+        min_length=3,
+        max_length=320,
+        description="E-mail normalizado gravado no rascunho (mesmo usado em POST).",
+    )
     expira_em: datetime
 
 

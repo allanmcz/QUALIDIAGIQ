@@ -101,7 +101,12 @@ services:
       API_PROXY_TARGET: http://api:8000
       NEXT_PUBLIC_API_URL: /api-backend
     volumes:
+      # Código-fonte no host; dependências e cache de build só no Linux do container.
+      # Sem isto, `node_modules`/`.next` gerados no macOS misturam-se com `npm run dev` no Alpine
+      # e o browser recebe chunks truncados/HTML → «layout.js: Invalid or unexpected token».
       - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     networks:
       - qdi-network
     command:

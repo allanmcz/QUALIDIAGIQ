@@ -77,7 +77,7 @@ app.add_middleware(
     allow_origins=settings.cors_allowed_origins,  # de env: csv
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "Authorization", "Idempotency-Key"],
+    allow_headers=["Content-Type", "Authorization", "Idempotency-Key", "X-Rascunho-Token"],
 )
 ```
 

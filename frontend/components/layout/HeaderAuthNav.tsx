@@ -67,7 +67,7 @@ export function HeaderAuthNav() {
           <Link href="/cadastro">Cadastrar</Link>
         </Button>
         <Button size="sm" asChild className="shrink-0">
-          <Link href="/login?redirect=/dashboard">Entrar</Link>
+          <Link href={`/login?redirect=${encodeURIComponent("/dashboard/diagnosticos")}`}>Entrar</Link>
         </Button>
       </div>
     );
@@ -82,7 +82,7 @@ export function HeaderAuthNav() {
         Olá, <span className="font-medium text-foreground">{nome}</span>
       </span>
       <Button variant="outline" size="sm" asChild className="shrink-0">
-        <Link href="/dashboard">Painel</Link>
+        <Link href="/dashboard/diagnosticos">Painel</Link>
       </Button>
       <Button variant="ghost" size="sm" type="button" className="shrink-0 text-destructive hover:text-destructive" onClick={sair}>
         Sair

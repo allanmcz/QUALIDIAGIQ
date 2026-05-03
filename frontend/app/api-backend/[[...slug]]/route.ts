@@ -19,6 +19,7 @@ const CABECALHOS_REPASSE = [
   "idempotency-key",
   "accept",
   "accept-language",
+  "x-rascunho-token",
 ] as const;
 
 function isLikelyDockerContainer(): boolean {
@@ -34,7 +35,8 @@ function resolveUpstreamBase(): string | null {
   const explicit = process.env.API_PROXY_TARGET?.trim();
   if (explicit) return explicit.replace(/\/$/, "");
   if (process.env.NODE_ENV === "production") return null;
-  if (isLikelyDockerContainer()) return null;
+  // Compose QDI: serviço `api` na rede interna (evita 503 se `.env.local` montado esvaziar o env).
+  if (isLikelyDockerContainer()) return "http://api:8000";
   return "http://127.0.0.1:60000";
 }
 

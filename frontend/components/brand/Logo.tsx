@@ -57,18 +57,23 @@ export type LogoProps = {
 export function Logo({ variant = "full", size = "md", className, priority = false }: LogoProps) {
   const h = heightsPx[variant][size];
   const src = sources[variant];
-  const width = logoRenderedWidth(variant, h);
+  const natural = logoRenderedWidth(variant, h);
   const maxW = logoMaxWidthPx(variant);
+  const displayW = Math.min(natural, maxW);
 
   return (
-    <Image
-      src={src}
-      alt="QualiDiagIQ"
-      width={width}
-      height={h}
-      priority={priority}
-      className={cn("w-auto object-contain object-left", className)}
-      style={{ height: h, width: "auto", maxWidth: maxW }}
-    />
+    <span
+      className={cn("relative inline-block shrink-0 overflow-hidden", className)}
+      style={{ width: displayW, height: h }}
+    >
+      <Image
+        src={src}
+        alt="QualiDiagIQ"
+        priority={priority}
+        fill
+        sizes={`${displayW}px`}
+        className="object-contain object-left"
+      />
+    </span>
   );
 }

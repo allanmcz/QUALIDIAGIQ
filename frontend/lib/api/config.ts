@@ -25,9 +25,9 @@ const API_HOST_DEV_PADRAO = "http://127.0.0.1:60000";
  * Base para chamadas `fetch` no cliente.
  *
  * Em **`NODE_ENV=development`** no browser, com front em `localhost|127.0.0.1` numa porta de dev
- * acima e `NEXT_PUBLIC_API_URL` ausente ou `/api-backend`, usa **API direta** em `127.0.0.1:60000`.
- * Isto contorna falhas intermitentes do proxy `/api-backend` (Route Handler / stream) no painel;
- * o `docker-compose` já inclui essas origens em `CORS_ALLOWED_ORIGINS` na API.
+ * acima e `NEXT_PUBLIC_API_URL` ausente, vazio ou `/api-backend`, usa **API direta** em `127.0.0.1:60000`.
+ * Evita «Failed to fetch» no painel quando o proxy same-origin (`/api-backend`) falha; a FastAPI já
+ * expõe CORS em dev (`CORS_ALLOWED_ORIGINS`) com `Authorization`, `Idempotency-Key`, `X-Rascunho-Token`.
  *
  * Em `next start` / produção mantém-se `NEXT_PUBLIC_API_URL` (ex.: `/api-backend` ou URL absoluta).
  */
@@ -39,7 +39,10 @@ export function getApiUrlForFetch(): string {
     const p = port || (window.location.protocol === "https:" ? "443" : "80");
     const frontDevLocal =
       (hostname === "localhost" || hostname === "127.0.0.1") && PORTAS_DEV_FRONT.has(p);
-    if (frontDevLocal && (!fromEnv || fromEnv === "/api-backend")) {
+    if (
+      frontDevLocal &&
+      (!fromEnv || fromEnv === "" || fromEnv === "/api-backend")
+    ) {
       return API_HOST_DEV_PADRAO;
     }
   }

@@ -79,16 +79,18 @@ def buscar_rascunho_ativo_por_token_sync(dsn: str, token_plain: str) -> dict[str
         if r.get("consumido_em") is not None:
             return None
         exp = r.get("expira_em")
-        if exp is not None:
-            exp_dt = (
-                exp
-                if isinstance(exp, datetime)
-                else datetime.fromisoformat(str(exp).replace("Z", "+00:00"))
-            )
-            if exp_dt.tzinfo is None:
-                exp_dt = exp_dt.replace(tzinfo=UTC)
-            if datetime.now(UTC) > exp_dt:
-                return None
+        if exp is None:
+            # Esquema exige NOT NULL; se vier nulo (corrupção/migração), não devolver linha ativa.
+            return None
+        exp_dt = (
+            exp
+            if isinstance(exp, datetime)
+            else datetime.fromisoformat(str(exp).replace("Z", "+00:00"))
+        )
+        if exp_dt.tzinfo is None:
+            exp_dt = exp_dt.replace(tzinfo=UTC)
+        if datetime.now(UTC) > exp_dt:
+            return None
         return r
     finally:
         conn.close()

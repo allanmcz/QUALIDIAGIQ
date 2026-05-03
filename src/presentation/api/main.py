@@ -160,6 +160,7 @@ def create_app() -> FastAPI:
             "Idempotency-Key",
             "If-Match",
             "X-Trace-Id",
+            "X-Rascunho-Token",
         ],
         expose_headers=["X-Idempotent-Replay", "X-Trace-Id"],
     )

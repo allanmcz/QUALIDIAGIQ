@@ -194,7 +194,44 @@ async def test_get_resumo_empresa_nao_dict_usa_fallback_razao(
 
 
 @pytest.mark.asyncio
-async def test_get_resumo_sem_expira_em_500(rascunho_async_client: AsyncClient) -> None:
+async def test_get_resumo_payload_json_como_string_200(rascunho_async_client: AsyncClient) -> None:
+    """Alguns drivers devolvem jsonb como str — o handler deve fazer parse."""
+    import json
+
+    from src.presentation.api.routers import diagnostico_router as dr
+
+    class S:
+        sync_database_url = "postgresql://x"
+
+    exp = datetime.now(UTC) + timedelta(hours=1)
+    payload = {"empresa": {"razao_social": "JSON str SA"}, "respondente": {"email": "x@y.com"}}
+    row = {
+        "id": str(uuid4()),
+        "tenant_id": str(uuid4()),
+        "email_norm": "x@y.com",
+        "payload_json": json.dumps(payload),
+        "expira_em": exp,
+        "consumido_em": None,
+    }
+
+    async def fake_to_thread(fn: object, /, *args: object, **kwargs: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dr, "get_settings", return_value=S()):
+        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+            r = await rascunho_async_client.get(
+                "/diagnosticos/rascunho-self-service/resumo",
+                headers={"X-Rascunho-Token": "t" * 24},
+            )
+    assert r.status_code == 200
+    assert r.json()["empresa_razao_social"] == "JSON str SA"
+
+
+@pytest.mark.asyncio
+async def test_get_resumo_sem_expira_em_404(rascunho_async_client: AsyncClient) -> None:
+    """Linha sem ``expira_em`` (corrupta): não expõe metadados — 404 como rascunho inválido."""
     from src.presentation.api.routers import diagnostico_router as dr
 
     class S:
@@ -220,7 +257,7 @@ async def test_get_resumo_sem_expira_em_500(rascunho_async_client: AsyncClient) 
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "u" * 24},
             )
-    assert r.status_code == 500
+    assert r.status_code == 404
 
 
 @pytest.mark.asyncio

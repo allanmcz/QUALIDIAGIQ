@@ -147,6 +147,22 @@ def test_buscar_ativo_retorna_dict_quando_valido(
     assert out["email_norm"] == "a@b.com"
 
 
+def test_buscar_ativo_none_quando_expira_em_nulo(
+    monkeypatch: pytest.MonkeyPatch, patch_psycopg2_connect: Any
+) -> None:
+    row = {
+        "id": str(uuid4()),
+        "tenant_id": str(uuid4()),
+        "email_norm": "a@b.com",
+        "payload_json": {},
+        "expira_em": None,
+        "consumido_em": None,
+    }
+    f = _ConnFactory(fetch_rows=[row])
+    patch_psycopg2_connect(f)
+    assert buscar_rascunho_ativo_por_token_sync("postgresql://test", "z" * 20) is None
+
+
 def test_buscar_ativo_none_quando_expirado(
     monkeypatch: pytest.MonkeyPatch, patch_psycopg2_connect: Any
 ) -> None:
