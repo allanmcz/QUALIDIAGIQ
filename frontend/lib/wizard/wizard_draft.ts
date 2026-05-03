@@ -63,3 +63,22 @@ export function clearWizardDraft(): void {
     /* ignore */
   }
 }
+
+/**
+ * Indica se o rascunho guardado representa progresso real (não só defaults vazios no passo 1).
+ * Usado ao reabrir o wizard para decidir se perguntamos «continuar vs reiniciar».
+ */
+export function wizardDraftHasProgress(draft: WizardDraftV1): boolean {
+  if (draft.step >= 2) return true;
+  const e = draft.form.empresa;
+  const r = draft.form.respondente;
+  const cnpjDigits = String(e.cnpj ?? "").replace(/\D/g, "");
+  if (cnpjDigits.length >= 14) return true;
+  if ((e.razao_social ?? "").trim().length >= 3) return true;
+  if ((r.nome ?? "").trim().length >= 1) return true;
+  if ((r.email ?? "").trim().length >= 3) return true;
+  const tel = String(r.telefone ?? "").replace(/\D/g, "");
+  if (tel.length >= 8) return true;
+  if (draft.form.aceite_termos_privacidade === true) return true;
+  return false;
+}

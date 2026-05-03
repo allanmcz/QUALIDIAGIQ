@@ -37,15 +37,43 @@ import { ADMIN_PERFIL_CONTA_STORAGE_KEY, getAccessToken } from "@/lib/api/config
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
 import { rotulosEscalaParaPergunta } from "@/lib/wizard/escalaLabels";
-import { STORAGE_PENDING_DIAGNOSTICO } from "@/lib/wizard/pending_diagnostico";
+import {
+  clearPendingDiagnosticoFromStorage,
+  loadPendingDiagnosticoFromStorage,
+  STORAGE_PENDING_DIAGNOSTICO,
+} from "@/lib/wizard/pending_diagnostico";
 import {
   clearWizardDraft,
   loadWizardDraft,
   saveWizardDraft,
+  wizardDraftHasProgress,
+  type WizardDraftV1,
 } from "@/lib/wizard/wizard_draft";
 import { montarRotulosMultiplaEscolha } from "@/lib/wizard/multiplaLabels";
 
 const TOTAL_STEPS = 3;
+
+/** Defaults do formulário — reutilizados no `reset` ao «reiniciar» e no `useForm`. */
+const DEFAULT_WIZARD_FORM_VALUES: DiagnosticoPayloadFormInput = {
+  empresa: {
+    cnpj: "",
+    razao_social: "",
+    porte: "",
+    regime: "",
+    cnae_principal: "",
+    uf: "",
+    setor_macro: "",
+  },
+  respondente: {
+    nome: "",
+    email: "",
+    telefone: "",
+  },
+  locale_relatorio: "pt-BR",
+  plano: "gratuito",
+  respostas: [],
+  aceite_termos_privacidade: false,
+};
 
 /**
  * Reserva linha para erro de validação — evita que uma coluna “puxe” o alinhamento vertical
@@ -62,6 +90,12 @@ function SlotMensagemErroCampo({ children }: { children?: ReactNode }) {
 /** API pode devolver tipo com variações — unifica para o wizard não cair no ramo errado (ex.: ternária). */
 function normalizarTipoPerguntaWizard(tipo: string | undefined): string {
   return (tipo ?? "").trim().toLowerCase();
+}
+
+function valorInicialPorTipoPergunta(tipo: string): string | number | string[] {
+  const t = normalizarTipoPerguntaWizard(tipo);
+  if (t === "multipla_escolha" || t === "checklist") return [];
+  return "";
 }
 
 function tipoEhEscalaLikert15(tipo: string | undefined): boolean {
@@ -101,6 +135,11 @@ export function WizardForm() {
   const skipPersistRef = useRef(false);
   /** Após ler/restaurar sessionStorage — só então passamos a persistir alterações. */
   const [draftHydrated, setDraftHydrated] = useState(false);
+  /** Há rascunho e/ou diagnóstico pendente — pergunta continuar vs reiniciar antes de hidratar. */
+  const [cacheResumePrompt, setCacheResumePrompt] = useState<{
+    hasDraft: boolean;
+    hasPending: boolean;
+  } | null>(null);
 
   useEffect(() => {
     setTokenChecked(true);
@@ -149,26 +188,7 @@ export function WizardForm() {
 
   const form = useForm<DiagnosticoPayloadFormInput>({
     resolver: zodResolver(DiagnosticoPayloadSchema),
-    defaultValues: {
-      empresa: {
-        cnpj: "",
-        razao_social: "",
-        porte: "",
-        regime: "",
-        cnae_principal: "",
-        uf: "",
-        setor_macro: "",
-      },
-      respondente: {
-        nome: "",
-        email: "",
-        telefone: "",
-      },
-      locale_relatorio: "pt-BR",
-      plano: "gratuito",
-      respostas: [],
-      aceite_termos_privacidade: false,
-    },
+    defaultValues: DEFAULT_WIZARD_FORM_VALUES,
     mode: "onBlur",
   });
 
@@ -294,91 +314,127 @@ export function WizardForm() {
       erro && "border-destructive",
     );
 
-  const valorInicialPorTipo = (tipo: string): string | number | string[] => {
-    const t = normalizarTipoPerguntaWizard(tipo);
-    if (t === "multipla_escolha" || t === "checklist") return [];
-    return "";
-  };
+  /**
+   * Aplica rascunho já validado (passos 1–2 ou passo 3 com catálogo da API).
+   */
+  const aplicarRascunhoWizard = useCallback(
+    async (draft: WizardDraftV1) => {
+      if (draft.step < 3) {
+        reset({
+          ...draft.form,
+          respostas: Array.isArray(draft.form.respostas) ? draft.form.respostas : [],
+        });
+        setStep(draft.step);
+        setIndicePerguntaAtual(draft.indicePerguntaAtual);
+        return;
+      }
+
+      setCatalogLoading(true);
+      setCatalogError(null);
+      try {
+        const q = await fetchQuestionarioAdaptativo(draft.form.empresa);
+        const respostasSalvas = Array.isArray(draft.form.respostas) ? draft.form.respostas : [];
+        const map = new Map(respostasSalvas.map((r) => [r.pergunta_id, r.valor]));
+        const merged = q.perguntas.map((pg) => ({
+          pergunta_id: pg.id,
+          valor: map.has(pg.id) ? map.get(pg.id)! : valorInicialPorTipoPergunta(pg.tipo),
+        }));
+        setPerguntas(q.perguntas);
+        reset({
+          ...draft.form,
+          respostas: merged,
+        });
+        setStep(3);
+        setIndicePerguntaAtual(
+          Math.min(draft.indicePerguntaAtual, Math.max(0, q.perguntas.length - 1)),
+        );
+      } catch {
+        setPerguntas([]);
+        setStep(2);
+        reset({
+          ...draft.form,
+          respostas: [],
+        });
+        setIndicePerguntaAtual(0);
+      } finally {
+        setCatalogLoading(false);
+      }
+    },
+    [reset],
+  );
+
+  const handleCacheContinuar = useCallback(() => {
+    setCacheResumePrompt(null);
+    skipPersistRef.current = true;
+    void (async () => {
+      try {
+        const draft = loadWizardDraft();
+        const temRascunho = !!(draft && wizardDraftHasProgress(draft));
+        if (temRascunho && draft) {
+          await aplicarRascunhoWizard(draft);
+        } else if (!getAccessToken() && loadPendingDiagnosticoFromStorage()) {
+          router.push("/diagnostico/gravado-local");
+        }
+      } finally {
+        skipPersistRef.current = false;
+        setDraftHydrated(true);
+      }
+    })();
+  }, [aplicarRascunhoWizard, router]);
+
+  const handleCacheReiniciar = useCallback(() => {
+    clearWizardDraft();
+    clearPendingDiagnosticoFromStorage();
+    reset({ ...DEFAULT_WIZARD_FORM_VALUES });
+    setStep(1);
+    setIndicePerguntaAtual(0);
+    setPerguntas([]);
+    setCatalogError(null);
+    setApiError(null);
+    setCacheResumePrompt(null);
+    skipPersistRef.current = false;
+    setDraftHydrated(true);
+  }, [reset]);
 
   /**
-   * Restaura passo, questionário e respostas após navegação externa (ex.: política de privacidade).
-   * Não disputa com o fluxo «JWT + diagnóstico pendente» que faz POST automático e redirect.
+   * Na abertura: se há JWT + pendente de POST, não restaura rascunho (fluxo automático existente).
+   * Se há rascunho com progresso e/ou diagnóstico pendente sem sessão, pergunta antes de hidratar.
    */
   useEffect(() => {
-    let cancelled = false;
+    if (typeof window === "undefined") {
+      setDraftHydrated(true);
+      return;
+    }
 
     const skipRestore =
-      typeof window !== "undefined" &&
-      !!getAccessToken() &&
-      !!sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO);
+      !!getAccessToken() && !!sessionStorage.getItem(STORAGE_PENDING_DIAGNOSTICO);
 
     if (skipRestore) {
       setDraftHydrated(true);
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
     skipPersistRef.current = true;
 
-    void (async () => {
-      try {
-        const draft = loadWizardDraft();
-        if (!draft) return;
+    let draft = loadWizardDraft();
+    if (draft && !wizardDraftHasProgress(draft)) {
+      clearWizardDraft();
+      draft = null;
+    }
 
-        if (draft.step < 3) {
-          reset({
-            ...draft.form,
-            respostas: Array.isArray(draft.form.respostas) ? draft.form.respostas : [],
-          });
-          setStep(draft.step);
-          setIndicePerguntaAtual(draft.indicePerguntaAtual);
-          return;
-        }
+    const pendenteOk =
+      !getAccessToken() ? loadPendingDiagnosticoFromStorage() : null;
+    const hasDraft = !!(draft && wizardDraftHasProgress(draft));
+    const hasPending = pendenteOk != null;
 
-        setCatalogLoading(true);
-        try {
-          const q = await fetchQuestionarioAdaptativo(draft.form.empresa);
-          if (cancelled) return;
-          const map = new Map(draft.form.respostas.map((r) => [r.pergunta_id, r.valor]));
-          const merged = q.perguntas.map((pg) => ({
-            pergunta_id: pg.id,
-            valor: map.has(pg.id) ? map.get(pg.id)! : valorInicialPorTipo(pg.tipo),
-          }));
-          setPerguntas(q.perguntas);
-          reset({
-            ...draft.form,
-            respostas: merged,
-          });
-          setStep(3);
-          setIndicePerguntaAtual(
-            Math.min(draft.indicePerguntaAtual, Math.max(0, q.perguntas.length - 1)),
-          );
-        } catch {
-          if (!cancelled) {
-            setPerguntas([]);
-            setStep(2);
-            reset({
-              ...draft.form,
-              respostas: [],
-            });
-            setIndicePerguntaAtual(0);
-          }
-        } finally {
-          if (!cancelled) setCatalogLoading(false);
-        }
-      } finally {
-        if (!cancelled) {
-          skipPersistRef.current = false;
-          setDraftHydrated(true);
-        }
-      }
-    })();
+    if (!hasDraft && !hasPending) {
+      skipPersistRef.current = false;
+      setDraftHydrated(true);
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [reset]);
+    setCacheResumePrompt({ hasDraft, hasPending });
+  }, []);
 
   /** Persiste rascunho com debounce — mesma origem que «Voltar ao diagnóstico» na política de privacidade. */
   useEffect(() => {
@@ -645,7 +701,7 @@ export function WizardForm() {
           ...getValues(),
           respostas: q.perguntas.map((pg) => ({
             pergunta_id: pg.id,
-            valor: valorInicialPorTipo(pg.tipo),
+            valor: valorInicialPorTipoPergunta(pg.tipo),
           })),
         });
         setStep(3);
@@ -897,12 +953,60 @@ export function WizardForm() {
   };
 
   return (
-    <div
-      className={cn(
-        "w-full max-w-3xl mx-auto flex flex-col min-h-0",
-        step === 3 ? "flex-1 gap-3" : "space-y-6",
-      )}
-    >
+    <>
+      {cacheResumePrompt != null &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="qdi-wizard-resume-title"
+              className="pointer-events-auto w-full max-w-md space-y-4 rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xl"
+            >
+              <h2 id="qdi-wizard-resume-title" className="text-lg font-semibold text-foreground">
+                Diagnóstico em andamento neste navegador
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Há dados do assistente guardados apenas na sessão atual desta aba (sessionStorage). Deseja
+                continuar de onde parou ou iniciar um novo diagnóstico do zero?
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {cacheResumePrompt.hasDraft ? (
+                  <li>Rascunho do wizard (identificação, perfil e/ou questionário).</li>
+                ) : null}
+                {cacheResumePrompt.hasPending ? (
+                  <li>Conclusão aguardando cadastro ou login para gravar na API.</li>
+                ) : null}
+              </ul>
+              {cacheResumePrompt.hasDraft && cacheResumePrompt.hasPending ? (
+                <p className="text-xs leading-snug text-muted-foreground">
+                  «Continuar» restaura o rascunho do assistente. O envio pendente permanece guardado até você
+                  concluir o fluxo de cadastro/login ou reiniciar.
+                </p>
+              ) : null}
+              <p className="text-xs leading-snug text-muted-foreground">
+                LGPD: trata-se de cache local no seu dispositivo; não substitui o armazenamento seguro após
+                autenticação na plataforma.
+              </p>
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" onClick={handleCacheReiniciar}>
+                  Reiniciar diagnóstico
+                </Button>
+                <Button type="button" onClick={() => void handleCacheContinuar()}>
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+      <div
+        className={cn(
+          "w-full max-w-3xl mx-auto flex flex-col min-h-0",
+          step === 3 ? "flex-1 gap-3" : "space-y-6",
+          cacheResumePrompt != null && "pointer-events-none opacity-60",
+        )}
+      >
       <div className={cn("w-full min-w-0 space-y-2", step === 3 && "shrink-0")}>
         <div className="flex w-full justify-between gap-4 text-sm text-muted-foreground font-medium">
           <span className="min-w-0 truncate">
@@ -1537,5 +1641,6 @@ export function WizardForm() {
       ) : null}
       </div>
     </div>
+    </>
   );
 }
