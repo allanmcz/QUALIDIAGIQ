@@ -38,18 +38,8 @@ export default function Home() {
                   <Link href="/metodologia">Conhecer a Metodologia</Link>
                 </Button>
               </div>
-              <div className="flex flex-col justify-center gap-2 sm:flex-row sm:flex-wrap md:justify-start">
-                <Button size="lg" variant="secondary" className="px-8 text-md h-12" asChild>
-                  <Link href="/cadastro">Cadastrar</Link>
-                </Button>
-                <Button size="lg" variant="outline" className="px-8 text-md h-12" asChild>
-                  <Link href="/login">Entrar no painel</Link>
-                </Button>
-              </div>
               <p className="qdi-prose-justify mx-auto max-w-xl text-sm text-muted-foreground md:mx-0">
-                O canto superior direito também leva ao painel. <strong className="text-foreground">Cadastrar</strong>{" "}
-                cria conta consultor (nome, e-mail, senha); <strong className="text-foreground">Entrar</strong> usa
-                credenciais já existentes — histórico, PDF, checklist e quadro de implantação.
+                Acesso ao painel consultor (histórico, PDF e checklist) fica no cabeçalho.
               </p>
             </div>
           </div>

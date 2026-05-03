@@ -29,10 +29,12 @@ test.describe("Smoke QDI", () => {
     await expect(page.getByRole("button", { name: /Cadastrar e entrar/i })).toBeVisible();
   });
 
-  test("landing oferece Cadastrar e Entrar no painel", async ({ page }) => {
+  test("landing: cabeçalho com links Cadastrar e Entrar", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("link", { name: /^Cadastrar$/i })).toHaveAttribute("href", "/cadastro");
-    await expect(page.getByRole("link", { name: /Entrar no painel/i })).toHaveAttribute("href", "/login");
+    const entrar = page.getByRole("link", { name: /^Entrar$/i });
+    await expect(entrar).toBeVisible();
+    await expect(entrar).toHaveAttribute("href", /\/login/);
   });
 
   test("/metodologia exibe título (API opcional no CI)", async ({ page }) => {

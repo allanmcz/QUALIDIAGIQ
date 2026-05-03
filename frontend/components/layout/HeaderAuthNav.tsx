@@ -62,9 +62,14 @@ export function HeaderAuthNav() {
 
   if (nome === null) {
     return (
-      <Button size="sm" asChild>
-        <Link href="/login?redirect=/dashboard">Entrar</Link>
-      </Button>
+      <div className="flex items-center gap-1.5 sm:gap-2" role="group" aria-label="Conta consultor B2B">
+        <Button variant="outline" size="sm" asChild className="shrink-0">
+          <Link href="/cadastro">Cadastrar</Link>
+        </Button>
+        <Button size="sm" asChild className="shrink-0">
+          <Link href="/login?redirect=/dashboard">Entrar</Link>
+        </Button>
+      </div>
     );
   }
 
