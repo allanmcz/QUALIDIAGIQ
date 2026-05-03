@@ -2,7 +2,7 @@
 
 > **Objetivo:** único documento mestre para declarar o **MVP fechado** (técnico + operação + mínimo comercial/jurídico), com fases, artefactos versionados no repo, critérios de aceite e links para runbooks.
 >
-> **Documentos relacionados:** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`, `docs/refs/02_MOSCOW_FEATURES.md`, `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md` (gates produto / Allan), `_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`, `_DEVELOPER/ANALISE_30042026/`.
+> **Documentos relacionados:** `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md`, `docs/refs/02_MOSCOW_FEATURES.md`, `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md` (gates produto / Allan), `_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`, `_DEVELOPER/ANALISE_30042026/`.
 >
 > **Última atualização:** 2026-05-01 — execução técnica das Fases **D.3** (LGPD persistido), **G.1** lean (`X-Trace-Id`), artefactos **§7**, migração **0012**.
 
@@ -146,7 +146,7 @@ Implementação alinhada a este plano (2026-05-01):
 - [x] P6 (parcial): isolamento **dois tenants** validado em **`tests/integration/test_mvp_gate_postgres.py`**; **pendente ops:** repetir no projeto Supabase real (`_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`)  
 - [x] Jurídico (parcial): páginas MVP + processo descritos em **`docs/legal/STATUS_JURIDICO_MVP.md`**; **pendente externo:** parecer formal pré-comercial  
 - [x] `DECISOES_PRODUTO_MVP_D1_D5.md` — registro de sincronização 2026-05-01 + baseline D2/D6  
-- [x] Atualizar `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` com data + links (`§17 Plano MVP fechado`, migrações **0012**, POST com aceite LGPD)  
+- [x] Atualizar `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` com data + links (`§17 Plano MVP fechado`, migrações **0012**, POST com aceite LGPD)  
 
 ---
 
@@ -166,13 +166,13 @@ Roteiro passo a passo: **`docs/operacao/SMOKE_MVP_FECHADO.md`**.
 ## 9. Prompt próximo agente
 
 ```
-Leia docs/HANDOFF_PLANO_MVP_FECHADO.md (§3 Fase B ou C conforme prioridade).
+Leia _DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md (§3 Fase B ou C conforme prioridade).
 
 Escopo: apenas P5 homologação PDF OU P6 RLS produção — não expandir QAI/QFC/QMI.
 
 Não fazer git push/rebase sem confirmação.
 
-Ao concluir: evidências em §6 + entrada em docs/CHANGELOG_MVP.md + HANDOFF_PROXIMA §12.3.
+Ao concluir: evidências em §6 + entrada em docs/CHANGELOG_MVP.md + `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` §12.3.
 ```
 
 ---

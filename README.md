@@ -77,10 +77,10 @@ Variáveis lidas em runtime: `OTEL_TRACING_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_
 │   ├── PROMPT_DIA_1.md         ← Prompt acionável Sprint 1 Dia 1
 │   └── settings.json
 ├── .vscode/                    ← Config VS Code
-├── docs/
+├── docs/                       ← Produto, operação, changelog (ver docs/README.md)
+│   ├── README.md               ← Mapa da documentação versionada
 │   ├── 01_arquitetura.md       ← Clean Architecture + Mermaid
 │   ├── 02_dominio_qdi.md       ← Entidades, value objects
-│   ├── 03_roadmap_sprint_1.md  ← Plano dia-a-dia (30 dias)
 │   └── refs/                   ← 7 documentos da Discovery (snapshot)
 │       ├── 01_PRD_BASE.md
 │       ├── 02_MOSCOW_FEATURES.md
@@ -89,6 +89,8 @@ Variáveis lidas em runtime: `OTEL_TRACING_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_
 │       ├── 05_QUESTIONARIO_v1.md   ⭐ banco de 35 perguntas
 │       ├── 06_MATRIZ_COMPETITIVA.md
 │       └── 07_ESTRATEGIA_GERAL.md
+├── _DEVELOPER/                 ← Planos de execução, handoffs (`INDICE_PLANOS_HANDOFF.md`; git add -f)
+│   └── 03_roadmap_sprint_1.md  ← Plano dia-a-dia Sprint 1 (30 dias)
 ├── src/                        ← Backend Python (Clean Architecture)
 │   ├── domain/                 ← Regras de negócio puras
 │   ├── application/            ← Casos de uso
@@ -138,7 +140,7 @@ O Cursor lê **automaticamente** `.cursorrules` + `.cursor/rules/*.mdc` ao abrir
 
 1. Abrir o projeto: `cursor .`
 2. Confirmar instalação das extensões recomendadas (popup automático)
-3. Iniciar conversa: *"Vamos começar o Sprint 1 Dia 1 conforme docs/03_roadmap_sprint_1.md"*
+3. Iniciar conversa: *"Vamos começar o Sprint 1 Dia 1 conforme `_DEVELOPER/03_roadmap_sprint_1.md`"*
 
 O Cursor já tem contexto completo de:
 - Persona dual (Mentor + Arquiteto + Pair Programmer + Instrutor)
@@ -168,7 +170,7 @@ O Claude Code lê automaticamente `.claude/CLAUDE.md` ao abrir o projeto.
 
 **Saída esperada:** API funcional com fluxo questionário → score → relatório PDF.
 
-Detalhes em [`docs/03_roadmap_sprint_1.md`](docs/03_roadmap_sprint_1.md).
+Detalhes em [`_DEVELOPER/03_roadmap_sprint_1.md`](_DEVELOPER/03_roadmap_sprint_1.md).
 
 ## ⚙️ Comandos `make`
 
@@ -214,7 +216,7 @@ cp .env.example .env
 | [`docs/refs/04_METODOLOGIA.md`](docs/refs/04_METODOLOGIA.md) | 15 min | Para implementar use case |
 | [`docs/01_arquitetura.md`](docs/01_arquitetura.md) | 10 min | Entender Clean Architecture |
 | [`docs/02_dominio_qdi.md`](docs/02_dominio_qdi.md) | 10 min | Entender entidades |
-| [`docs/03_roadmap_sprint_1.md`](docs/03_roadmap_sprint_1.md) | 10 min | Plano dia-a-dia |
+| [`_DEVELOPER/03_roadmap_sprint_1.md`](_DEVELOPER/03_roadmap_sprint_1.md) | 10 min | Plano dia-a-dia |
 
 ## 🚫 Fora de Escopo
 

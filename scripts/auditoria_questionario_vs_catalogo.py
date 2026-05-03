@@ -72,7 +72,7 @@ def _render_markdown(
             + versao
             + "`** contém **37** perguntas (inclui ramificações setoriais/versionamento MVP). "
             "Não é inconsistência de código — é **escopo documental** vs **catálogo materializado**. "
-            "Ver também `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` — auditoria formal **37x35**.\n"
+            "Ver também `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` — auditoria formal **37x35**.\n"
         ),
         "",
         "## Divergências",

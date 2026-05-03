@@ -152,10 +152,10 @@ PLAYWRIGHT_INTEGRATED=1 npm run test:e2e:integrado
 
 | Documento | Uso |
 |-----------|-----|
-| [`HANDOFF_PROXIMA_SESSAO_QDI.md`](../HANDOFF_PROXIMA_SESSAO_QDI.md) | Estado técnico completo |
+| [`HANDOFF_PROXIMA_SESSAO_QDI.md`](../../_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md) | Estado técnico completo |
 | [`RUNBOOK_DEPLOY_ROLLBACK.md`](./RUNBOOK_DEPLOY_ROLLBACK.md) | Release e rollback |
 | [`SMOKE_MVP_FECHADO.md`](./SMOKE_MVP_FECHADO.md) | Smoke operacional |
-| `_DEVELOPER/HANDOFF_PLANO_EXECUCAO_2026-05-03.md` | Plano HANDOFF executado (pasta dev; `git add -f` se versionar) |
+| [`HANDOFF_PLANO_EXECUCAO_2026-05-03.md`](../../_DEVELOPER/HANDOFF_PLANO_EXECUCAO_2026-05-03.md) | Plano HANDOFF executado (`_DEVELOPER/`; `git add -f` se necessário) |
 
 ---
 

@@ -1,6 +1,6 @@
 # Changelog — fechamento MVP QualiDiagIQ
 
-Registro de entregas orientadas ao **MVP fechado** (ver `docs/HANDOFF_PLANO_MVP_FECHADO.md`).  
+Registro de entregas orientadas ao **MVP fechado** (ver `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`).  
 Versões internas podem usar data `YYYY-MM-DD` até adoção de semver de produto.
 
 ---
@@ -19,7 +19,7 @@ Alinha ao checklist Allan — secção 1 (tag/release MVP + changelog).
 ### Resumo executivo do baseline nomeado
 
 - **Handoff plano 02/05/2026 (execução técnica agente):** `GET /referencia/cnae/subclasses` (JWT + `DATABASE_URL`); wizard com datalist autocomplete CNAE; **`make verify-schema-mvp-strict`** / `--strict-cnae` no script; SQL MVP bloco CNAE opcional; decisões **D1/D3/D5** registadas como adiadas; **D4** parcial. Itens só humanos/externos permanecem: sign-off PDF **P5**, smoke Supabase real **P6**, jurídico, **M08** editorial, Beta SHOULD/COULD.
-- **Produção:** aplicar migrações até **0015** para pesos macro em DB (ou **0014** se CNAE + **0012** mínimo conforme operação); evidência: **`make verify-schema-mvp`** ou **`make verify-schema-mvp-strict`** + contagens `qdi.cnae_subclasse` (1332) quando CNAE ativo; smoke **Supabase** conforme runbook RLS e `docs/operacao/GAP_ANALYSIS_RLS_P6_2026-05-02.md`.
+- **Produção:** aplicar migrações até **0015** para pesos macro em DB (ou **0014** se CNAE + **0012** mínimo conforme operação); evidência: **`make verify-schema-mvp`** ou **`make verify-schema-mvp-strict`** + contagens `qdi.cnae_subclasse` (1332) quando CNAE ativo; smoke **Supabase** conforme runbook RLS e `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md`.
 - **P5:** sign-off humano no checklist PDF após revisão visual em ambiente com WeasyPrint (ajustes técnicos Ciclo Q já no template/CSS).
 
 ### 2026-05-02 — Ciclo Q (handoff autorizado)
@@ -27,8 +27,8 @@ Alinha ao checklist Allan — secção 1 (tag/release MVP + changelog).
 - **CNAE:** migrações **`0013_cnae_referencia.sql`** e **`0014_cnae_seed_dados.sql`**; `init.sql` atualizado.
 - **PDF:** síntese executiva com `page-break-inside: avoid`; disclaimer reforçado; margens `@page`.
 - **Deploy/D4:** `RUNBOOK_DEPLOY_ROLLBACK.md` (URLs Next); `frontend/.env.production.example`.
-- **P6:** relatório de gaps RLS `GAP_ANALYSIS_RLS_P6_2026-05-02.md`.
-- **Docs:** `HANDOFF_PROXIMA_SESSAO_QDI.md` sincronizado; `PDF_HOMOLOGACAO_CHECKLIST_B1.md` nota técnica Ciclo Q.
+- **P6:** relatório de gaps RLS `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md`.
+- **Docs:** `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` sincronizado; `PDF_HOMOLOGACAO_CHECKLIST_B1.md` nota técnica Ciclo Q.
 
 ### Adicionado (ferramenta ops)
 
@@ -48,7 +48,7 @@ Alinha ao checklist Allan — secção 1 (tag/release MVP + changelog).
 - CI em branches **`release/**`** e tags **`v*`**, **`mvp-*`**.
 - **`make mvp-gate`**: smoke API MVP + testes Postgres (`schema` **0012**, RLS dois tenants).
 - `docs/legal/STATUS_JURIDICO_MVP.md` — processo jurídico vs parecer externo.
-- Marker pytest **`mvp_gate`** e documentação cruzada (`SMOKE_MVP_FECHADO.md`, `PDF_HOMOLOGACAO_CHECKLIST_B1.md`, `HANDOFF_PLANO_MVP_FECHADO.md` §6).
+- Marker pytest **`mvp_gate`** e documentação cruzada (`SMOKE_MVP_FECHADO.md`, `PDF_HOMOLOGACAO_CHECKLIST_B1.md`, `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md` §6).
 
 ### Alterado
 
@@ -78,4 +78,4 @@ Alinha ao checklist Allan — secção 1 (tag/release MVP + changelog).
 
 ## Histórico anterior (consolidado)
 
-Entregas anteriores (M03–M12, P1–P4, idempotência, WORM, M12 PATCH, etc.) permanecem descritas em `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` e commits do repositório.
+Entregas anteriores (M03–M12, P1–P4, idempotência, WORM, M12 PATCH, etc.) permanecem descritas em `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` e commits do repositório.

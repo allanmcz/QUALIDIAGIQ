@@ -14,7 +14,7 @@
 
 ## Nota 35 × 37
 
-O PRD descreve **21 núcleo + 9 setoriais + 5 avançadas Lucro Real = 35** perguntas no desenho pedagógico. O catálogo runtime **`v1-doc-05-full-37`** contém **37** perguntas (inclui ramificações setoriais/versionamento MVP). Não é inconsistência de código — é **escopo documental** vs **catálogo materializado**. Ver também `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` — auditoria formal **37×35**.
+O PRD descreve **21 núcleo + 9 setoriais + 5 avançadas Lucro Real = 35** perguntas no desenho pedagógico. O catálogo runtime **`v1-doc-05-full-37`** contém **37** perguntas (inclui ramificações setoriais/versionamento MVP). Não é inconsistência de código — é **escopo documental** vs **catálogo materializado**. Ver também `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` — auditoria formal **37×35**.
 
 
 ## Divergências

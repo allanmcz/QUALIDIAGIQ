@@ -72,8 +72,16 @@ docs/*
 !docs/operacao/
 !docs/operacao/**
 
-# Handoff plano MVP fechado (exceção — versionado; restante docs/ segue ignorado)
-!docs/HANDOFF_PLANO_MVP_FECHADO.md
+# Mapa da documentação (índice humano — versionado)
+!docs/README.md
+
+# Índice sandbox + domínio (referência arquitetura)
+!docs/00_INDICE.md
+!docs/01_arquitetura.md
+!docs/02_dominio_qdi.md
+
+# Changelog MVP (exceção — versionado)
+!docs/CHANGELOG_MVP.md
 
 # Cursor IDE caches
 .cursor/cache/

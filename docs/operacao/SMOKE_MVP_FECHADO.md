@@ -39,4 +39,4 @@ Passos **2** (login Supabase real), **3** (wizard UI) e **8** (PDF real) continu
 
 ## Referência
 
-- Plano mestre: `docs/HANDOFF_PLANO_MVP_FECHADO.md`
+- Plano mestre: `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`

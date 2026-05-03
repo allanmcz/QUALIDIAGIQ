@@ -1,6 +1,6 @@
 # Operação — documentação QDI
 
-Índice dos artefactos em `docs/operacao/` (runbooks, gates MVP, decisões de produto). **Plano mestre:** `docs/HANDOFF_PLANO_MVP_FECHADO.md`.
+Índice dos artefactos em `docs/operacao/` (runbooks, gates MVP, decisões de produto). **Planos de execução e handoffs:** `_DEVELOPER/INDICE_PLANOS_HANDOFF.md` — **plano mestre gate MVP:** `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`.
 
 ## Confirmações produto e gates
 
@@ -18,7 +18,7 @@
 | [RUNBOOK_DEPLOY_ROLLBACK.md](./RUNBOOK_DEPLOY_ROLLBACK.md) | Deploy e rollback. |
 | [SMOKE_MVP_FECHADO.md](./SMOKE_MVP_FECHADO.md) | Smoke manual e referência ao gate automatizado. |
 | [SQL_VERIFICACAO_SCHEMA_MVP.sql](./SQL_VERIFICACAO_SCHEMA_MVP.sql) | Verificação SQL do schema MVP. |
-| [GAP_ANALYSIS_RLS_P6_2026-05-02.md](./GAP_ANALYSIS_RLS_P6_2026-05-02.md) | Análise / evidência RLS (P6). |
+| [`_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md`](../../_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md) | Análise / evidência RLS (P6) — documento de planeamento. |
 
 ## PDF e homologação
 
@@ -37,4 +37,4 @@
 
 ---
 
-Outros ficheiros nesta pasta (auditorias pontuais, notas OpenAPI) mantêm-se como evidência histórica; para onboarding MVP, começar pelo checklist e pelo handoff acima.
+Outros ficheiros nesta pasta (auditorias pontuais, notas OpenAPI) mantêm-se como evidência histórica; para onboarding MVP, começar pelo checklist e pelos links acima. **Não** colocar aqui novos planos de sprint ou handoffs de sessão — usar `_DEVELOPER/` (ver [`docs/README.md`](../README.md)).

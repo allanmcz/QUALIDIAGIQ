@@ -69,5 +69,5 @@ PYTHONPATH=. OPENAI_API_KEY=... DATABASE_URL=postgresql://... python scripts/ing
 
 ## Referências
 
-- `docs/HANDOFF_PLANO_MVP_FECHADO.md` — Fase C (RLS) e Fase G (observabilidade).
+- `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md` — Fase C (RLS) e Fase G (observabilidade).
 - `docs/operacao_rls_idempotency.md` — idempotência e RLS.

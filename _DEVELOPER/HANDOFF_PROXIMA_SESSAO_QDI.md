@@ -1,10 +1,10 @@
 # Handoff QualiDiagIQ — estado completo e backlog detalhado
 
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
-> **Local canônico (versionado):** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`  
+> **Local canônico (versionado):** `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md`  
 > **Plano HANDOFF só engenharia (2026-05-03):** `_DEVELOPER/HANDOFF_PLANO_EXECUCAO_2026-05-03.md` (**executado** — ver secção “Estado de execução” nesse ficheiro; `git add -f` para versionar).  
-> **Guia de teste (hoje):** [`docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md`](./operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md)  
-> **Última atualização:** 2026-05-03 — harmonização com plano HANDOFF (A1/A3/A4, G1 script+CI, OTEL quickstart, E2E wizard catálogo inválido, idempotência 2 chaves, M06 `motion-reduce`/`focus-within`). Migrações **`0001`…`0020`** em **`init.sql`** / **`make migrate`** (Postgres **pgvector**): **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`), **`0020`** (RAG-light: extensão **`vector`**, schema **`qdi_rag`**, `scripts/ingestao_rag_baseline.py`, adapters **`BaseNormativaPort`** / Anthropic opcional). Gates: **`make test-domain`** (cobertura só `src/domain` ≥85%), **`test_metodologia_postgres_normativa_0015`**, **`scripts/verify_mvp_schema.py --rag`** ou **`QDI_VERIFY_SCHEMA_RAG=1`**. Ver **`CHANGELOG_MVP.md`** e **`docs/HANDOFF_CICLO_Q_2026-05-02.md`**.
+> **Guia de teste (hoje):** [`docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md`](../docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md)  
+> **Última atualização:** 2026-05-03 — harmonização com plano HANDOFF (A1/A3/A4, G1 script+CI, OTEL quickstart, E2E wizard catálogo inválido, idempotência 2 chaves, M06 `motion-reduce`/`focus-within`). Migrações **`0001`…`0020`** em **`init.sql`** / **`make migrate`** (Postgres **pgvector**): **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`), **`0020`** (RAG-light: extensão **`vector`**, schema **`qdi_rag`**, `scripts/ingestao_rag_baseline.py`, adapters **`BaseNormativaPort`** / Anthropic opcional). Gates: **`make test-domain`** (cobertura só `src/domain` ≥85%), **`test_metodologia_postgres_normativa_0015`**, **`scripts/verify_mvp_schema.py --rag`** ou **`QDI_VERIFY_SCHEMA_RAG=1`**. Ver **`docs/CHANGELOG_MVP.md`** e **`_DEVELOPER/HANDOFF_CICLO_Q_2026-05-02.md`**.
 
 ---
 
@@ -107,7 +107,7 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 | `src/infrastructure/db/migrations/` | **`0001`…`0020`** (`0012` LGPD + WORM; `0011` M12; `0013`/`0014` CNAE; **`0015`** normativa pesos macro; **`0019`** RLS admins/idempotency; **`0020`** RAG `qdi_rag.documento_normativo` + extensão `vector`) |
 | `src/application/ports/base_normativa_port.py` | Contrato RAG-light (chunks normativos) |
 | `scripts/ingestao_rag_baseline.py` | Ingestão embeddings → **`qdi_rag`** (fonte default `scripts/normativos_baseline/`) |
-| `docs/HANDOFF_PLANO_MVP_FECHADO.md` | Plano mestre gate MVP fechado |
+| `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md` | Plano mestre gate MVP fechado |
 | `docs/operacao/SMOKE_MVP_FECHADO.md` | Smoke manual A.3 |
 | `docs/CHANGELOG_MVP.md` | Registro de entregas MVP |
 | `src/presentation/api/routers/diagnostico_router.py` | **`/manifesto-pesos`**, `/metodologia`, `/questionario`, CRUD diagnóstico |
@@ -214,7 +214,7 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 
 - **P4:** Script + relatório `docs/operacao/auditoria_catalogo_vs_pr_v1_2026-05-01.md` (37 códigos alinhados ao PRD).  
 - **P5 + M04:** Homologação PDF + paginação/impressão; ajustes técnicos Ciclo Q registados em `PDF_HOMOLOGACAO_CHECKLIST_B1.md`.  
-- **P6:** OTEL prod; OpenAPI **P1 feito**; RLS prod pendente — **gap analysis:** `docs/operacao/GAP_ANALYSIS_RLS_P6_2026-05-02.md` (G2 fechado: **`make verify-schema-mvp-strict`** + SQL MVP).  
+- **P6:** OTEL prod; OpenAPI **P1 feito**; RLS prod pendente — **gap analysis:** `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md` (G2 fechado: **`make verify-schema-mvp-strict`** + SQL MVP).  
 - **CNAE:** migrações **`0013`/`0014`** + `init.sql`; ambientes já criados: rodar **`make migrate`**.  
 - Versionamento normativo DB (`vigencia_*`) nas regras de score — não implementado (CNAE já tem vigência nas tabelas de referência).  
 - **Bases antigas:** garantir migrações até **`0012`** mínimo; para CNAE, até **`0014`**.
@@ -301,9 +301,9 @@ Parecer jurídico em **privacidade** e **termos de uso** “oficiais” (hoje MV
 | **P7** | Dashboard lista **GET real** no browser + empty states | **Feito** no app; E2E lista **mock** no CI (sem backend) — ver **§7** |
 | **P8** | Feature flag painel normativa no wizard (`validar-ancora`) | **Feito** código + E2E opcional verde (`test:e2e:wizard-normativa`) |
 
-**Prioridade sugerida:** **P5 + P6** (go-live); **P7** e **P8** código/E2E fechados — ver **§7**. Ver `docs/HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md` (plano 10h).
+**Prioridade sugerida:** **P5 + P6** (go-live); **P7** e **P8** código/E2E fechados — ver **§7**. Ver `_DEVELOPER/HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md` (plano 10h).
 
-**Ciclo Q (2026-05-02):** plano em `docs/HANDOFF_CICLO_Q_2026-05-02.md` — entregues sincronização deste handoff, PDF técnico B1, gap P6, CNAE **0013/0014**, deploy **D4** (`RUNBOOK_DEPLOY_ROLLBACK.md` + `.env.production.example`).
+**Ciclo Q (2026-05-02):** plano em `_DEVELOPER/HANDOFF_CICLO_Q_2026-05-02.md` — entregues sincronização deste handoff, PDF técnico B1, gap P6, CNAE **0013/0014**, deploy **D4** (`docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` + `.env.production.example`).
 
 ---
 
@@ -312,7 +312,7 @@ Parecer jurídico em **privacidade** e **termos de uso** “oficiais” (hoje MV
 ```
 Branch local: feat/qdi-<nome>.
 
-Leia docs/HANDOFF_PROXIMA_SESSAO_QDI.md (§1, §7, §12.3 — bloco P<n> acordado).
+Leia _DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md (§1, §7, §12.3 — bloco P<n> acordado).
 
 Escopo: apenas o bloco P combinado — não expandir QAI/QFC/QMI sem pedido explícito.
 
@@ -356,7 +356,7 @@ Playwright: rotas específicas (*questionario*) depois de rotas amplas (*diagnos
 
 ## 17. Plano MVP fechado e operação
 
-- **Plano mestre (gate comercial/técnico):** `docs/HANDOFF_PLANO_MVP_FECHADO.md`  
+- **Plano mestre (gate comercial/técnico):** `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`  
 - **Smoke manual:** `docs/operacao/SMOKE_MVP_FECHADO.md`  
 - **Smoke + gate Postgres (CI/local):** `make mvp-gate`; testes `test_smoke_mvp_fechado_api.py`, `test_mvp_gate_postgres.py`  
 - **Verificação schema pós-migrate (ops):** `make verify-schema-mvp` ou `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql`  
@@ -369,4 +369,4 @@ Playwright: rotas específicas (*questionario*) depois de rotas amplas (*diagnos
 
 ---
 
-*Fim do handoff. Próximo: **§12.3 P5–P8** — detalhe em `docs/HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md`.*
+*Fim do handoff. Próximo: **§12.3 P5–P8** — detalhe em `_DEVELOPER/HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md`.*

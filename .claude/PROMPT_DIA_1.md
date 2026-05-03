@@ -45,7 +45,7 @@ Por favor, **leia nesta ordem** (use o tool Read em cada um):
 2. `README.md` — overview do scaffold
 3. `docs/01_arquitetura.md` — Clean Architecture, decisões, diagramas Mermaid
 4. `docs/02_dominio_qdi.md` — entidades, value objects, agregados
-5. `docs/03_roadmap_sprint_1.md` — plano dia-a-dia do Sprint 1
+5. `_DEVELOPER/03_roadmap_sprint_1.md` — plano dia-a-dia do Sprint 1
 
 E os documentos estratégicos (na pasta-irmã):
 
@@ -144,7 +144,7 @@ Se eu pedir algo dessa lista, **lembre o escopo e proponha redirecionamento**.
 
 ## Sua missão hoje (Sprint 1, Dia 1)
 
-Conforme `docs/03_roadmap_sprint_1.md`:
+Conforme `_DEVELOPER/03_roadmap_sprint_1.md`:
 
 ### Tarefa 1.1 — Validação do ambiente (bloqueante)
 

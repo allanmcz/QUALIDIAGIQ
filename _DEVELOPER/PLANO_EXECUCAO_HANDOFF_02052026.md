@@ -1,7 +1,7 @@
 # Plano de execução — handoff 02/05/2026 (fechamento de itens QDI)
 
-> **Propósito:** inventário **auditável** do que falta para fechar o **MVP MoSCoW (12 MUST)** + **gate operacional** declarado em `docs/HANDOFF_PLANO_MVP_FECHADO.md`, mais **extensões Beta/GA** quando Allan decidir ampliar escopo.  
-> **Não substitui:** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` (snapshot vivo); este ficheiro é **plano de trabalho e avaliação**.  
+> **Propósito:** inventário **auditável** do que falta para fechar o **MVP MoSCoW (12 MUST)** + **gate operacional** declarado em `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`, mais **extensões Beta/GA** quando Allan decidir ampliar escopo.  
+> **Não substitui:** `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` (snapshot vivo); este ficheiro é **plano de trabalho e avaliação**.  
 > **Data-base:** 2026-05-02 — inclui migrações até **`0014`** (CNAE), compose **`postgres:16-alpine`**, Ciclo Q executado.
 
 ---
@@ -45,7 +45,7 @@ Cada linha: **ID**, **lacuna restante**, **critério de aceite sugerido**, **art
 
 | ID | Lacuna | Critério de aceite | Dono / refs |
 |----|--------|-------------------|---------------|
-| **M01** | UX edge cases (`multipla_total`, opções vazias); CNAE no wizard **não** existe | Testes manuais/registrados + opcional E2E; se CNAE obrigatório: campo + API search | Produto + Eng · `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` §5 |
+| **M01** | UX edge cases (`multipla_total`, opções vazias); CNAE no wizard **não** existe | Testes manuais/registrados + opcional E2E; se CNAE obrigatório: campo + API search | Produto + Eng · `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` §5 |
 | **M02** | Calibração com dados reais | Processo de coorte + atualização de pesos/notas documentado; `nota_calibracao_m02` revisada | Allan / dados · fora núcleo código |
 | **M03** | Polimento | Nenhum gap funcional crítico citado — revisão contínua de copy/links | Produto |
 | **M04** | Homologação humana; PDF real em container prod | `PDF_HOMOLOGACAO_CHECKLIST_B1.md`: B.2 sign-off + B.3 checkboxes; sem stub mascarado em prod | Allan + Ops · `HANDOFF_PLANO_MVP_FECHADO.md` Fase B |
@@ -54,7 +54,7 @@ Cada linha: **ID**, **lacuna restante**, **critério de aceite sugerido**, **art
 | **M07** | — | Coberto por regras determinísticas; revisão negócio | Produto |
 | **M08** | Cobertura editorial todas NTs/dispositivos nas entregas ao cliente | Passagem linha a linha matriz/PDF/checklist | Allan/conteúdo · Fase F plano MVP |
 | **M09** | **D1** Free vs B2B logado não decidido | Registro em `DECISOES_PRODUTO_MVP_D1_D5.md` + eventual fluxo técnico | Allan · **D2** já fechado (CNPJ obrigatório) |
-| **M10** | RLS + roles **projeto Supabase real**; CNAE **0013/0014** aplicados se usar lookup global | Evidência: runbook + smoke dois tenants + contagens `qdi.cnae_subclasse`=1332 quando aplicável | Ops · `_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`, `docs/operacao/GAP_ANALYSIS_RLS_P6_2026-05-02.md` |
+| **M10** | RLS + roles **projeto Supabase real**; CNAE **0013/0014** aplicados se usar lookup global | Evidência: runbook + smoke dois tenants + contagens `qdi.cnae_subclasse`=1332 quando aplicável | Ops · `_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`, `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md` |
 | **M11** | Linkagem pergunta↔pilar no catálogo | Opcional MVP — melhoria contínua | Eng/conteúdo |
 | **M12** | — | Persistência + PATCH + WORM — **feito** | — |
 
@@ -165,13 +165,13 @@ Para declarar **MoSCoW completo incluindo SHOULD/COULD**: além do acima, implem
 
 | Documento | Uso |
 |-----------|-----|
-| `docs/HANDOFF_PROXIMA_SESSAO_QDI.md` | Estado vivo do produto |
-| `docs/HANDOFF_PLANO_MVP_FECHADO.md` | Fases A–G e gate §6 |
+| `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` | Estado vivo do produto |
+| `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md` | Fases A–G e gate §6 |
 | `docs/refs/02_MOSCOW_FEATURES.md` | MUST/SHOULD/COULD/WONT |
 | `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` | D1–D5 |
 | `docs/legal/STATUS_JURIDICO_MVP.md` | Jurídico |
 | `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` | P5 |
-| `docs/operacao/GAP_ANALYSIS_RLS_P6_2026-05-02.md` | P6/CNAE |
+| `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md` | P6/CNAE |
 | `docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md` | D4 deploy |
 | `docs/CHANGELOG_MVP.md` | Registro de releases |
 

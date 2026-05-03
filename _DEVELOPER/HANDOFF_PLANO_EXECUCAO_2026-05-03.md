@@ -2,7 +2,7 @@
 
 > **Data de corte:** 2026-05-03 (sábado)  
 > **Estado:** **EXECUTADO (100% escopo engenharia)** em 2026-05-03 — ver secção **8** e [`docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md`](../docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md).  
-> **Documento canônico de estado vivo:** [`docs/HANDOFF_PROXIMA_SESSAO_QDI.md`](../docs/HANDOFF_PROXIMA_SESSAO_QDI.md)  
+> **Documento canônico de estado vivo:** [`HANDOFF_PROXIMA_SESSAO_QDI.md`](./HANDOFF_PROXIMA_SESSAO_QDI.md) (raiz do repositório: `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md`)  
 > **Backlog autónomo:** [`BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md`](./BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md)  
 > **Análise Claude 02/05 arquivada:** [`_CONCLUIDOS_DEV/ANALISE_02052026_CLAUDE/`](./_CONCLUIDOS_DEV/ANALISE_02052026_CLAUDE/)
 
@@ -95,7 +95,7 @@ Homologação PDF, M02 dados reais, M10 prod Supabase, M09 Free/CNPJ, legal M08,
 
 | Documento | Uso |
 |-----------|-----|
-| [`docs/HANDOFF_PROXIMA_SESSAO_QDI.md`](../docs/HANDOFF_PROXIMA_SESSAO_QDI.md) | Estado completo |
+| [`HANDOFF_PROXIMA_SESSAO_QDI.md`](./HANDOFF_PROXIMA_SESSAO_QDI.md) | Estado completo |
 | [`docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md`](../docs/operacao/RUNBOOK_DEPLOY_ROLLBACK.md) | Release |
 | [`docs/refs/05_QUESTIONARIO_v1.md`](../docs/refs/05_QUESTIONARIO_v1.md) | Fonte editorial perguntas |
 | [`.github/adr/ADR-006-dependencias-ia-fora-src.md`](../.github/adr/ADR-006-dependencias-ia-fora-src.md) | Deps IA |
