@@ -70,7 +70,7 @@ services:
       QDI_SELF_SERVICE_TENANT_ID: "${QDI_SELF_SERVICE_TENANT_ID:-44444444-4444-4444-8444-444444444444}"
       QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES: "${QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES:-30}"
       # Next no compose exposto em :60001 — precisa constar no CORS (senão fetch → "Failed to fetch").
-      CORS_ALLOWED_ORIGINS: http://localhost:3010,http://127.0.0.1:3010,http://localhost:60001,http://127.0.0.1:60001,http://localhost:3333,http://127.0.0.1:3333
+      CORS_ALLOWED_ORIGINS: http://localhost:3010,http://127.0.0.1:3010,http://localhost:3000,http://127.0.0.1:3000,http://localhost:60001,http://127.0.0.1:60001,http://localhost:3333,http://127.0.0.1:3333
       # Ollama típico no host; dentro do container 127.0.0.1 NÃO é o Mac — ver README «Ollama local».
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}

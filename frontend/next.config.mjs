@@ -1,6 +1,27 @@
 /** Alvo interno do proxy (servidor Next → FastAPI). Compose: http://api:8000 */
 const apiProxyTarget = process.env.API_PROXY_TARGET?.trim();
 
+/**
+ * Origem da API para CSP `connect-src` em produção (evita «Failed to fetch» quando
+ * `NEXT_PUBLIC_API_URL` é http(s) absoluto e não same-origin).
+ */
+function connectSrcCspParts() {
+  const parts = ["'self'", "https:"];
+  const api = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (api && (api.startsWith("http://") || api.startsWith("https://"))) {
+    try {
+      const u = new URL(api);
+      const origin = `${u.protocol}//${u.host}`;
+      if (!parts.includes(origin)) {
+        parts.push(origin);
+      }
+    } catch {
+      /* URL inválida — ignora */
+    }
+  }
+  return parts;
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /**
@@ -8,6 +29,10 @@ const nextConfig = {
    * Next 14+ pode exigir origem explícita para assets `/_next/*` em dev.
    */
   allowedDevOrigins: [
+    "127.0.0.1:3000",
+    "localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
     "127.0.0.1:3010",
     "localhost:3010",
     "http://127.0.0.1:3010",
@@ -55,7 +80,7 @@ const nextConfig = {
           value: [
             "default-src 'self'",
             "img-src 'self' data: https:",
-            "connect-src 'self' https:",
+            `connect-src ${connectSrcCspParts().join(" ")}`,
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
             "frame-ancestors 'self'",

@@ -1,4 +1,5 @@
 import { getAccessToken, getApiUrlForFetch } from "./config";
+import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
 /** Resposta de GET /diagnosticos/ (lista resumida por tenant). */
 export type DiagnosticoResumoApi = {
@@ -33,13 +34,22 @@ export async function fetchDiagnosticosResumo(
   }).toString();
   const url = `${path}?${qs}`;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const detail = (err as { detail?: string }).detail ?? res.statusText;
-    throw new Error(typeof detail === "string" ? detail : `Erro ${res.status}`);
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const detail = (err as { detail?: string }).detail ?? res.statusText;
+      throw new Error(typeof detail === "string" ? detail : `Erro ${res.status}`);
+    }
+    return res.json() as Promise<DiagnosticoResumoApi[]>;
+  } catch (e) {
+    if (isLikelyNetworkFetchFailure(e)) {
+      const tecnico = e instanceof Error ? e.message : String(e);
+      throw new Error(`${mensagemConectividadeApiParaUsuario(base)} Detalhe: ${tecnico}`);
+    }
+    throw e;
   }
-  return res.json() as Promise<DiagnosticoResumoApi[]>;
 }
