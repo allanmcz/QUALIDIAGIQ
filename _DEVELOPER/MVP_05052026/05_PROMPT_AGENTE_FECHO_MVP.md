@@ -3,8 +3,9 @@
 Copiar para o Cursor / Claude. **Não** inclui push/rebase sem confirmação do Allan.
 
 ```text
-Contexto: fechar **Definição D** (demo local + consultoria supervisionada no MacBook, sem site público)
-do pacote `_DEVELOPER/MVP_05052026/00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md` + secção **2** de
+Contexto: executar `_DEVELOPER/MVP_05052026/HANDOFF_PLANO_EXECUCAO_MVP_05052026.md` (fases F0–F4, IDs Z)
+e fechar **Definição D** (demo local + consultoria supervisionada no MacBook, sem site público)
+conforme `_DEVELOPER/MVP_05052026/00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md` + secção **2** de
 `_DEVELOPER/MVP_05052026/02_CRITERIOS_ACEITE_EVIDENCIAS.md` até 2026-05-05.
 
 Se Allan pedir explicitamente go-live, mudar para Definição A no `01_AVALIACAO_GAP_MVP_100.md`.

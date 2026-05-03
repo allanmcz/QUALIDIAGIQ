@@ -52,7 +52,8 @@ Cenário **D** **não** elimina LC **13.709/2018** se entrares **dados pessoais 
 
 ## 5. Onde está espelhado nos outros ficheiros
 
-- Critérios formais alinhados a **D:** [`02_CRITERIOS_ACEITE_EVIDENCIAS.md`](./02_CRITERIOS_ACEITE_EVIDENCIAS.md) — secção **3**.  
+- **Plano HANDOFF de execução:** [`HANDOFF_PLANO_EXECUCAO_MVP_05052026.md`](./HANDOFF_PLANO_EXECUCAO_MVP_05052026.md) (fases F0–F4, Z1–Z11).  
+- Critérios formais alinhados a **D:** [`02_CRITERIOS_ACEITE_EVIDENCIAS.md`](./02_CRITERIOS_ACEITE_EVIDENCIAS.md) — secção **2**.  
 - Gaps atualizados: [`01_AVALIACAO_GAP_MVP_100.md`](./01_AVALIACAO_GAP_MVP_100.md) — secção **1** (definição **D**).  
 - Prompt agente: [`05_PROMPT_AGENTE_FECHO_MVP.md`](./05_PROMPT_AGENTE_FECHO_MVP.md).
 

@@ -31,7 +31,7 @@
 
 | Pasta | Uso |
 |-------|-----|
-| [`MVP_05052026/`](./MVP_05052026/README.md) | Avaliação gap **100%**, critérios, cronograma **03–05/05/2026**, riscos, prompt agente |
+| [`MVP_05052026/`](./MVP_05052026/README.md) | Avaliação gap **100%**, critérios, cronograma **03–05/05/2026**, riscos, prompt agente + **[`HANDOFF_PLANO_EXECUCAO_MVP_05052026.md`](./MVP_05052026/HANDOFF_PLANO_EXECUCAO_MVP_05052026.md)** |
 
 ## Outros (backlog, kits, runbooks internos)
 
