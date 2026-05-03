@@ -6,32 +6,32 @@ import { Wordmark } from "@/components/brand/Wordmark";
 export function Footer() {
   const ano = new Date().getFullYear();
   return (
-    <footer className="border-t py-6 text-left hyphens-none md:py-0">
-      <div className="container flex flex-col items-center justify-between gap-6 md:h-auto md:min-h-16 md:flex-row md:gap-4 md:py-4">
-        <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <Wordmark size="sm" />
-          <EndorsedBadge />
+    <footer className="border-t py-3 text-left hyphens-none md:py-0">
+      <div className="container flex min-h-14 flex-nowrap items-center justify-between gap-3 overflow-x-auto py-3 md:min-h-16 md:gap-4 md:py-4">
+        <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3 md:gap-4">
+          <Wordmark size="sm" className="shrink-0" />
+          <EndorsedBadge className="shrink-0" />
+          <p className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm">
+            &copy; {ano} QualiDiagIQ · produto Tributiq. Todos os direitos reservados.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          &copy; {ano} QualiDiagIQ · produto Tributiq. Todos os direitos reservados.
-        </p>
         <nav
-          className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground"
+          className="flex shrink-0 flex-nowrap items-center gap-x-2 text-xs text-muted-foreground sm:gap-x-3 sm:text-sm md:gap-x-4"
           aria-label="Links institucionais"
         >
-          <Link href="/metodologia" className="hover:underline">
+          <Link href="/metodologia" className="whitespace-nowrap hover:underline">
             Metodologia e pesos
           </Link>
-          <Link href="/abnt-framework" className="hover:underline">
+          <Link href="/abnt-framework" className="whitespace-nowrap hover:underline">
             Framework ABNT
           </Link>
-          <Link href="/termos" className="hover:underline">
+          <Link href="/termos" className="whitespace-nowrap hover:underline">
             Termos de Uso
           </Link>
-          <Link href="/privacidade" className="hover:underline">
+          <Link href="/privacidade" className="whitespace-nowrap hover:underline">
             Política de Privacidade
           </Link>
-          <Link href="/avaliacao-contador" className="hover:underline">
+          <Link href="/avaliacao-contador" className="whitespace-nowrap hover:underline">
             Avaliação (contador)
           </Link>
         </nav>
