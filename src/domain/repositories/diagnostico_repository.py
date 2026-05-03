@@ -4,7 +4,8 @@ Port (interface) de persistência de Diagnóstico.
 Camada: Domain (interface — Dependency Inversion Principle)
 
 Implementação concreta vive em:
-    src/infrastructure/repositories/supabase_diagnostico_repository.py
+    ``src/infrastructure/repositories/postgres_diagnostico_repository.py`` (quando há DSN) ou
+    ``src/infrastructure/repositories/supabase_diagnostico_repository.py`` (PostgREST).
 
 Princípio: domain define o contrato, infrastructure implementa.
 Isso permite trocar Supabase → PostgreSQL puro → MongoDB sem tocar nas regras de negócio.

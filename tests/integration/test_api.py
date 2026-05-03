@@ -147,7 +147,7 @@ async def test_criar_diagnostico_sem_tenant(async_client):
             "uf": "SP",
             "setor_macro": "comercio",
         },
-        "respondente": {"email": "teste@teste.com"},
+        "respondente": {"email": "teste@teste.com", "nome": "Respondente QA"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
         "aceite_termos_privacidade": True,
     }

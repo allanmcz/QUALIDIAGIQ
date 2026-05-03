@@ -1,0 +1,62 @@
+"""Validação HTTP do respondente (nome obrigatório)."""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+
+from src.presentation.api.schemas import IniciarDiagnosticoRequest
+
+
+def _empresa_min() -> dict:
+    return {
+        "cnpj": "12345678000195",
+        "razao_social": "Empresa X",
+        "porte": "micro",
+        "regime": "simples_nacional",
+        "cnae_principal": "1234567",
+        "uf": "SP",
+        "setor_macro": "comercio",
+    }
+
+
+class TestRespondenteSchemaNomeObrigatorio:
+    """POST /diagnosticos exige nome não vazio após strip."""
+
+    def test_rejeita_sem_campo_nome(self) -> None:
+        with pytest.raises(ValidationError) as ex:
+            IniciarDiagnosticoRequest.model_validate(
+                {
+                    "empresa": _empresa_min(),
+                    "respondente": {"email": "a@b.com"},
+                    "respostas": [
+                        {"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}
+                    ],
+                    "aceite_termos_privacidade": True,
+                }
+            )
+        assert "nome" in str(ex.value).lower()
+
+    def test_rejeita_nome_somente_espacos(self) -> None:
+        with pytest.raises(ValidationError):
+            IniciarDiagnosticoRequest.model_validate(
+                {
+                    "empresa": _empresa_min(),
+                    "respondente": {"email": "a@b.com", "nome": "   "},
+                    "respostas": [
+                        {"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}
+                    ],
+                    "aceite_termos_privacidade": True,
+                }
+            )
+
+    def test_aceita_nome_valido(self) -> None:
+        body = IniciarDiagnosticoRequest.model_validate(
+            {
+                "empresa": _empresa_min(),
+                "respondente": {"email": "a@b.com", "nome": "Maria"},
+                "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
+                "aceite_termos_privacidade": True,
+            }
+        )
+        assert body.respondente.nome == "Maria"

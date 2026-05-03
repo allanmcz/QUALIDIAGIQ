@@ -111,7 +111,7 @@ def test_criar_diagnostico_sem_token_falha():
             "uf": "SP",
             "setor_macro": "comercio",
         },
-        "respondente": {"email": "teste@teste.com"},
+        "respondente": {"email": "teste@teste.com", "nome": "Respondente QA"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
         "aceite_termos_privacidade": True,
     }
@@ -175,7 +175,7 @@ def test_criar_diagnostico_com_sucesso():
             "uf": "SP",
             "setor_macro": "comercio",
         },
-        "respondente": {"email": "teste@teste.com"},
+        "respondente": {"email": "teste@teste.com", "nome": "Respondente QA"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
         "aceite_termos_privacidade": True,
     }
@@ -205,7 +205,7 @@ def test_criar_diagnostico_sem_aceite_lgpd_422():
             "uf": "SP",
             "setor_macro": "comercio",
         },
-        "respondente": {"email": "teste@teste.com"},
+        "respondente": {"email": "teste@teste.com", "nome": "Respondente QA"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
         "aceite_termos_privacidade": False,
     }
@@ -233,7 +233,7 @@ def test_criar_diagnostico_com_token_invalido():
             "uf": "SP",
             "setor_macro": "comercio",
         },
-        "respondente": {"email": "teste@teste.com"},
+        "respondente": {"email": "teste@teste.com", "nome": "Respondente QA"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
         "aceite_termos_privacidade": True,
     }
@@ -258,7 +258,7 @@ def _payload_diagnostico_minimo_api(*, email: str = "teste@teste.com") -> dict:
             "uf": "SP",
             "setor_macro": "comercio",
         },
-        "respondente": {"email": email},
+        "respondente": {"email": email, "nome": "Respondente QA"},
         "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}],
         "aceite_termos_privacidade": True,
     }

@@ -69,6 +69,9 @@ from src.infrastructure.repositories.embutidas_normativa_score_macro_repository 
 from src.infrastructure.repositories.postgres_cnae_subclasse_repository import (
     PostgresCnaeSubclasseRepository,
 )
+from src.infrastructure.repositories.postgres_diagnostico_repository import (
+    PostgresDiagnosticoRepository,
+)
 from src.infrastructure.repositories.postgres_normativa_score_macro_repository import (
     PostgresNormativaScoreMacroRepository,
 )
@@ -249,8 +252,11 @@ async def get_self_service_diagnostico_claims(
 
 
 def get_diagnostico_repository() -> DiagnosticoRepository:
-    """Injeta o repositório de diagnósticos (Supabase ou modo CI Playwright)."""
+    """Injeta o repositório de diagnósticos (Postgres quando há DSN; senão CI em memória ou Supabase)."""
     settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn:
+        return PostgresDiagnosticoRepository(dsn_sync=dsn)
     if settings.ci_playwright_integrated:
         return _singleton_ci_playwright_repo()
     return SupabaseDiagnosticoRepository(client=get_supabase_client())
@@ -260,17 +266,18 @@ def get_lead_diagnostico_vinculo_port() -> LeadDiagnosticoVinculoPort:
     """
     Reatribuição self-service → tenant B2B.
 
-    Com CI Playwright, altera o dict in-process; com ``DATABASE_URL``, UPDATE via Postgres (bypass RLS).
+    Com ``DATABASE_URL`` (DSN síncrono), UPDATE via Postgres. Sem DSN e com modo CI Playwright,
+    altera o dict in-process (legado sem Postgres).
     """
     settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn:
+        return PostgresLeadDiagnosticoVinculoAdapter(dsn_sync=dsn)
     if settings.ci_playwright_integrated:
         return MemoriaLeadDiagnosticoVinculoAdapter(
             repo=_singleton_ci_playwright_repo(),
             tenant_self_service=settings.self_service_tenant_id,
         )
-    dsn = settings.sync_database_url
-    if dsn:
-        return PostgresLeadDiagnosticoVinculoAdapter(dsn_sync=dsn)
     return NopLeadDiagnosticoVinculoAdapter()
 
 

@@ -35,8 +35,9 @@ O Docker Compose **lê automaticamente** o arquivo `.env` na raiz do repositóri
 
 | Variável | Efeito típico |
 |----------|----------------|
-| `QDI_CI_PLAYWRIGHT_INTEGRATED` | Default **`1`**: login via Postgres + repositório de diagnósticos **em memória** (stack local sem Supabase Cloud). Use **`0`** + `SUPABASE_*` para persistir via PostgREST real. |
-| `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Sobrescrevem os placeholders do compose quando você usa projeto Supabase (com `QDI_CI_PLAYWRIGHT_INTEGRATED=0`). |
+| `DATABASE_URL` | No Compose (default), a API grava **diagnósticos** na tabela `diagnosticos` do **PostgreSQL** (`PostgresDiagnosticoRepository`). Sem DSN e sem Supabase real, use o modo CI em memória só em cenários de teste sem banco. |
+| `QDI_CI_PLAYWRIGHT_INTEGRATED` | Default **`1`**: suíte E2E integrada + login em `admins` no Postgres; **com `DATABASE_URL`**, diagnósticos vão para o mesmo Postgres (não ficam só em memória). Use **`0`** + `SUPABASE_*` se quiser persistir diagnósticos via PostgREST **sem** DSN local. |
+| `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Sobrescrevem os placeholders do compose quando você usa projeto Supabase (tipicamente com `QDI_CI_PLAYWRIGHT_INTEGRATED=0` e sem depender do Postgres local para diagnósticos). |
 | `JWT_SECRET_KEY` | Default de desenvolvimento no compose; defina uma chave forte em ambientes compartilhados. |
 | `QDI_SELF_SERVICE_TENANT_ID` | Tenant UUID do fluxo OTP → `/diagnosticos/self-service` (default alinhado ao backend). |
 

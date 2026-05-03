@@ -30,8 +30,16 @@ from src.domain.value_objects.cnpj_brasil import (
 
 
 class RespondenteSchema(BaseModel):
+    """Respondente do diagnóstico — e-mail e nome obrigatórios (vínculo LGPD / rastreio)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     email: EmailStr
-    nome: str | None = None
+    nome: str = Field(
+        min_length=1,
+        max_length=255,
+        description="Nome do respondente que vincula o diagnóstico ao contato (obrigatório).",
+    )
     cargo: str | None = None
     telefone: str | None = Field(
         default=None,
