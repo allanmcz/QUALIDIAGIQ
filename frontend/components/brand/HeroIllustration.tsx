@@ -49,8 +49,8 @@ export function HeroIllustration({
         width={1920}
         height={1080}
         priority={priority}
-        sizes="(max-width: 768px) 100vw, 42vw"
-        className="relative z-10 h-auto w-full max-h-[min(340px,48vh)] object-contain object-center sm:max-h-[min(400px,50vh)] md:max-h-[min(440px,52vh)]"
+        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 46vw"
+        className="relative z-10 h-auto w-full max-h-[min(400px,52vh)] object-contain object-center sm:max-h-[min(460px,56vh)] md:max-h-[min(520px,58vh)]"
       />
     </div>
   );

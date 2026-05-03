@@ -8,7 +8,7 @@ export default function Home() {
     <div className="flex-1 flex flex-col items-center p-4 py-12 md:py-20">
       <section className="container max-w-6xl w-full">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-center md:gap-12">
-          <div className="space-y-8 md:col-span-7">
+          <div className="space-y-8 md:col-span-6">
             <div className="space-y-4">
               <h1 className="text-4xl font-extrabold tracking-tight text-primary md:text-5xl lg:text-6xl">
                 QualiDiag<span className="text-accent">IQ</span>
@@ -45,7 +45,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="md:col-span-5">
+          <div className="md:col-span-6">
             <HeroIllustration variant="radar" priority />
           </div>
         </div>
