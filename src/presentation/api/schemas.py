@@ -68,11 +68,12 @@ class RespondenteSchema(BaseModel):
 
 class EmpresaSchema(BaseModel):
     cnpj: str = Field(
-        default="",
-        max_length=14,
+        ...,
+        max_length=18,
         description=(
-            "CNPJ com 14 dígitos numéricos (sem máscara), ou string vazia se o respondente não informar "
-            "(LGPD — minimização de dados no fluxo self-service)."
+            "CNPJ: 14 dígitos numéricos ou com máscara (00.000.000/0000-00). Obrigatório no POST "
+            "de diagnóstico — cadastro da empresa (vínculo PJ) junto à razão social. "
+            "Após validação, armazenado sem máscara."
         ),
     )
     razao_social: str
@@ -96,9 +97,9 @@ class EmpresaSchema(BaseModel):
     def validar_cnpj(cls, v: str) -> str:
         raw = normalizar_cnpj_apenas_digitos(v or "")
         if raw == "":
-            return ""
+            raise ValueError("CNPJ é obrigatório no cadastro da empresa para o diagnóstico.")
         if len(raw) != 14:
-            raise ValueError("CNPJ deve conter exatos 14 dígitos ou ficar vazio")
+            raise ValueError("CNPJ deve conter exatos 14 dígitos numéricos")
         if len(set(raw)) == 1:
             raise ValueError("CNPJ não pode conter todos os dígitos iguais")
         if not cnpj_com_digitos_verificadores_validos(raw):

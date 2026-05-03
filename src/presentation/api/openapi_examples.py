@@ -40,12 +40,12 @@ OPENAPI_EXAMPLES_POST_DIAGNOSTICO: dict[str, dict[str, Any]] = {
             "aceite_termos_privacidade": True,
         },
     },
-    "sem_cnpj": {
-        "summary": "Sem CNPJ — razão social e perfil fiscal apenas",
-        "description": "Campo empresa.cnpj vazio ou omitido (LGPD — fluxo sem identificação cadastral obrigatória).",
+    "servicos_medio_presumido": {
+        "summary": "Serviços — médio porte, Lucro Presumido",
+        "description": "Mesmo requisito de cadastro PJ: CNPJ válido (14 dígitos) + razão social e perfil fiscal.",
         "value": {
             "empresa": {
-                "cnpj": "",
+                "cnpj": "11222333000181",
                 "razao_social": "Empresa Anônima Exemplo LTDA",
                 "porte": "medio",
                 "regime": "lucro_presumido",

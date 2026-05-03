@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from src.presentation.api.schemas import IniciarDiagnosticoRequest
+from src.presentation.api.schemas import EmpresaSchema, IniciarDiagnosticoRequest
 
 
 def _empresa_min() -> dict:
@@ -60,3 +60,20 @@ class TestRespondenteSchemaNomeObrigatorio:
             }
         )
         assert body.respondente.nome == "Maria"
+
+
+class TestEmpresaSchemaCnpjObrigatorio:
+    """POST /diagnosticos exige CNPJ válido (cadastro PJ no diagnóstico)."""
+
+    def test_rejeita_cnpj_vazio(self) -> None:
+        d = _empresa_min()
+        d["cnpj"] = ""
+        with pytest.raises(ValidationError) as ex:
+            EmpresaSchema.model_validate(d)
+        assert "obrigatório" in str(ex.value).lower() or "cnpj" in str(ex.value).lower()
+
+    def test_aceita_cnpj_mascarado_valido(self) -> None:
+        d = _empresa_min()
+        d["cnpj"] = "12.345.678/0001-95"
+        e = EmpresaSchema.model_validate(d)
+        assert e.cnpj == "12345678000195"
