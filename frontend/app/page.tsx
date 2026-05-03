@@ -36,8 +36,8 @@ export default function Home() {
                 </Button>
               </div>
               <p className="mx-auto max-w-xl text-center text-sm text-muted-foreground md:mx-0 md:text-left">
-                Conta corporativa Tributiq: use <strong className="text-foreground">Entrar</strong> no canto superior
-                direito para o painel B2B (histórico, PDF, checklist). Ou inicie o diagnóstico gratuito acima.
+                Use <strong className="text-foreground">Entrar</strong> no canto superior direito para o painel B2B
+                (histórico, PDF, checklist). Ou inicie o diagnóstico gratuito acima.
               </p>
             </div>
           </div>
