@@ -94,10 +94,20 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
 
   try {
     const upstream = await fetch(alvo, init);
-    return new NextResponse(upstream.body, {
+    /** Corpo em buffer: reencaminhar `ReadableStream` cru falha em alguns browsers (fetch → «Failed to fetch»). */
+    const buf = await upstream.arrayBuffer();
+    const out = new Headers();
+    const omitir = new Set(["connection", "keep-alive", "transfer-encoding", "content-encoding"]);
+    upstream.headers.forEach((value, key) => {
+      if (!omitir.has(key.toLowerCase())) {
+        out.set(key, value);
+      }
+    });
+    out.set("content-length", String(buf.byteLength));
+    return new NextResponse(buf, {
       status: upstream.status,
       statusText: upstream.statusText,
-      headers: upstream.headers,
+      headers: out,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
