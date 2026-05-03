@@ -430,15 +430,26 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       {data.cronograma && data.cronograma.length > 0 && (
         <Card className="mb-10">
           <CardHeader>
-            <CardTitle>Cronograma em cinco horizontes (LC 214/2025)</CardTitle>
+            <CardTitle id="m06-cronograma-tabela-heading">
+              Cronograma em cinco horizontes (LC 214/2025)
+            </CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table
+              className="w-full text-sm border-collapse"
+              aria-labelledby="m06-cronograma-tabela-heading"
+            >
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-4">Fase</th>
-                  <th className="text-left py-2 pr-4">Foco</th>
-                  <th className="text-left py-2">Referência normativa</th>
+                  <th scope="col" className="text-left py-2 pr-4">
+                    Fase
+                  </th>
+                  <th scope="col" className="text-left py-2 pr-4">
+                    Foco
+                  </th>
+                  <th scope="col" className="text-left py-2">
+                    Referência normativa
+                  </th>
                 </tr>
               </thead>
               <tbody>

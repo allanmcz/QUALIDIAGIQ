@@ -168,6 +168,37 @@ class TestPergunta:
 
         assert pergunta.aplicavel_para(empresa_industria_simples) is False
 
+    def test_setores_excluidos_bloqueia_mesmo_com_outras_condicoes_ok(
+        self, empresa_lucro_real_industria
+    ) -> None:
+        """Setor listado em exclusão não responde à pergunta."""
+        pergunta = Pergunta(
+            codigo="Q-EXC",
+            dimensao=Dimensao.OPERACIONAL,
+            texto="Excluída para indústria",
+            peso=1.0,
+            tipo=TipoPergunta.BINARIA,
+            condicao=CondicaoExibicao(
+                regimes_permitidos=(RegimeTributario.LUCRO_REAL,),
+                setores_excluidos=(SetorMacro.INDUSTRIA,),
+            ),
+        )
+        assert pergunta.aplicavel_para(empresa_lucro_real_industria) is False
+
+    def test_portes_permitidos_restringe_me_epp(self, empresa_padrao) -> None:
+        """Porte fora da tupla ⇒ não aplicável."""
+        pergunta_me_epp = Pergunta(
+            codigo="Q-PORTE",
+            dimensao=Dimensao.FISCAL,
+            texto="Só ME/EPP",
+            peso=1.0,
+            tipo=TipoPergunta.TERNARIA,
+            condicao=CondicaoExibicao(
+                portes_permitidos=(PorteEmpresa.MEDIO, PorteEmpresa.GRANDE),
+            ),
+        )
+        assert pergunta_me_epp.aplicavel_para(empresa_padrao) is False
+
 
 class TestResposta:
     @pytest.mark.parametrize(
@@ -191,6 +222,17 @@ class TestResposta:
             pergunta_id=uuid.uuid4(),
             pergunta_tipo=TipoPergunta.TERNARIA,
             valor_bruto="nao_se_aplica",
+        )
+        assert resposta.calcular_pontuacao(pergunta_ternaria) is None
+
+    def test_calculo_pontuacao_ternaria_nao_comercializo_exclui_media(
+        self, pergunta_ternaria
+    ) -> None:
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.TERNARIA,
+            valor_bruto="nao_comercializo",
         )
         assert resposta.calcular_pontuacao(pergunta_ternaria) is None
 
@@ -253,6 +295,16 @@ class TestResposta:
         )
         assert resposta.calcular_pontuacao(pergunta_binaria) == esperado
 
+    def test_calculo_pontuacao_binaria_valor_invalido(self, pergunta_binaria) -> None:
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.BINARIA,
+            valor_bruto="talvez",
+        )
+        with pytest.raises(ValueError, match=r"Valor inválido para binária"):
+            resposta.calcular_pontuacao(pergunta_binaria)
+
     def test_calculo_pontuacao_multipla(self, pergunta_multipla):
         resposta = Resposta(
             diagnostico_id=uuid.uuid4(),
@@ -277,6 +329,16 @@ class TestResposta:
             pergunta_id=uuid.uuid4(),
             pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
             valor_bruto="x, y",
+        )
+        assert resposta.calcular_pontuacao(pergunta_multipla) == 50.0
+
+    def test_calculo_pontuacao_multipla_lista_python(self, pergunta_multipla) -> None:
+        """Valor já como lista (caso típico pós-parse JSON na API)."""
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto=["a", "b"],
         )
         assert resposta.calcular_pontuacao(pergunta_multipla) == 50.0
 

@@ -21,6 +21,18 @@
 - Qualquer novo código em `src/` que use Anthropic/LangChain deve passar por adapter dedicado (Port + Adapter), mantendo **Ollama** como backend default dev.
 - Revisitar esta ADR quando SHOULD “motor IA produção” entrar em desenvolvimento ativo ou quando métricas de build indicarem custo relevante.
 
+## Atualização — 2026-05-02 (runtime em `src/`)
+
+Os pacotes listados no contexto passaram a ter uso direto na camada **Infrastructure / Application ports**, sem mudar a decisão de **manter deps no núcleo**:
+
+| Pacote | Uso atual (referência) |
+|--------|-------------------------|
+| `anthropic` | `AnthropicLlmAdapter` — `llm_backend=anthropic` + `ANTHROPIC_API_KEY` |
+| `openai` | Indireto: embeddings via REST **httpx** em `base_normativa_pgvector.py` (API OpenAI) |
+| `langchain*`, `langgraph` | `LangGraphOllamaLlmAdapter` (default dev) — **ADR-007** |
+
+RAG-light (**migração 0020**, pgvector) não adiciona dependência obrigatória além de **asyncpg** já presente; ingestão baseline usa o mesmo cliente HTTP de embeddings.
+
 ## Referências
 
 - ADR-003 (stack LLM produção planejada)

@@ -44,6 +44,8 @@ Se o Ollama não estiver disponível, o fluxo de diagnóstico segue com mensagem
 Env opcional: **`QDI_LLM_BACKEND=http_ollama`** — força chamada REST direta (adapter legado `llm_ollama.py`).  
 **`OLLAMA_TIMEOUT_SECONDS`** (default `30`) aplica-se ao cliente LangChain ou ao `httpx`, conforme o backend.
 
+**RAG-light (opcional):** com **`DATABASE_URL`** síncrono + **`OPENAI_API_KEY`**, a API usa **`PgvectorBaseNormativaAdapter`** (`qdi_rag.documento_normativo`, migração **0020**). Threshold de similaridade: **`QDI_RAG_SIMILARITY_THRESHOLD`** (default no código em `settings.py`). Ingestão baseline: `PYTHONPATH=. python scripts/ingestao_rag_baseline.py` (fontes em `scripts/normativos_baseline/*.txt`).
+
 ### OpenTelemetry (traços)
 
 Ative com **`OTEL_TRACING_ENABLED=true`** e aponte **`OTEL_EXPORTER_OTLP_ENDPOINT`** para um collector OTLP/HTTP (porta típica **4318**, path `/v1/traces`). Exemplo local com [otelcol](https://opentelemetry.io/docs/collector/) em Docker:

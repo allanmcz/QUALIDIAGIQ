@@ -59,6 +59,13 @@ jobs:
           QDI_VERIFY_SCHEMA_STRICT_CNAE: "1"
         run: python scripts/verify_mvp_schema.py
 
+      - name: Schema RAG-light (0020 — extensão vector + qdi_rag)
+        if: ${{ env.POSTGRES_CI_URL != '' }}
+        env:
+          QDI_POSTGRES_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          QDI_VERIFY_SCHEMA_RAG: "1"
+        run: python scripts/verify_mvp_schema.py
+
       - name: Ruff (lint)
         run: ruff check src/ tests/
 

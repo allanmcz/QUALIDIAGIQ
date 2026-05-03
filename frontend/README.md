@@ -1,6 +1,6 @@
 # Frontend — QualiDiagIQ
 
-> **Status:** scaffold pendente — inicializar com Next.js 14 antes do Sprint 2.
+> **Status:** MVP App Router ativo (Next 14+) — wizard, dashboard M05/M06/M12 e páginas públicas (`/metodologia`, LGPD).
 
 ## E2E integrado (API Python real — C1)
 

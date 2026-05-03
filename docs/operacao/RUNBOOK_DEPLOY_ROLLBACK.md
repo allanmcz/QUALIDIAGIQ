@@ -6,8 +6,8 @@
 ## Pré-deploy
 
 1. `make test`, `make lint`, `make type-check` verdes na branch de release.
-2. Aplicar migrações até **`0015`** (pesos macro por dimensão em `qdi.normativa_score_macro_dimensao`) em ambientes que servem **GET `/diagnosticos/metodologia`** / **`manifesto-pesos`** com `DATABASE_URL`. Incluir **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`) para alinhar multi-tenant no Postgres self-hosted. Mínimo operacional sem CNAE: **`0012`**; com CNAE referencial: **`0013`/`0014`**. Ordem lexical: `src/infrastructure/db/migrations/*.sql` — ver `init.sql` e `make migrate` em pré-prod ou pipeline equivalente.
-3. Variáveis: `JWT_SECRET_KEY`, `SUPABASE_*`, `DATABASE_URL` / `sync_database_url` (idempotência Postgres), `CORS` explícito (sem `*` com credentials).
+2. Aplicar migrações até **`0015`** (pesos macro por dimensão em `qdi.normativa_score_macro_dimensao`) em ambientes que servem **GET `/diagnosticos/metodologia`** / **`manifesto-pesos`** com `DATABASE_URL`. Incluir **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`) para alinhar multi-tenant no Postgres self-hosted. Incluir **`0020`** se usar **RAG-light** (`qdi_rag.documento_normativo`, extensão **`vector`**) — imagem Postgres deve ser **pgvector** (ex.: `pgvector/pgvector:pg16`), como no `docker-compose.yml` do repositório. Mínimo operacional sem CNAE: **`0012`**; com CNAE referencial: **`0013`/`0014`**. Ordem lexical: `src/infrastructure/db/migrations/*.sql` — ver `init.sql` e `make migrate` em pré-prod ou pipeline equivalente.
+3. Variáveis: `JWT_SECRET_KEY`, `SUPABASE_*`, `DATABASE_URL` / `sync_database_url` (idempotência Postgres), `CORS` explícito (sem `*` com credentials). **OpenTelemetry:** `OTEL_TRACING_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT` (collector OTLP/HTTP, porta típica **4318**), opcional `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_HEADERS` — ver `README.md` (raiz) e `src/infrastructure/config/settings.py`.
 
 ### Front (Next.js) — URLs canónicas (D4)
 
@@ -52,6 +52,19 @@ Equivalente sem Makefile:
 
 ```bash
 QDI_VERIFY_SCHEMA_STRICT_CNAE=1 QDI_POSTGRES_TEST_URL="$POSTGRES_CI_URL" python scripts/verify_mvp_schema.py
+```
+
+Gate opcional **RAG (0020)** — falha se extensão `vector` ou tabela `qdi_rag.documento_normativo` ausente:
+
+```bash
+QDI_VERIFY_SCHEMA_RAG=1 QDI_POSTGRES_TEST_URL="$POSTGRES_CI_URL" python scripts/verify_mvp_schema.py
+# ou: python scripts/verify_mvp_schema.py --rag "$POSTGRES_CI_URL"
+```
+
+Após migrações, popular embeddings (dev/staging) com `OPENAI_API_KEY` e `DATABASE_URL` síncrono:
+
+```bash
+PYTHONPATH=. OPENAI_API_KEY=... DATABASE_URL=postgresql://... python scripts/ingestao_rag_baseline.py
 ```
 
 ## Referências
