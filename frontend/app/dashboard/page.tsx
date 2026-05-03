@@ -57,8 +57,8 @@ export default function DashboardPage() {
       const r = await postVincularLeadsSelfService();
       setMsgVinculo(
         r.total_vinculados === 0
-          ? "Nenhum diagnóstico gratuito pendente (mesmo e-mail no fluxo OTP) para vincular."
-          : `${r.total_vinculados} diagnóstico(s) do fluxo gratuito vinculado(s) a este painel.`,
+          ? "Nenhum registro elegível: só existem diagnósticos no «pool» self-service (após OTP), plano gratuito, com e-mail do respondente igual ao do seu login B2B. Diagnósticos feitos já logado no painel não entram aqui — já estão no seu tenant."
+          : `${r.total_vinculados} diagnóstico(s) do fluxo gratuito (OTP / self-service) foram trazidos para este painel.`,
       );
       await recarregarLista();
     } catch (e) {
@@ -80,18 +80,31 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:items-end shrink-0">
             {!semSessao && (
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button asChild variant="default">
-                  <Link href="/wizard">Novo diagnóstico</Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={vinculando}
-                  onClick={() => void importarLeadsSelfService()}
+              <div className="flex w-full max-w-xl flex-col gap-3 sm:max-w-none sm:items-end">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button asChild variant="default">
+                    <Link href="/wizard">Novo diagnóstico</Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={vinculando}
+                    onClick={() => void importarLeadsSelfService()}
+                    aria-describedby="ajuda-importar-otp"
+                  >
+                    {vinculando ? "Importando…" : "Importar do fluxo OTP (gratuito)"}
+                  </Button>
+                </div>
+                <p
+                  id="ajuda-importar-otp"
+                  className="text-xs text-muted-foreground text-left sm:text-right leading-relaxed max-w-md sm:ml-auto"
                 >
-                  {vinculando ? "Importando…" : "Importar diagnósticos (OTP / gratuito)"}
-                </Button>
+                  Use apenas se você concluiu o assistente <strong className="font-medium text-foreground">sem</strong>{" "}
+                  conta B2B: código no e-mail → gravação no ambiente self-service. A API só traz linhas em que o
+                  e-mail do respondente é o <strong className="font-medium text-foreground">mesmo</strong> do seu
+                  login atual e o plano é gratuito. Se você já estava logado e usou «Novo diagnóstico», os itens já
+                  aparecem na lista abaixo — não precisam de importação.
+                </p>
               </div>
             )}
             {!semSessao && itens === null && (
@@ -125,13 +138,13 @@ export default function DashboardPage() {
         )}
 
         {!semSessao && !erro && itens !== null && itens.length === 0 && (
-          <p className="text-muted-foreground text-sm">
-            Nenhum diagnóstico encontrado para este tenant. Use o assistente em{" "}
+          <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+            Nenhum diagnóstico neste painel ainda. Inicie um novo em{" "}
             <Link href="/wizard" className="text-primary underline font-medium">
               /wizard
-            </Link>
-            . Se você já concluiu o assistente com o mesmo e-mail da conta B2B (fluxo OTP), use
-            «Importar diagnósticos (OTP / gratuito)» acima para trazer esses registros para o painel.
+            </Link>{" "}
+            (logado) ou, se você só usou o fluxo com código por e-mail (lead), clique em «Importar do fluxo OTP
+            (gratuito)» — desde que o e-mail confirmado no OTP seja o mesmo do login B2B.
           </p>
         )}
 
