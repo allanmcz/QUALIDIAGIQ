@@ -1,5 +1,7 @@
 # Riscos, dependências e decisões — MVP **2026-05-05**
 
+> **Cenário D** (demo MacBook supervisionada): a matriz abaixo aplica-se sobretudo a **go-live / A / B**. Em **D**, baixa prioridade: R1–R4 relacionados a DNS, cloud e jurídico **comercial**; mantém-se risco de **dados pessoais** sem base legal (ver [`00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md`](./00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md) §2).
+
 ---
 
 ## 1. Matriz de riscos (top 5)

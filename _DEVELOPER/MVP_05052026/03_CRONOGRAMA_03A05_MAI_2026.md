@@ -2,9 +2,21 @@
 
 > **Premissa:** equipa reduzida (Allan + agente/Eng + jurídico/Ops sob demanda). Ajustar horários ao teu bloco de **45 min** com pausas.
 
+### Atalho — cenário **D** (demo + consultoria no MacBook, sem público)
+
+Se adoptaste a [**definição D**](./01_AVALIACAO_GAP_MVP_100.md) ([`00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md`](./00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md)):
+
+| Dia | Foco único |
+|-----|----------------|
+| **03** | `make dev` + subset **B1** PDF + **1** gravação ou PDF de exemplo (dados fictícios) |
+| **04** | `make mvp-gate` + `verify-schema-mvp-strict` no Postgres local **60322** + roteiro oral 15 min |
+| **05** | Repetição ensaio + nota “MVP-D fechado” em `HANDOFF_PROXIMA` (opcional) |
+
+**Não** executar linhas de calendário abaixo que falem em D4, jurídico comercial ou tag — são para **A/B**.
+
 ---
 
-## Sábado **03-05-2026** — Congelamento + PDF + decisões
+## Sábado **03-05-2026** — Congelamento + PDF + decisões *(A / B)*
 
 | Janela | Entrega | Detalhe |
 |--------|---------|---------|
@@ -18,7 +30,7 @@
 
 ---
 
-## Domingo **04-05-2026** — Smoke, schema, jurídico, release
+## Domingo **04-05-2026** — Smoke, schema, jurídico, release *(A / B)*
 
 | Janela | Entrega | Detalhe |
 |--------|---------|---------|
@@ -32,7 +44,7 @@
 
 ---
 
-## Segunda **05-05-2026** — Corte final
+## Segunda **05-05-2026** — Corte final *(A / B)*
 
 | Janela | Entrega | Detalhe |
 |--------|---------|---------|

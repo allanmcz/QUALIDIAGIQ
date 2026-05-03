@@ -17,7 +17,19 @@ Cada linha deve ter **evidência colável**: link, hash de commit, screenshot no
 
 ---
 
-## 2. Definição B — Extensões institucionais (se forem exigidas no mesmo corte)
+## 2. Definição **D** — Demo local + consultoria supervisionada (MacBook, sem público)
+
+| # | Critério | Como verificar | Onde registar |
+|---|------------|----------------|---------------|
+| D1 | `make dev` + fluxo wizard → PDF **no localhost** | Gravação curta ou PDF exemplo | Pasta local (não commitar PII) |
+| D2 | `make test` + `make lint` + `make type-check` + `make mvp-gate` na branch usada na demo | Terminal | Nota em `MVP_05052026/` ou ticket |
+| D3 | `PDF_HOMOLOGACAO_CHECKLIST_B1.md` — **só** itens objetivos (layout, quebras, contraste, rodapé) | Revisão visual | **[x]** com nota “subset demo local” |
+| D4 | **Não** exigir D4, P6 cloud, tag, changelog, parecer jurídico comercial | N/A | Registar em [`00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md`](./00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md) §1 |
+| D5 | Dados: **fictícios** na demo **ou** base legal clara para dados reais em sessão supervisionada | Checklist mental / termo cliente | Nota privada escritório |
+
+---
+
+## 3. Definição B — Extensões institucionais (se forem exigidas no mesmo corte)
 
 | # | Critério | Como verificar | Onde registar |
 |---|------------|----------------|---------------|
@@ -28,19 +40,19 @@ Cada linha deve ter **evidência colável**: link, hash de commit, screenshot no
 
 ---
 
-## 3. Critérios explícitos de **rejeição** (não declarar 100% se)
+## 4. Critérios explícitos de **rejeição** (não declarar 100% se)
 
 - PDF “dummy” mascarado como relatório real em ambiente de corte (anti-padrão do plano MVP).  
 - `tenant_id` ou segredos fora de env / settings.  
-- Push para produção **sem** rollback documentado (`RUNBOOK_DEPLOY_ROLLBACK.md`).  
+- **Go-live público:** push para produção **sem** rollback documentado (`RUNBOOK_DEPLOY_ROLLBACK.md`). Em **D** não há obrigação de push de prod.  
 
 ---
 
-## 4. Após o corte
+## 5. Após o corte
 
 - Atualizar `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` (§12.3 — P5/P6) com **datas** e **links** das evidências.  
 - Opcional: PR “release/MVP-2026-05-05” só com docs + tag, sem feature nova.
 
 ---
 
-*Ver cronograma:* [`03_CRONOGRAMA_03A05_MAI_2026.md`](./03_CRONOGRAMA_03A05_MAI_2026.md)
+*Ver cronograma:* [`03_CRONOGRAMA_03A05_MAI_2026.md`](./03_CRONOGRAMA_03A05_MAI_2026.md) · *Cenário D:* [`00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md`](./00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md)

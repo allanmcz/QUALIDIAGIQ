@@ -1,13 +1,15 @@
 # Pacote MVP — corte **2026-05-05**
 
 > **Objetivo:** concentrar num único sítio a **avaliação concreta**, o **cronograma** e os **critérios de aceite** para declarar o MVP no prazo **05-05-2026**.  
+> **Cenário comum Allan (mai/2026):** demo + consultoria **supervisionada** no **MacBook**, **sem** site público — ver **[`00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md`](./00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md)** (aceleração explícita).  
 > **Não substitui:** `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`, `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md`, `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` — cruza e atualiza esses ficheiros à medida que fechas itens.
 
 ## Documentos nesta pasta
 
 | # | Ficheiro | Conteúdo |
 |---|----------|----------|
-| 1 | [`01_AVALIACAO_GAP_MVP_100.md`](./01_AVALIACAO_GAP_MVP_100.md) | O que falta para **MVP 100%** (duas definições: técnico vs lançável) |
+| 0 | [`00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md`](./00_CENARIO_DEMO_LOCAL_SUPERVISIONADA.md) | **Demo local** — o que cortar/relaxar vs go-live público + nota LGPD (LC 13.709/2018) |
+| 1 | [`01_AVALIACAO_GAP_MVP_100.md`](./01_AVALIACAO_GAP_MVP_100.md) | O que falta para **MVP 100%** (definições A, B e **D**) |
 | 2 | [`02_CRITERIOS_ACEITE_EVIDENCIAS.md`](./02_CRITERIOS_ACEITE_EVIDENCIAS.md) | Critérios mensuráveis + onde deixar prova |
 | 3 | [`03_CRONOGRAMA_03A05_MAI_2026.md`](./03_CRONOGRAMA_03A05_MAI_2026.md) | Plano por dia (**03 → 05** mai 2026) |
 | 4 | [`04_RISCOS_DEPENDENCIAS_DECISOES.md`](./04_RISCOS_DEPENDENCIAS_DECISOES.md) | Riscos, donos, decisões D* e mitigação |
