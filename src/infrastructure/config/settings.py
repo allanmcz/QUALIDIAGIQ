@@ -102,7 +102,11 @@ class Settings(BaseSettings):
     ci_playwright_integrated: bool = Field(
         default=False,
         validation_alias=AliasChoices("QDI_CI_PLAYWRIGHT_INTEGRATED"),
-        description="CI: login via Postgres + repo diagnósticos em memória (sem Supabase).",
+        description=(
+            "CI/desenvolvimento: login B2B em `admins` no Postgres (exige DATABASE_URL). "
+            "Com DSN, diagnósticos e vinculação OTP usam SQL direto na mesma base; o flag não pode "
+            "ficar ativo sem DATABASE_URL."
+        ),
     )
 
     public_rate_limit_enabled: bool = Field(

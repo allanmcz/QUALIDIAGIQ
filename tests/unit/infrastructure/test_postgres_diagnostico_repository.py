@@ -25,7 +25,7 @@ from src.infrastructure.repositories.postgres_diagnostico_repository import (
 
 def _diag_minimo() -> Diagnostico:
     emp = EmpresaInfo(
-        cnpj="",
+        cnpj="12345678000195",
         razao_social="Empresa Teste",
         porte=PorteEmpresa.MICRO,
         regime=RegimeTributario.SIMPLES_NACIONAL,
@@ -58,7 +58,7 @@ def _row_minima(did, tid) -> dict:
         "respondente_nome": "Nome",
         "respondente_cargo": None,
         "respondente_telefone": None,
-        "empresa_cnpj": "",
+        "empresa_cnpj": "12345678000195",
         "empresa_razao_social": "Empresa",
         "empresa_porte": "micro",
         "empresa_regime": "simples_nacional",

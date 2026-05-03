@@ -252,7 +252,7 @@ async def get_self_service_diagnostico_claims(
 
 
 def get_diagnostico_repository() -> DiagnosticoRepository:
-    """Injeta o repositório de diagnósticos (Postgres quando há DSN; senão CI em memória ou Supabase)."""
+    """Postgres quando há DSN; sem DSN, repositório CI em memória ou Supabase (PostgREST)."""
     settings = get_settings()
     dsn = settings.sync_database_url
     if dsn:
