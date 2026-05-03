@@ -13,6 +13,10 @@ Variáveis típicas no mesmo shell antes de subir Next + Playwright:
 
 Script auxiliar: `npm run test:e2e:integrado` (ajuste env conforme o host; requer API com `QDI_CI_PLAYWRIGHT_INTEGRATED=1` e Postgres migrado + seed `0005`).
 
+## Armazenamento local (MVP)
+
+O wizard usa **`localStorage`** para rascunho (`wizard_draft`) e fila pós-OTP (`pending_diagnostico`), conforme implementação em `lib/wizard/*`. É uma **exceção conscientemente MVP**: dados ficam no browser até envio à API; roadmap BFF/cookie HttpOnly está em **ADR-004**. Não colocar tokens JWT ou segredos nessas chaves.
+
 ## Stack-alvo
 
 - Next.js 14 (App Router)

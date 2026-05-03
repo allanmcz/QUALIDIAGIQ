@@ -3,6 +3,7 @@ import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { AppProviders } from "@/components/providers/AppProviders";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,9 +56,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} ${montserrat.variable} antialiased`}>
       <body className="min-h-screen flex flex-col font-sans">
-        <Header />
-        <main className="flex-1 flex flex-col">{children}</main>
-        <Footer />
+        <AppProviders>
+          <Header />
+          <main className="flex-1 flex flex-col">{children}</main>
+          <Footer />
+        </AppProviders>
       </body>
     </html>
   );

@@ -24,7 +24,7 @@ _DIGITOS = re.compile(r"^\d+$")
 
 
 def _escape_like(valor: str) -> str:
-    """Escapa `%`, `_` e `\` para uso em ILIKE ... ESCAPE '\\'."""
+    r"""Escapa `%`, `_` e `\` para uso em ILIKE ... ESCAPE '\\'."""
     return valor.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 

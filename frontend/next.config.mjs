@@ -39,14 +39,29 @@ const nextConfig = {
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=(), payment=()",
+        value:
+          "camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()",
       },
     ];
     if (isProd) {
-      securityHeaders.push({
-        key: "Strict-Transport-Security",
-        value: "max-age=63072000; includeSubDomains; preload",
-      });
+      securityHeaders.push(
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+        {
+          key: "Content-Security-Policy",
+          value: [
+            "default-src 'self'",
+            "img-src 'self' data: https:",
+            "connect-src 'self' https:",
+            "script-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline'",
+            "frame-ancestors 'self'",
+          ].join("; "),
+        },
+      );
     }
     return [{ source: "/:path*", headers: securityHeaders }];
   },

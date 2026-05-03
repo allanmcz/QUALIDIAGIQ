@@ -6,7 +6,7 @@
 ## Pré-deploy
 
 1. `make test`, `make lint`, `make type-check` verdes na branch de release.
-2. Aplicar migrações até **`0015`** (pesos macro por dimensão em `qdi.normativa_score_macro_dimensao`) em ambientes que servem **GET `/diagnosticos/metodologia`** / **`manifesto-pesos`** com `DATABASE_URL`. Mínimo operacional sem CNAE: **`0012`**; com CNAE referencial: **`0013`/`0014`**. Ordem lexical: `src/infrastructure/db/migrations/*.sql` — ver `init.sql` e `make migrate` em pré-prod ou pipeline equivalente.
+2. Aplicar migrações até **`0015`** (pesos macro por dimensão em `qdi.normativa_score_macro_dimensao`) em ambientes que servem **GET `/diagnosticos/metodologia`** / **`manifesto-pesos`** com `DATABASE_URL`. Incluir **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`) para alinhar multi-tenant no Postgres self-hosted. Mínimo operacional sem CNAE: **`0012`**; com CNAE referencial: **`0013`/`0014`**. Ordem lexical: `src/infrastructure/db/migrations/*.sql` — ver `init.sql` e `make migrate` em pré-prod ou pipeline equivalente.
 3. Variáveis: `JWT_SECRET_KEY`, `SUPABASE_*`, `DATABASE_URL` / `sync_database_url` (idempotência Postgres), `CORS` explícito (sem `*` com credentials).
 
 ### Front (Next.js) — URLs canónicas (D4)

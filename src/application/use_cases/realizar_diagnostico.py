@@ -150,24 +150,18 @@ class RealizarDiagnostico:
         recomendacao_ia = None
         if self.llm_service:
             contexto_empresa = (
-                f"Empresa: {diagnostico.empresa.razao_social}\\n"
-                f"Porte: {diagnostico.empresa.porte.value}\\n"
-                f"Regime: {diagnostico.empresa.regime.value}\\n"
-                f"Score Geral: {score_completo.score_geral.valor} (Nível: {score_completo.score_geral.nivel.name})\\n"
+                f"Empresa: {diagnostico.empresa.razao_social}\n"
+                f"Porte: {diagnostico.empresa.porte.value}\n"
+                f"Regime: {diagnostico.empresa.regime.value}\n"
+                f"Score Geral: {score_completo.score_geral.valor} "
+                f"(Nível: {score_completo.score_geral.nivel.name})\n"
             )
 
-            # Carregar o texto base normativo (Decreto CBS) para o RAG
-            base_normativa = ""
-            import os
-
-            caminho_decreto = os.path.join(
-                os.path.dirname(__file__),
-                "../../../_DEVELOPER/_NOVIDADE/00_RESUMO_EXECUTIVO_Decreto_12955.txt",
+            # Contexto normativo fixo (sem ler `_DEVELOPER/` — Sprint 12 prevê BaseNormativaPort / RAG).
+            base_normativa = (
+                "Âncoras: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026. "
+                "Sugira medidas práticas citando dispositivo aplicável quando possível."
             )
-            if os.path.exists(caminho_decreto):
-                with open(caminho_decreto, encoding="utf-8") as f:
-                    # Limitar o tamanho do contexto para evitar estouro de tokens locais (ex: Llama3 tem 8k contexto)
-                    base_normativa = f.read()[:4000]
 
             recomendacao_ia = await self.llm_service.gerar_recomendacao(
                 contexto_empresa=contexto_empresa, base_normativa=base_normativa

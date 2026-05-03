@@ -2,7 +2,7 @@
 
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
 > **Local canônico (versionado):** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`  
-> **Última atualização:** 2026-05-02 (tarde) — backlog autónomo **02052026**: migração **`0015`** (pesos macro em Postgres / `qdi.normativa_score_macro_dimensao`); **`init.sql`** inclui **0015**; endpoints **`GET /diagnosticos/metodologia`** e **`manifesto-pesos`** leem a mesma normativa que o motor quando **`DATABASE_URL`** está definido (fallback embutido sem DB); CI opcional **`verify-schema-mvp-strict`**; Ollama **`OLLAMA_TIMEOUT_SECONDS`** + logs **`structlog`** no adapter; ADR **ADR-006** (deps IA fora de `src/`); catálogo **Q-ABNT-*** com **`pilar_abnt`** alinhado ao PRD (secção 8); E2E **`wizard-edge-cases.spec.ts`**. Ver também **`docs/HANDOFF_CICLO_Q_2026-05-02.md`**.
+> **Última atualização:** 2026-05-02 — inclui **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`), gate **`make test-domain`** (cobertura só `src/domain` ≥85%), integração **`test_metodologia_postgres_normativa_0015`** (GET metodologia/manifesto vs seed 0015). Migrações **`0001`…`0019`** em **`init.sql`** / **`make migrate`**. Ver **`CHANGELOG_MVP.md`** e **`docs/HANDOFF_CICLO_Q_2026-05-02.md`**.
 
 ---
 
@@ -34,7 +34,7 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 
 **Situação atual (macro) — maio/2026:**
 
-- **API FastAPI:** POST/GET/PATCH diagnóstico, motor em **7 dimensões**, **GET `/diagnosticos/questionario`** e **`GET /diagnosticos/manifesto-pesos`** públicos, **`GET /diagnosticos/metodologia`** com **`pesos_macro_dimensao_score_geral`** resolvido via **`NormativaScoreMacroRepository`** — com **`DATABASE_URL`** + migração **`0015`** lê **`qdi.normativa_score_macro_dimensao`** (vigência); sem DB usa constantes em **`src/domain/value_objects/score.py`**. Catálogo **37** perguntas, idempotência, migrações **`0001`…`0015`** (incl. **`0012`** LGPD/WORM; **`0013`/`0014`** CNAE em **`qdi`**; **`0015`** pesos macro versionados), **`0011`** M12, **header `X-Trace-Id`**, WORM/OTEL, **`/normativa/validar-ancora`**, **`GET /referencia/cnae/subclasses`** (JWT + `DATABASE_URL`).
+- **API FastAPI:** POST/GET/PATCH diagnóstico, motor em **7 dimensões**, **GET `/diagnosticos/questionario`** e **`GET /diagnosticos/manifesto-pesos`** públicos, **`GET /diagnosticos/metodologia`** com **`pesos_macro_dimensao_score_geral`** resolvido via **`NormativaScoreMacroRepository`** — com **`DATABASE_URL`** + migração **`0015`** lê **`qdi.normativa_score_macro_dimensao`** (vigência); sem DB usa constantes em **`src/domain/value_objects/score.py`**. Catálogo **37** perguntas, idempotência escopada por tenant (**`0019`**), migrações **`0001`…`0019`** (incl. **`0012`** LGPD/WORM; **`0013`/`0014`** CNAE; **`0015`** pesos macro; **`0016`–`0018`** PDF/locale/dev; **`0019`** RLS admins/idempotency), **`0011`** M12, **header `X-Trace-Id`**, WORM/OTEL, **`/normativa/validar-ancora`**, **`GET /referencia/cnae/subclasses`** (JWT + `DATABASE_URL`).
 - **Consultoria:** `ConsultoriaService` com frente **M07** (“Prioridade por gaps do score”) quando há `ScoreCompleto`; cronograma 5 fases; matriz com **NT CGNFS-e** na linha Jurídico (M08); checklist ABNT 10 itens.
 - **Front-end:** identidade **QualiDiagIQ / Tributiq** (`public/brand`, componentes marca); cartões sociais **1200×630** (`opengraph-image` / `twitter-image`); wizard (tipos + telefone M09 + **datalist CNAE** passo 2 + links API); **`/abnt-framework`**, **`/metodologia`**, **`/termos`**, **`/privacidade`**; dashboard **M05**; detalhe radar/heatmap/**timeline** **M06**; **M12** PATCH + **If-Match**.
 - **Testes:** pytest (ver **`make test`**); integração **`test_manifesto_pesos_publico`**; **`test_m07_prioridade_checklist`**; WORM inclui UPDATE **`checklist_m12_estado`** pós-finalizado; Playwright **`wizard-post`** + smoke — ordem de rotas §14.
@@ -50,7 +50,7 @@ O **QualiDiagIQ (QDI)** é o módulo de diagnóstico tributário (Reforma do Con
 | Área | Escolha do projeto |
 |------|-------------------|
 | Backend | Python 3.12+, FastAPI 0.115+, Pydantic v2, Clean Architecture (`src/domain`, `application`, `infrastructure`, `presentation`) |
-| DB local | PostgreSQL via Docker; migrações `src/infrastructure/db/migrations/` (**`0001`…`0015`**) + `init.sql` na raiz |
+| DB local | PostgreSQL via Docker; migrações `src/infrastructure/db/migrations/` (**`0001`…`0019`**) + `init.sql` na raiz |
 | Front | Next.js 14 App Router, Tailwind, shadcn/ui, Recharts |
 | PDF | WeasyPrint (Python) + Jinja2 (`src/infrastructure/adapters/pdf_generator_weasyprint.py`) |
 | Testes | pytest, pytest-asyncio; Playwright (`frontend/e2e/`) |

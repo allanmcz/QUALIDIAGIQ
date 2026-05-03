@@ -60,7 +60,7 @@ def configurar_logging(app_env: str) -> None:
         processors = [*shared, structlog.dev.ConsoleRenderer(colors=True)]
 
     structlog.configure(
-        processors=cast(Iterable[Proc], processors),
+        processors=cast("Iterable[Proc]", processors),
         wrapper_class=structlog.make_filtering_bound_logger(nivel),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),

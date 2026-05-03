@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
   DiagnosticoPayloadSchema,
@@ -1447,14 +1448,23 @@ export function WizardForm() {
                         </span>
                       </Label>
                       {perguntas[indicePerguntaAtual].base_legal ? (
-                        <button
-                          type="button"
-                          className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          title={perguntas[indicePerguntaAtual].base_legal ?? ""}
-                          aria-label={`Base legal: ${perguntas[indicePerguntaAtual].base_legal}`}
-                        >
-                          <Info className="h-5 w-5" aria-hidden />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`Base legal: ${perguntas[indicePerguntaAtual].base_legal}`}
+                            >
+                              <Info className="h-5 w-5" aria-hidden />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs text-left leading-snug">
+                            <span className="font-medium text-foreground">Base legal (referência)</span>
+                            <span className="mt-1 block text-muted-foreground">
+                              {perguntas[indicePerguntaAtual].base_legal}
+                            </span>
+                          </TooltipContent>
+                        </Tooltip>
                       ) : null}
                     </div>
                     {tipoEhEscalaLikert15(perguntas[indicePerguntaAtual].tipo) && (
