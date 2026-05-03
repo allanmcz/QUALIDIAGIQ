@@ -2,7 +2,9 @@
 
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
 > **Local canônico (versionado):** `docs/HANDOFF_PROXIMA_SESSAO_QDI.md`  
-> **Última atualização:** 2026-05-02 — inclui **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`), **`0020`** (RAG-light: extensão **`vector`**, schema **`qdi_rag`**, `scripts/ingestao_rag_baseline.py`, adapters **`BaseNormativaPort`** / Anthropic opcional), gate **`make test-domain`** (cobertura só `src/domain` ≥85%), integração **`test_metodologia_postgres_normativa_0015`**. Migrações **`0001`…`0020`** em **`init.sql`** / **`make migrate`**; Postgres local/CI com imagem **pgvector**. Verificação ops: **`scripts/verify_mvp_schema.py --rag`** ou **`QDI_VERIFY_SCHEMA_RAG=1`**. Ver **`CHANGELOG_MVP.md`** e **`docs/HANDOFF_CICLO_Q_2026-05-02.md`**.
+> **Plano HANDOFF só engenharia (2026-05-03):** `_DEVELOPER/HANDOFF_PLANO_EXECUCAO_2026-05-03.md` (**executado** — ver secção “Estado de execução” nesse ficheiro; `git add -f` para versionar).  
+> **Guia de teste (hoje):** [`docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md`](./operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md)  
+> **Última atualização:** 2026-05-03 — harmonização com plano HANDOFF (A1/A3/A4, G1 script+CI, OTEL quickstart, E2E wizard catálogo inválido, idempotência 2 chaves, M06 `motion-reduce`/`focus-within`). Migrações **`0001`…`0020`** em **`init.sql`** / **`make migrate`** (Postgres **pgvector**): **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`), **`0020`** (RAG-light: extensão **`vector`**, schema **`qdi_rag`**, `scripts/ingestao_rag_baseline.py`, adapters **`BaseNormativaPort`** / Anthropic opcional). Gates: **`make test-domain`** (cobertura só `src/domain` ≥85%), **`test_metodologia_postgres_normativa_0015`**, **`scripts/verify_mvp_schema.py --rag`** ou **`QDI_VERIFY_SCHEMA_RAG=1`**. Ver **`CHANGELOG_MVP.md`** e **`docs/HANDOFF_CICLO_Q_2026-05-02.md`**.
 
 ---
 

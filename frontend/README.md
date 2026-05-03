@@ -17,6 +17,13 @@ Script auxiliar: `npm run test:e2e:integrado` (ajuste env conforme o host; reque
 
 O wizard usa **`localStorage`** para rascunho (`wizard_draft`) e fila pós-OTP (`pending_diagnostico`), conforme implementação em `lib/wizard/*`. É uma **exceção conscientemente MVP**: dados ficam no browser até envio à API; roadmap BFF/cookie HttpOnly está em **ADR-004**. Não colocar tokens JWT ou segredos nessas chaves.
 
+| Chave / API | Tecnologia | Uso resumido |
+|-------------|------------|--------------|
+| `wizard_draft` | `localStorage` | Rascunho do wizard (passos 1–2 e estado parcial). |
+| `pending_diagnostico` | `localStorage` | Payload enfileirado após OTP / antes do POST autenticado. |
+| `admin_token`, `admin_nome` | `localStorage` | Sessão painel pós-login B2B (MVP — não é modelo-alvo produção). |
+| `sessionStorage` (chave interna) | `sessionStorage` | Payload diagnóstico quando o fluxo redireciona a login antes do POST — ver `lib/wizard/pending_diagnostico.ts`. |
+
 ## Stack-alvo
 
 - Next.js 14 (App Router)

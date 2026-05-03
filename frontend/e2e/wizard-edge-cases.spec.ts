@@ -160,3 +160,71 @@ test.describe("Wizard — edge cases (mock API)", () => {
     await expect(page.getByTestId("wizard-pergunta-atual")).toBeVisible({ timeout: 15_000 });
   });
 });
+
+test.describe("Wizard — catálogo multipla inválido (mock API)", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/diagnosticos/questionario*", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          versao_catalogo: "e2e-invalid",
+          total: 2,
+          perguntas: [
+            {
+              id: "cafe0010-0010-4010-8010-000000000010",
+              codigo: "Q-E2E-T",
+              texto: "Ternária",
+              tipo: "ternaria",
+              peso: 1,
+              dimensao: "fiscal",
+              base_legal: null,
+              multipla_total: null,
+              opcoes: null,
+            },
+            {
+              id: "cafe0012-0012-4012-8012-000000000012",
+              codigo: "Q-E2E-BAD",
+              texto: "Múltipla sem total",
+              tipo: "multipla_escolha",
+              peso: 1,
+              dimensao: "fiscal",
+              base_legal: null,
+              multipla_total: null,
+              opcoes: ["A", "B"],
+            },
+          ],
+        }),
+      });
+    });
+  });
+
+  test("multipla_total ausente mostra erro de catálogo e não avança", async ({ page }) => {
+    test.setTimeout(45_000);
+    await page.goto("/wizard");
+    await page.locator("#cnpj").fill("12345678000195");
+    await page.locator("#razao_social").fill("Cat Inválida SA");
+    await page.locator("#nome").fill("Tester");
+    await page.locator("#email").fill("cat@empresa.com");
+    await page.locator("#lgpd").check();
+    await page.getByRole("button", { name: "Próxima Etapa" }).click();
+
+    await page.locator("#porte").selectOption("micro");
+    await page.locator("#regime").selectOption("simples_nacional");
+    await page.locator("#setor_macro").selectOption("comercio");
+    await page.locator("#uf").selectOption("SP");
+    await page.locator("#cnae_principal").fill("1234567");
+    await page.getByRole("button", { name: "Próxima Etapa" }).click();
+
+    await page.getByRole("radio", { name: /^Sim$/i }).first().check();
+    await page.getByRole("button", { name: "Seguir" }).click();
+
+    await expect(page.getByText(/Catálogo incompleto/i)).toBeVisible();
+    // Código da pergunta no título e possivelmente na mensagem — evitar strict mode (2 matches).
+    await expect(page.getByText(/Q-E2E-BAD/).first()).toBeVisible();
+  });
+});

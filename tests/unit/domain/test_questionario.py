@@ -342,6 +342,24 @@ class TestResposta:
         )
         assert resposta.calcular_pontuacao(pergunta_multipla) == 50.0
 
+    def test_calculo_pontuacao_multipla_rejeita_multipla_total_zero(self) -> None:
+        p_zero = Pergunta(
+            codigo="Q-M0",
+            dimensao=Dimensao.FISCAL,
+            texto="Múltipla total zero",
+            peso=1.0,
+            tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            multipla_total=0,
+        )
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto=["a"],
+        )
+        with pytest.raises(ValueError, match=r"multipla_total"):
+            resposta.calcular_pontuacao(p_zero)
+
     def test_calculo_pontuacao_multipla_exige_multipla_total(self, pergunta_multipla):
         p_sem_total = Pergunta(
             codigo="Q-M2",

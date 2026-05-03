@@ -667,6 +667,10 @@ export function WizardForm() {
       if (!Array.isArray(v) || v.length === 0) {
         return "Selecione ao menos uma opção antes de seguir.";
       }
+      const total = perguntas[i]?.multipla_total ?? 0;
+      if (total >= 1 && v.length > total) {
+        return `Selecione no máximo ${total} opção(ões) antes de seguir.`;
+      }
       return null;
     }
     if (tipo === "numerica") {
@@ -721,6 +725,18 @@ export function WizardForm() {
     if (incompleto) {
       setApiError("Por favor, responda a todas as perguntas do questionário.");
       return null;
+    }
+
+    for (let i = 0; i < perguntas.length; i++) {
+      const tipo = normalizarTipoPerguntaWizard(perguntas[i]?.tipo);
+      if (tipo !== "multipla_escolha" && tipo !== "checklist") continue;
+      const total = perguntas[i]?.multipla_total ?? 0;
+      const v = respostas[i]?.valor;
+      if (total >= 1 && Array.isArray(v) && v.length > total) {
+        const cod = perguntas[i]?.codigo ?? "";
+        setApiError(`Seleção inválida em «${cod}»: no máximo ${total} opção(ões).`);
+        return null;
+      }
     }
 
     const respostasNorm = respostas.map((r, i) => {

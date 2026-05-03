@@ -463,7 +463,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
               </tbody>
             </table>
             <div
-              className="mt-8 rounded-xl border border-border/80 bg-muted/25 p-5 sm:p-7"
+              className="mt-8 rounded-xl border border-border/80 bg-muted/25 p-5 sm:p-7 motion-reduce:transition-none"
               role="region"
               aria-label="Linha do tempo do cronograma em cinco fases (M06)"
             >
@@ -474,13 +474,16 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 Linha do tempo (M06 — visão rápida)
               </p>
               <ol
-                className="relative ml-2 border-l-[3px] border-primary/70 space-y-12 pl-8 sm:pl-11"
+                className="relative ml-2 border-l-[3px] border-primary/70 space-y-12 pl-8 sm:pl-11 motion-reduce:space-y-8"
                 aria-labelledby="m06-timeline-heading"
               >
                 {(data.cronograma ?? []).map((linha, idx) => (
-                  <li key={linha.fase} className="relative scroll-mt-4">
+                  <li
+                    key={linha.fase}
+                    className="relative scroll-mt-4 rounded-md outline-none focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-2 focus-within:ring-offset-background"
+                  >
                     <span
-                      className="absolute -left-[26px] sm:-left-[30px] top-1 flex h-4 w-4 rounded-full bg-primary shadow-md ring-[3px] ring-background"
+                      className="absolute -left-[26px] sm:-left-[30px] top-1 flex h-4 w-4 rounded-full bg-primary shadow-md ring-[3px] ring-background motion-reduce:shadow-none"
                       aria-hidden
                     />
                     <span className="sr-only">

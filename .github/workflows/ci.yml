@@ -75,6 +75,9 @@ jobs:
       - name: Pytest (unit + integration)
         run: PYTHONPATH=. pytest
 
+      - name: Auditoria catálogo MVP (G1 — invariantes JSON)
+        run: PYTHONPATH=. python scripts/auditoria_catalogo_perguntas_mvp.py
+
       - name: Cobertura mínima domain (≥85%)
         run: |
           PYTHONPATH=. coverage run --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q

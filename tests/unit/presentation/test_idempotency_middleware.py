@@ -150,3 +150,33 @@ def test_post_diagnostico_mesma_chave_tenant_diferente_executa_duas_vezes() -> N
 
     assert mock_uc_a.execute.call_count == 1
     assert mock_uc_b.execute.call_count == 1
+
+
+def test_post_diagnostico_chaves_idempotencia_distintas_executa_duas_vezes() -> None:
+    """Duas chaves distintas no mesmo tenant → use case executado duas vezes (sem replay)."""
+    mock_uc = _mock_use_case_sucesso()
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+
+    h1 = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": "11111111-1111-1111-1111-111111111111",
+    }
+    h2 = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": "22222222-2222-2222-2222-222222222222",
+    }
+
+    try:
+        r1 = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=h1)
+        r2 = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=h2)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r1.status_code == 201
+    assert r2.status_code == 201
+    assert r1.headers.get("X-Idempotent-Replay") is None
+    assert r2.headers.get("X-Idempotent-Replay") is None
+    assert mock_uc.execute.call_count == 2
