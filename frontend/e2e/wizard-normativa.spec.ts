@@ -29,6 +29,7 @@ const enabled = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
         body: JSON.stringify({
           access_token: "e2e-token-normativa",
           nome: "Usuário E2E",
+          perfil_conta: "gratuito",
         }),
       });
     });

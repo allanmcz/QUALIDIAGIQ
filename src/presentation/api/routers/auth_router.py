@@ -45,6 +45,8 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str
     nome: str | None
+    # Perfil B2B espelhado no JWT: gratuito (só plano gratuito) | avancado (plano avançado permitido).
+    perfil_conta: str = "gratuito"
 
 
 class SolicitarVerificacaoEmailRequest(BaseModel):
@@ -85,16 +87,21 @@ def create_access_token(
     *,
     subject_user_id: UUID,
     tenant_id: UUID,
+    perfil_conta: str = "gratuito",
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Gera JWT com `sub` (id do admin) e claim `tenant_id`."""
+    """Gera JWT com `sub` (id do admin), `tenant_id` e `perfil_conta` (B2B)."""
     settings = get_settings()
     expire = datetime.now(UTC) + (
         expires_delta if expires_delta is not None else timedelta(minutes=15)
     )
+    perfil = perfil_conta.strip().lower()
+    if perfil not in ("gratuito", "avancado"):
+        perfil = "gratuito"
     payload: dict[str, Any] = {
         "sub": str(subject_user_id),
         "tenant_id": str(tenant_id),
+        "perfil_conta": perfil,
         "exp": expire,
     }
     return jwt.encode(
@@ -222,14 +229,25 @@ async def login(request: LoginRequest) -> LoginResponse:
                 detail="Registro de administrador com identificador inválido no banco.",
             ) from e
 
+        perfil_raw = user.get("perfil_conta") or "gratuito"
+        perfil_login = str(perfil_raw).strip().lower()
+        if perfil_login not in ("gratuito", "avancado"):
+            perfil_login = "gratuito"
+
         access_token = create_access_token(
             subject_user_id=user_id,
             tenant_id=tenant_id,
+            perfil_conta=perfil_login,
             expires_delta=timedelta(minutes=settings_login.jwt_expire_minutes),
         )
         nome_raw = user.get("nome")
         nome = str(nome_raw) if nome_raw is not None else None
-        return LoginResponse(access_token=access_token, token_type="bearer", nome=nome)
+        return LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+            nome=nome,
+            perfil_conta=perfil_login,
+        )
 
     except HTTPException:
         raise

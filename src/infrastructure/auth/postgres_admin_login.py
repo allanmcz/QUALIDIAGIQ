@@ -23,7 +23,7 @@ def buscar_admin_por_email_postgres(email: str, dsn_sync: str) -> dict[str, Any]
         dsn_sync: URL `postgresql://...` (sync).
 
     Returns:
-        Dict com chaves id, email, hashed_password, nome, tenant_id (strings UUID) ou None.
+        Dict com chaves id, email, hashed_password, nome, tenant_id, perfil_conta ou None.
     """
     norm = email.strip().lower()
     conn = psycopg2.connect(dsn_sync)
@@ -31,7 +31,13 @@ def buscar_admin_por_email_postgres(email: str, dsn_sync: str) -> dict[str, Any]
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id::text AS id, email, hashed_password, nome, tenant_id::text AS tenant_id
+                SELECT
+                    id::text AS id,
+                    email,
+                    hashed_password,
+                    nome,
+                    tenant_id::text AS tenant_id,
+                    COALESCE(perfil_conta, 'gratuito') AS perfil_conta
                 FROM admins
                 WHERE lower(trim(email)) = %s
                 LIMIT 1

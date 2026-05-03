@@ -58,6 +58,8 @@ export function getApiUrlForFetch(): string {
 /** Chaves `localStorage` — fluxo B2B MVP (`/login` → painel). */
 export const ADMIN_TOKEN_STORAGE_KEY = "admin_token";
 export const ADMIN_NOME_STORAGE_KEY = "admin_nome";
+/** Espelho do claim JWT `perfil_conta` (UX apenas; servidor revalida no POST). */
+export const ADMIN_PERFIL_CONTA_STORAGE_KEY = "admin_perfil_conta";
 
 /** JWT salvo pelo fluxo de login MVP (`/login`). */
 export function getAccessToken(): string | null {

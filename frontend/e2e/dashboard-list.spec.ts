@@ -13,7 +13,11 @@ test.describe("Dashboard lista B2B (mock API)", () => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ access_token: "e2e-dashboard-token", nome: "Consultor QA" }),
+        body: JSON.stringify({
+          access_token: "e2e-dashboard-token",
+          nome: "Consultor QA",
+          perfil_conta: "gratuito",
+        }),
       });
     });
 

@@ -46,11 +46,18 @@ export default function DashboardPage() {
               Gerencie os diagnósticos e planos de ação das empresas vinculadas.
             </p>
           </div>
-          {!semSessao && itens === null && (
-            <p className="text-sm text-muted-foreground" aria-live="polite">
-              Carregando lista…
-            </p>
-          )}
+          <div className="flex flex-col items-stretch gap-2 sm:items-end shrink-0">
+            {!semSessao && (
+              <Button asChild>
+                <Link href="/wizard">Novo diagnóstico</Link>
+              </Button>
+            )}
+            {!semSessao && itens === null && (
+              <p className="text-sm text-muted-foreground text-right" aria-live="polite">
+                Carregando lista…
+              </p>
+            )}
+          </div>
         </div>
 
         {semSessao && (

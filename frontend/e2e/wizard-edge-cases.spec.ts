@@ -20,6 +20,7 @@ test.describe("Wizard — edge cases (mock API)", () => {
         body: JSON.stringify({
           access_token: "e2e-edge-token",
           nome: "E2E Edge",
+          perfil_conta: "gratuito",
         }),
       });
     });

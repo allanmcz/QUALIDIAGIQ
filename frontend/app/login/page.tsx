@@ -2,7 +2,12 @@
 
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ADMIN_NOME_STORAGE_KEY, ADMIN_TOKEN_STORAGE_KEY, getApiUrlForFetch } from "@/lib/api/config"
+import {
+  ADMIN_NOME_STORAGE_KEY,
+  ADMIN_PERFIL_CONTA_STORAGE_KEY,
+  ADMIN_TOKEN_STORAGE_KEY,
+  getApiUrlForFetch,
+} from "@/lib/api/config"
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events"
 import { mensagemErroHttp } from "@/lib/api/http_errors"
 import { destinoSeguroAposLogin } from "@/lib/auth/safe_redirect_after_login"
@@ -37,9 +42,9 @@ function LoginPageContent() {
         throw new Error(mensagemErroHttp(res.status, raw))
       }
 
-      let data: { access_token?: string; nome?: string | null }
+      let data: { access_token?: string; nome?: string | null; perfil_conta?: string }
       try {
-        data = JSON.parse(raw) as { access_token?: string; nome?: string | null }
+        data = JSON.parse(raw) as { access_token?: string; nome?: string | null; perfil_conta?: string }
       } catch {
         throw new Error(mensagemErroHttp(res.status, raw))
       }
@@ -49,6 +54,11 @@ function LoginPageContent() {
       // Salva em localStorage (apenas para o MVP/Dev)
       localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.access_token)
       localStorage.setItem(ADMIN_NOME_STORAGE_KEY, data.nome || "Admin")
+      const perfil =
+        data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
+          ? data.perfil_conta
+          : "gratuito"
+      localStorage.setItem(ADMIN_PERFIL_CONTA_STORAGE_KEY, perfil)
       window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))
 
       const destino = destinoSeguroAposLogin(searchParams.get("redirect"))

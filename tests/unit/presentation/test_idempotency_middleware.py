@@ -65,7 +65,7 @@ def _mock_use_case_sucesso() -> AsyncMock:
 def test_post_diagnostico_sem_idempotency_key_retorna_400() -> None:
     tid = uuid.uuid4()
     uid = uuid.uuid4()
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: _mock_use_case_sucesso()
 
     try:
@@ -89,7 +89,7 @@ def test_post_diagnostico_replay_retorna_header_e_nao_reexecuta_use_case() -> No
     idem = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     headers = {
         **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
@@ -121,7 +121,7 @@ def test_post_diagnostico_mesma_chave_tenant_diferente_executa_duas_vezes() -> N
     idem = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc_a
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_a)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_a, "gratuito")
     headers_a = {
         **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid_a),
         "Idempotency-Key": idem,
@@ -135,7 +135,7 @@ def test_post_diagnostico_mesma_chave_tenant_diferente_executa_duas_vezes() -> N
         app.dependency_overrides.clear()
 
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc_b
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_b)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_b, "gratuito")
     headers_b = {
         **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid_b),
         "Idempotency-Key": idem,
@@ -158,7 +158,7 @@ def test_post_diagnostico_chaves_idempotencia_distintas_executa_duas_vezes() -> 
     tid = uuid.uuid4()
     uid = uuid.uuid4()
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     h1 = {
         **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),

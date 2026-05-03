@@ -66,6 +66,26 @@ from src.presentation.api.schemas import (
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
 
 
+def _plano_efetivo_para_criacao(
+    payload: IniciarDiagnosticoRequest, perfil_limite: str | None
+) -> str:
+    """
+    Define o plano persistido conforme o perfil da conta (JWT), não confiando só no corpo HTTP.
+
+    - Self-service (`perfil_limite` None): sempre gratuito (lead / OTP).
+    - Conta `gratuito`: sempre gratuito.
+    - Conta `avancado`: aceita `gratuito` ou `avancado` declarado no payload.
+    """
+    raw = (payload.plano or "gratuito").strip().lower()
+    if raw not in ("gratuito", "avancado"):
+        raw = "gratuito"
+    if perfil_limite is None:
+        return "gratuito"
+    if perfil_limite == "gratuito":
+        return "gratuito"
+    return raw
+
+
 def _campos_auditoria_http(entity: object) -> tuple[str | None, int | None]:
     """Extrai hash/versão apenas se tipos forem válidos (evita MagicMock nos testes unitários)."""
     raw_h = getattr(entity, "hash_evidencia", None)
@@ -193,6 +213,7 @@ async def _executar_criar_diagnostico_core(
     tenant_id: UUID,
     payload: IniciarDiagnosticoRequest,
     use_case: RealizarDiagnostico,
+    perfil_limite: str | None,
 ) -> DiagnosticoResponse:
     """Núcleo compartilhado entre POST autenticado B2B e POST self-service (JWT após OTP)."""
     empresa_domain = EmpresaInfo(
@@ -227,12 +248,14 @@ async def _executar_criar_diagnostico_core(
             EntradaRespostaDiagnostico(pergunta=pergunta, valor_bruto=resp_payload.valor)
         )
 
+    plano_efetivo = _plano_efetivo_para_criacao(payload, perfil_limite)
+
     comando = ComandoRealizarDiagnostico(
         tenant_id=tenant_id,
         empresa=empresa_domain,
         respondente=respondente_domain,
         entradas_resposta=entradas_resposta,
-        plano=payload.plano,
+        plano=plano_efetivo,
         aceite_termos_privacidade=payload.aceite_termos_privacidade,
         locale_relatorio=payload.locale_relatorio,
     )
@@ -281,13 +304,13 @@ async def _executar_criar_diagnostico_core(
 
 @router.get("/", response_model=list[DiagnosticoResumoSchema])
 async def listar_diagnosticos(
-    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[DiagnosticoResumoSchema]:
     """Lista diagnósticos do tenant atual (ordenacao: mais recentes primeiro na camada repo/DB)."""
-    _, tenant_id = current
+    _, tenant_id, _ = current
     rows = await repo.listar_por_tenant(tenant_id, limit=limit, offset=offset)
     return [_para_resumo(d) for d in rows]
 
@@ -311,15 +334,16 @@ async def criar_diagnostico(
         IniciarDiagnosticoRequest,
         Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
     ],
-    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
 ) -> DiagnosticoResponse:
     """Inicia um novo diagnóstico e calcula o score com base nas respostas."""
-    _, tenant_id = current
+    _, tenant_id, perfil_conta = current
     return await _executar_criar_diagnostico_core(
         tenant_id=tenant_id,
         payload=payload,
         use_case=use_case,
+        perfil_limite=perfil_conta,
     )
 
 
@@ -355,6 +379,7 @@ async def criar_diagnostico_self_service(
         tenant_id=tenant_id,
         payload=payload,
         use_case=use_case,
+        perfil_limite=None,
     )
 
 
@@ -480,11 +505,11 @@ async def obter_questionario_adaptativo(
 @router.get("/{diagnostico_id}", response_model=DiagnosticoResponse)
 async def obter_diagnostico(
     diagnostico_id: UUID,
-    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     """Busca um diagnóstico pelo ID, garantindo o isolamento do tenant."""
-    _, tenant_id = current
+    _, tenant_id, _ = current
     diagnostico = await repo.buscar_por_id(diagnostico_id, tenant_id)
     if not diagnostico:
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
@@ -504,7 +529,7 @@ async def obter_diagnostico(
 async def atualizar_checklist_m12_autoconf(
     diagnostico_id: UUID,
     payload: PatchChecklistM12AutoconfRequest,
-    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     use_case: Annotated[
         AtualizarChecklistM12Autoconf,
         Depends(get_atualizar_checklist_m12_autoconf_use_case),
@@ -512,7 +537,7 @@ async def atualizar_checklist_m12_autoconf(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> DiagnosticoResponse:
     """PATCH M12 — lock otimista alinhado ao PATCH de relatório PDF."""
-    _, tenant_id = current
+    _, tenant_id, _ = current
     try:
         versao = _parse_if_match_versao(if_match)
     except ValueError as e:
@@ -543,7 +568,7 @@ async def atualizar_checklist_m12_autoconf(
 async def atualizar_relatorio_pdf(
     diagnostico_id: UUID,
     payload: PatchRelatorioPdfRequest,
-    current: Annotated[tuple[UUID, UUID], Depends(get_current_user_tenant)],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     use_case: Annotated[
         AnexarRelatorioOtimista,
         Depends(get_anexar_relatorio_otimista_use_case),
@@ -555,7 +580,7 @@ async def atualizar_relatorio_pdf(
 
     Exige `If-Match` com a `versao_otimista` retornada no GET (lock otimista).
     """
-    _, tenant_id = current
+    _, tenant_id, _ = current
     try:
         versao = _parse_if_match_versao(if_match)
     except ValueError as e:

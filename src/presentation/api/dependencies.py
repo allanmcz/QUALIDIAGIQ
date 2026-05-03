@@ -126,11 +126,12 @@ async def get_current_user_tenant(
         HTTPAuthorizationCredentials | None,
         Depends(bearer_scheme),
     ],
-) -> tuple[UUID, UUID]:
+) -> tuple[UUID, UUID, str]:
     """
-    Valida Bearer JWT e retorna (user_id, tenant_id).
+    Valida Bearer JWT e retorna (user_id, tenant_id, perfil_conta).
 
-    Claims esperadas: `sub` = UUID do admin, `tenant_id` = UUID do tenant.
+    Claims esperadas: `sub` = UUID do admin, `tenant_id` = UUID do tenant,
+    `perfil_conta` opcional (`gratuito` | `avancado`; tokens antigos assumem gratuito).
     """
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
@@ -152,7 +153,11 @@ async def get_current_user_tenant(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token sem subject ou tenant_id",
             )
-        return UUID(str(sub)), UUID(str(tid))
+        perfil_raw = payload.get("perfil_conta") or "gratuito"
+        perfil = str(perfil_raw).strip().lower()
+        if perfil not in ("gratuito", "avancado"):
+            perfil = "gratuito"
+        return UUID(str(sub)), UUID(str(tid)), perfil
     except HTTPException:
         raise
     except (jwt.PyJWTError, ValueError) as e:

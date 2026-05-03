@@ -108,10 +108,14 @@ export const RespostaSchema = z.object({
 
 const LOCALES_RELATORIO_PDF = ["pt-BR", "en"] as const;
 
+const PLANOS_DIAGNOSTICO = ["gratuito", "avancado"] as const;
+
 export const DiagnosticoPayloadSchema = z.object({
   empresa: EmpresaSchema,
   respondente: RespondenteSchema,
   respostas: z.array(RespostaSchema).min(1, "Responda ao questionário carregado"),
+  /** Alinhado ao domínio da API; contas gratuitas são forçadas a `gratuito` no servidor. */
+  plano: z.enum(PLANOS_DIAGNOSTICO).default("gratuito"),
   /** Idioma do relatório PDF (WeasyPrint): pt-BR ou en (labels EN; narrativa dinâmica pode seguir em PT). */
   locale_relatorio: z.enum(LOCALES_RELATORIO_PDF).default("pt-BR"),
   /** LGPD — consentimento para tratamento dos dados informados (MVP). */

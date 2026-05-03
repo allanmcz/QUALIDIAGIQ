@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 import { mascaraTelefoneBR } from "@/lib/utils/mascaraTelefoneBr";
 import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { postDiagnostico } from "@/lib/api/diagnostico";
-import { getAccessToken } from "@/lib/api/config";
+import { ADMIN_PERFIL_CONTA_STORAGE_KEY, getAccessToken } from "@/lib/api/config";
 import { postValidarAncora } from "@/lib/api/normativa";
 import { fetchQuestionarioAdaptativo, type PerguntaCatalogo } from "@/lib/api/questionario";
 import { rotulosEscalaParaPergunta } from "@/lib/wizard/escalaLabels";
@@ -165,11 +165,20 @@ export function WizardForm() {
         telefone: "",
       },
       locale_relatorio: "pt-BR",
+      plano: "gratuito",
       respostas: [],
       aceite_termos_privacidade: false,
     },
     mode: "onBlur",
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = window.localStorage.getItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
+    if (p === "avancado") {
+      form.setValue("plano", "avancado");
+    }
+  }, [form]);
 
   const {
     register,

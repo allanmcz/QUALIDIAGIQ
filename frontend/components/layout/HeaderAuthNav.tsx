@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useLayoutEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ADMIN_NOME_STORAGE_KEY, ADMIN_TOKEN_STORAGE_KEY } from "@/lib/api/config";
+import {
+  ADMIN_NOME_STORAGE_KEY,
+  ADMIN_PERFIL_CONTA_STORAGE_KEY,
+  ADMIN_TOKEN_STORAGE_KEY,
+} from "@/lib/api/config";
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
 
 /**
@@ -29,7 +33,12 @@ export function HeaderAuthNav() {
   useLayoutEffect(() => {
     sincronizar();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === ADMIN_TOKEN_STORAGE_KEY || e.key === ADMIN_NOME_STORAGE_KEY || e.key === null) {
+      if (
+        e.key === ADMIN_TOKEN_STORAGE_KEY ||
+        e.key === ADMIN_NOME_STORAGE_KEY ||
+        e.key === ADMIN_PERFIL_CONTA_STORAGE_KEY ||
+        e.key === null
+      ) {
         sincronizar();
       }
     };
@@ -45,6 +54,7 @@ export function HeaderAuthNav() {
   const sair = () => {
     window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(ADMIN_NOME_STORAGE_KEY);
+    window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
     window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
     router.push("/");
     router.refresh();

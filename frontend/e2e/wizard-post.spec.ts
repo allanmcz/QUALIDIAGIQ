@@ -23,6 +23,7 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
         body: JSON.stringify({
           access_token: "e2e-token-playwright",
           nome: "Usuário E2E",
+          perfil_conta: "gratuito",
         }),
       });
     });
@@ -145,7 +146,8 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
     expect(headersCapturados.idempotency || "").toMatch(/[0-9a-f-]{36}/i);
     expect(postJson).toContain(PID_TERNARIA);
     expect(postJson).toContain(PID_ESCALA);
-    const posted = JSON.parse(postJson) as { aceite_termos_privacidade?: boolean };
+    const posted = JSON.parse(postJson) as { aceite_termos_privacidade?: boolean; plano?: string };
     expect(posted.aceite_termos_privacidade).toBe(true);
+    expect(posted.plano).toBe("gratuito");
   });
 });

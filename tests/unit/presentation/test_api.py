@@ -163,7 +163,7 @@ def test_criar_diagnostico_com_sucesso():
     tid = uuid.uuid4()
     uid = uuid.uuid4()
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_use_case
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     payload = {
         "empresa": {
@@ -212,7 +212,7 @@ def test_criar_diagnostico_sem_aceite_lgpd_422():
     uid = uuid.uuid4()
     tid = uuid.uuid4()
     mock_uc = AsyncMock()
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
     response = client.post("/diagnosticos/", json=payload, headers=cabecalho_post_diagnostico())
     app.dependency_overrides.clear()
@@ -362,7 +362,7 @@ def test_obter_diagnostico_com_sucesso():
     uid = uuid.uuid4()
     tid = uuid.uuid4()
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     response = client.get(
         f"/diagnosticos/{diagnostico_id}",
@@ -383,7 +383,7 @@ def test_patch_relatorio_sem_if_match_400():
     tid = uuid.uuid4()
     mock_uc = AsyncMock()
     app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     response = client.patch(
         f"/diagnosticos/{uuid.uuid4()}",
@@ -404,7 +404,7 @@ def test_patch_relatorio_conflito_412():
     mock_uc = AsyncMock()
     mock_uc.execute.side_effect = ConflitoVersaoOtimistaError("versão 1 obsoleta")
     app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     did = uuid.uuid4()
     response = client.patch(
@@ -434,7 +434,7 @@ def test_patch_relatorio_sucesso():
     mock_uc.execute.return_value = d_out
 
     app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     response = client.patch(
         f"/diagnosticos/{d_in.id}",
@@ -458,7 +458,7 @@ def test_patch_checklist_m12_sem_if_match_400():
     tid = uuid.uuid4()
     mock_uc = AsyncMock()
     app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     response = client.patch(
         f"/diagnosticos/{uuid.uuid4()}/checklist-m12-autoconf",
@@ -479,7 +479,7 @@ def test_patch_checklist_m12_conflito_412():
     mock_uc = AsyncMock()
     mock_uc.execute.side_effect = ConflitoVersaoOtimistaError("versão obsoleta")
     app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     did = uuid.uuid4()
     response = client.patch(
@@ -509,7 +509,7 @@ def test_patch_checklist_m12_sucesso():
     mock_uc.execute.return_value = d_out
 
     app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     payload = {"checklist_m12_autoconf": [True] + [False] * 9}
     response = client.patch(
@@ -552,7 +552,7 @@ def test_listar_diagnosticos_resumo():
     mock_repo.listar_por_tenant.return_value = [d1, d2]
 
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     response = client.get(
         "/diagnosticos/?limit=10&offset=0",
@@ -579,7 +579,7 @@ def test_obter_diagnostico_nao_encontrado():
     uid = uuid.uuid4()
     tid = uuid.uuid4()
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid)
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
     response = client.get(
         f"/diagnosticos/{uuid.uuid4()}",
