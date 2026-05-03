@@ -15,6 +15,7 @@ from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
+from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
@@ -30,12 +31,15 @@ from src.domain.entities.diagnostico import (
     RegimeTributario,
     SetorMacro,
 )
-from src.domain.repositories.diagnostico_repository import DiagnosticoRepository  # noqa: TC001
+from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.repositories.normativa_score_macro_repository import (
-    NormativaScoreMacroRepository,  # noqa: TC001
+    NormativaScoreMacroRepository,
 )
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
+from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNormativaAdapter
+from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
+from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
 from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
@@ -383,27 +387,75 @@ def get_email_service() -> SmtpEmailAdapter:
     return SmtpEmailAdapter()
 
 
-def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter:
+def build_base_normativa_port() -> BaseNormativaPort:
+    """
+    RAG-light: pgvector + embeddings OpenAI quando ``DATABASE_URL`` e ``OPENAI_API_KEY`` existem.
+    Caso contrário stub (guardrail usa regex no pós-processamento LLM).
+    """
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    key_oai = settings.openai_api_key.get_secret_value().strip() if settings.openai_api_key else ""
+    if dsn and key_oai:
+        return PgvectorBaseNormativaAdapter(
+            dsn=dsn,
+            openai_api_key=key_oai,
+            embedding_model=settings.openai_embedding_model.strip(),
+        )
+    return StubBaseNormativaAdapter()
+
+
+def get_base_normativa_port_dependency() -> BaseNormativaPort:
+    """Depends() para use cases que enriquecem prompt com chunks normativos."""
+    return build_base_normativa_port()
+
+
+def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter | AnthropicLlmAdapter:
     """
     Injeta LLM — default **LangGraph + LangChain ChatOllama** (Ollama local).
 
-    Fallback ``http_ollama``: REST direta (``QDI_LLM_BACKEND=http_ollama``).
+    ``http_ollama``: REST direta. ``anthropic``: Claude com ``ANTHROPIC_API_KEY``.
+    Sem chave Anthropic em modo ``anthropic`` → fallback para LangGraph/Ollama (log).
     Ver **ADR-007** e ADR-003.
     """
     settings = get_settings()
+    norm = build_base_normativa_port()
+    thr = float(settings.qdi_rag_similarity_threshold)
     url = settings.ollama_base_url.strip()
     model = settings.ollama_model.strip()
     timeout = float(settings.ollama_timeout_seconds)
+
+    if settings.llm_backend == "anthropic":
+        ak = (
+            settings.anthropic_api_key.get_secret_value().strip()
+            if settings.anthropic_api_key
+            else ""
+        )
+        if ak:
+            return AnthropicLlmAdapter(
+                api_key=ak,
+                model=settings.anthropic_model.strip(),
+                base_normativa_port=norm,
+                rag_similarity_threshold=thr,
+            )
+        logger.warning(
+            "llm_backend_anthropic_sem_api_key",
+            fallback="langgraph_ollama",
+        )
+
     if settings.llm_backend == "http_ollama":
         return OllamaLlmAdapter(
             ollama_url=url,
             model=model,
             timeout_seconds=timeout,
+            base_normativa_port=norm,
+            rag_similarity_threshold=thr,
         )
     return LangGraphOllamaLlmAdapter(
         ollama_url=url,
         model=model,
         timeout_seconds=timeout,
+        base_normativa_port=norm,
+        rag_similarity_threshold=thr,
     )
 
 
@@ -432,8 +484,12 @@ def get_realizar_diagnostico_use_case(
     storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],
     email_service: Annotated[SmtpEmailAdapter, Depends(get_email_service)],
     llm_service: Annotated[
-        LangGraphOllamaLlmAdapter | OllamaLlmAdapter,
+        LangGraphOllamaLlmAdapter | OllamaLlmAdapter | AnthropicLlmAdapter,
         Depends(get_llm_service),
+    ],
+    base_normativa_port: Annotated[
+        BaseNormativaPort,
+        Depends(get_base_normativa_port_dependency),
     ],
 ) -> RealizarDiagnostico:
     """Orquestrador principal."""
@@ -444,4 +500,5 @@ def get_realizar_diagnostico_use_case(
         storage_service=storage_service,
         email_service=email_service,
         llm_service=llm_service,
+        base_normativa_port=base_normativa_port,
     )

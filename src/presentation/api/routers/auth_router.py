@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 
-from src.application.ports.email_service import EmailServicePort  # noqa: TC001
+from src.application.ports.email_service import EmailServicePort
 from src.infrastructure.auth.postgres_admin_login import buscar_admin_por_email_postgres
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.email_verificacao import codigo_store

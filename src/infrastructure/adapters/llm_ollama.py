@@ -1,11 +1,9 @@
 import httpx
 import structlog
 
+from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
-from src.application.services.lexiq_guardrail import (
-    mensagem_rejeicao_guardrail,
-    texto_tem_ancora_normativa,
-)
+from src.application.services.lexiq_guardrail import filtrar_resposta_recomendacao_llm
 from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
 
 logger = structlog.get_logger(__name__)
@@ -24,10 +22,14 @@ class OllamaLlmAdapter(LlmServicePort):
         model: str = "llama3",
         *,
         timeout_seconds: float = 30.0,
+        base_normativa_port: BaseNormativaPort | None = None,
+        rag_similarity_threshold: float = 0.65,
     ) -> None:
         self.ollama_url = ollama_url
         self.model = model
         self._timeout_seconds = timeout_seconds
+        self._normativa_port = base_normativa_port
+        self._rag_threshold = float(rag_similarity_threshold)
 
     async def gerar_recomendacao(self, contexto_empresa: str, base_normativa: str) -> str:
         prompt = montar_prompt_recomendacao(contexto_empresa, base_normativa)
@@ -46,13 +48,11 @@ class OllamaLlmAdapter(LlmServicePort):
                 data: dict[str, object] = response.json()
                 texto = data.get("response", "Recomendação não gerada pelo modelo.")
                 out = str(texto).strip()
-                if not texto_tem_ancora_normativa(out):
-                    logger.info(
-                        "ollama_guardrail_lexiq",
-                        motivo="resposta_sem_ancora_normativa_reconhecivel",
-                    )
-                    return mensagem_rejeicao_guardrail()
-                return out
+                return await filtrar_resposta_recomendacao_llm(
+                    out,
+                    base_normativa_port=self._normativa_port,
+                    rag_threshold=self._rag_threshold,
+                )
         except httpx.RequestError as exc:
             logger.warning(
                 "ollama_request_error",

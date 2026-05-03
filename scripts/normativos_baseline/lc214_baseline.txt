@@ -1,0 +1,4 @@
+LC 214/2025 — Lei Complementar da Reforma Tributária do Consumo (referência baseline ingestão RAG).
+
+Dispositivos frequentes em diagnóstico: arts. que tratam de CBS, IBS e transição gradual em relação a PIS, COFINS, ICMS e ISS.
+Empresas devem mapear impactos em cadastros fiscais, classificações tributárias e processos de crédito na transição para o novo modelo previsto na LC 214/2025.

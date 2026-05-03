@@ -4,9 +4,8 @@
 
 services:
   db:
-    # CI (.github/workflows/ci.yml) usa postgres:16-alpine; supabase/postgres local quebrava
-    # CREATE EXTENSION (hook pg_read_file). Produção Supabase aplica o mesmo SQL na cloud.
-    image: postgres:16-alpine
+    # Postgres 16 + pgvector — alinhado ao CI e à migração 0020 (RAG-light).
+    image: pgvector/pgvector:pg16
     container_name: qdi-db
     restart: unless-stopped
     environment:

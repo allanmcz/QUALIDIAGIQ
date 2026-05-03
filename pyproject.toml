@@ -78,7 +78,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "TCH", "RUF"]
-ignore = ["E501"]  # linha longa: black cuida
+ignore = [
+    "E501",  # linha longa: black cuida
+    "TC001",  # ports/adapters QDI: imports explícitos de ABC (BaseNormativaPort) preferidos a TYPE_CHECKING-only
+]
 
 [tool.black]
 line-length = 100

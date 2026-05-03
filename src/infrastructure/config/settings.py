@@ -135,12 +135,41 @@ class Settings(BaseSettings):
         description="Timeout (segundos) nas chamadas ao Ollama — REST direta ou cliente LangChain.",
     )
 
-    llm_backend: Literal["langgraph_ollama", "http_ollama"] = Field(
+    llm_backend: Literal["langgraph_ollama", "http_ollama", "anthropic"] = Field(
         default="langgraph_ollama",
         validation_alias=AliasChoices("QDI_LLM_BACKEND"),
         description=(
-            "Backend de recomendação IA: LangGraph+LangChain+Ollama (default) ou HTTP legado."
+            "Backend de recomendação IA: LangGraph+Ollama (default), HTTP Ollama ou Anthropic Claude."
         ),
+    )
+
+    anthropic_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ANTHROPIC_API_KEY"),
+        description="Chave API Anthropic — obrigatória se QDI_LLM_BACKEND=anthropic.",
+    )
+    anthropic_model: str = Field(
+        default="claude-3-5-sonnet-20241022",
+        validation_alias=AliasChoices("ANTHROPIC_MODEL", "LLM_MODEL"),
+        description="Modelo Claude (Messages API).",
+    )
+
+    openai_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY"),
+        description="OpenAI — embeddings para RAG-light (busca pgvector) quando DATABASE_URL definido.",
+    )
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias=AliasChoices("OPENAI_EMBEDDING_MODEL", "QDI_OPENAI_EMBEDDING_MODEL"),
+        description="Modelo de embedding — deve produzir 1536 dims (migração 0020).",
+    )
+    qdi_rag_similarity_threshold: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+        validation_alias=AliasChoices("QDI_RAG_SIMILARITY_THRESHOLD"),
+        description="Threshold cosine similarity pós-processamento Lexiq RAG.",
     )
 
     cors_allowed_origins: str = Field(

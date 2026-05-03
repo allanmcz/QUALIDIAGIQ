@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
@@ -28,6 +29,11 @@ from src.domain.entities.diagnostico import (
     Respondente,
 )
 from src.domain.entities.questionario import Pergunta, Resposta
+
+_ANCORA_FIXA_LLM = (
+    "Âncoras: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026. "
+    "Sugira medidas práticas citando dispositivo aplicável quando possível."
+)
 
 
 def _locale_relatorio_pdf_normalizado(raw: str) -> str:
@@ -95,6 +101,7 @@ class RealizarDiagnostico:
         storage_service: StorageServicePort | None = None,
         email_service: EmailServicePort | None = None,
         llm_service: LlmServicePort | None = None,
+        base_normativa_port: BaseNormativaPort | None = None,
     ) -> None:
         self.repo = repo
         self.calcular_score_use_case = calcular_score_use_case
@@ -102,6 +109,7 @@ class RealizarDiagnostico:
         self.storage_service = storage_service
         self.email_service = email_service
         self.llm_service = llm_service
+        self.base_normativa_port = base_normativa_port
 
     async def execute(self, comando: ComandoRealizarDiagnostico) -> ResultadoDiagnostico:
         """Executa o pipeline completo do diagnóstico."""
@@ -157,11 +165,16 @@ class RealizarDiagnostico:
                 f"(Nível: {score_completo.score_geral.nivel.name})\n"
             )
 
-            # Contexto normativo fixo (sem ler `_DEVELOPER/` — Sprint 12 prevê BaseNormativaPort / RAG).
-            base_normativa = (
-                "Âncoras: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026. "
-                "Sugira medidas práticas citando dispositivo aplicável quando possível."
-            )
+            base_normativa = _ANCORA_FIXA_LLM
+            if self.base_normativa_port is not None:
+                chunks_ctx = await self.base_normativa_port.buscar_contexto(
+                    f"{comando.empresa.regime.value} {comando.empresa.setor_macro.value}",
+                    top_k=3,
+                    threshold=0.0,
+                )
+                if chunks_ctx:
+                    rag_blob = "\n\n".join(c.texto for c in chunks_ctx)
+                    base_normativa = f"{rag_blob}\n\n{_ANCORA_FIXA_LLM}"
 
             recomendacao_ia = await self.llm_service.gerar_recomendacao(
                 contexto_empresa=contexto_empresa, base_normativa=base_normativa

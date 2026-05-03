@@ -11,7 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses  # noqa: TC001
+from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.presentation.api.dependencies import get_buscar_cnae_subclasses_use_case
 from src.presentation.api.schemas import CnaeBuscaResponse, CnaeSubclasseItemSchema
 

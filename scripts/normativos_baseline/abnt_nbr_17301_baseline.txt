@@ -1,0 +1,4 @@
+ABNT NBR 17301:2026 — Sistema de gestão de compliance tributário (alinhamento conceitual à ISO 37301).
+
+O ciclo PDCA aplica-se à identificação de obrigações tributárias, avaliação de riscos, controles e melhoria contínua.
+Evidências documentadas e rastreáveis sustentam a demonstração de conformidade segundo ABNT NBR 17301:2026.

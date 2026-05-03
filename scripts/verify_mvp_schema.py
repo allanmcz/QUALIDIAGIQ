@@ -10,6 +10,8 @@ Uso (uma das opções):
   python scripts/verify_mvp_schema.py postgresql://user:pass@host:5432/db
   QDI_VERIFY_SCHEMA_STRICT_CNAE=1 make verify-schema-mvp
   python scripts/verify_mvp_schema.py --strict-cnae postgresql://...
+  QDI_VERIFY_SCHEMA_RAG=1 python scripts/verify_mvp_schema.py
+  python scripts/verify_mvp_schema.py --rag postgresql://...
 
 Aceita URL com prefixo ``postgresql+asyncpg://`` (normaliza para asyncpg).
 
@@ -31,8 +33,13 @@ def _dsn_normalizado(raw: str) -> str:
     return raw.strip().replace("postgresql+asyncpg://", "postgresql://", 1)
 
 
-def _parse_argv(argv: list[str]) -> tuple[str | None, bool]:
+def _parse_argv(argv: list[str]) -> tuple[str | None, bool, bool]:
     strict_cnae = os.environ.get("QDI_VERIFY_SCHEMA_STRICT_CNAE", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    rag_light = os.environ.get("QDI_VERIFY_SCHEMA_RAG", "").strip().lower() in (
         "1",
         "true",
         "yes",
@@ -41,9 +48,11 @@ def _parse_argv(argv: list[str]) -> tuple[str | None, bool]:
     for a in argv:
         if a == "--strict-cnae":
             strict_cnae = True
+        elif a == "--rag":
+            rag_light = True
         elif not a.startswith("-"):
             dsn = a
-    return dsn, strict_cnae
+    return dsn, strict_cnae, rag_light
 
 
 async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
@@ -207,20 +216,55 @@ async def _verificar_strict_cnae(conn: asyncpg.Connection) -> list[str]:
     return erros
 
 
-async def _verificar(conn_dsn: str, *, strict_cnae: bool) -> list[str]:
+async def _verificar_rag_light(conn: asyncpg.Connection) -> list[str]:
+    """Migração 0020 — extensão vector + tabela ``qdi_rag.documento_normativo``."""
+    erros: list[str] = []
+
+    ext = await conn.fetchval(
+        "SELECT 1 FROM pg_extension WHERE extname = $1",
+        "vector",
+    )
+    if ext != 1:
+        erros.append("Extensão PostgreSQL 'vector' ausente (migração 0020 / imagem pgvector).")
+
+    tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'qdi_rag' AND table_name = 'documento_normativo'
+    """)
+    if tbl != 1:
+        erros.append("Tabela qdi_rag.documento_normativo ausente (aplique migração 0020).")
+        return erros
+
+    emb = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'qdi_rag'
+          AND table_name = 'documento_normativo'
+          AND column_name = 'embedding'
+    """)
+    if emb != 1:
+        erros.append("Coluna qdi_rag.documento_normativo.embedding ausente.")
+
+    return erros
+
+
+async def _verificar(conn_dsn: str, *, strict_cnae: bool, rag_light: bool) -> list[str]:
     conn = await asyncpg.connect(conn_dsn, timeout=10)
     try:
         erros = await _verificar_nucleo(conn)
         if strict_cnae:
             erros.extend(await _verificar_strict_cnae(conn))
             erros.extend(await _verificar_normativa_score_macro_strict(conn))
+        if rag_light:
+            erros.extend(await _verificar_rag_light(conn))
         return erros
     finally:
         await conn.close()
 
 
 def main() -> int:
-    dsn_arg, strict_cnae = _parse_argv(sys.argv[1:])
+    dsn_arg, strict_cnae, rag_light = _parse_argv(sys.argv[1:])
     raw_url = dsn_arg or os.environ.get("DATABASE_URL") or os.environ.get("QDI_POSTGRES_TEST_URL")
     if not raw_url:
         print(
@@ -231,12 +275,16 @@ def main() -> int:
             "Modo CNAE estrito: --strict-cnae ou QDI_VERIFY_SCHEMA_STRICT_CNAE=1",
             file=sys.stderr,
         )
+        print(
+            "Modo RAG-light: --rag ou QDI_VERIFY_SCHEMA_RAG=1",
+            file=sys.stderr,
+        )
         return 1
 
     dsn = _dsn_normalizado(raw_url)
 
     try:
-        erros = asyncio.run(_verificar(dsn, strict_cnae=strict_cnae))
+        erros = asyncio.run(_verificar(dsn, strict_cnae=strict_cnae, rag_light=rag_light))
     except Exception as exc:
         print(f"Falha de conexão ou execução: {exc}", file=sys.stderr)
         return 1
@@ -250,6 +298,8 @@ def main() -> int:
     msg = "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id)."
     if strict_cnae:
         msg += " Modo strict: CNAE (extensões + 1332 subclasses) + normativa score macro (0015)."
+    if rag_light:
+        msg += " Modo RAG: extensão vector + qdi_rag.documento_normativo (0020)."
     print(msg)
     return 0
 
