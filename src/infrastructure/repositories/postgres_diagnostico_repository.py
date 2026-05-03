@@ -36,6 +36,22 @@ from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto
 
 
+def _quadro_anotacoes_de_row(row: dict[str, Any]) -> dict[str, dict[str, str]] | None:
+    """Lê JSONB ``quadro_implantacao_anotacoes`` (mapa f{i}_a{j} -> comentario, prazo_meta)."""
+    raw = row.get("quadro_implantacao_anotacoes")
+    if raw is None or not isinstance(raw, dict):
+        return None
+    out: dict[str, dict[str, str]] = {}
+    for k, v in raw.items():
+        if not isinstance(v, dict):
+            continue
+        out[str(k)] = {
+            "comentario": str(v.get("comentario", "") or ""),
+            "prazo_meta": str(v.get("prazo_meta", "") or "").strip(),
+        }
+    return out or None
+
+
 def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
     """Converte uma linha ``RealDict`` em entidade de domínio (paridade com Supabase)."""
     raw_created = row.get("criado_em")
@@ -113,6 +129,7 @@ def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
         hash_evidencia=row.get("hash_sha256"),
         versao_otimista=int(row.get("versao_otimista") or 1),
         checklist_m12_estado=checklist_m12,
+        quadro_implantacao_anotacoes=_quadro_anotacoes_de_row(row),
         aceite_termos_privacidade_em=aceite_em,
         locale_relatorio=locale_relatorio,
     )
@@ -154,6 +171,11 @@ def _entity_para_params(d: Diagnostico) -> dict[str, Any]:
         "checklist_m12_estado": (
             Json(d.checklist_m12_estado) if d.checklist_m12_estado is not None else None
         ),
+        "quadro_implantacao_anotacoes": (
+            Json(d.quadro_implantacao_anotacoes)
+            if getattr(d, "quadro_implantacao_anotacoes", None) is not None
+            else None
+        ),
         "aceite_termos_privacidade_em": d.aceite_termos_privacidade_em,
         "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
     }
@@ -168,6 +190,7 @@ INSERT INTO diagnosticos (
     status, plano, score_geral, relatorio_pdf_url,
     criado_em, finalizado_em,
     hash_sha256, score_completo, versao_otimista, checklist_m12_estado,
+    quadro_implantacao_anotacoes,
     aceite_termos_privacidade_em, locale_relatorio
 ) VALUES (
     %(id)s, %(tenant_id)s,
@@ -177,6 +200,7 @@ INSERT INTO diagnosticos (
     %(status)s, %(plano)s, %(score_geral)s, %(relatorio_pdf_url)s,
     %(criado_em)s, %(finalizado_em)s,
     %(hash_sha256)s, %(score_completo)s, %(versao_otimista)s, %(checklist_m12_estado)s,
+    %(quadro_implantacao_anotacoes)s,
     %(aceite_termos_privacidade_em)s, %(locale_relatorio)s
 )
 ON CONFLICT (id) DO UPDATE SET
@@ -203,6 +227,7 @@ ON CONFLICT (id) DO UPDATE SET
     score_completo = EXCLUDED.score_completo,
     versao_otimista = EXCLUDED.versao_otimista,
     checklist_m12_estado = EXCLUDED.checklist_m12_estado,
+    quadro_implantacao_anotacoes = EXCLUDED.quadro_implantacao_anotacoes,
     aceite_termos_privacidade_em = EXCLUDED.aceite_termos_privacidade_em,
     locale_relatorio = EXCLUDED.locale_relatorio
 """
@@ -280,6 +305,43 @@ def _patch_relatorio_sync(
                 RETURNING *
                 """,
                 (relatorio_pdf_url, str(diagnostico_id), str(tenant_id), versao_esperada),
+            )
+            row = cur.fetchone()
+        conn.commit()
+        if not row:
+            return None
+        return _row_dict_para_entity(cast("dict[str, Any]", dict(row)))
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _patch_quadro_sync(
+    dsn: str,
+    diagnostico_id: UUID,
+    tenant_id: UUID,
+    quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+    versao_esperada: int,
+) -> Diagnostico | None:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE diagnosticos
+                SET quadro_implantacao_anotacoes = %s,
+                    versao_otimista = versao_otimista + 1
+                WHERE id = %s AND tenant_id = %s AND versao_otimista = %s
+                RETURNING *
+                """,
+                (
+                    Json(quadro_implantacao_anotacoes),
+                    str(diagnostico_id),
+                    str(tenant_id),
+                    versao_esperada,
+                ),
             )
             row = cur.fetchone()
         conn.commit()
@@ -371,5 +433,21 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
             diagnostico_id,
             tenant_id,
             checklist_m12_estado,
+            versao_esperada,
+        )
+
+    async def atualizar_quadro_implantacao_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        return await asyncio.to_thread(
+            _patch_quadro_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
+            quadro_implantacao_anotacoes,
             versao_esperada,
         )

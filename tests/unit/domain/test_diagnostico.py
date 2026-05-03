@@ -326,3 +326,38 @@ class TestDiagnostico:
         diag.finalizar(50.0)
         with pytest.raises(DiagnosticoNaoFinalizavelError, match=r"Aceite LGPD"):
             diag.registrar_aceite_termos_privacidade(datetime.now(UTC))
+
+
+class TestQuadroImplantacaoAnotacoes:
+    """Mapa f{i}_a{j} — comentário e prazo meta (planejamento consultor)."""
+
+    def test_grava_quando_finalizado(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        diag.definir_quadro_implantacao_anotacoes(
+            {"f0_a0": {"comentario": "Reunião kickoff", "prazo_meta": "2026-06-15"}}
+        )
+        assert diag.quadro_implantacao_anotacoes == {
+            "f0_a0": {"comentario": "Reunião kickoff", "prazo_meta": "2026-06-15"},
+        }
+
+    def test_rejeita_chave_invalida(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(40.0)
+        with pytest.raises(ValueError, match="Chave"):
+            diag.definir_quadro_implantacao_anotacoes(
+                {"acao-1": {"comentario": "x", "prazo_meta": ""}},
+            )
+
+    def test_rejeita_em_andamento(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        with pytest.raises(DiagnosticoNaoFinalizavelError, match="quadro"):
+            diag.definir_quadro_implantacao_anotacoes(
+                {"f0_a0": {"comentario": "", "prazo_meta": ""}}
+            )

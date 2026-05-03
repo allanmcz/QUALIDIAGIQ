@@ -164,6 +164,37 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             return None
         return self._para_entity(data[0])
 
+    async def atualizar_quadro_implantacao_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        """UPDATE condicional do JSONB do quadro + incremento de ``versao_otimista``."""
+        sid, stid = str(diagnostico_id), str(tenant_id)
+
+        def _update() -> Any:
+            q: Any = (
+                self._client.table("diagnosticos")
+                .update(
+                    {
+                        "quadro_implantacao_anotacoes": quadro_implantacao_anotacoes,
+                        "versao_otimista": versao_esperada + 1,
+                    }
+                )
+                .eq("id", sid)
+                .eq("tenant_id", stid)
+                .eq("versao_otimista", versao_esperada)
+            )
+            return q.select("*").execute()
+
+        response = await asyncio.to_thread(_update)
+        data = response.data
+        if not data:
+            return None
+        return self._para_entity(data[0])
+
     # ============================================================
     # Tradução entity ↔ dict
     # ============================================================
@@ -204,6 +235,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             "score_completo": score_blob,
             "versao_otimista": d.versao_otimista,
             "checklist_m12_estado": d.checklist_m12_estado,
+            "quadro_implantacao_anotacoes": getattr(d, "quadro_implantacao_anotacoes", None),
             "aceite_termos_privacidade_em": (
                 d.aceite_termos_privacidade_em.isoformat()
                 if d.aceite_termos_privacidade_em is not None
@@ -259,6 +291,18 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             except ValueError:
                 faixa = None
 
+        quadro_raw = row.get("quadro_implantacao_anotacoes")
+        quadro: dict[str, dict[str, str]] | None = None
+        if isinstance(quadro_raw, dict):
+            tmp: dict[str, dict[str, str]] = {}
+            for k, v in quadro_raw.items():
+                if isinstance(v, dict):
+                    tmp[str(k)] = {
+                        "comentario": str(v.get("comentario", "") or ""),
+                        "prazo_meta": str(v.get("prazo_meta", "") or "").strip(),
+                    }
+            quadro = tmp if tmp else None
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -288,6 +332,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             hash_evidencia=row.get("hash_sha256"),
             versao_otimista=int(row.get("versao_otimista") or 1),
             checklist_m12_estado=checklist_m12,
+            quadro_implantacao_anotacoes=quadro,
             aceite_termos_privacidade_em=aceite_em,
             locale_relatorio=locale_relatorio,
         )

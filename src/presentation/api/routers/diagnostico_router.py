@@ -22,6 +22,10 @@ from src.application.use_cases.atualizar_checklist_m12_autoconf import (
     AtualizarChecklistM12Autoconf,
     ComandoAtualizarChecklistM12Autoconf,
 )
+from src.application.use_cases.atualizar_quadro_implantacao import (
+    AtualizarQuadroImplantacao,
+    ComandoAtualizarQuadroImplantacao,
+)
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
@@ -47,6 +51,7 @@ from src.infrastructure.questionario.banco_cache import (
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
+    get_atualizar_quadro_implantacao_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
     get_gerar_questionario_adaptativo_use_case,
@@ -65,6 +70,7 @@ from src.presentation.api.schemas import (
     ManifestoPesosResponse,
     MetodologiaResponse,
     PatchChecklistM12AutoconfRequest,
+    PatchQuadroImplantacaoRequest,
     PatchRelatorioPdfRequest,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
@@ -131,6 +137,13 @@ def _parse_if_match_versao(raw: str | None) -> int:
     return v
 
 
+def _quadro_implantacao_para_http(diagnostico: Diagnostico) -> dict[str, dict[str, str]] | None:
+    raw = getattr(diagnostico, "quadro_implantacao_anotacoes", None)
+    if not raw:
+        return None
+    return {str(k): dict(v) for k, v in raw.items()}
+
+
 def _checklist_m12_para_http(diagnostico: Diagnostico) -> list[bool] | None:
     """Extrai lista persistida para o contrato HTTP (evita `MagicMock` nos testes)."""
     raw = getattr(diagnostico, "checklist_m12_estado", None)
@@ -195,6 +208,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         matriz_impacto=matriz_data,
         cronograma=cronograma_data,
         checklist_m12_autoconf=_checklist_m12_para_http(diagnostico),
+        quadro_implantacao_anotacoes=_quadro_implantacao_para_http(diagnostico),
         aceite_termos_privacidade_em=_aceite_lgpd_para_http(diagnostico),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
@@ -308,6 +322,7 @@ async def _executar_criar_diagnostico_core(
         matriz_impacto=resultado.matriz_impacto,
         cronograma=resultado.cronograma,
         checklist_m12_autoconf=_checklist_m12_para_http(d),
+        quadro_implantacao_anotacoes=_quadro_implantacao_para_http(d),
         aceite_termos_privacidade_em=_aceite_lgpd_para_http(d),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
@@ -619,6 +634,57 @@ async def atualizar_checklist_m12_autoconf(
         tenant_id=tenant_id,
         diagnostico_id=diagnostico_id,
         checklist_m12_autoconf=list(payload.checklist_m12_autoconf),
+        versao_esperada=versao,
+    )
+    try:
+        atualizado = await use_case.execute(comando)
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except ConflitoVersaoOtimistaError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail=str(e),
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return _montar_diagnostico_response(atualizado)
+
+
+@router.patch(
+    "/{diagnostico_id}/quadro-implantacao-anotacoes",
+    response_model=DiagnosticoResponse,
+    summary="Atualizar anotações do quadro de implantação",
+    description=(
+        "Persiste comentários e metas de prazo (YYYY-MM-DD) por ação sugerida do checklist derivado. "
+        "Chaves: f{índice_frente}_a{índice_ação}. Exige diagnóstico **finalizado** e header **If-Match**."
+    ),
+)
+async def atualizar_quadro_implantacao_anotacoes(
+    diagnostico_id: UUID,
+    payload: PatchQuadroImplantacaoRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AtualizarQuadroImplantacao,
+        Depends(get_atualizar_quadro_implantacao_use_case),
+    ],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> DiagnosticoResponse:
+    """PATCH quadro — lock otimista (mesmo contrato do M12)."""
+    _, tenant_id, _ = current
+    try:
+        versao = _parse_if_match_versao(if_match)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    blob = {
+        k: {"comentario": v.comentario, "prazo_meta": v.prazo_meta}
+        for k, v in payload.quadro_implantacao_anotacoes.items()
+    }
+    comando = ComandoAtualizarQuadroImplantacao(
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        quadro_implantacao_anotacoes=blob,
         versao_esperada=versao,
     )
     try:

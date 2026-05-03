@@ -86,3 +86,19 @@ class DiagnosticoRepository(ABC):
             Diagnóstico atualizado se o UPDATE afetou uma linha; None em conflito de versão.
         """
         ...
+
+    @abstractmethod
+    async def atualizar_quadro_implantacao_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        """
+        Persiste JSONB do quadro de implantação (comentários e prazos meta) com lock otimista.
+
+        Retorna:
+            Diagnóstico atualizado se o UPDATE afetou uma linha; None em conflito de versão.
+        """
+        ...

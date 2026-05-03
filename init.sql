@@ -22,4 +22,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0019_rls_completo.sql
 \i /docker-entrypoint-initdb.d/migrations/0020_pgvector_rag_light.sql
 \i /docker-entrypoint-initdb.d/migrations/0021_admins_perfil_conta_dev.sql
+\i /docker-entrypoint-initdb.d/migrations/0022_quadro_implantacao_anotacoes.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

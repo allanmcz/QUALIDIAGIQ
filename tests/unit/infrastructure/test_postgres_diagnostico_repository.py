@@ -76,6 +76,7 @@ def _row_minima(did, tid) -> dict:
         "score_completo": None,
         "versao_otimista": 1,
         "checklist_m12_estado": None,
+        "quadro_implantacao_anotacoes": None,
         "aceite_termos_privacidade_em": None,
         "locale_relatorio": "pt-BR",
     }
@@ -183,6 +184,24 @@ class TestPostgresDiagnosticoRepository:
             )
         assert out is not None
         assert out.id == did
+
+    async def test_atualizar_quadro_implantacao(self) -> None:
+        did, tid = uuid4(), uuid4()
+        mock_cursor = MagicMock()
+        row = _row_minima(did, tid)
+        row["quadro_implantacao_anotacoes"] = {"f0_a0": {"comentario": "x", "prazo_meta": ""}}
+        mock_cursor.fetchone.return_value = row
+        mock_conn = _mock_conn_cursor(mock_cursor)
+        with patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ):
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            out = await repo.atualizar_quadro_implantacao_com_versao(
+                did, tid, {"f0_a0": {"comentario": "x", "prazo_meta": ""}}, versao_esperada=1
+            )
+        assert out is not None
+        assert out.quadro_implantacao_anotacoes == {"f0_a0": {"comentario": "x", "prazo_meta": ""}}
 
     async def test_atualizar_m12(self) -> None:
         did, tid = uuid4(), uuid4()

@@ -22,6 +22,7 @@ from src.application.ports.lead_diagnostico_vinculo_port import (
 )
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
+from src.application.use_cases.atualizar_quadro_implantacao import AtualizarQuadroImplantacao
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.gerar_questionario_adaptativo import (
@@ -300,6 +301,13 @@ def get_atualizar_checklist_m12_autoconf_use_case(
 ) -> AtualizarChecklistM12Autoconf:
     """PATCH M12 (autoconf ABNT) com versão otimista."""
     return AtualizarChecklistM12Autoconf(repo=repo)
+
+
+def get_atualizar_quadro_implantacao_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> AtualizarQuadroImplantacao:
+    """PATCH quadro de implantação (comentários e prazos) com versão otimista."""
+    return AtualizarQuadroImplantacao(repo=repo)
 
 
 def get_normativa_score_macro_repository() -> NormativaScoreMacroRepository:

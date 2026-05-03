@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -164,6 +165,8 @@ class Diagnostico:
     versao_otimista: int = 1
     # M12 — autoconf ABNT (10 booleanos); mutável após finalizado com versao_otimista (vide PATCH dedicado).
     checklist_m12_estado: list[bool] | None = None
+    # Quadro de implantação — anotações do consultor por ação (chave f{i}_a{j}); não entra no hash WORM.
+    quadro_implantacao_anotacoes: dict[str, dict[str, str]] | None = None
     # LGPD — instante do aceite declarado no POST (persistido pelo servidor; imutável após finalizado via WORM).
     aceite_termos_privacidade_em: datetime | None = None
     # Relatório PDF (WeasyPrint) — pt-BR default; en preparado para expansão i18n.
@@ -251,6 +254,42 @@ class Diagnostico:
         if len(itens) != 10:
             raise ValueError("Autoconf M12 exige exatamente 10 itens booleanos.")
         self.checklist_m12_estado = list(itens)
+
+    _CHAVE_QUADRO_RE = re.compile(r"^f\d+_a\d+$")
+
+    def definir_quadro_implantacao_anotacoes(self, anotacoes: dict[str, dict[str, str]]) -> None:
+        """
+        Substitui o mapa de anotações do quadro de implantação (comentário + prazo meta por ação).
+
+        Chaves esperadas: ``f{{i}}_a{{j}}`` (índices da frente e da ação no checklist derivado).
+
+        Raises:
+            DiagnosticoNaoFinalizavelError: se não finalizado.
+            ValueError: chaves ou estrutura inválidas.
+        """
+        if self.status != StatusDiagnostico.FINALIZADO:
+            raise DiagnosticoNaoFinalizavelError(
+                "Só é possível atualizar o quadro de implantação em diagnóstico finalizado."
+            )
+        if len(anotacoes) > 200:
+            raise ValueError("No máximo 200 anotações no quadro de implantação.")
+        limpo: dict[str, dict[str, str]] = {}
+        for chave, item in anotacoes.items():
+            ck = str(chave).strip()
+            if not self._CHAVE_QUADRO_RE.match(ck):
+                raise ValueError(
+                    f"Chave de anotação inválida: {ck!r}. Use o padrão f{{índice}}_a{{índice}} (ex.: f0_a2)."
+                )
+            comentario = str(item.get("comentario", "") or "")
+            prazo_meta = str(item.get("prazo_meta", "") or "").strip()
+            if len(comentario) > 8000:
+                raise ValueError("comentario excede 8000 caracteres.")
+            if prazo_meta != "" and (
+                len(prazo_meta) != 10 or prazo_meta[4] != "-" or prazo_meta[7] != "-"
+            ):
+                raise ValueError("prazo_meta deve ser data ISO YYYY-MM-DD ou vazio.")
+            limpo[ck] = {"comentario": comentario, "prazo_meta": prazo_meta}
+        self.quadro_implantacao_anotacoes = limpo
 
     def registrar_aceite_termos_privacidade(self, instante_utc: datetime) -> None:
         """

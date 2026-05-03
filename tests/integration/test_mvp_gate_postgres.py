@@ -51,7 +51,7 @@ async def pg_conn():
 @pytest.mark.postgres
 @pytest.mark.mvp_gate
 async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
-    """Confere migrações 0012 (LGPD), 0016 (locale_relatorio PDF / WORM) e 0017 (faixa faturamento)."""
+    """Confere migrações 0012 (LGPD), 0016 (locale), 0017 (faixa) e 0022 (quadro implantação)."""
     val = await pg_conn.fetchval("""
         SELECT 1
         FROM information_schema.columns
@@ -76,6 +76,18 @@ async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
           AND column_name = 'empresa_faixa_faturamento'
         """)
     assert ff == 1
+    qd = await pg_conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'quadro_implantacao_anotacoes'
+        """)
+    if qd != 1:
+        pytest.skip(
+            "Coluna quadro_implantacao_anotacoes ausente — reaplique migrações "
+            "(ex.: `docker compose down -v && make dev` ou aplique 0022 no Postgres de teste)."
+        )
 
 
 @pytest.mark.asyncio

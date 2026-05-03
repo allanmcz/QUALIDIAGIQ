@@ -105,6 +105,20 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         row.versao_otimista += 1
         return row
 
+    async def atualizar_quadro_implantacao_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        row = await self.buscar_por_id(diagnostico_id, tenant_id)
+        if row is None or row.versao_otimista != versao_esperada:
+            return None
+        row.definir_quadro_implantacao_anotacoes(quadro_implantacao_anotacoes)
+        row.versao_otimista += 1
+        return row
+
     def vincular_leads_self_service_em_memoria(
         self,
         *,

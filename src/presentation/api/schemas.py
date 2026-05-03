@@ -7,6 +7,7 @@ Responsabilidade:
     - Transformar objetos de Domínio puros em JSON limpo de saída.
 """
 
+import re
 from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
@@ -200,6 +201,55 @@ class PatchChecklistM12AutoconfRequest(BaseModel):
         max_length=10,
         description="Exatamente 10 valores — mesma ordem das ações da frente ABNT no relatório.",
     )
+
+
+class QuadroImplantacaoAnotacaoItemSchema(BaseModel):
+    """Uma anotação por ação sugerida no quadro (chave f{i}_a{j} no mapa pai)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    comentario: str = Field(default="", max_length=8000)
+    prazo_meta: str = Field(
+        default="",
+        max_length=32,
+        description="Meta de prazo ISO YYYY-MM-DD ou vazio.",
+    )
+
+    @field_validator("prazo_meta")
+    @classmethod
+    def prazo_iso_ou_vazio(cls, v: str) -> str:
+        s = (v or "").strip()
+        if s == "":
+            return ""
+        if len(s) == 10 and s[4] == "-" and s[7] == "-":
+            return s
+        raise ValueError("prazo_meta deve ser data ISO YYYY-MM-DD ou vazio.")
+
+
+class PatchQuadroImplantacaoRequest(BaseModel):
+    """Corpo do PATCH do quadro de implantação — exige ``If-Match`` com ``versao_otimista``."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    quadro_implantacao_anotacoes: dict[str, QuadroImplantacaoAnotacaoItemSchema] = Field(
+        default_factory=dict,
+        description="Mapa chave f{i}_a{j} (índices frente/ação no checklist derivado) para anotação.",
+    )
+
+    @field_validator("quadro_implantacao_anotacoes")
+    @classmethod
+    def validar_chaves_e_tamanho(
+        cls, v: dict[str, QuadroImplantacaoAnotacaoItemSchema]
+    ) -> dict[str, QuadroImplantacaoAnotacaoItemSchema]:
+        if len(v) > 200:
+            raise ValueError("No máximo 200 anotações no quadro de implantação.")
+        pat = re.compile(r"^f\d+_a\d+$")
+        for k in v:
+            if not pat.match(k.strip()):
+                raise ValueError(
+                    f"Chave inválida: {k!r}. Use o padrão f{{índice}}_a{{índice}} (ex.: f0_a2)."
+                )
+        return v
 
 
 class QuestionarioPerguntaItemSchema(BaseModel):
@@ -449,6 +499,11 @@ class DiagnosticoResponse(BaseModel):
     cronograma: list[dict[str, Any]] | None = None
     # M12 — estado persistido da autoconf (JSONB `checklist_m12_estado`)
     checklist_m12_autoconf: list[bool] | None = None
+    # Quadro de implantação — anotações consultor (JSONB `quadro_implantacao_anotacoes`)
+    quadro_implantacao_anotacoes: dict[str, dict[str, str]] | None = Field(
+        default=None,
+        description="Mapa f{i}_a{j} -> {comentario, prazo_meta} persistido com PATCH + If-Match.",
+    )
     # LGPD — instante registrado pelo servidor no POST (coluna `aceite_termos_privacidade_em`)
     aceite_termos_privacidade_em: datetime | None = None
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
