@@ -943,7 +943,7 @@ export function WizardForm() {
           </CardTitle>
           <CardDescription className={cn(step === 3 && "text-xs md:text-sm leading-snug")}>
             {step === 1 &&
-              "M09 — Lead B2B: CNPJ é opcional (minimização de dados). Responder ao assistente não exige sessão; gravar na API exige login após cadastro B2B. LGPD: consentimento abaixo."}
+              "Cadastro da empresa: CNPJ e razão social são obrigatórios (vínculo PJ ao diagnóstico). Responder ao assistente não exige sessão; gravar na API exige login após cadastro B2B. LGPD: consentimento abaixo."}
             {step === 2 &&
               "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). A conclusão persiste na API após autenticação."}
             {step === 3 &&
@@ -965,12 +965,22 @@ export function WizardForm() {
           >
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground tracking-tight">
+                    Cadastro da empresa
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    CNPJ (com dígitos verificadores válidos) e razão social conforme Receita Federal.
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ (opcional)</Label>
+                    <Label htmlFor="cnpj">CNPJ *</Label>
                     <Input
                       id="cnpj"
-                      placeholder="Deixe em branco ou informe 14 dígitos"
+                      placeholder="00.000.000/0000-00"
+                      inputMode="numeric"
+                      autoComplete="organization"
                       {...register("empresa.cnpj")}
                       className={errors.empresa?.cnpj ? "border-destructive" : ""}
                     />
