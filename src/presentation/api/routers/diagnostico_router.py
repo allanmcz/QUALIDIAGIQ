@@ -9,6 +9,8 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
+import psycopg2
+import structlog
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, status
 
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
@@ -28,9 +30,15 @@ from src.application.use_cases.realizar_diagnostico import (
     EntradaRespostaDiagnostico,
     RealizarDiagnostico,
 )
+from src.application.use_cases.vincular_diagnosticos_lead_self_service import (
+    ComandoVincularDiagnosticosLeadSelfService,
+    VincularDiagnosticosLeadSelfService,
+)
 from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto
+from src.infrastructure.auth.postgres_admin_login import buscar_email_admin_por_id_e_tenant_postgres
+from src.infrastructure.config.settings import get_settings
 from src.infrastructure.email_verificacao import codigo_store
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
@@ -44,6 +52,7 @@ from src.presentation.api.dependencies import (
     get_gerar_questionario_adaptativo_use_case,
     get_realizar_diagnostico_use_case,
     get_self_service_diagnostico_claims,
+    get_vincular_diagnosticos_lead_self_service_use_case,
     perfil_empresa_para_questionario,
     pesos_macro_dimensao_iso_para_http,
 )
@@ -61,9 +70,12 @@ from src.presentation.api.schemas import (
     QuestionarioPerguntaItemSchema,
     ScoreCompletoSchema,
     ScoreDimensaoSchema,
+    VincularLeadsSelfServiceResponse,
 )
 
 router = APIRouter(prefix="/diagnosticos", tags=["Diagnósticos"])
+
+logger = structlog.get_logger(__name__)
 
 
 def _plano_efetivo_para_criacao(
@@ -500,6 +512,66 @@ async def obter_questionario_adaptativo(
         total=len(itens),
         perguntas=itens,
     )
+
+
+@router.post(
+    "/vincular-leads-self-service",
+    response_model=VincularLeadsSelfServiceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Vincular diagnósticos gratuitos (self-service) ao tenant B2B",
+    description=(
+        "Reatribui ao tenant do JWT as linhas em `diagnosticos` gravadas no tenant self-service "
+        "(fluxo OTP), com `respondente_email` igual ao e-mail do consultor em `admins` e plano gratuito. "
+        "Resolve o caso em que o lead concluiu o assistente antes de entrar no painel B2B. "
+        "**Idempotency-Key** obrigatório (mesmo middleware dos outros POST sob `/diagnosticos/`)."
+    ),
+)
+async def vincular_leads_self_service(
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        VincularDiagnosticosLeadSelfService,
+        Depends(get_vincular_diagnosticos_lead_self_service_use_case),
+    ],
+) -> VincularLeadsSelfServiceResponse:
+    """Move diagnósticos do pool OTP para o tenant do token (LGPD: e-mail conferido em `admins`)."""
+    user_id, tenant_id, _perfil = current
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Operação indisponível: configure DATABASE_URL na API para validar o consultor.",
+        )
+    try:
+        email = buscar_email_admin_por_id_e_tenant_postgres(user_id, tenant_id, dsn)
+    except psycopg2.Error as e:
+        logger.exception("vincular_leads_email_lookup_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível validar o consultor no PostgreSQL.",
+        ) from e
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token não corresponde a um consultor com e-mail resolvível para vinculação.",
+        )
+    comando = ComandoVincularDiagnosticosLeadSelfService(
+        email_admin_normalizado=codigo_store.normalizar_email(email),
+        tenant_destino=tenant_id,
+        tenant_self_service=settings.self_service_tenant_id,
+    )
+    try:
+        ids = await use_case.execute(comando)
+    except psycopg2.Error as e:
+        logger.exception("vincular_leads_update_falhou", erro=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível atualizar diagnósticos no PostgreSQL.",
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    return VincularLeadsSelfServiceResponse(total_vinculados=len(ids), diagnostico_ids=ids)
 
 
 @router.get("/{diagnostico_id}", response_model=DiagnosticoResponse)

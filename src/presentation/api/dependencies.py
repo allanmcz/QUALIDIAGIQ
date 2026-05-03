@@ -16,6 +16,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
+from src.application.ports.lead_diagnostico_vinculo_port import (
+    LeadDiagnosticoVinculoPort,
+    NopLeadDiagnosticoVinculoAdapter,
+)
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
@@ -24,6 +28,9 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
+from src.application.use_cases.vincular_diagnosticos_lead_self_service import (
+    VincularDiagnosticosLeadSelfService,
+)
 from src.domain.entities.diagnostico import (
     EmpresaInfo,
     FaixaFaturamentoDeclarada,
@@ -45,6 +52,12 @@ from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
+from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
+    MemoriaLeadDiagnosticoVinculoAdapter,
+)
+from src.infrastructure.diagnosticos.postgres_lead_diagnostico_vinculo import (
+    PostgresLeadDiagnosticoVinculoAdapter,
+)
 from src.infrastructure.email_verificacao import codigo_store
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
 from src.infrastructure.repositories.ci_playwright_diagnostico_repository import (
@@ -241,6 +254,31 @@ def get_diagnostico_repository() -> DiagnosticoRepository:
     if settings.ci_playwright_integrated:
         return _singleton_ci_playwright_repo()
     return SupabaseDiagnosticoRepository(client=get_supabase_client())
+
+
+def get_lead_diagnostico_vinculo_port() -> LeadDiagnosticoVinculoPort:
+    """
+    Reatribuição self-service → tenant B2B.
+
+    Com CI Playwright, altera o dict in-process; com ``DATABASE_URL``, UPDATE via Postgres (bypass RLS).
+    """
+    settings = get_settings()
+    if settings.ci_playwright_integrated:
+        return MemoriaLeadDiagnosticoVinculoAdapter(
+            repo=_singleton_ci_playwright_repo(),
+            tenant_self_service=settings.self_service_tenant_id,
+        )
+    dsn = settings.sync_database_url
+    if dsn:
+        return PostgresLeadDiagnosticoVinculoAdapter(dsn_sync=dsn)
+    return NopLeadDiagnosticoVinculoAdapter()
+
+
+def get_vincular_diagnosticos_lead_self_service_use_case(
+    vinculo: Annotated[LeadDiagnosticoVinculoPort, Depends(get_lead_diagnostico_vinculo_port)],
+) -> VincularDiagnosticosLeadSelfService:
+    """Vincula diagnósticos gratuitos do pool OTP ao tenant do JWT."""
+    return VincularDiagnosticosLeadSelfService(vinculo=vinculo)
 
 
 def get_anexar_relatorio_otimista_use_case(

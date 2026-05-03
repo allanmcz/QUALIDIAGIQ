@@ -8,7 +8,10 @@ Mesmo contrato de senha bcrypt que ``passlib`` na rota ``POST /auth/login``.
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -46,5 +49,40 @@ def buscar_admin_por_email_postgres(email: str, dsn_sync: str) -> dict[str, Any]
             )
             row = cur.fetchone()
             return cast("dict[str, Any]", dict(row)) if row else None
+    finally:
+        conn.close()
+
+
+def buscar_email_admin_por_id_e_tenant_postgres(
+    admin_id: UUID, tenant_id: UUID, dsn_sync: str
+) -> str | None:
+    """
+    Retorna o e-mail do admin quando `id` e `tenant_id` conferem (defense-in-depth no vincular lead).
+
+    Args:
+        admin_id: UUID do registro em `admins` (claim JWT `sub`).
+        tenant_id: UUID do tenant (claim JWT `tenant_id`).
+        dsn_sync: URL `postgresql://...` (sync).
+
+    Returns:
+        E-mail normalizado em minúsculas ou None se não existir linha compatível.
+    """
+    conn = psycopg2.connect(dsn_sync)
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT lower(trim(email)) AS email
+                FROM admins
+                WHERE id = %s AND tenant_id = %s
+                LIMIT 1
+                """,
+                (admin_id, tenant_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            em = row.get("email")
+            return str(em).strip().lower() if em is not None else None
     finally:
         conn.close()

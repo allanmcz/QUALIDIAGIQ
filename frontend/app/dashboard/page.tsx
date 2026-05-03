@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { getAccessToken } from "@/lib/api/config";
+import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
 
 export default function DashboardPage() {
   const [itens, setItens] = useState<DiagnosticoResumoApi[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [msgVinculo, setMsgVinculo] = useState<string | null>(null);
+  const [vinculando, setVinculando] = useState(false);
 
   useEffect(() => {
     let cancel = false;
@@ -34,7 +37,36 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const recarregarLista = async () => {
+    if (!getAccessToken()) return;
+    try {
+      const rows = await fetchDiagnosticosResumo();
+      setItens(rows);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao carregar diagnósticos.");
+    }
+  };
+
   const semSessao = !getAccessToken();
+
+  const importarLeadsSelfService = async () => {
+    setMsgVinculo(null);
+    setErro(null);
+    setVinculando(true);
+    try {
+      const r = await postVincularLeadsSelfService();
+      setMsgVinculo(
+        r.total_vinculados === 0
+          ? "Nenhum diagnóstico gratuito pendente (mesmo e-mail no fluxo OTP) para vincular."
+          : `${r.total_vinculados} diagnóstico(s) do fluxo gratuito vinculado(s) a este painel.`,
+      );
+      await recarregarLista();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao vincular diagnósticos.");
+    } finally {
+      setVinculando(false);
+    }
+  };
 
   return (
     <div className="container py-10">
@@ -48,9 +80,19 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:items-end shrink-0">
             {!semSessao && (
-              <Button asChild>
-                <Link href="/wizard">Novo diagnóstico</Link>
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button asChild variant="default">
+                  <Link href="/wizard">Novo diagnóstico</Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={vinculando}
+                  onClick={() => void importarLeadsSelfService()}
+                >
+                  {vinculando ? "Importando…" : "Importar diagnósticos (OTP / gratuito)"}
+                </Button>
+              </div>
             )}
             {!semSessao && itens === null && (
               <p className="text-sm text-muted-foreground text-right" aria-live="polite">
@@ -76,13 +118,20 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {!semSessao && msgVinculo && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
+            {msgVinculo}
+          </div>
+        )}
+
         {!semSessao && !erro && itens !== null && itens.length === 0 && (
           <p className="text-muted-foreground text-sm">
             Nenhum diagnóstico encontrado para este tenant. Use o assistente em{" "}
             <Link href="/wizard" className="text-primary underline font-medium">
               /wizard
             </Link>
-            .
+            . Se você já concluiu o assistente com o mesmo e-mail da conta B2B (fluxo OTP), use
+            «Importar diagnósticos (OTP / gratuito)» acima para trazer esses registros para o painel.
           </p>
         )}
 

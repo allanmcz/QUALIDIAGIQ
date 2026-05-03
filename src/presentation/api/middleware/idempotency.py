@@ -45,6 +45,8 @@ def _exige_idempotencia(request: Request) -> bool:
         "/diagnosticos",
         "/diagnosticos/",
         "/diagnosticos/self-service",
+        "/diagnosticos/vincular-leads-self-service",
+        "/diagnosticos/vincular-leads-self-service/",
     )
 
 
@@ -72,8 +74,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 status_code=400,
                 content={
                     "detail": (
-                        "Header Idempotency-Key obrigatório para POST /diagnosticos/ "
-                        "e POST /diagnosticos/self-service"
+                        "Header Idempotency-Key obrigatório para POST /diagnosticos/, "
+                        "POST /diagnosticos/self-service e POST /diagnosticos/vincular-leads-self-service"
                     )
                 },
             )

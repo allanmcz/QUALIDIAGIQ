@@ -390,6 +390,18 @@ class ScoreCompletoSchema(BaseModel):
     score_por_dimensao: dict[str, ScoreDimensaoSchema]
 
 
+class VincularLeadsSelfServiceResponse(BaseModel):
+    """Resposta de POST /diagnosticos/vincular-leads-self-service (reatribuição de tenant)."""
+
+    total_vinculados: int = Field(
+        ge=0, description="Quantidade de diagnósticos reatribuídos ao tenant B2B."
+    )
+    diagnostico_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Identificadores atualizados (ordem não garantida).",
+    )
+
+
 class DiagnosticoResumoSchema(BaseModel):
     """Item resumido para listagem do tenant (P7 — dashboard B2B)."""
 
