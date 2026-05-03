@@ -1,6 +1,7 @@
 import { HeroIllustration } from "@/components/brand/HeroIllustration";
-import { HomeHeroCtas } from "@/components/home/HomeHeroCtas";
-import { ShieldCheck, BarChart3, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ShieldCheck, BarChart3, FileText, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -18,7 +19,27 @@ export default function Home() {
               </p>
             </div>
 
-            <HomeHeroCtas />
+            <div className="space-y-3">
+              <div className="flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap md:justify-start">
+                <Button
+                  size="lg"
+                  asChild
+                  className="gap-2 px-8 text-md h-12 shadow-lg transition-all hover:shadow-xl"
+                >
+                  <Link href="/wizard">
+                    Iniciar Diagnóstico Gratuito
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" className="px-8 text-md h-12" asChild>
+                  <Link href="/metodologia">Conhecer a Metodologia</Link>
+                </Button>
+              </div>
+              <p className="mx-auto max-w-xl text-center text-sm text-muted-foreground md:mx-0 md:text-left">
+                Conta corporativa Tributiq: use <strong className="text-foreground">Entrar</strong> no canto superior
+                direito para o painel B2B (histórico, PDF, checklist). Ou inicie o diagnóstico gratuito acima.
+              </p>
+            </div>
           </div>
 
           <div className="md:col-span-5">

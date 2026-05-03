@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ADMIN_NOME_STORAGE_KEY, ADMIN_TOKEN_STORAGE_KEY } from "@/lib/api/config";
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
 
 /**
- * Sessão B2B (JWT em localStorage) — visível em todo o site, não só em `/dashboard`.
+ * Sessão B2B (JWT em localStorage) — só no cabeçalho global.
+ * Estado inicial «convidado» evita placeholder «…» preso em hidratação; `useLayoutEffect` corrige antes do paint.
  */
 export function HeaderAuthNav() {
   const router = useRouter();
-  const [nome, setNome] = useState<string | null | undefined>(undefined);
+  const [nome, setNome] = useState<string | null>(null);
 
   const sincronizar = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -25,7 +26,7 @@ export function HeaderAuthNav() {
     setNome(window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY) || "Consultor");
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     sincronizar();
     const onStorage = (e: StorageEvent) => {
       if (e.key === ADMIN_TOKEN_STORAGE_KEY || e.key === ADMIN_NOME_STORAGE_KEY || e.key === null) {
@@ -49,22 +50,10 @@ export function HeaderAuthNav() {
     router.refresh();
   };
 
-  if (nome === undefined) {
-    return (
-      <span
-        className="inline-flex h-9 min-w-[5.5rem] shrink-0 items-center justify-center rounded-md border border-dashed border-border bg-transparent text-muted-foreground animate-pulse"
-        aria-busy={true}
-        aria-label="Carregando sessão"
-      >
-        …
-      </span>
-    );
-  }
-
   if (nome === null) {
     return (
       <Button size="sm" asChild>
-        <Link href="/login">Entrar</Link>
+        <Link href="/login?redirect=/dashboard">Entrar</Link>
       </Button>
     );
   }
