@@ -22,6 +22,16 @@ Passos **2** (login Supabase real), **3** (wizard UI) e **8** (PDF real) continu
 | Next | `http://localhost:60001` |
 | Postgres | `localhost:60322` |
 
+## Registo **MVP-D** (execução handoff 2026-05-05 — engenharia)
+
+| Gate | Evidência |
+|------|-----------|
+| `make mvp-gate` | Executado com sucesso no repositório (CI/local agente). |
+| `make verify-schema-mvp-strict` | OK em `QDI_POSTGRES_TEST_URL` default `127.0.0.1:60322` (quando Postgres disponível). |
+| Passos 1–8 abaixo | **Allan:** executar na demo MacBook seguindo [`_DEVELOPER/MVP_05052026/07_ROTEIRO_DEMO.md`](../../_DEVELOPER/MVP_05052026/07_ROTEIRO_DEMO.md); marcar caixas quando concluídos. |
+
+---
+
 ## Passos (marcar evidência)
 
 1. [ ] **Health:** `GET /health` → `200`; header **`X-Trace-Id`** presente; repetir com header `X-Trace-Id: smoke-manual` → resposta ecoa o mesmo valor.

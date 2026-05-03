@@ -16,6 +16,7 @@
 | 3 | [`03_CRONOGRAMA_03A05_MAI_2026.md`](./03_CRONOGRAMA_03A05_MAI_2026.md) | Plano por dia (**03 → 05** mai 2026) |
 | 4 | [`04_RISCOS_DEPENDENCIAS_DECISOES.md`](./04_RISCOS_DEPENDENCIAS_DECISOES.md) | Riscos, donos, decisões D* e mitigação |
 | 5 | [`05_PROMPT_AGENTE_FECHO_MVP.md`](./05_PROMPT_AGENTE_FECHO_MVP.md) | Prompt para agente (só âmbito técnico fechável) |
+| 7 | [`07_ROTEIRO_DEMO.md`](./07_ROTEIRO_DEMO.md) | Roteiro **15 min** (5 demo + 10 perguntas) — F3.1 |
 
 ## Leitura mínima antes de decidir “100%”
 

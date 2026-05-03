@@ -50,8 +50,8 @@ Cada linha deve ter **evidência colável**: link, hash de commit, screenshot no
 
 ## 5. Após o corte
 
-- Atualizar `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` (§12.3 — P5/P6) com **datas** e **links** das evidências.  
-- Opcional: PR “release/MVP-2026-05-05” só com docs + tag, sem feature nova.
+- [x] Atualizar `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md` (§12.3 — P5/P6) com **datas** e **links** das evidências — **feito** 2026-05-05 (MVP-D).  
+- [ ] Opcional: PR “release/MVP-2026-05-05” só com docs + tag, sem feature nova (cenário **A**).
 
 ---
 

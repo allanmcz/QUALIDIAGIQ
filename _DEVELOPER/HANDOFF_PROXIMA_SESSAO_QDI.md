@@ -3,8 +3,9 @@
 > **Propósito:** permitir retomada por Allan, por outro agente ou após pausa longa, **sem depender de memória de chat**.  
 > **Local canônico (versionado):** `_DEVELOPER/HANDOFF_PROXIMA_SESSAO_QDI.md`  
 > **Plano HANDOFF só engenharia (2026-05-03):** `_DEVELOPER/HANDOFF_PLANO_EXECUCAO_2026-05-03.md` (**executado** — ver secção “Estado de execução” nesse ficheiro; `git add -f` para versionar).  
-> **Guia de teste (hoje):** [`docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md`](../docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md)  
-> **Última atualização:** 2026-05-03 — harmonização com plano HANDOFF (A1/A3/A4, G1 script+CI, OTEL quickstart, E2E wizard catálogo inválido, idempotência 2 chaves, M06 `motion-reduce`/`focus-within`). Migrações **`0001`…`0020`** em **`init.sql`** / **`make migrate`** (Postgres **pgvector**): **`0019`** (RLS `admins` + `idempotency_responses.tenant_id`), **`0020`** (RAG-light: extensão **`vector`**, schema **`qdi_rag`**, `scripts/ingestao_rag_baseline.py`, adapters **`BaseNormativaPort`** / Anthropic opcional). Gates: **`make test-domain`** (cobertura só `src/domain` ≥85%), **`test_metodologia_postgres_normativa_0015`**, **`scripts/verify_mvp_schema.py --rag`** ou **`QDI_VERIFY_SCHEMA_RAG=1`**. Ver **`docs/CHANGELOG_MVP.md`** e **`_DEVELOPER/HANDOFF_CICLO_Q_2026-05-02.md`**.
+> **Plano HANDOFF MVP corte 05/05 (cenário D — demo local):** [`MVP_05052026/HANDOFF_PLANO_EXECUCAO_MVP_05052026.md`](./MVP_05052026/HANDOFF_PLANO_EXECUCAO_MVP_05052026.md) (**executado** 2026-05-05 — gates `make test`, `make mvp-gate`, `make verify-schema-mvp-strict`; subset PDF B1; roteiro **`MVP_05052026/07_ROTEIRO_DEMO.md`**).  
+> **Guia de teste:** [`docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md`](../docs/operacao/GUIA_TESTE_COMPLETO_QDI_2026-05-03.md)  
+> **Última atualização:** 2026-05-05 — além do MVP-D acima: migrações **`0001`…`0020`** em **`init.sql`** / **`make migrate`** (Postgres **pgvector**); **`0019`**/**`0020`** RAG; gates **`make test-domain`**, **`test_metodologia_postgres_normativa_0015`**, **`verify_mvp_schema`**. Harmonização **2026-05-03:** A1/A3/A4, G1+CI, OTEL quickstart, E2E wizard, idempotência, M06 a11y — ver **`docs/CHANGELOG_MVP.md`** e **`HANDOFF_CICLO_Q_2026-05-02.md`**.
 
 ---
 
@@ -296,10 +297,12 @@ Parecer jurídico em **privacidade** e **termos de uso** “oficiais” (hoje MV
 | **P2** | **CI E2E** Playwright (`wizard-post` mínimo) | **Verde** — `CI=true npm run test:e2e` (**8** passed + 1 suite P8 skip); `frontend/.env.example` documenta `PLAYWRIGHT_*` |
 | **P3** | Corrigir warning **`asChild`** no `Button` | **Feito** — tipagem `SlotProps` em `button.tsx` + build Next sem erro |
 | **P4** | **Auditoria 37×35** + ajuste catálogo ou doc | **Feito** — `scripts/auditoria_questionario_vs_catalogo.py` + `docs/operacao/auditoria_catalogo_vs_pr_v1_2026-05-01.md` (37=37) |
-| **P5** | **M04** homologação + PDF produção (WeasyPrint) | Checklist contábil Allan |
+| **P5** | **M04** homologação + PDF produção (WeasyPrint) | **Parcial (MVP-D 2026-05-05):** subset objetivo B1 + testes M04 + gates eng — **sign-off B.2** Allan **pendente** para go-live público |
 | **P6** | **M10** hardening Supabase prod (RLS, roles, revisão) | Runbook + teste de fumaça tenant |
 | **P7** | Dashboard lista **GET real** no browser + empty states | **Feito** no app; E2E lista **mock** no CI (sem backend) — ver **§7** |
 | **P8** | Feature flag painel normativa no wizard (`validar-ancora`) | **Feito** código + E2E opcional verde (`test:e2e:wizard-normativa`) |
+
+**MVP-D fechado (engenharia, 2026-05-05):** cenário **demo local + consultoria supervisionada** — pacote [`MVP_05052026/README.md`](./MVP_05052026/README.md); plano [`HANDOFF_PLANO_EXECUCAO_MVP_05052026.md`](./MVP_05052026/HANDOFF_PLANO_EXECUCAO_MVP_05052026.md) **100% executado** (sec. 7). **Não** dispensa P5 B.2 nem P6 cloud para **produto público**.
 
 **Prioridade sugerida:** **P5 + P6** (go-live); **P7** e **P8** código/E2E fechados — ver **§7**. Ver `_DEVELOPER/HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md` (plano 10h).
 

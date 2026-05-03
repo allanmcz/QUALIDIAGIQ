@@ -37,6 +37,16 @@ Os marcadores HTML M04 abaixo são validados em **`tests/unit/infrastructure/tes
 - Margens `@page` e bloco **síntese executiva** com `page-break-inside: avoid` + estilo dedicado (`.sintese-executiva-pdf`).
 - Rodapé disclaimer reforçado (EC 132/2023, LC 214/2025, ABNT NBR 17301:2026).
 
+## Subset **MVP-D** (demo local — 2026-05-05)
+
+> **Engenharia:** itens **objetivos** para demo no MacBook (`make dev`). **Não** substitui **B.2** para go-live público.
+
+| Critério | OK |
+|----------|-----|
+| Marcadores **M04** no template cobertos por `tests/unit/infrastructure/test_pdf_template_m04.py` | [x] |
+| Blocos dinâmicos (cronograma, matriz, checklist, rodapé disclaimer LC/EC/ABNT) presentes no HTML | [x] |
+| Secção produção (fontes/timeout) alinhada a `WEASYPRINT_RUNTIME.md` / `QDI_PDF_RENDER_TIMEOUT_SECONDS` | [x] |
+
 ## Sign-off (B.2)
 
 | Papel | Nome | Data |

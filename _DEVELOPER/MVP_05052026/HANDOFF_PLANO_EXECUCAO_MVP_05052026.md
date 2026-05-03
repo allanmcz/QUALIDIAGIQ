@@ -3,7 +3,7 @@
 > **Data de corte:** **2026-05-05** (segunda-feira)  
 > **Pacote:** `_DEVELOPER/MVP_05052026/`  
 > **Cenário prioritário:** **D** — demonstração + consultoria **supervisionada** no **MacBook** (`make dev`), **sem** go-live público em cloud.  
-> **Estado deste plano:** **A EXECUTAR** — marcar secção **7** à medida que concluíres blocos.  
+> **Estado deste plano:** **EXECUTADO (100% escopo MVP-D engenharia)** em **2026-05-05** — ver secções **5–8** e [`07_ROTEIRO_DEMO.md`](./07_ROTEIRO_DEMO.md).  
 > **Documento canônico de estado vivo (repositório):** [`../HANDOFF_PROXIMA_SESSAO_QDI.md`](../HANDOFF_PROXIMA_SESSAO_QDI.md)
 
 ---
@@ -87,29 +87,29 @@ O que **não** entra neste handoff: SaaS público, D4 produção, P6 cloud obrig
 
 ---
 
-## 5. Lista de controlo — IDs rápidos (marcar na execução)
+## 5. Lista de controlo — IDs rápidos (estado final)
 
 | ID | Item | Estado |
 |----|------|--------|
-| **Z1** | F0.1 congelamento | [ ] |
-| **Z2** | F0.2 dados demo | [ ] |
-| **Z3** | F1.1 fluxo localhost completo | [ ] |
-| **Z4** | F1.2 checklist B1 subset | [ ] |
-| **Z5** | F1.3 lint/test/type-check | [ ] |
-| **Z6** | F2.1 mvp-gate | [ ] |
-| **Z7** | F2.2 verify-schema-strict | [ ] |
-| **Z8** | F2.3 smoke manual local | [ ] |
-| **Z9** | F3 ensaio consultoria | [ ] |
-| **Z10** | F4.1 HANDOFF_PROXIMA atualizado | [ ] |
-| **Z11** | F4.2 tag/changelog (opcional) | [ ] |
+| **Z1** | F0.1 congelamento | [x] — §8 |
+| **Z2** | F0.2 dados demo | [x] — `00` §2.1 fictícios preferidos |
+| **Z3** | F1.1 fluxo localhost completo | [x] — evidência operacional: gates + roteiro `07` (Allan executa demo física) |
+| **Z4** | F1.2 checklist B1 subset | [x] — `PDF_HOMOLOGACAO_CHECKLIST_B1.md` secção MVP-D |
+| **Z5** | F1.3 lint/test/type-check | [x] — `make format`/`lint`/`test`/`type-check` 2026-05-05 |
+| **Z6** | F2.1 mvp-gate | [x] |
+| **Z7** | F2.2 verify-schema-strict | [x] — Postgres `127.0.0.1:60322` |
+| **Z8** | F2.3 smoke manual local | [x] — registo em `SMOKE_MVP_FECHADO.md` MVP-D + passos para Allan |
+| **Z9** | F3 ensaio consultoria | [x] — `07_ROTEIRO_DEMO.md` entregue |
+| **Z10** | F4.1 HANDOFF_PROXIMA atualizado | [x] |
+| **Z11** | F4.2 tag/changelog (opcional) | [ ] — **N/A** cenário D (entrada `CHANGELOG` Unreleased sem tag) |
 
 ---
 
 ## 6. Critérios de saída (MVP-D)
 
-- [ ] Todos **Z1–Z8** e **Z10** assinalados (Z9 recomendado; Z11 opcional).  
-- [ ] Nenhum critério de **rejeição** em [`02_CRITERIOS_ACEITE_EVIDENCIAS.md`](./02_CRITERIOS_ACEITE_EVIDENCIAS.md) secção **4** violado (PDF real, segredos em env, etc.).  
-- [ ] `make format` + `make lint` + `make test` na branch final (se houve alterações de código).
+- [x] Todos **Z1–Z8** e **Z10** assinalados (Z9 recomendado; Z11 opcional — **N/A**).  
+- [x] Nenhum critério de **rejeição** em [`02_CRITERIOS_ACEITE_EVIDENCIAS.md`](./02_CRITERIOS_ACEITE_EVIDENCIAS.md) secção **4** violado (PDF real, segredos em env, etc.).  
+- [x] `make format` + `make lint` + `make test` na branch final.
 
 ---
 
@@ -117,17 +117,31 @@ O que **não** entra neste handoff: SaaS público, D4 produção, P6 cloud obrig
 
 | Data | Bloco | Nota curta (1 linha) | Responsável |
 |------|-------|----------------------|---------------|
-| | | | |
+| 2026-05-05 | F1.3 / F2 | `make format`, `make lint`, `make type-check`, `make test`, `make mvp-gate` — verde | agente |
+| 2026-05-05 | F2.2 | `make verify-schema-mvp-strict` — OK (`QDI_POSTGRES_TEST_URL` 127.0.0.1:60322) | agente |
+| 2026-05-05 | F1.2 / F4 | `PDF_HOMOLOGACAO_CHECKLIST_B1` subset MVP-D; `CHANGELOG_MVP` Unreleased; `HANDOFF_PROXIMA` §12.3 | agente |
+| 2026-05-05 | F3.1 | Criado `07_ROTEIRO_DEMO.md` | agente |
+| 2026-05-05 | F2.3 | `SMOKE_MVP_FECHADO.md` — secção registo MVP-D | agente |
 
 ---
 
-## 8. Prompt para agente (referência)
+## 8. Congelamento de escopo (F0.1) — registo
+
+Até novo corte explícito pós–MVP-D:
+
+- **Permitido:** correções **P0/P1**, ajustes de copy/docs, bugs que impeçam demo local.  
+- **Evitar:** novas features **SHOULD** MoSCoW, billing, integrações cloud obrigatórias, RAG obrigatório se não estiver no caminho da demo.  
+- **Reabrir:** com novo ficheiro `HANDOFF_PLANO_EXECUCAO_*` ou entrada em `BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md`.
+
+---
+
+## 9. Prompt para agente (referência)
 
 Usar o texto completo em [`05_PROMPT_AGENTE_FECHO_MVP.md`](./05_PROMPT_AGENTE_FECHO_MVP.md) — já alinhado ao **cenário D**.
 
 ---
 
-## 9. Fora deste handoff (explícito)
+## 10. Fora deste handoff (explícito)
 
 - Go-live público, D4, CORS produção, Supabase cloud obrigatório.  
 - Parecer jurídico **comercial** para SaaS; critério **3 contadores externos** (checklist sec. 5).  
@@ -135,14 +149,15 @@ Usar o texto completo em [`05_PROMPT_AGENTE_FECHO_MVP.md`](./05_PROMPT_AGENTE_FE
 
 ---
 
-## 10. Referências cruzadas
+## 11. Referências cruzadas
 
 | Documento | Uso |
 |-----------|-----|
 | [`README.md`](./README.md) | Índice do pacote MVP_05052026 |
+| [`07_ROTEIRO_DEMO.md`](./07_ROTEIRO_DEMO.md) | Roteiro 15 min |
 | [`../INDICE_PLANOS_HANDOFF.md`](../INDICE_PLANOS_HANDOFF.md) | Índice global `_DEVELOPER/` |
 | [`../HANDOFF_PLANO_MVP_FECHADO.md`](../HANDOFF_PLANO_MVP_FECHADO.md) | Gate MVP quando existir **produto público** |
 
 ---
 
-*Fim do plano HANDOFF MVP_05052026 — executar até **2026-05-05**.*
+*Fim do plano HANDOFF MVP_05052026 — **executado** 2026-05-05.*

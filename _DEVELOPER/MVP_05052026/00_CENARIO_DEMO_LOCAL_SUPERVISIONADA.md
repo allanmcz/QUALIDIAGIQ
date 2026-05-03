@@ -31,6 +31,11 @@ Cenário **D** **não** elimina LC **13.709/2018** se entrares **dados pessoais 
 | **Demo com dados fictícios** | Preferível para acelerar — fixtures / CNPJs de teste já usados em QA. |
 | **Consultoria supervisionada com dados reais** | Base legal + minimização + registo de **finalidade** (ex.: sessão de análise sob teu mando); idealmente **termo curto** com o cliente ou uso apenas de dados já licenciados ao teu escritório. **Não** substitui parecer jurídico para **produto SaaS público** — mas o risco é outro. |
 
+### 2.1 Decisão registada (handoff **MVP_05052026** — 2026-05-05)
+
+- **Congelamento (F0.1):** sem novas features **SHOULD** até novo corte; apenas **P0/P1** no repositório.  
+- **Dados demo (F0.2):** **fictícios preferidos** nas demos gravadas; dados reais só com regra da tabela acima.
+
 ---
 
 ## 3. Lista mínima para declarar **“MVP-D pronto”** (acelerado)
