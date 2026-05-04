@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import {
+  ADMIN_EMAIL_STORAGE_KEY,
   ADMIN_NOME_STORAGE_KEY,
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
   ADMIN_TOKEN_STORAGE_KEY,
@@ -63,6 +64,7 @@ export default function DashboardLayout({
                 onClick={() => {
                   localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY)
                   localStorage.removeItem(ADMIN_NOME_STORAGE_KEY)
+                  localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY)
                   localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY)
                   window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))
                   router.push("/login")

@@ -6,6 +6,7 @@ import { useCallback, useLayoutEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
+  ADMIN_EMAIL_STORAGE_KEY,
   ADMIN_NOME_STORAGE_KEY,
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
   ADMIN_TOKEN_STORAGE_KEY,
@@ -36,6 +37,7 @@ export function HeaderAuthNav() {
       if (
         e.key === ADMIN_TOKEN_STORAGE_KEY ||
         e.key === ADMIN_NOME_STORAGE_KEY ||
+        e.key === ADMIN_EMAIL_STORAGE_KEY ||
         e.key === ADMIN_PERFIL_CONTA_STORAGE_KEY ||
         e.key === null
       ) {
@@ -54,6 +56,7 @@ export function HeaderAuthNav() {
   const sair = () => {
     window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(ADMIN_NOME_STORAGE_KEY);
+    window.localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
     window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
     window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
     router.push("/");

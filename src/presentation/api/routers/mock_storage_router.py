@@ -38,8 +38,11 @@ async def baixar_pdf_mock_storage(tenant_id: uuid.UUID, nome_arquivo: str) -> Re
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=(
-                "PDF não encontrado no cache em memória (reinício da API limpa o cache) "
-                "ou link expirado. Gere de novo o diagnóstico ou configure Supabase Storage."
+                "PDF não encontrado no spool em disco nem na RAM. Possíveis causas: "
+                "caminho QDI_PDF_MOCK_SPOOL_DIR sem volume após recriar o container; "
+                "LRU em RAM evictou e o ficheiro em disco foi apagado; ou nunca foi gerado. "
+                "Gere de novo o diagnóstico, defina volume em /tmp/qdi-mock-pdf (default do spool) "
+                "ou configure upload real no Supabase Storage."
             ),
         )
 

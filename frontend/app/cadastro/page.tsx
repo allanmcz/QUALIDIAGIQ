@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  ADMIN_EMAIL_STORAGE_KEY,
   ADMIN_NOME_STORAGE_KEY,
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
   ADMIN_TOKEN_STORAGE_KEY,
@@ -55,6 +56,7 @@ function CadastroPageContent() {
       }
       localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.access_token);
       localStorage.setItem(ADMIN_NOME_STORAGE_KEY, data.nome || nome.trim() || "Consultor");
+      localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, email.trim());
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
           ? data.perfil_conta

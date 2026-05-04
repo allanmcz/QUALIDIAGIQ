@@ -93,9 +93,14 @@ def test_m07_prioridade_checklist_por_piores_dimensoes() -> None:
     d = _diagnostico(PorteEmpresa.MICRO)
     score = _score_stub_m07()
     frentes = ConsultoriaService.gerar_checklist(d, score)
-    assert frentes[0].nome.startswith("Prioridade por gaps")
-    assert "Fiscal" in frentes[0].acoes[0].descricao
+    assert frentes[0].nome.startswith("Prioridade conforme lacunas")
+    # Três piores dimensões: um cartão cada, com três sub-ações numeradas no texto (chaves f0_a* estáveis).
+    assert len(frentes[0].acoes) == 3
     assert frentes[0].acoes[0].prioridade == 1
+    assert "(1)" in frentes[0].acoes[0].descricao and "(3)" in frentes[0].acoes[0].descricao
+    assert "NCM" in frentes[0].acoes[0].descricao or "cClassTrib" in frentes[0].acoes[0].descricao
+    assert "Fiscal" in frentes[0].acoes[0].descricao
+    assert "gap analysis" in frentes[0].acoes[1].descricao.lower()
 
 
 def test_matriz_impacto_seis_departamentos_com_base_legal() -> None:

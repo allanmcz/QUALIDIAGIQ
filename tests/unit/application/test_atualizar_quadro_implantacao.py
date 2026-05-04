@@ -58,7 +58,7 @@ class TestAtualizarQuadroImplantacao:
         cmd = ComandoAtualizarQuadroImplantacao(
             tenant_id=uuid4(),
             diagnostico_id=uuid4(),
-            quadro_implantacao_anotacoes={"f0_a0": {"comentario": "x", "prazo_meta": ""}},
+            quadro_implantacao_anotacoes={"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}},
             versao_esperada=1,
         )
         with pytest.raises(DiagnosticoNaoEncontradoError):
@@ -73,7 +73,7 @@ class TestAtualizarQuadroImplantacao:
         cmd = ComandoAtualizarQuadroImplantacao(
             tenant_id=d.tenant_id,
             diagnostico_id=d.id,
-            quadro_implantacao_anotacoes={"f0_a0": {"comentario": "x", "prazo_meta": ""}},
+            quadro_implantacao_anotacoes={"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}},
             versao_esperada=1,
         )
         with pytest.raises(ConflitoVersaoOtimistaError):
@@ -85,7 +85,7 @@ class TestAtualizarQuadroImplantacao:
         repo.buscar_por_id = AsyncMock(return_value=d)
         repo.atualizar_quadro_implantacao_com_versao = AsyncMock(return_value=d)
         uc = AtualizarQuadroImplantacao(repo=repo)
-        blob = {"f0_a0": {"comentario": "Kickoff", "prazo_meta": "2026-12-31"}}
+        blob = {"f0_a0": {"comentarios": ["Kickoff"], "prazo_meta": "2026-12-31"}}
         cmd = ComandoAtualizarQuadroImplantacao(
             tenant_id=d.tenant_id,
             diagnostico_id=d.id,
@@ -95,6 +95,70 @@ class TestAtualizarQuadroImplantacao:
         out = await uc.execute(cmd)
         assert out is d
         repo.atualizar_quadro_implantacao_com_versao.assert_awaited_once()
+
+    async def test_merge_na_mesma_chave_preserva_descricao_quando_parcial_sem_campo(self) -> None:
+        d = _diag_finalizado()
+        d.quadro_implantacao_anotacoes = {
+            "f0_a0": {
+                "prazo_meta": "",
+                "comentarios": ["a"],
+                "descricao_personalizada": "Texto custom",
+            },
+        }
+        repo = MagicMock()
+        repo.buscar_por_id = AsyncMock(return_value=d)
+        repo.atualizar_quadro_implantacao_com_versao = AsyncMock(return_value=d)
+        uc = AtualizarQuadroImplantacao(repo=repo)
+        await uc.execute(
+            ComandoAtualizarQuadroImplantacao(
+                tenant_id=d.tenant_id,
+                diagnostico_id=d.id,
+                quadro_implantacao_anotacoes={"f0_a0": {"comentarios": ["b"], "prazo_meta": ""}},
+                versao_esperada=1,
+            )
+        )
+        blob = repo.atualizar_quadro_implantacao_com_versao.call_args[0][2]
+        assert blob["f0_a0"]["comentarios"] == ["b"]
+        assert blob["f0_a0"]["descricao_personalizada"] == "Texto custom"
+
+    async def test_merge_preserva_outras_chaves(self) -> None:
+        d = _diag_finalizado()
+        d.quadro_implantacao_anotacoes = {
+            "f0_a0": {"prazo_meta": "", "comentarios": ["manter"]},
+            "f0_a1": {"prazo_meta": "", "comentarios": ["outra"]},
+        }
+        repo = MagicMock()
+        repo.buscar_por_id = AsyncMock(return_value=d)
+        repo.atualizar_quadro_implantacao_com_versao = AsyncMock(return_value=d)
+        uc = AtualizarQuadroImplantacao(repo=repo)
+        cmd = ComandoAtualizarQuadroImplantacao(
+            tenant_id=d.tenant_id,
+            diagnostico_id=d.id,
+            quadro_implantacao_anotacoes={
+                "f0_a0": {"comentarios": ["atualizado"], "prazo_meta": ""},
+            },
+            versao_esperada=1,
+        )
+        await uc.execute(cmd)
+        blob = repo.atualizar_quadro_implantacao_com_versao.call_args[0][2]
+        assert blob["f0_a0"]["comentarios"] == ["atualizado"]
+        assert blob["f0_a1"]["comentarios"] == ["outra"]
+
+    async def test_rejeita_payload_quadro_vazio(self) -> None:
+        d = _diag_finalizado()
+        repo = MagicMock()
+        repo.buscar_por_id = AsyncMock(return_value=d)
+        uc = AtualizarQuadroImplantacao(repo=repo)
+        with pytest.raises(ValueError, match="pelo menos"):
+            await uc.execute(
+                ComandoAtualizarQuadroImplantacao(
+                    tenant_id=d.tenant_id,
+                    diagnostico_id=d.id,
+                    quadro_implantacao_anotacoes={},
+                    versao_esperada=1,
+                )
+            )
+        repo.atualizar_quadro_implantacao_com_versao.assert_not_called()
 
     async def test_rejeita_em_andamento(self) -> None:
         d = Diagnostico(
@@ -110,7 +174,7 @@ class TestAtualizarQuadroImplantacao:
         cmd = ComandoAtualizarQuadroImplantacao(
             tenant_id=d.tenant_id,
             diagnostico_id=d.id,
-            quadro_implantacao_anotacoes={"f0_a0": {"comentario": "x", "prazo_meta": ""}},
+            quadro_implantacao_anotacoes={"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}},
             versao_esperada=1,
         )
         with pytest.raises(ValueError, match="finalizado"):

@@ -82,6 +82,8 @@ services:
     volumes:
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
+      # Fallback PDF (upload Storage falhou em dev): persiste entre restarts da API no mesmo stack.
+      - qdi-mock-pdf-spool:/tmp/qdi-mock-pdf
     networks:
       - qdi-network
     command: ["uvicorn", "src.presentation.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
@@ -113,11 +115,12 @@ services:
       [
         "sh",
         "-c",
-        "if [ -f package.json ]; then npm install && npm run dev -- -H 0.0.0.0 -p 3010; else echo 'frontend ainda nao inicializado — rode: cd frontend && npx create-next-app@14 . --ts --tailwind --app'; tail -f /dev/null; fi",
+        "if [ -f package.json ]; then npm install && npm run dev -- -H 0.0.0.0; else echo 'frontend ainda nao inicializado — rode: cd frontend && npx create-next-app@14 . --ts --tailwind --app'; tail -f /dev/null; fi",
       ]
 
 volumes:
   qdi-db-data:
+  qdi-mock-pdf-spool:
 
 networks:
   qdi-network:

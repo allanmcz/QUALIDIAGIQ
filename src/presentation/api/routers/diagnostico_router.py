@@ -219,7 +219,7 @@ def _parse_if_match_versao(raw: str | None) -> int:
     return v
 
 
-def _quadro_implantacao_para_http(diagnostico: Diagnostico) -> dict[str, dict[str, str]] | None:
+def _quadro_implantacao_para_http(diagnostico: Diagnostico) -> dict[str, dict[str, Any]] | None:
     raw = getattr(diagnostico, "quadro_implantacao_anotacoes", None)
     if not raw:
         return None
@@ -1098,8 +1098,11 @@ async def atualizar_checklist_m12_autoconf(
     response_model=DiagnosticoResponse,
     summary="Atualizar anotações do quadro de implantação",
     description=(
-        "Persiste comentários e metas de prazo (YYYY-MM-DD) por ação sugerida do checklist derivado. "
-        "Chaves: f{índice_frente}_a{índice_ação}. Exige diagnóstico **finalizado** e header **If-Match**."
+        "Mescla no mapa persistido as chaves enviadas (meta de prazo ISO, comentários e, opcionalmente, "
+        "``descricao_personalizada`` que substitui o texto canônico da ação no painel). "
+        "Chaves não enviadas permanecem inalteradas; por chave, campos ausentes no PATCH preservam valores já "
+        "gravados. Formato: f{índice_frente}_a{índice_ação}. Campo legado ``comentario`` (único) ainda é aceito. "
+        "Exige diagnóstico **finalizado** e **If-Match**."
     ),
 )
 async def atualizar_quadro_implantacao_anotacoes(
@@ -1119,10 +1122,16 @@ async def atualizar_quadro_implantacao_anotacoes(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    blob = {
-        k: {"comentario": v.comentario, "prazo_meta": v.prazo_meta}
-        for k, v in payload.quadro_implantacao_anotacoes.items()
-    }
+    blob: dict[str, dict[str, Any]] = {}
+    for k, v in payload.quadro_implantacao_anotacoes.items():
+        coms = list(v.comentarios)
+        if not coms and v.comentario.strip():
+            coms = [v.comentario.strip()]
+        blob[k] = {
+            "prazo_meta": v.prazo_meta,
+            "comentarios": coms,
+            "descricao_personalizada": v.descricao_personalizada.strip(),
+        }
     comando = ComandoAtualizarQuadroImplantacao(
         tenant_id=tenant_id,
         diagnostico_id=diagnostico_id,

@@ -22,10 +22,16 @@ function connectSrcCspParts() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /**
-   * Playwright usa baseURL http://127.0.0.1:3333 (ver playwright.config.ts).
-   * Next 14+ pode exigir origem explícita para assets `/_next/*` em dev.
+   * Next 14.2+ (block-cross-site): compara só o **hostname** do `Origin` com cada entrada
+   * (ex.: Origin `http://127.0.0.1:60001` → hostname `127.0.0.1`). Incluir `127.0.0.1` literal;
+   * `127.0.0.1:60001` / URL completa **não** coincidem — ver `csrf-protection.js` / `block-cross-site.js`.
+   *
+   * Compose publica o web em :60001; Playwright em :3333; `npm run dev` típico em :3010.
    */
   allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "::1",
     "127.0.0.1:3000",
     "localhost:3000",
     "http://127.0.0.1:3000",

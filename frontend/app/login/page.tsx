@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
+  ADMIN_EMAIL_STORAGE_KEY,
   ADMIN_NOME_STORAGE_KEY,
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
   ADMIN_TOKEN_STORAGE_KEY,
@@ -55,6 +56,7 @@ function LoginPageContent() {
       // Salva em localStorage (apenas para o MVP/Dev)
       localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.access_token)
       localStorage.setItem(ADMIN_NOME_STORAGE_KEY, data.nome || "Admin")
+      localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, email.trim())
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
           ? data.perfil_conta

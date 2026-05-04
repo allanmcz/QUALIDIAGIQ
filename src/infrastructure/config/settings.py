@@ -136,6 +136,16 @@ class Settings(BaseSettings):
         description="Timeout WeasyPrint (asyncio.wait_for) por geração de PDF.",
     )
 
+    #: Pasta onde o fallback `/mock-storage` grava o PDF em disco (sobrevive a restart do processo).
+    qdi_pdf_mock_spool_dir: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("QDI_PDF_MOCK_SPOOL_DIR"),
+        description=(
+            "Se omitido ou só espaços, usa ``<tempdir>/qdi-mock-pdf`` (ex.: /tmp/qdi-mock-pdf no Linux). "
+            "No Docker Compose há volume nomeado nesse caminho por defeito."
+        ),
+    )
+
     ollama_base_url: str = Field(
         default="http://127.0.0.1:11434",
         validation_alias=AliasChoices("OLLAMA_BASE_URL", "OLLAMA_URL"),

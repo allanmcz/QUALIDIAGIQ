@@ -7,7 +7,10 @@ import structlog
 
 from src.application.ports.storage_service import StorageServicePort
 from src.infrastructure.config.settings import get_settings
-from src.infrastructure.storage.mock_pdf_bytes_cache import registrar_pdf_mock
+from src.infrastructure.storage.mock_pdf_bytes_cache import (
+    pdf_mock_existe_em_disco,
+    registrar_pdf_mock,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -56,6 +59,13 @@ class SupabaseStorageAdapter(StorageServicePort):
                         "Verifique bucket, políticas e SUPABASE_*."
                     ) from e
                 registrar_pdf_mock(file_path, file_bytes)
+                if not pdf_mock_existe_em_disco(file_path):
+                    logger.error(
+                        "supabase_storage_fallback_mock_sem_persistencia_disco",
+                        path=file_path,
+                        hint="Verifique permissões do spool ou QDI_PDF_MOCK_SPOOL_DIR; "
+                        "sem disco o PDF some após LRU ou restart do processo.",
+                    )
                 base = settings.qdi_public_api_base_url.strip().rstrip("/")
                 url_fallback = f"{base}/mock-storage/{file_path}"
                 logger.warning(

@@ -33,7 +33,12 @@ import { cn } from "@/lib/utils";
 import { mascaraTelefoneBR } from "@/lib/utils/mascaraTelefoneBr";
 import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { postDiagnostico } from "@/lib/api/diagnostico";
-import { ADMIN_PERFIL_CONTA_STORAGE_KEY, getAccessToken } from "@/lib/api/config";
+import {
+  ADMIN_EMAIL_STORAGE_KEY,
+  ADMIN_NOME_STORAGE_KEY,
+  ADMIN_PERFIL_CONTA_STORAGE_KEY,
+  getAccessToken,
+} from "@/lib/api/config";
 import {
   postRascunhoDiagnosticoSelfService,
   postVincularRascunhoContaPlataforma,
@@ -236,7 +241,25 @@ export function WizardForm() {
     formState: { errors },
     getValues,
     reset,
+    setValue,
   } = form;
+
+  /** Com JWT ativo, preenche nome/e-mail do respondente a partir do login (sem sobrescrever rascunho já preenchido). */
+  const aplicarRespondenteDaConta = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (!getAccessToken()) return;
+    const nomeLs = window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY)?.trim() ?? "";
+    const emailLs = window.localStorage.getItem(ADMIN_EMAIL_STORAGE_KEY)?.trim() ?? "";
+    if (!nomeLs && !emailLs) return;
+    const curNome = (getValues("respondente.nome") ?? "").trim();
+    const curEmail = (getValues("respondente.email") ?? "").trim();
+    if (!curNome && nomeLs) {
+      setValue("respondente.nome", nomeLs, { shouldDirty: true, shouldValidate: false });
+    }
+    if (!curEmail && emailLs) {
+      setValue("respondente.email", emailLs, { shouldDirty: true, shouldValidate: false });
+    }
+  }, [getValues, setValue]);
 
   const [cnaeSugestoes, setCnaeSugestoes] = useState<CnaeSubclasseItem[]>([]);
   /** Texto no input (código ou busca por descrição); o formulário só guarda 7 dígitos após seleção/blur válido. */
@@ -421,7 +444,8 @@ export function WizardForm() {
     setCacheResumePrompt(null);
     skipPersistRef.current = false;
     setDraftHydrated(true);
-  }, [reset]);
+    aplicarRespondenteDaConta();
+  }, [reset, aplicarRespondenteDaConta]);
 
   /**
    * Na abertura: se há JWT + pendente de POST, não restaura rascunho (fluxo automático existente).
@@ -462,6 +486,11 @@ export function WizardForm() {
 
     setCacheResumePrompt({ hasDraft, hasPending });
   }, []);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    aplicarRespondenteDaConta();
+  }, [draftHydrated, aplicarRespondenteDaConta]);
 
   /** Persiste rascunho com debounce — mesma origem que «Voltar ao diagnóstico» na política de privacidade. */
   useEffect(() => {

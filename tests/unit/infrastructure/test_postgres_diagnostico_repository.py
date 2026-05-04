@@ -189,7 +189,7 @@ class TestPostgresDiagnosticoRepository:
         did, tid = uuid4(), uuid4()
         mock_cursor = MagicMock()
         row = _row_minima(did, tid)
-        row["quadro_implantacao_anotacoes"] = {"f0_a0": {"comentario": "x", "prazo_meta": ""}}
+        row["quadro_implantacao_anotacoes"] = {"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}}
         mock_cursor.fetchone.return_value = row
         mock_conn = _mock_conn_cursor(mock_cursor)
         with patch(
@@ -198,10 +198,10 @@ class TestPostgresDiagnosticoRepository:
         ):
             repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
             out = await repo.atualizar_quadro_implantacao_com_versao(
-                did, tid, {"f0_a0": {"comentario": "x", "prazo_meta": ""}}, versao_esperada=1
+                did, tid, {"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}}, versao_esperada=1
             )
         assert out is not None
-        assert out.quadro_implantacao_anotacoes == {"f0_a0": {"comentario": "x", "prazo_meta": ""}}
+        assert out.quadro_implantacao_anotacoes == {"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}}
 
     async def test_atualizar_m12(self) -> None:
         did, tid = uuid4(), uuid4()

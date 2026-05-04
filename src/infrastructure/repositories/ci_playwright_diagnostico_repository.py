@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from src.domain.entities.diagnostico import (
@@ -109,7 +110,7 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        quadro_implantacao_anotacoes: dict[str, dict[str, Any]],
         versao_esperada: int,
     ) -> Diagnostico | None:
         row = await self.buscar_por_id(diagnostico_id, tenant_id)

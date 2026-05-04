@@ -61,6 +61,8 @@ export function getApiUrlForFetch(): string {
 /** Chaves `localStorage` — sessão com conta na plataforma MVP (`/login` → painel). */
 export const ADMIN_TOKEN_STORAGE_KEY = "admin_token";
 export const ADMIN_NOME_STORAGE_KEY = "admin_nome";
+/** E-mail da conta gravado no login/cadastro (pré-preenche respondente no wizard). */
+export const ADMIN_EMAIL_STORAGE_KEY = "admin_email";
 /** Espelho do claim JWT `perfil_conta` (UX apenas; servidor revalida no POST). */
 export const ADMIN_PERFIL_CONTA_STORAGE_KEY = "admin_perfil_conta";
 
@@ -68,4 +70,36 @@ export const ADMIN_PERFIL_CONTA_STORAGE_KEY = "admin_perfil_conta";
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+}
+
+/**
+ * Alinha o href do PDF mock à mesma base que o `fetch` usa (ex.: `/api-backend` no Compose).
+ * Evita abrir `http://127.0.0.1:60000/...` quando o browser só alcança a API via proxy same-origin.
+ */
+export function normalizarHrefRelatorioPdf(url: string | null): string | null {
+  if (!url?.trim()) return null;
+  const bruto = url.trim();
+  if (typeof window === "undefined") return bruto;
+
+  const m = bruto.match(/\/mock-storage\/[0-9a-fA-F-]{36}\/[0-9a-fA-F-]{36}\.pdf/);
+  if (!m) return bruto;
+
+  const base = getApiUrlForFetch().replace(/\/$/, "");
+  const pathComQuery = m[0];
+  if (base.startsWith("/")) {
+    return `${window.location.origin}${base}${pathComQuery}`;
+  }
+  try {
+    const parsed = new URL(bruto);
+    const port = parsed.port || (parsed.protocol === "https:" ? "443" : "80");
+    const devApi =
+      (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") &&
+      (port === "60000" || port === "8000");
+    if (devApi) {
+      return `${base}${pathComQuery}`;
+    }
+  } catch {
+    return bruto;
+  }
+  return bruto;
 }

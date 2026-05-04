@@ -50,9 +50,15 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
         Path(__file__).resolve().parents[2]
         / "src/infrastructure/db/migrations/0012_aceite_lgpd_e_worm.sql"
     )
+    mig_0025 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0025_worm_permite_reatribuir_tenant_vinculo_lead.sql"
+    )
     await pg_conn.execute(mig_0006.read_text(encoding="utf-8"))
     await pg_conn.execute(mig_0011.read_text(encoding="utf-8"))
     await pg_conn.execute(mig_0012.read_text(encoding="utf-8"))
+    if mig_0025.exists():
+        await pg_conn.execute(mig_0025.read_text(encoding="utf-8"))
 
     tid = uuid.uuid4()
     did = uuid.uuid4()
@@ -129,5 +135,55 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
         )
     msg_aceite = str(exc_aceite.value).lower()
     assert "worm" in msg_aceite or "evidência" in msg_aceite or "imutável" in msg_aceite
+
+    await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)
+
+
+@pytest.mark.asyncio
+@pytest.mark.postgres
+async def test_worm_permite_reatribuir_tenant_id_pos_finalizado(pg_conn):
+    """Mesmo finalizado, UPDATE só de tenant_id deve passar (vincular lead self-service)."""
+    mig_0006 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0006_worm_column_granular.sql"
+    )
+    mig_0025 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0025_worm_permite_reatribuir_tenant_vinculo_lead.sql"
+    )
+    await pg_conn.execute(mig_0006.read_text(encoding="utf-8"))
+    if mig_0025.exists():
+        await pg_conn.execute(mig_0025.read_text(encoding="utf-8"))
+
+    tid_pool = uuid.uuid4()
+    tid_dest = uuid.uuid4()
+    did = uuid.uuid4()
+    await pg_conn.execute(
+        """
+        INSERT INTO diagnosticos (
+          id, tenant_id, respondente_email,
+          empresa_cnpj, empresa_razao_social, empresa_porte, empresa_regime,
+          empresa_cnae, empresa_uf, empresa_setor_macro,
+          status, plano, score_geral, criado_em, finalizado_em,
+          versao_otimista
+        ) VALUES (
+          $1, $2, 'lead@exemplo.com',
+          '12345678000195', 'Lead SA', 'micro', 'simples_nacional',
+          '1234567', 'SP', 'comercio',
+          'finalizado', 'gratuito', 40.0, now(), now(),
+          1
+        )
+        """,
+        did,
+        tid_pool,
+    )
+    await pg_conn.execute(
+        "UPDATE diagnosticos SET tenant_id = $2 WHERE id = $1",
+        did,
+        tid_dest,
+    )
+    row = await pg_conn.fetchrow("SELECT tenant_id FROM diagnosticos WHERE id = $1", did)
+    assert row is not None
+    assert row["tenant_id"] == tid_dest
 
     await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)

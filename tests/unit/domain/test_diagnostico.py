@@ -340,8 +340,59 @@ class TestQuadroImplantacaoAnotacoes:
             {"f0_a0": {"comentario": "Reunião kickoff", "prazo_meta": "2026-06-15"}}
         )
         assert diag.quadro_implantacao_anotacoes == {
-            "f0_a0": {"comentario": "Reunião kickoff", "prazo_meta": "2026-06-15"},
+            "f0_a0": {"comentarios": ["Reunião kickoff"], "prazo_meta": "2026-06-15"},
         }
+
+    def test_grava_varios_comentarios(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        diag.definir_quadro_implantacao_anotacoes(
+            {
+                "f0_a0": {
+                    "comentarios": ["Kickoff", "Follow-up com fiscal"],
+                    "prazo_meta": "2026-07-01",
+                }
+            }
+        )
+        assert diag.quadro_implantacao_anotacoes == {
+            "f0_a0": {
+                "comentarios": ["Kickoff", "Follow-up com fiscal"],
+                "prazo_meta": "2026-07-01",
+            },
+        }
+
+    def test_grava_descricao_personalizada(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        diag.definir_quadro_implantacao_anotacoes(
+            {
+                "f0_a0": {
+                    "comentarios": [],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "  Ação customizada do consultor  ",
+                }
+            }
+        )
+        assert diag.quadro_implantacao_anotacoes == {
+            "f0_a0": {
+                "comentarios": [],
+                "prazo_meta": "",
+                "descricao_personalizada": "Ação customizada do consultor",
+            },
+        }
+
+    def test_rejeita_lista_comentarios_grande_demais(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        grande = [f"c{i}" for i in range(31)]
+        with pytest.raises(ValueError, match="30"):
+            diag.definir_quadro_implantacao_anotacoes({"f0_a0": {"comentarios": grande, "prazo_meta": ""}})
 
     def test_rejeita_chave_invalida(self, empresa_fixture, respondente_fixture) -> None:
         diag = Diagnostico(
@@ -350,7 +401,7 @@ class TestQuadroImplantacaoAnotacoes:
         diag.finalizar(40.0)
         with pytest.raises(ValueError, match="Chave"):
             diag.definir_quadro_implantacao_anotacoes(
-                {"acao-1": {"comentario": "x", "prazo_meta": ""}},
+                {"acao-1": {"comentarios": ["x"], "prazo_meta": ""}},
             )
 
     def test_rejeita_em_andamento(self, empresa_fixture, respondente_fixture) -> None:
@@ -359,5 +410,5 @@ class TestQuadroImplantacaoAnotacoes:
         )
         with pytest.raises(DiagnosticoNaoFinalizavelError, match="quadro"):
             diag.definir_quadro_implantacao_anotacoes(
-                {"f0_a0": {"comentario": "", "prazo_meta": ""}}
+                {"f0_a0": {"comentarios": [], "prazo_meta": ""}}
             )

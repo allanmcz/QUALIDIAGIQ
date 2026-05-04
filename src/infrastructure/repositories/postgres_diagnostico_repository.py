@@ -36,19 +36,29 @@ from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto
 
 
-def _quadro_anotacoes_de_row(row: dict[str, Any]) -> dict[str, dict[str, str]] | None:
-    """Lê JSONB ``quadro_implantacao_anotacoes`` (mapa f{i}_a{j} -> comentario, prazo_meta)."""
+def _quadro_anotacoes_de_row(row: dict[str, Any]) -> dict[str, dict[str, str | list[str]]] | None:
+    """Lê JSONB ``quadro_implantacao_anotacoes`` (mapa f{i}_a{j} -> prazo_meta, comentarios[]; legado comentario)."""
     raw = row.get("quadro_implantacao_anotacoes")
     if raw is None or not isinstance(raw, dict):
         return None
-    out: dict[str, dict[str, str]] = {}
+    out: dict[str, dict[str, str | list[str]]] = {}
     for k, v in raw.items():
         if not isinstance(v, dict):
             continue
-        out[str(k)] = {
-            "comentario": str(v.get("comentario", "") or ""),
-            "prazo_meta": str(v.get("prazo_meta", "") or "").strip(),
-        }
+        prazo = str(v.get("prazo_meta", "") or "").strip()
+        comentarios: list[str] = []
+        cr = v.get("comentarios")
+        if isinstance(cr, list):
+            comentarios = [str(x).strip() for x in cr if str(x).strip()]
+        if not comentarios:
+            leg = str(v.get("comentario", "") or "").strip()
+            if leg:
+                comentarios = [leg]
+        item: dict[str, str | list[str]] = {"prazo_meta": prazo, "comentarios": comentarios}
+        dp = str(v.get("descricao_personalizada", "") or "").strip()
+        if dp:
+            item["descricao_personalizada"] = dp
+        out[str(k)] = item
     return out or None
 
 
@@ -322,7 +332,7 @@ def _patch_quadro_sync(
     dsn: str,
     diagnostico_id: UUID,
     tenant_id: UUID,
-    quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+    quadro_implantacao_anotacoes: dict[str, dict[str, Any]],
     versao_esperada: int,
 ) -> Diagnostico | None:
     conn = psycopg2.connect(dsn)
@@ -440,7 +450,7 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        quadro_implantacao_anotacoes: dict[str, dict[str, Any]],
         versao_esperada: int,
     ) -> Diagnostico | None:
         return await asyncio.to_thread(

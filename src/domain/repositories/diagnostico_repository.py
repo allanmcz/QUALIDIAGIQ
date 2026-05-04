@@ -18,7 +18,7 @@ Analogia para o Allan:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -92,7 +92,7 @@ class DiagnosticoRepository(ABC):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        quadro_implantacao_anotacoes: dict[str, dict[str, Any]],
         versao_esperada: int,
     ) -> Diagnostico | None:
         """

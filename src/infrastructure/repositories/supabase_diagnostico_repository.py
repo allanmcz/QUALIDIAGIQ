@@ -168,7 +168,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        quadro_implantacao_anotacoes: dict[str, dict[str, str]],
+        quadro_implantacao_anotacoes: dict[str, dict[str, Any]],
         versao_esperada: int,
     ) -> Diagnostico | None:
         """UPDATE condicional do JSONB do quadro + incremento de ``versao_otimista``."""
@@ -292,15 +292,25 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 faixa = None
 
         quadro_raw = row.get("quadro_implantacao_anotacoes")
-        quadro: dict[str, dict[str, str]] | None = None
+        quadro: dict[str, dict[str, str | list[str]]] | None = None
         if isinstance(quadro_raw, dict):
-            tmp: dict[str, dict[str, str]] = {}
+            tmp: dict[str, dict[str, str | list[str]]] = {}
             for k, v in quadro_raw.items():
                 if isinstance(v, dict):
-                    tmp[str(k)] = {
-                        "comentario": str(v.get("comentario", "") or ""),
-                        "prazo_meta": str(v.get("prazo_meta", "") or "").strip(),
-                    }
+                    prazo = str(v.get("prazo_meta", "") or "").strip()
+                    comentarios: list[str] = []
+                    cr = v.get("comentarios")
+                    if isinstance(cr, list):
+                        comentarios = [str(x).strip() for x in cr if str(x).strip()]
+                    if not comentarios:
+                        leg = str(v.get("comentario", "") or "").strip()
+                        if leg:
+                            comentarios = [leg]
+                    item_sq: dict[str, str | list[str]] = {"prazo_meta": prazo, "comentarios": comentarios}
+                    dp_sq = str(v.get("descricao_personalizada", "") or "").strip()
+                    if dp_sq:
+                        item_sq["descricao_personalizada"] = dp_sq
+                    tmp[str(k)] = item_sq
             quadro = tmp if tmp else None
 
         return Diagnostico(

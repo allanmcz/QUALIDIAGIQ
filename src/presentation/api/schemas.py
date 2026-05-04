@@ -9,10 +9,10 @@ Responsabilidade:
 
 import re
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from src.domain.entities.diagnostico import (
     FaixaFaturamentoDeclarada,
@@ -258,12 +258,43 @@ class QuadroImplantacaoAnotacaoItemSchema(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    comentario: str = Field(default="", max_length=8000)
+    comentario: str = Field(
+        default="",
+        max_length=8000,
+        description="Legado: um único texto; use ``comentarios`` para várias notas.",
+    )
+    comentarios: list[str] = Field(
+        default_factory=list,
+        description="Lista de comentários (follow-ups) por ação; no máximo 30 itens.",
+    )
     prazo_meta: str = Field(
         default="",
         max_length=32,
         description="Meta de prazo ISO YYYY-MM-DD ou vazio.",
     )
+    descricao_personalizada: str = Field(
+        default="",
+        max_length=4000,
+        description=(
+            "Substitui a descrição canônica da ação no quadro (texto exibido ao consultor). "
+            "Vazio = manter texto sugerido pelo motor."
+        ),
+    )
+
+    @field_validator("comentarios", mode="before")
+    @classmethod
+    def comentarios_coerce_e_limites(cls, v: object) -> list[str]:
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            raise TypeError("comentarios deve ser uma lista de strings.")
+        limpos = [str(x).strip() for x in v if str(x).strip()]
+        if len(limpos) > 30:
+            raise ValueError("No máximo 30 comentários por ação sugerida.")
+        for s in limpos:
+            if len(s) > 2000:
+                raise ValueError("Cada comentário deve ter no máximo 2000 caracteres.")
+        return limpos
 
     @field_validator("prazo_meta")
     @classmethod
@@ -274,6 +305,24 @@ class QuadroImplantacaoAnotacaoItemSchema(BaseModel):
         if len(s) == 10 and s[4] == "-" and s[7] == "-":
             return s
         raise ValueError("prazo_meta deve ser data ISO YYYY-MM-DD ou vazio.")
+
+    @field_validator("descricao_personalizada")
+    @classmethod
+    def descricao_personalizada_tamanho(cls, v: str) -> str:
+        s = (v or "").strip()
+        if len(s) > 4000:
+            raise ValueError("descricao_personalizada deve ter no máximo 4000 caracteres.")
+        return s
+
+    @model_validator(mode="after")
+    def merge_comentario_legado_em_lista(self) -> Self:
+        """Se veio só ``comentario`` (legado), reflete em ``comentarios`` para o restante da pipeline."""
+        if self.comentarios:
+            return self
+        leg = self.comentario.strip()
+        if leg:
+            return self.model_copy(update={"comentarios": [leg]})
+        return self
 
 
 class PatchQuadroImplantacaoRequest(BaseModel):
@@ -580,9 +629,9 @@ class DiagnosticoResponse(BaseModel):
     # M12 — estado persistido da autoconf (JSONB `checklist_m12_estado`)
     checklist_m12_autoconf: list[bool] | None = None
     # Quadro de implantação — anotações consultor (JSONB `quadro_implantacao_anotacoes`)
-    quadro_implantacao_anotacoes: dict[str, dict[str, str]] | None = Field(
+    quadro_implantacao_anotacoes: dict[str, dict[str, Any]] | None = Field(
         default=None,
-        description="Mapa f{i}_a{j} -> {comentario, prazo_meta} persistido com PATCH + If-Match.",
+        description="Mapa f{i}_a{j} -> {prazo_meta, comentarios[]} (legado comentario migrado na leitura).",
     )
     # LGPD — instante registrado pelo servidor no POST (coluna `aceite_termos_privacidade_em`)
     aceite_termos_privacidade_em: datetime | None = None

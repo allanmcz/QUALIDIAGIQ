@@ -10,7 +10,7 @@ export function Header() {
       <div className="container flex min-h-[4.5rem] items-center justify-between gap-3 py-2 sm:min-h-[5rem]">
         <Link
           href="/"
-          className="flex min-h-[48px] min-w-0 shrink-0 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
+          className="flex min-h-[48px] min-w-0 shrink-0 items-center rounded-md shadow-none ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Logo variant="full" size="2xl" priority />
         </Link>

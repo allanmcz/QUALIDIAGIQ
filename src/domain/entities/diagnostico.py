@@ -23,7 +23,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from src.domain.value_objects.cnpj_brasil import exigir_cnpj_vazio_ou_com_dv_ok
@@ -168,7 +168,8 @@ class Diagnostico:
     # M12 — autoconf ABNT (10 booleanos); mutável após finalizado com versao_otimista (vide PATCH dedicado).
     checklist_m12_estado: list[bool] | None = None
     # Quadro de implantação — anotações do consultor por ação (chave f{i}_a{j}); não entra no hash WORM.
-    quadro_implantacao_anotacoes: dict[str, dict[str, str]] | None = None
+    # Cada item: prazo_meta (ISO) + comentarios[]; opcional descricao_personalizada (substitui texto canônico no painel).
+    quadro_implantacao_anotacoes: dict[str, dict[str, str | list[str]]] | None = None
     # LGPD — instante do aceite declarado no POST (persistido pelo servidor; imutável após finalizado via WORM).
     aceite_termos_privacidade_em: datetime | None = None
     # Relatório PDF (WeasyPrint) — pt-BR default; en preparado para expansão i18n.
@@ -258,12 +259,18 @@ class Diagnostico:
         self.checklist_m12_estado = list(itens)
 
     _CHAVE_QUADRO_RE = re.compile(r"^f\d+_a\d+$")
+    _QUADRO_MAX_COMENTARIOS_POR_ACAO = 30
+    _QUADRO_MAX_CHARS_POR_COMENTARIO = 2000
+    _QUADRO_MAX_DESCRICAO_PERSONALIZADA = 4000
 
-    def definir_quadro_implantacao_anotacoes(self, anotacoes: dict[str, dict[str, str]]) -> None:
+    def definir_quadro_implantacao_anotacoes(self, anotacoes: dict[str, dict[str, Any]]) -> None:
         """
-        Substitui o mapa de anotações do quadro de implantação (comentário + prazo meta por ação).
+        Substitui o mapa de anotações do quadro de implantação (prazo meta + vários comentários por ação).
 
         Chaves esperadas: ``f{{i}}_a{{j}}`` (índices da frente e da ação no checklist derivado).
+
+        Entrada aceita ``comentarios`` (lista de strings) e/ou ``comentario`` (legado — vira um único item),
+        além de ``descricao_personalizada`` opcional (texto exibido no lugar da descrição canônica da ação).
 
         Raises:
             DiagnosticoNaoFinalizavelError: se não finalizado.
@@ -275,22 +282,49 @@ class Diagnostico:
             )
         if len(anotacoes) > 200:
             raise ValueError("No máximo 200 anotações no quadro de implantação.")
-        limpo: dict[str, dict[str, str]] = {}
+        limpo: dict[str, dict[str, str | list[str]]] = {}
         for chave, item in anotacoes.items():
             ck = str(chave).strip()
             if not self._CHAVE_QUADRO_RE.match(ck):
                 raise ValueError(
                     f"Chave de anotação inválida: {ck!r}. Use o padrão f{{índice}}_a{{índice}} (ex.: f0_a2)."
                 )
-            comentario = str(item.get("comentario", "") or "")
             prazo_meta = str(item.get("prazo_meta", "") or "").strip()
-            if len(comentario) > 8000:
-                raise ValueError("comentario excede 8000 caracteres.")
             if prazo_meta != "" and (
                 len(prazo_meta) != 10 or prazo_meta[4] != "-" or prazo_meta[7] != "-"
             ):
                 raise ValueError("prazo_meta deve ser data ISO YYYY-MM-DD ou vazio.")
-            limpo[ck] = {"comentario": comentario, "prazo_meta": prazo_meta}
+
+            comentarios: list[str] = []
+            raw_list = item.get("comentarios")
+            if isinstance(raw_list, list):
+                for x in raw_list:
+                    s = str(x).strip()
+                    if s:
+                        comentarios.append(s)
+            if not comentarios:
+                leg = str(item.get("comentario", "") or "").strip()
+                if leg:
+                    comentarios = [leg]
+            if len(comentarios) > self._QUADRO_MAX_COMENTARIOS_POR_ACAO:
+                raise ValueError(
+                    f"No máximo {self._QUADRO_MAX_COMENTARIOS_POR_ACAO} comentários por ação sugerida."
+                )
+            for c in comentarios:
+                if len(c) > self._QUADRO_MAX_CHARS_POR_COMENTARIO:
+                    raise ValueError(
+                        f"Cada comentário excede {self._QUADRO_MAX_CHARS_POR_COMENTARIO} caracteres."
+                    )
+            desc_pers = str(item.get("descricao_personalizada", "") or "").strip()
+            if len(desc_pers) > self._QUADRO_MAX_DESCRICAO_PERSONALIZADA:
+                raise ValueError(
+                    "descricao_personalizada excede "
+                    f"{self._QUADRO_MAX_DESCRICAO_PERSONALIZADA} caracteres."
+                )
+            entrada: dict[str, str | list[str]] = {"prazo_meta": prazo_meta, "comentarios": comentarios}
+            if desc_pers:
+                entrada["descricao_personalizada"] = desc_pers
+            limpo[ck] = entrada
         self.quadro_implantacao_anotacoes = limpo
 
     def registrar_aceite_termos_privacidade(self, instante_utc: datetime) -> None:
