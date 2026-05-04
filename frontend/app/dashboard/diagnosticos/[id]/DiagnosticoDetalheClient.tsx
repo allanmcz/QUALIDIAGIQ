@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CalendarPlus, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { CalendarPlus, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,8 @@ export type DiagnosticoDetalheApi = {
   checklist: FrenteChecklist[] | null;
   matriz_impacto: MatrizLinha[] | null;
   cronograma: CronogramaFase[] | null;
-  checklist_m12_autoconf: boolean[] | null;
+  /** Likert 1–5 por controlo M12 (API); booleanos legados são normalizados na leitura. */
+  checklist_m12_autoconf: (number | boolean)[] | null;
   /** Chave canónica f{i}_a{j} — meta de prazo (ISO) e vários comentários por ação sugerida. */
   quadro_implantacao_anotacoes?: Record<string, QuadroItemPersistidoApi> | null;
   versao_otimista: number | null;
@@ -85,6 +86,33 @@ export type DiagnosticoDetalheApi = {
     score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;
   } | null;
 };
+
+const M12_NUM_ITENS = 10;
+const M12_LIKERT_PADRAO = 3;
+
+function normalizarM12DoApi(
+  raw: DiagnosticoDetalheApi["checklist_m12_autoconf"],
+): number[] | null {
+  if (!Array.isArray(raw) || raw.length !== M12_NUM_ITENS) return null;
+  const out: number[] = [];
+  for (const x of raw) {
+    if (typeof x === "boolean") out.push(x ? 5 : 1);
+    else if (typeof x === "number" && Number.isInteger(x) && x >= 1 && x <= 5) out.push(x);
+    else return null;
+  }
+  return out;
+}
+
+function rotuloLikertM12(v: number): string {
+  const m: Record<number, string> = {
+    1: "Não implementado",
+    2: "Inicial / informal",
+    3: "Parcial",
+    4: "Implementado (lacunas menores)",
+    5: "Implementado e monitorado",
+  };
+  return m[v] ?? "—";
+}
 
 /** Estado local do quadro por ação (edição + espelho do persistido até PATCH). */
 export type QuadroEdicaoAcao = {
@@ -203,7 +231,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(null);
   const [error, setError] = useState<string | null>(null);
   const versaoOtimistaRef = useRef<number | null>(null);
-  const lastSyncedM12Ref = useRef<string | null>(null);
   const [quadroEdits, setQuadroEdits] = useState<Record<string, QuadroEdicaoAcao>>({});
   /** Gravação por chave f{i}_a{j} (uma ação de cada vez). */
   const [quadroSaving, setQuadroSaving] = useState<Record<string, boolean>>({});
@@ -212,6 +239,13 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const [prazoModalDraft, setPrazoModalDraft] = useState("");
   const [comentarioModalQk, setComentarioModalQk] = useState<string | null>(null);
   const [comentarioModalDraft, setComentarioModalDraft] = useState("");
+  const [acaoEditModalQk, setAcaoEditModalQk] = useState<string | null>(null);
+  const [acaoEditModalDraft, setAcaoEditModalDraft] = useState("");
+  const [m12Likert, setM12Likert] = useState<number[]>([]);
+  const [m12ModalIndex, setM12ModalIndex] = useState<number | null>(null);
+  const [m12ModalDraft, setM12ModalDraft] = useState<number>(M12_LIKERT_PADRAO);
+  const [m12Saving, setM12Saving] = useState(false);
+  const [m12Msg, setM12Msg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -278,21 +312,12 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     );
   }, [data?.checklist]);
 
-  const [abntChecks, setAbntChecks] = useState<boolean[]>([]);
-
   useEffect(() => {
-    if (!frenteAbnt10 || frenteAbnt10.acoes.length === 0) return;
-    const n = frenteAbnt10.acoes.length;
-    const fromApi = data?.checklist_m12_autoconf;
-    if (fromApi && fromApi.length === n) {
-      setAbntChecks(fromApi);
-      lastSyncedM12Ref.current = JSON.stringify(fromApi);
-      return;
-    }
-    const zeros = Array.from({ length: n }, () => false);
-    setAbntChecks(zeros);
-    lastSyncedM12Ref.current = JSON.stringify(zeros);
-  }, [data?.checklist_m12_autoconf, frenteAbnt10]);
+    if (!frenteAbnt10 || frenteAbnt10.acoes.length !== M12_NUM_ITENS) return;
+    const parsed = normalizarM12DoApi(data?.checklist_m12_autoconf ?? null);
+    setM12Likert(parsed ?? Array.from({ length: M12_NUM_ITENS }, () => M12_LIKERT_PADRAO));
+    setM12Msg(null);
+  }, [data?.checklist_m12_autoconf, data?.id, frenteAbnt10]);
 
   useEffect(() => {
     if (data?.versao_otimista != null) {
@@ -328,14 +353,14 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   }, [id]);
 
   const salvarQuadroAcao = useCallback(
-    async (qk: string, snapshot?: Partial<QuadroEdicaoAcao>) => {
+    async (qk: string, snapshot?: Partial<QuadroEdicaoAcao>): Promise<boolean> => {
       const token = getAccessToken();
       if (!token || data?.status !== "finalizado") {
         setQuadroMsgPorAcao((prev) => ({
           ...prev,
           [qk]: "É necessário estar autenticado e o diagnóstico finalizado.",
         }));
-        return;
+        return false;
       }
       const v = versaoOtimistaRef.current;
       if (v == null) {
@@ -343,7 +368,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           ...prev,
           [qk]: "Versão otimista indisponível — recarregue a página.",
         }));
-        return;
+        return false;
       }
       const qv: QuadroEdicaoAcao = {
         ...defaultQuadroEdicaoAcao(),
@@ -387,7 +412,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           }
           setData(json);
           setQuadroMsgPorAcao((prev) => ({ ...prev, [qk]: "Ação gravada." }));
-          return;
+          return true;
         }
         if (res.status === 412) {
           setQuadroMsgPorAcao((prev) => ({
@@ -395,18 +420,20 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             [qk]: "Conflito de versão — recarregando…",
           }));
           await refetchDetalhe();
-          return;
+          return false;
         }
         const t = await res.text();
         setQuadroMsgPorAcao((prev) => ({
           ...prev,
           [qk]: `Não foi possível gravar (${res.status}): ${t.slice(0, 200)}`,
         }));
+        return false;
       } catch {
         setQuadroMsgPorAcao((prev) => ({
           ...prev,
           [qk]: "Falha de rede ao gravar.",
         }));
+        return false;
       } finally {
         setQuadroSaving((s) => ({ ...s, [qk]: false }));
       }
@@ -468,25 +495,45 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     async (qk: string, idx: number) => {
       const cur = { ...defaultQuadroEdicaoAcao(), ...quadroEdits[qk] };
       const next = cur.comentarios.filter((_, i) => i !== idx);
-      await salvarQuadroAcao(qk, { comentarios: next });
+      void salvarQuadroAcao(qk, { comentarios: next });
     },
     [quadroEdits, salvarQuadroAcao],
   );
 
-  useEffect(() => {
-    if (!data || data.status !== "finalizado") return;
-    if (abntChecks.length !== 10) return;
-    const serialized = JSON.stringify(abntChecks);
-    if (serialized === lastSyncedM12Ref.current) return;
+  const abrirModalAcaoEditParaChave = useCallback(
+    (qk: string) => {
+      const atual = { ...defaultQuadroEdicaoAcao(), ...quadroEdits[qk] };
+      setAcaoEditModalDraft(atual.descricao_personalizada ?? "");
+      setAcaoEditModalQk(qk);
+    },
+    [quadroEdits],
+  );
 
-    const token = getAccessToken();
-    if (!token) return;
+  const confirmarAcaoEditModal = useCallback(async () => {
+    const qk = acaoEditModalQk;
+    if (!qk) return;
+    const ok = await salvarQuadroAcao(qk, {
+      descricao_personalizada: acaoEditModalDraft.trim(),
+    });
+    if (ok) setAcaoEditModalQk(null);
+  }, [acaoEditModalQk, acaoEditModalDraft, salvarQuadroAcao]);
 
-    const handle = window.setTimeout(() => {
-      void (async () => {
-        const v = versaoOtimistaRef.current;
-        if (v == null) return;
-        const base = getApiUrlForFetch().replace(/\/$/, "");
+  const salvarM12LikertCompleto = useCallback(
+    async (proximo: number[]): Promise<boolean> => {
+      const token = getAccessToken();
+      if (!token || data?.status !== "finalizado") {
+        setM12Msg("É necessário estar autenticado e o diagnóstico finalizado.");
+        return false;
+      }
+      const v = versaoOtimistaRef.current;
+      if (v == null) {
+        setM12Msg("Versão otimista indisponível — recarregue a página.");
+        return false;
+      }
+      setM12Saving(true);
+      setM12Msg(null);
+      const base = getApiUrlForFetch().replace(/\/$/, "");
+      try {
         const res = await fetch(`${base}/diagnosticos/${id}/checklist-m12-autoconf`, {
           method: "PATCH",
           headers: {
@@ -495,28 +542,45 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             Authorization: `Bearer ${token}`,
             "If-Match": String(v),
           },
-          body: JSON.stringify({ checklist_m12_autoconf: abntChecks }),
+          body: JSON.stringify({ checklist_m12_autoconf: proximo }),
         });
         if (res.ok) {
           const json = (await res.json()) as DiagnosticoDetalheApi;
           if (json.versao_otimista != null) {
             versaoOtimistaRef.current = json.versao_otimista;
           }
-          const m12 = json.checklist_m12_autoconf;
-          lastSyncedM12Ref.current = JSON.stringify(
-            m12 && m12.length === 10 ? m12 : abntChecks,
-          );
+          const sync = normalizarM12DoApi(json.checklist_m12_autoconf);
+          setM12Likert(sync ?? proximo);
           setData(json);
-          return;
+          setM12Msg("Autoconf M12 gravada.");
+          return true;
         }
         if (res.status === 412) {
+          setM12Msg("Conflito de versão — a atualizar dados…");
           await refetchDetalhe();
+          return false;
         }
-      })();
-    }, 480);
+        const t = await res.text();
+        setM12Msg(`Não foi possível gravar (${res.status}): ${t.slice(0, 160)}`);
+        return false;
+      } catch {
+        setM12Msg("Falha de rede ao gravar o M12.");
+        return false;
+      } finally {
+        setM12Saving(false);
+      }
+    },
+    [data?.status, id, refetchDetalhe],
+  );
 
-    return () => window.clearTimeout(handle);
-  }, [abntChecks, data, id, refetchDetalhe]);
+  const confirmarM12Modal = useCallback(async () => {
+    const idx = m12ModalIndex;
+    if (idx === null || idx < 0 || idx >= M12_NUM_ITENS) return;
+    const base = m12Likert.length === M12_NUM_ITENS ? [...m12Likert] : Array(M12_NUM_ITENS).fill(M12_LIKERT_PADRAO);
+    base[idx] = m12ModalDraft;
+    const ok = await salvarM12LikertCompleto(base);
+    if (ok) setM12ModalIndex(null);
+  }, [m12ModalIndex, m12ModalDraft, m12Likert, salvarM12LikertCompleto]);
 
   const barGapColors = ["#b91c1c", "#ea580c", "#ca8a04", "#65a30d", "#16a34a"];
 
@@ -773,32 +837,49 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <CardHeader>
             <CardTitle>Autoconferência ABNT — 10 controles (M12)</CardTitle>
             <p className="text-sm font-normal text-muted-foreground">
-              Réplica espelho do checklist do relatório PDF. Alterações são salvas no servidor com
-              concorrência otimista (<code className="text-xs">If-Match</code> /{" "}
-              <code className="text-xs">versao_otimista</code>), alinhado à ABNT NBR 17301:2026 e LC 214/2025.
+              Escala Likert 1 (mínimo) a 5 (máximo) por controlo — espelho do checklist do relatório PDF. Use{" "}
+              <strong className="font-medium text-foreground">Alterar</strong> e{" "}
+              <strong className="font-medium text-foreground">Salvar</strong> na janela. Persistência com{" "}
+              <code className="text-xs">If-Match</code> / <code className="text-xs">versao_otimista</code> (ABNT NBR
+              17301:2026, LC 214/2025).
             </p>
+            {m12Msg ? (
+              <p className="text-sm text-muted-foreground mt-2" role="status">
+                {m12Msg}
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-3">
-            {frenteAbnt10.acoes.map((a, i) => (
-              <label
-                key={a.descricao + String(i)}
-                className="flex gap-3 items-start rounded-lg border bg-muted/10 p-3 cursor-pointer hover:border-primary/40"
-              >
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 rounded border-input"
-                  checked={abntChecks[i] ?? false}
-                  onChange={(e) => {
-                    setAbntChecks((prev) => {
-                      const next = [...prev];
-                      next[i] = e.target.checked;
-                      return next;
-                    });
-                  }}
-                />
-                <span className="text-sm leading-snug">{a.descricao}</span>
-              </label>
-            ))}
+            {frenteAbnt10.acoes.map((a, i) => {
+              const valor = m12Likert[i] ?? M12_LIKERT_PADRAO;
+              return (
+                <div
+                  key={a.descricao + String(i)}
+                  className="flex flex-col gap-3 rounded-lg border bg-muted/10 p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                >
+                  <p className="text-sm leading-snug flex-1 min-w-0">{a.descricao}</p>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <Badge variant="secondary" className="text-xs font-normal max-w-[14rem] sm:max-w-xs text-left">
+                      {valor} — {rotuloLikertM12(valor)}
+                    </Badge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={m12Saving || data.status !== "finalizado"}
+                      onClick={() => {
+                        setM12ModalIndex(i);
+                        setM12ModalDraft(valor);
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Alterar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}
@@ -842,11 +923,12 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Quadro de implantação</h2>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              <strong className="font-medium text-foreground">Alterar ação</strong> abre a edição do texto do cartão
+              com <strong className="font-medium text-foreground">Salvar</strong> na janela.{" "}
               <strong className="font-medium text-foreground">Incluir prazo</strong> e{" "}
-              <strong className="font-medium text-foreground">Adicionar comentário</strong> abrem uma janela: você
-              informa, confirma e o sistema grava na hora (mesmo contrato If-Match do servidor). Personalize a
-              descrição no cartão e use <strong className="font-medium text-foreground">Salvar esta ação</strong> para
-              persistir só o texto editável. Referência do motor: prazo qualitativo na ficha.
+              <strong className="font-medium text-foreground">Adicionar comentário</strong> também gravam na confirmação
+              (If-Match / <code className="text-xs">versao_otimista</code>). Referência do motor: prazo qualitativo na
+              ficha.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-center shrink-0">
@@ -904,24 +986,23 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                         )}
                       </CardHeader>
                       <CardContent className="p-4 pt-0 space-y-3">
-                        <div className="space-y-1">
-                          <Label htmlFor={`desc-acao-${qk}`} className="text-xs">
-                            Descrição da ação (editável)
-                          </Label>
-                          <textarea
-                            id={`desc-acao-${qk}`}
-                            rows={3}
-                            className="w-full min-h-[4.5rem] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            placeholder="Deixe em branco para usar o texto sugerido pelo motor. Ao preencher e salvar, substitui o título do cartão."
-                            value={qv.descricao_personalizada}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setQuadroEdits((prev) => {
-                                const cur = prev[qk] ?? qv;
-                                return { ...prev, [qk]: { ...cur, descricao_personalizada: v } };
-                              });
-                            }}
-                          />
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto gap-2"
+                            disabled={Boolean(quadroSaving[qk]) || data.status !== "finalizado"}
+                            onClick={() => abrirModalAcaoEditParaChave(qk)}
+                          >
+                            <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Alterar ação
+                          </Button>
+                          {quadroMsgPorAcao[qk] ? (
+                            <p className="text-xs text-muted-foreground sm:text-right" role="status">
+                              {quadroMsgPorAcao[qk]}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex justify-between items-center mt-2">
                           <span className="text-xs text-muted-foreground">{acao.responsavel}</span>
@@ -1022,23 +1103,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                               ))}
                             </ul>
                           )}
-                        </div>
-                        <div className="flex flex-col gap-2 pt-3 border-t border-border/70">
-                          <Button
-                            type="button"
-                            variant="default"
-                            size="sm"
-                            className="w-full sm:w-auto"
-                            disabled={Boolean(quadroSaving[qk]) || data.status !== "finalizado"}
-                            onClick={() => void salvarQuadroAcao(qk)}
-                          >
-                            {quadroSaving[qk] ? "Gravando…" : "Salvar esta ação"}
-                          </Button>
-                          {quadroMsgPorAcao[qk] ? (
-                            <p className="text-xs text-muted-foreground" role="status">
-                              {quadroMsgPorAcao[qk]}
-                            </p>
-                          ) : null}
                         </div>
                       </CardContent>
                     </Card>
@@ -1142,6 +1206,109 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
               {comentarioModalQk != null && quadroSaving[comentarioModalQk]
                 ? "Gravando…"
                 : "Salvar comentário"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={acaoEditModalQk !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAcaoEditModalQk(null);
+            setAcaoEditModalDraft("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Alterar ação</DialogTitle>
+            <DialogDescription>
+              Texto exibido no título do cartão. Deixe em branco para voltar ao texto sugerido pelo motor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <Label htmlFor="qdi-quadro-modal-desc-acao">Descrição da ação</Label>
+            <textarea
+              id="qdi-quadro-modal-desc-acao"
+              rows={6}
+              className="w-full min-h-[8rem] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Deixe em branco para usar o texto sugerido pelo motor."
+              value={acaoEditModalDraft}
+              onChange={(e) => setAcaoEditModalDraft(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setAcaoEditModalQk(null);
+                setAcaoEditModalDraft("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                acaoEditModalQk != null
+                  ? Boolean(quadroSaving[acaoEditModalQk]) || data.status !== "finalizado"
+                  : true
+              }
+              onClick={() => void confirmarAcaoEditModal()}
+            >
+              {acaoEditModalQk != null && quadroSaving[acaoEditModalQk] ? "Gravando…" : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={m12ModalIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setM12ModalIndex(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Controlo M12 — escala Likert</DialogTitle>
+            <DialogDescription>
+              Grau declarado para este controlo: 1 = não implementado, 5 = implementado e monitorado. A gravação
+              envia os 10 valores (If-Match).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2" role="radiogroup" aria-label="Escala Likert 1 a 5">
+            {([1, 2, 3, 4, 5] as const).map((n) => (
+              <label
+                key={n}
+                className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-sm transition-colors ${
+                  m12ModalDraft === n ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="m12-likert"
+                  className="mt-0.5"
+                  checked={m12ModalDraft === n}
+                  onChange={() => setM12ModalDraft(n)}
+                />
+                <span>
+                  <span className="font-semibold text-foreground">{n}</span> — {rotuloLikertM12(n)}
+                </span>
+              </label>
+            ))}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setM12ModalIndex(null)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={m12Saving || data.status !== "finalizado"}
+              onClick={() => void confirmarM12Modal()}
+            >
+              {m12Saving ? "Gravando…" : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>

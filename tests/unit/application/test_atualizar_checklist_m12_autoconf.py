@@ -46,7 +46,7 @@ async def test_execute_persiste_e_retorna_atualizado():
 
     d1 = _diag_finalizado(tid)
     d1.id = did
-    d1.definir_checklist_m12_autoconf([True] * 10)
+    d1.definir_checklist_m12_autoconf([5] * 10)
     d1.versao_otimista = 2
 
     repo = AsyncMock()
@@ -57,14 +57,14 @@ async def test_execute_persiste_e_retorna_atualizado():
     cmd = ComandoAtualizarChecklistM12Autoconf(
         tenant_id=tid,
         diagnostico_id=did,
-        checklist_m12_autoconf=[True] * 10,
+        checklist_m12_autoconf=[5] * 10,
         versao_esperada=1,
     )
     out = await uc.execute(cmd)
 
     assert out.versao_otimista == 2
-    assert out.checklist_m12_estado == [True] * 10
-    repo.atualizar_checklist_m12_com_versao.assert_awaited_once_with(did, tid, [True] * 10, 1)
+    assert out.checklist_m12_estado == [5] * 10
+    repo.atualizar_checklist_m12_com_versao.assert_awaited_once_with(did, tid, [5] * 10, 1)
 
 
 @pytest.mark.asyncio
@@ -75,7 +75,7 @@ async def test_execute_nao_encontrado():
     cmd = ComandoAtualizarChecklistM12Autoconf(
         tenant_id=uuid.uuid4(),
         diagnostico_id=uuid.uuid4(),
-        checklist_m12_autoconf=[False] * 10,
+        checklist_m12_autoconf=[1] * 10,
         versao_esperada=1,
     )
     with pytest.raises(DiagnosticoNaoEncontradoError):
@@ -93,7 +93,7 @@ async def test_execute_conflito_versao():
     cmd = ComandoAtualizarChecklistM12Autoconf(
         tenant_id=tid,
         diagnostico_id=d0.id,
-        checklist_m12_autoconf=[False] * 10,
+        checklist_m12_autoconf=[1] * 10,
         versao_esperada=99,
     )
     with pytest.raises(ConflitoVersaoOtimistaError):
@@ -123,7 +123,7 @@ async def test_execute_rejeita_em_andamento():
     cmd = ComandoAtualizarChecklistM12Autoconf(
         tenant_id=tid,
         diagnostico_id=d.id,
-        checklist_m12_autoconf=[False] * 10,
+        checklist_m12_autoconf=[1] * 10,
         versao_esperada=1,
     )
     with pytest.raises(ValueError, match=r"finalizado"):

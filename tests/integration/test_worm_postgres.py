@@ -107,7 +107,7 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
     assert row["versao_otimista"] == 2
     assert row["relatorio_pdf_url"] == "https://exemplo/qdi-rel.pdf"
 
-    m12_esperado = [True] + [False] * 9
+    m12_esperado = [5] + [1] * 9
     await pg_conn.execute(
         """
         UPDATE diagnosticos

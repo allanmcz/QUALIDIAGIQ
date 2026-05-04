@@ -1,5 +1,5 @@
 """
-Caso de uso: persistir autoconf ABNT M12 (10 booleanos) com lock otimista.
+Caso de uso: persistir autoconf ABNT M12 (10 x Likert 1-5) com lock otimista.
 
 Camada: Application
 Depende apenas de: domain + port DiagnosticoRepository
@@ -29,7 +29,7 @@ class ComandoAtualizarChecklistM12Autoconf:
 
     tenant_id: UUID
     diagnostico_id: UUID
-    checklist_m12_autoconf: list[bool]
+    checklist_m12_autoconf: list[int]
     versao_esperada: int
 
 

@@ -96,7 +96,7 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        checklist_m12_estado: list[bool],
+        checklist_m12_estado: list[int],
         versao_esperada: int,
     ) -> Diagnostico | None:
         row = await self.buscar_por_id(diagnostico_id, tenant_id)

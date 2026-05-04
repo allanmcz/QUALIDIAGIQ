@@ -207,7 +207,7 @@ class TestPostgresDiagnosticoRepository:
         did, tid = uuid4(), uuid4()
         mock_cursor = MagicMock()
         row = _row_minima(did, tid)
-        row["checklist_m12_estado"] = [True] * 10
+        row["checklist_m12_estado"] = [5] * 10
         mock_cursor.fetchone.return_value = row
         mock_conn = _mock_conn_cursor(mock_cursor)
         with patch(
@@ -216,7 +216,7 @@ class TestPostgresDiagnosticoRepository:
         ):
             repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
             out = await repo.atualizar_checklist_m12_com_versao(
-                did, tid, [True] * 10, versao_esperada=1
+                did, tid, [5] * 10, versao_esperada=1
             )
         assert out is not None
-        assert out.checklist_m12_estado == [True] * 10
+        assert out.checklist_m12_estado == [5] * 10

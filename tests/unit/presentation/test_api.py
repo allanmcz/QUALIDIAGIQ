@@ -462,7 +462,7 @@ def test_patch_checklist_m12_sem_if_match_400():
 
     response = client.patch(
         f"/diagnosticos/{uuid.uuid4()}/checklist-m12-autoconf",
-        json={"checklist_m12_autoconf": [False] * 10},
+        json={"checklist_m12_autoconf": [1] * 10},
         headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
     )
 
@@ -484,7 +484,7 @@ def test_patch_checklist_m12_conflito_412():
     did = uuid.uuid4()
     response = client.patch(
         f"/diagnosticos/{did}/checklist-m12-autoconf",
-        json={"checklist_m12_autoconf": [True] * 10},
+        json={"checklist_m12_autoconf": [5] * 10},
         headers={
             **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
             "If-Match": "1",
@@ -502,7 +502,7 @@ def test_patch_checklist_m12_sucesso():
     d_in = _diag_finalizado_micro()
     d_in.tenant_id = tid
     d_out = copy.deepcopy(d_in)
-    d_out.definir_checklist_m12_autoconf([True] + [False] * 9)
+    d_out.definir_checklist_m12_autoconf([5] + [1] * 9)
     d_out.versao_otimista = 2
 
     mock_uc = AsyncMock()
@@ -511,7 +511,7 @@ def test_patch_checklist_m12_sucesso():
     app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
     app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
 
-    payload = {"checklist_m12_autoconf": [True] + [False] * 9}
+    payload = {"checklist_m12_autoconf": [5] + [1] * 9}
     response = client.patch(
         f"/diagnosticos/{d_in.id}/checklist-m12-autoconf",
         json=payload,
@@ -526,7 +526,7 @@ def test_patch_checklist_m12_sucesso():
     assert response.status_code == 200
     body = response.json()
     assert body["versao_otimista"] == 2
-    assert body["checklist_m12_autoconf"] == [True] + [False] * 9
+    assert body["checklist_m12_autoconf"] == [5] + [1] * 9
 
 
 def test_listar_diagnosticos_resumo():

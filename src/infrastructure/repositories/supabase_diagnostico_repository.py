@@ -37,6 +37,7 @@ from src.domain.entities.diagnostico import (
     StatusDiagnostico,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
 from src.domain.value_objects.score import ScoreCompleto
 
 if TYPE_CHECKING:
@@ -137,7 +138,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        checklist_m12_estado: list[bool],
+        checklist_m12_estado: list[int],
         versao_esperada: int,
     ) -> Diagnostico | None:
         """UPDATE condicional do JSONB M12 + incremento de `versao_otimista`."""
@@ -268,12 +269,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         email_resp = row.get("respondente_email") or "nao-informado@placeholder.qdi"
 
         m12_raw = row.get("checklist_m12_estado")
-        checklist_m12: list[bool] | None = None
-        if isinstance(m12_raw, list):
-            try:
-                checklist_m12 = [bool(x) for x in m12_raw]
-            except (TypeError, ValueError):
-                checklist_m12 = None
+        checklist_m12 = normalizar_checklist_m12_estado_bruto(m12_raw)
 
         aceite_raw = row.get("aceite_termos_privacidade_em")
         aceite_em: datetime | None = None

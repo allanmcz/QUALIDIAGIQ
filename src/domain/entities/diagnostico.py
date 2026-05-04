@@ -26,6 +26,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+from src.domain.value_objects.checklist_m12_likert import validar_itens_m12_likert
 from src.domain.value_objects.cnpj_brasil import exigir_cnpj_vazio_ou_com_dv_ok
 
 if TYPE_CHECKING:
@@ -165,8 +166,8 @@ class Diagnostico:
     score_completo_snapshot: ScoreCompleto | None = None
     hash_evidencia: str | None = None  # SHA-256 hex (64 caracteres)
     versao_otimista: int = 1
-    # M12 — autoconf ABNT (10 booleanos); mutável após finalizado com versao_otimista (vide PATCH dedicado).
-    checklist_m12_estado: list[bool] | None = None
+    # M12 - autoconf ABNT (10 x Likert 1-5); mutável após finalizado com versao_otimista (vide PATCH dedicado).
+    checklist_m12_estado: list[int] | None = None
     # Quadro de implantação — anotações do consultor por ação (chave f{i}_a{j}); não entra no hash WORM.
     # Cada item: prazo_meta (ISO) + comentarios[]; opcional descricao_personalizada (substitui texto canônico no painel).
     quadro_implantacao_anotacoes: dict[str, dict[str, str | list[str]]] | None = None
@@ -244,9 +245,9 @@ class Diagnostico:
             )
         self.relatorio_pdf_url = url
 
-    def definir_checklist_m12_autoconf(self, itens: list[bool]) -> None:
+    def definir_checklist_m12_autoconf(self, itens: list[int]) -> None:
         """
-        Persistência lógica da autoconf ABNT — 10 controles binários (M12).
+        Persistência lógica da autoconf ABNT - 10 itens em escala Likert 1-5 (M12).
 
         Base normativa: ABNT NBR 17301:2026 (autoconferência operacional).
         """
@@ -254,8 +255,7 @@ class Diagnostico:
             raise DiagnosticoNaoFinalizavelError(
                 "Só é possível atualizar a autoconf M12 em diagnóstico finalizado."
             )
-        if len(itens) != 10:
-            raise ValueError("Autoconf M12 exige exatamente 10 itens booleanos.")
+        validar_itens_m12_likert(itens)
         self.checklist_m12_estado = list(itens)
 
     _CHAVE_QUADRO_RE = re.compile(r"^f\d+_a\d+$")

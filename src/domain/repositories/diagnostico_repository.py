@@ -76,11 +76,11 @@ class DiagnosticoRepository(ABC):
         self,
         diagnostico_id: UUID,
         tenant_id: UUID,
-        checklist_m12_estado: list[bool],
+        checklist_m12_estado: list[int],
         versao_esperada: int,
     ) -> Diagnostico | None:
         """
-        Persiste os 10 booleanos M12 com lock otimista (incrementa `versao_otimista`).
+        Persiste os 10 valores Likert (1-5) M12 com lock otimista (incrementa `versao_otimista`).
 
         Retorna:
             Diagnóstico atualizado se o UPDATE afetou uma linha; None em conflito de versão.

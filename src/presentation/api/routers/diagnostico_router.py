@@ -226,12 +226,12 @@ def _quadro_implantacao_para_http(diagnostico: Diagnostico) -> dict[str, dict[st
     return {str(k): dict(v) for k, v in raw.items()}
 
 
-def _checklist_m12_para_http(diagnostico: Diagnostico) -> list[bool] | None:
-    """Extrai lista persistida para o contrato HTTP (evita `MagicMock` nos testes)."""
+def _checklist_m12_para_http(diagnostico: Diagnostico) -> list[int] | None:
+    """Extrai lista persistida Likert 1-5 para o contrato HTTP (evita `MagicMock` nos testes)."""
     raw = getattr(diagnostico, "checklist_m12_estado", None)
     if not isinstance(raw, list) or len(raw) != 10:
         return None
-    if not all(isinstance(x, bool) for x in raw):
+    if not all(isinstance(x, int) and 1 <= x <= 5 for x in raw):
         return None
     return list(raw)
 
@@ -1051,7 +1051,7 @@ async def obter_diagnostico(
     response_model=DiagnosticoResponse,
     summary="Atualizar autoconf ABNT M12",
     description=(
-        "Persiste os 10 booleanos da autoconferência (ABNT NBR 17301). "
+        "Persiste os 10 valores Likert (1-5) da autoconferência (ABNT NBR 17301). "
         "Exige diagnóstico **finalizado** e header **If-Match** com `versao_otimista` atual."
     ),
 )

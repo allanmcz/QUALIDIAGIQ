@@ -9,7 +9,7 @@ Responsabilidade:
 
 import re
 from datetime import datetime
-from typing import Any, Literal, Self
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
@@ -238,18 +238,21 @@ class PatchRelatorioPdfRequest(BaseModel):
     relatorio_pdf_url: str = Field(..., min_length=1, max_length=4096)
 
 
+LikertM12Item = Annotated[int, Field(ge=1, le=5, description="Escala Likert 1 (minimo) a 5 (maximo).")]
+
+
 class PatchChecklistM12AutoconfRequest(BaseModel):
     """
-    Corpo do PATCH M12 — espelho dos 10 controles ABNT (booleanos).
+    Corpo do PATCH M12 - espelho dos 10 controles ABNT (Likert 1-5 por item).
 
     Exige `If-Match` com `versao_otimista` atual (mesmo contrato do PATCH de relatório).
     """
 
-    checklist_m12_autoconf: list[bool] = Field(
+    checklist_m12_autoconf: list[LikertM12Item] = Field(
         ...,
         min_length=10,
         max_length=10,
-        description="Exatamente 10 valores — mesma ordem das ações da frente ABNT no relatório.",
+        description="Exatamente 10 inteiros 1-5 - mesma ordem das ações da frente ABNT no relatório.",
     )
 
 
@@ -626,8 +629,8 @@ class DiagnosticoResponse(BaseModel):
     checklist: list[dict[str, Any]] | None = None
     matriz_impacto: list[dict[str, Any]] | None = None
     cronograma: list[dict[str, Any]] | None = None
-    # M12 — estado persistido da autoconf (JSONB `checklist_m12_estado`)
-    checklist_m12_autoconf: list[bool] | None = None
+    # M12 - estado persistido da autoconf (JSONB `checklist_m12_estado`, Likert 1-5)
+    checklist_m12_autoconf: list[int] | None = None
     # Quadro de implantação — anotações consultor (JSONB `quadro_implantacao_anotacoes`)
     quadro_implantacao_anotacoes: dict[str, dict[str, Any]] | None = Field(
         default=None,

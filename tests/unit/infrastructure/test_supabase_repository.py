@@ -230,7 +230,7 @@ async def test_atualizar_checklist_m12_com_versao_retorna_entidade(diagnostico_m
 
     repo = SupabaseDiagnosticoRepository(client=mock_client)
     diagnostico_mock.finalizar(score_geral=80.0)
-    diagnostico_mock.definir_checklist_m12_autoconf([True] + [False] * 9)
+    diagnostico_mock.definir_checklist_m12_autoconf([5] + [1] * 9)
     payload_pos_update = repo._para_dict(diagnostico_mock)
     payload_pos_update["versao_otimista"] = 2
     mock_select.execute = MagicMock(return_value=MagicMock(data=[payload_pos_update]))
@@ -238,12 +238,12 @@ async def test_atualizar_checklist_m12_com_versao_retorna_entidade(diagnostico_m
     out = await repo.atualizar_checklist_m12_com_versao(
         diagnostico_mock.id,
         diagnostico_mock.tenant_id,
-        [True] + [False] * 9,
+        [5] + [1] * 9,
         versao_esperada=1,
     )
 
     assert out is not None
-    assert out.checklist_m12_estado == [True] + [False] * 9
+    assert out.checklist_m12_estado == [5] + [1] * 9
     assert out.versao_otimista == 2
     mock_table.update.assert_called_once()
 
@@ -271,7 +271,7 @@ async def test_atualizar_checklist_m12_com_versao_none_quando_sem_linha(diagnost
     out = await repo.atualizar_checklist_m12_com_versao(
         diagnostico_mock.id,
         diagnostico_mock.tenant_id,
-        [False] * 10,
+        [1] * 10,
         versao_esperada=9,
     )
 

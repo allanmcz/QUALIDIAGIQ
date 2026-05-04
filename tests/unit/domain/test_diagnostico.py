@@ -281,7 +281,7 @@ class TestDiagnostico:
             tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
         )
         diag.finalizar(score_geral=50.0)
-        itens = [True, False] * 5
+        itens = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
         diag.definir_checklist_m12_autoconf(itens)
         assert diag.checklist_m12_estado == itens
 
@@ -291,7 +291,15 @@ class TestDiagnostico:
         )
         diag.finalizar(score_geral=50.0)
         with pytest.raises(ValueError, match=r"exatamente 10"):
-            diag.definir_checklist_m12_autoconf([True] * 9)
+            diag.definir_checklist_m12_autoconf([3] * 9)
+
+    def test_definir_m12_rejeita_likert_invalido(self, empresa_fixture, respondente_fixture):
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(score_geral=50.0)
+        with pytest.raises(ValueError, match=r"índice"):
+            diag.definir_checklist_m12_autoconf([0] + [3] * 9)
 
     def test_definir_m12_rejeita_se_nao_finalizado(self, empresa_fixture, respondente_fixture):
         diag = Diagnostico(
@@ -301,7 +309,7 @@ class TestDiagnostico:
             DiagnosticoNaoFinalizavelError,
             match=r"autoconf M12",
         ):
-            diag.definir_checklist_m12_autoconf([False] * 10)
+            diag.definir_checklist_m12_autoconf([1] * 10)
 
     def test_registrar_aceite_lgpd_em_andamento(self, empresa_fixture, respondente_fixture):
         diag = Diagnostico(
