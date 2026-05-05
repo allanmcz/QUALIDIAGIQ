@@ -177,11 +177,15 @@ def create_app() -> FastAPI:
     from src.presentation.api.routers import (
         auth_router,
         cnae_router,
+        diagnostico_core_router,
+        diagnostico_self_service_router,
         mock_storage_router,
         normativa_router,
     )
 
     app.include_router(diagnostico_router.router)
+    app.include_router(diagnostico_self_service_router.router)
+    app.include_router(diagnostico_core_router.router)
     app.include_router(auth_router.router)
     app.include_router(normativa_router.router)
     app.include_router(cnae_router.router)

@@ -137,7 +137,10 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
     await page.getByRole("button", { name: "Seguir" }).click();
 
     await expect(page.getByText(/Pergunta escala E2E/i)).toBeVisible();
-    await page.getByRole("radio", { name: /^3$/ }).check();
+    await page
+      .getByTestId("wizard-pergunta-atual")
+      .locator('input[type="radio"][value="3"]')
+      .check();
     await page.getByRole("button", { name: /Finalizar Diagnóstico/i }).click();
 
     await page.waitForURL("**/sucesso**", { timeout: 15_000 });

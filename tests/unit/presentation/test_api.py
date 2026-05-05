@@ -23,7 +23,7 @@ from src.presentation.api.dependencies import (
     get_realizar_diagnostico_use_case,
 )
 from src.presentation.api.main import app
-from src.presentation.api.routers.diagnostico_router import _parse_if_match_versao
+from src.presentation.api.routers.diagnostico_helpers import _parse_if_match_versao
 from tests.conftest import (
     cabecalho_auth_bearer,
     cabecalho_post_diagnostico,

@@ -13,6 +13,8 @@ from httpx import ASGITransport, AsyncClient
 from src.infrastructure.email_verificacao import codigo_store
 from src.presentation.api.dependencies import get_email_service, get_realizar_diagnostico_use_case
 from src.presentation.api.main import app
+from src.presentation.api.routers import diagnostico_helpers as dh
+from src.presentation.api.routers import diagnostico_self_service_router as dss
 from src.presentation.api.schemas import (
     DiagnosticoResponse,
     ScoreCompletoSchema,
@@ -62,13 +64,11 @@ async def rascunho_async_client() -> AsyncClient:
 
 @pytest.mark.asyncio
 async def test_post_rascunho_sem_dsn_503(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = None
         self_service_tenant_id = uuid4()
 
-    with patch.object(dr, "get_settings", return_value=S()):
+    with patch.object(dss, "get_settings", return_value=S()):
         r = await rascunho_async_client.post(
             "/diagnosticos/rascunho-self-service",
             json=PAYLOAD_MIN,
@@ -79,8 +79,6 @@ async def test_post_rascunho_sem_dsn_503(rascunho_async_client: AsyncClient) -> 
 
 @pytest.mark.asyncio
 async def test_post_rascunho_201(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
         self_service_tenant_id = uuid4()
@@ -91,8 +89,8 @@ async def test_post_rascunho_201(rascunho_async_client: AsyncClient) -> None:
             return ("resgate-token-fixo", datetime.now(UTC))
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.post(
                 "/diagnosticos/rascunho-self-service",
                 json=PAYLOAD_MIN,
@@ -106,8 +104,6 @@ async def test_post_rascunho_201(rascunho_async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_resumo_404(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
 
@@ -116,8 +112,8 @@ async def test_get_resumo_404(rascunho_async_client: AsyncClient) -> None:
             return None
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "invalido"},
@@ -127,8 +123,6 @@ async def test_get_resumo_404(rascunho_async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_get_resumo_200(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
 
@@ -147,8 +141,8 @@ async def test_get_resumo_200(rascunho_async_client: AsyncClient) -> None:
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "qualquer"},
@@ -163,8 +157,6 @@ async def test_get_resumo_200(rascunho_async_client: AsyncClient) -> None:
 async def test_get_resumo_empresa_nao_dict_usa_fallback_razao(
     rascunho_async_client: AsyncClient,
 ) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
 
@@ -183,8 +175,8 @@ async def test_get_resumo_empresa_nao_dict_usa_fallback_razao(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "t" * 24},
@@ -197,8 +189,6 @@ async def test_get_resumo_empresa_nao_dict_usa_fallback_razao(
 async def test_get_resumo_payload_json_como_string_200(rascunho_async_client: AsyncClient) -> None:
     """Alguns drivers devolvem jsonb como str — o handler deve fazer parse."""
     import json
-
-    from src.presentation.api.routers import diagnostico_router as dr
 
     class S:
         sync_database_url = "postgresql://x"
@@ -219,8 +209,8 @@ async def test_get_resumo_payload_json_como_string_200(rascunho_async_client: As
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "t" * 24},
@@ -232,7 +222,6 @@ async def test_get_resumo_payload_json_como_string_200(rascunho_async_client: As
 @pytest.mark.asyncio
 async def test_get_resumo_sem_expira_em_404(rascunho_async_client: AsyncClient) -> None:
     """Linha sem ``expira_em`` (corrupta): não expõe metadados — 404 como rascunho inválido."""
-    from src.presentation.api.routers import diagnostico_router as dr
 
     class S:
         sync_database_url = "postgresql://x"
@@ -251,8 +240,8 @@ async def test_get_resumo_sem_expira_em_404(rascunho_async_client: AsyncClient) 
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "u" * 24},
@@ -262,8 +251,6 @@ async def test_get_resumo_sem_expira_em_404(rascunho_async_client: AsyncClient) 
 
 @pytest.mark.asyncio
 async def test_post_concluir_rascunho_201(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
         self_service_tenant_id = uuid4()
@@ -302,12 +289,12 @@ async def test_post_concluir_rascunho_201(rascunho_async_client: AsyncClient) ->
             ),
         )
 
-    orig_core = dr._executar_criar_diagnostico_core
-    dr._executar_criar_diagnostico_core = fake_core
+    orig_core = dh._executar_criar_diagnostico_core
+    dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dr, "get_settings", return_value=S()):
-            with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
-                with patch.object(dr.codigo_store, "validar_e_consumir", return_value=True):
+        with patch.object(dss, "get_settings", return_value=S()):
+            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
                     r = await rascunho_async_client.post(
                         "/diagnosticos/rascunho-self-service/concluir",
                         json={
@@ -317,7 +304,7 @@ async def test_post_concluir_rascunho_201(rascunho_async_client: AsyncClient) ->
                         headers={"Idempotency-Key": "c3d4e5f6-a7b8-9012-cdef-123456789012"},
                     )
     finally:
-        dr._executar_criar_diagnostico_core = orig_core
+        dh._executar_criar_diagnostico_core = orig_core
     assert r.status_code == 201
     body = r.json()
     assert body["status"] == "finalizado"
@@ -326,8 +313,6 @@ async def test_post_concluir_rascunho_201(rascunho_async_client: AsyncClient) ->
 
 @pytest.mark.asyncio
 async def test_get_conclusao_visualizacao_404(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
         self_service_tenant_id = uuid4()
@@ -338,8 +323,8 @@ async def test_get_conclusao_visualizacao_404(rascunho_async_client: AsyncClient
             return None
         raise AssertionError(n)
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/self-service/conclusao-visualizacao",
                 params={
@@ -352,8 +337,6 @@ async def test_get_conclusao_visualizacao_404(rascunho_async_client: AsyncClient
 
 @pytest.mark.asyncio
 async def test_get_conclusao_visualizacao_200(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
         self_service_tenant_id = uuid4()
@@ -381,8 +364,8 @@ async def test_get_conclusao_visualizacao_200(rascunho_async_client: AsyncClient
             return drow
         raise AssertionError(n)
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/self-service/conclusao-visualizacao",
                 params={
@@ -399,8 +382,6 @@ async def test_get_conclusao_visualizacao_200(rascunho_async_client: AsyncClient
 
 @pytest.mark.asyncio
 async def test_post_concluir_marcar_falha_503(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
         self_service_tenant_id = uuid4()
@@ -437,26 +418,24 @@ async def test_post_concluir_marcar_falha_503(rascunho_async_client: AsyncClient
             ),
         )
 
-    orig_core = dr._executar_criar_diagnostico_core
-    dr._executar_criar_diagnostico_core = fake_core
+    orig_core = dh._executar_criar_diagnostico_core
+    dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dr, "get_settings", return_value=S()):
-            with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
-                with patch.object(dr.codigo_store, "validar_e_consumir", return_value=True):
+        with patch.object(dss, "get_settings", return_value=S()):
+            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
                     r = await rascunho_async_client.post(
                         "/diagnosticos/rascunho-self-service/concluir",
                         json={"resgate_token": "v" * 32, "codigo": "654321"},
                         headers={"Idempotency-Key": "e5f6a7b8-c9d0-1234-ef01-345678901234"},
                     )
     finally:
-        dr._executar_criar_diagnostico_core = orig_core
+        dh._executar_criar_diagnostico_core = orig_core
     assert r.status_code == 503
 
 
 @pytest.mark.asyncio
 async def test_post_concluir_codigo_com_letras_400(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
         self_service_tenant_id = uuid4()
@@ -476,8 +455,8 @@ async def test_post_concluir_codigo_com_letras_400(rascunho_async_client: AsyncC
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dr, "get_settings", return_value=S()):
-        with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.post(
                 "/diagnosticos/rascunho-self-service/concluir",
                 json={"resgate_token": "w" * 32, "codigo": "12ab45"},
@@ -488,8 +467,6 @@ async def test_post_concluir_codigo_com_letras_400(rascunho_async_client: AsyncC
 
 @pytest.mark.asyncio
 async def test_post_vincular_rascunho_conta_201(rascunho_async_client: AsyncClient) -> None:
-    from src.presentation.api.routers import diagnostico_router as dr
-
     class S:
         sync_database_url = "postgresql://x"
 
@@ -534,13 +511,13 @@ async def test_post_vincular_rascunho_conta_201(rascunho_async_client: AsyncClie
         )
 
     em = codigo_store.normalizar_email(str(PAYLOAD_MIN["respondente"]["email"]))
-    orig_core = dr._executar_criar_diagnostico_core
-    dr._executar_criar_diagnostico_core = fake_core
+    orig_core = dh._executar_criar_diagnostico_core
+    dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dr, "get_settings", return_value=S()):
-            with patch.object(dr.asyncio, "to_thread", side_effect=fake_to_thread):
+        with patch.object(dss, "get_settings", return_value=S()):
+            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
                 with patch.object(
-                    dr,
+                    dss,
                     "buscar_email_admin_por_id_e_tenant_postgres",
                     return_value=em,
                 ):
@@ -550,6 +527,6 @@ async def test_post_vincular_rascunho_conta_201(rascunho_async_client: AsyncClie
                         headers=headers,
                     )
     finally:
-        dr._executar_criar_diagnostico_core = orig_core
+        dh._executar_criar_diagnostico_core = orig_core
     assert r.status_code == 201
     assert r.json()["id"] == "22222222-2222-4222-8222-222222222222"
