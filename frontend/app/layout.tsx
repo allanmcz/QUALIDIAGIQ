@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
@@ -23,6 +23,13 @@ const montserrat = Montserrat({
  * Em produção definir NEXT_PUBLIC_SITE_URL (ex.: https://app.tributiq.com.br).
  */
 const metadataBase = new URL(process.env["NEXT_PUBLIC_SITE_URL"] ?? "http://localhost:3010");
+
+/** PWA / instalável — ADR-011 B1; theme alinhado ao manifest.json */
+export const viewport: Viewport = {
+  themeColor: "#0D1B4B",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase,

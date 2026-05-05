@@ -2,6 +2,12 @@
 
 > **Status:** MVP App Router ativo (Next 14+) — wizard, dashboard M05/M06/M12 e páginas públicas (`/metodologia`, LGPD).
 
+## PWA — Onda 1 (ADR-011)
+
+- **B1 (actual):** `public/manifest.json` + `metadata.manifest` + `viewport.themeColor` em `app/layout.tsx` — sem service worker.  
+- **B2 (planeado):** SW com política explícita (**não** cachear `/api-backend`, `/api/*`, rotas autenticadas); branch sugerida `feat/qdi-front-pwa-onda1`.  
+- Após alterações PWA: `npm run build` + smoke manual login → dashboard → `/wizard`.
+
 ## E2E integrado (API Python real — C1)
 
 Variáveis típicas no mesmo shell antes de subir Next + Playwright:

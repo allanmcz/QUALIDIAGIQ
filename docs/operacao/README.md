@@ -13,6 +13,7 @@
 | [DECISOES_PRODUTO_MVP_D1_D5.md](./DECISOES_PRODUTO_MVP_D1_D5.md) | Registro vivo das decisões D1–D5. |
 | [FAIXA_FATURAMENTO_AUTODECLARADA.md](./FAIXA_FATURAMENTO_AUTODECLARADA.md) | Faixa de faturamento opcional: slugs, convenção de limites MVP, LGPD, relação com porte. |
 | [STATUS_JURIDICO_MVP.md](../legal/STATUS_JURIDICO_MVP.md) | Processo jurídico MVP (termos/privacidade). |
+| [HANDOFF_DPO_RIPD_TEMPLATE.md](./HANDOFF_DPO_RIPD_TEMPLATE.md) | Template DPO / RIPD / workshop WORM×LGPD (handoff). |
 
 ## Deploy, smoke e schema
 
@@ -25,6 +26,15 @@
 | [SMOKE_MVP_FECHADO.md](./SMOKE_MVP_FECHADO.md) | Smoke manual e referência ao gate automatizado. |
 | [SQL_VERIFICACAO_SCHEMA_MVP.sql](./SQL_VERIFICACAO_SCHEMA_MVP.sql) | Verificação SQL do schema MVP. |
 | [`_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md`](../../_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md) | Análise / evidência RLS (P6) — documento de planeamento. |
+
+## Planeamento compliance e PWA (handoff)
+
+| Documento | Uso |
+|-----------|-----|
+| [PLANO_HANDOFF_JANELA_23H_LGPD_PWA.md](./PLANO_HANDOFF_JANELA_23H_LGPD_PWA.md) | Fatias acionáveis **LGPD técnico + PWA** numa janela curta; liga a ADR-011 e ADR-012. |
+| [ROADMAP_HANDOFF_PROGRESSO_SYNC.md](./ROADMAP_HANDOFF_PROGRESSO_SYNC.md) | Espelho versionável do painel do roadmap em `_DEVELOPER/` (Git). |
+| [RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md](./RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md) | Runbook rascunho art. 18 (pré-endpoints). |
+| [OPENAPI_DIFF_INSTRUCOES.md](./OPENAPI_DIFF_INSTRUCOES.md) | Como gerar diff OpenAPI opcional (R2). |
 
 ## PDF e homologação
 
