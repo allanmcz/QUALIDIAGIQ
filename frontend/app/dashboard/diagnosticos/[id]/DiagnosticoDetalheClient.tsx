@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAccessToken, getApiUrlForFetch, normalizarHrefRelatorioPdf } from "@/lib/api/config";
+import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import { clearPendingDiagnosticoFromStorage } from "@/lib/wizard/pending_diagnostico";
 import { clearWizardDraft } from "@/lib/wizard/wizard_draft";
 
@@ -42,6 +43,17 @@ type AcaoChecklist = {
   criticidade: string;
   base_legal?: string | null;
   prioridade?: number;
+  /** UUID da linha materializada em BD — preferido para o quadro. */
+  plano_acao_id?: string;
+  chave_quadro_legado?: string;
+  subtarefas?: Array<{
+    id: string;
+    titulo: string;
+    status: string;
+    prazo?: string | null;
+    comentarios?: string | null;
+    ordem: number;
+  }>;
 };
 type FrenteChecklist = { nome: string; acoes: AcaoChecklist[] };
 
@@ -81,6 +93,7 @@ export type DiagnosticoDetalheApi = {
   /** Chave canónica f{i}_a{j} — meta de prazo (ISO) e vários comentários por ação sugerida. */
   quadro_implantacao_anotacoes?: Record<string, QuadroItemPersistidoApi> | null;
   versao_otimista: number | null;
+  versao_plano?: number;
   score: {
     score_geral: { valor: number };
     score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;
@@ -138,6 +151,14 @@ function formatarMetaPrazoPtBr(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+function chaveQuadroParaAcao(acao: AcaoChecklist, i: number, j: number): string {
+  const pid = (acao.plano_acao_id || "").trim();
+  if (pid.length >= 32 && /^[0-9a-f-]+$/i.test(pid)) {
+    return pid;
+  }
+  return `f${i}_a${j}`;
+}
+
 function chavesQuadroIniciais(
   checklist: FrenteChecklist[] | null | undefined,
   persistido: DiagnosticoDetalheApi["quadro_implantacao_anotacoes"],
@@ -145,9 +166,9 @@ function chavesQuadroIniciais(
   const out: Record<string, QuadroEdicaoAcao> = {};
   if (!checklist) return out;
   checklist.forEach((f, i) => {
-    f.acoes.forEach((_, j) => {
-      const k = `f${i}_a${j}`;
-      const p = persistido?.[k];
+    f.acoes.forEach((acao, j) => {
+      const k = chaveQuadroParaAcao(acao, i, j);
+      const p = persistido?.[k] ?? persistido?.[`f${i}_a${j}`];
       const fromList = Array.isArray(p?.comentarios)
         ? p!.comentarios!.filter((x): x is string => typeof x === "string")
         : [];
@@ -261,6 +282,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           cache: "no-store",
         });
         if (!res.ok) {
+          if (encerrarSessaoPainelSe401(res.status)) return;
           if (!cancel) {
             setError(`API ${res.status}`);
             setData(mockDiagnostico(id));
@@ -344,7 +366,10 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       },
       cache: "no-store",
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (encerrarSessaoPainelSe401(res.status)) return;
+      return;
+    }
     const json = (await res.json()) as DiagnosticoDetalheApi;
     if (json.versao_otimista != null) {
       versaoOtimistaRef.current = json.versao_otimista;
@@ -405,6 +430,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           },
           body: JSON.stringify({ quadro_implantacao_anotacoes: body }),
         });
+        if (encerrarSessaoPainelSe401(res.status)) return false;
         if (res.ok) {
           const json = (await res.json()) as DiagnosticoDetalheApi;
           if (json.versao_otimista != null) {
@@ -544,6 +570,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           },
           body: JSON.stringify({ checklist_m12_autoconf: proximo }),
         });
+        if (encerrarSessaoPainelSe401(res.status)) return false;
         if (res.ok) {
           const json = (await res.json()) as DiagnosticoDetalheApi;
           if (json.versao_otimista != null) {
@@ -953,14 +980,14 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                     {frente.nome}
                   </div>
                   {frente.acoes.map((acao, j) => {
-                    const qk = `f${i}_a${j}`;
+                    const qk = chaveQuadroParaAcao(acao, i, j);
                     const qv = quadroEdits[qk] ?? defaultQuadroEdicaoAcao();
                     const descMotor = acao.descricao;
                     const descEditada = (qv.descricao_personalizada ?? "").trim();
                     const tituloExibido = descEditada || descMotor;
                     return (
                     <Card
-                      key={`${i}-${j}-${qk}`}
+                      key={qk}
                       className="mb-2 hover:border-primary/50 transition-colors"
                     >
                       <CardHeader className="p-4 pb-2">

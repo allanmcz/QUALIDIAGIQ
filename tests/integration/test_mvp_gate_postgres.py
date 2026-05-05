@@ -93,6 +93,27 @@ async def test_schema_diagnosticos_inclui_coluna_aceite_lgpd_0012(pg_conn):
 @pytest.mark.asyncio
 @pytest.mark.postgres
 @pytest.mark.mvp_gate
+async def test_schema_diagnostico_mutacao_audit_0026(pg_conn):
+    """Migração 0026 — log append-only de mutações pós-finalização (M12, quadro, PDF)."""
+    tbl = await pg_conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'diagnostico_mutacao_audit'
+    """)
+    if tbl != 1:
+        pytest.skip("Migração 0026 ausente no Postgres de teste (aplique migrations/*.sql).")
+    rls = await pg_conn.fetchval("""
+        SELECT c.relrowsecurity
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'diagnostico_mutacao_audit'
+    """)
+    assert rls is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.postgres
+@pytest.mark.mvp_gate
 async def test_rls_authenticated_ve_apenas_proprio_tenant(pg_conn):
     """
     Dois ``tenant_id`` distintos: sessão ``authenticated`` + JWT simulado só enxerga seu conjunto.

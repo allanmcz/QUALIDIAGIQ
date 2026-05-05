@@ -16,6 +16,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
+from src.application.ports.diagnostico_mutacao_audit_port import DiagnosticoMutacaoAuditPort
 from src.application.ports.lead_diagnostico_vinculo_port import (
     LeadDiagnosticoVinculoPort,
     NopLeadDiagnosticoVinculoAdapter,
@@ -27,6 +28,10 @@ from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasse
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
+)
+from src.application.use_cases.plano_painel_subtarefa import (
+    AtualizarSubtarefaPlanoDiagnostico,
+    CriarSubtarefaPlanoDiagnostico,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.application.use_cases.vincular_diagnosticos_lead_self_service import (
@@ -50,7 +55,13 @@ from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
 from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
 from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
+from src.infrastructure.adapters.noop_diagnostico_mutacao_audit_adapter import (
+    NoOpDiagnosticoMutacaoAuditAdapter,
+)
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
+from src.infrastructure.adapters.postgres_diagnostico_mutacao_audit_adapter import (
+    PostgresDiagnosticoMutacaoAuditAdapter,
+)
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
@@ -263,6 +274,15 @@ def get_diagnostico_repository() -> DiagnosticoRepository:
     return SupabaseDiagnosticoRepository(client=get_supabase_client())
 
 
+def get_diagnostico_mutacao_audit_port() -> DiagnosticoMutacaoAuditPort:
+    """Auditoria append-only em Postgres; no-op sem DSN síncrono (Supabase / memória)."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn:
+        return PostgresDiagnosticoMutacaoAuditAdapter(dsn_sync=dsn)
+    return NoOpDiagnosticoMutacaoAuditAdapter()
+
+
 def get_lead_diagnostico_vinculo_port() -> LeadDiagnosticoVinculoPort:
     """
     Reatribuição self-service → tenant da conta na plataforma.
@@ -291,23 +311,49 @@ def get_vincular_diagnosticos_lead_self_service_use_case(
 
 def get_anexar_relatorio_otimista_use_case(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    mutacao_audit: Annotated[
+        DiagnosticoMutacaoAuditPort,
+        Depends(get_diagnostico_mutacao_audit_port),
+    ],
 ) -> AnexarRelatorioOtimista:
     """PATCH de relatório com versão otimista."""
-    return AnexarRelatorioOtimista(repo=repo)
+    return AnexarRelatorioOtimista(repo=repo, mutacao_audit=mutacao_audit)
 
 
 def get_atualizar_checklist_m12_autoconf_use_case(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    mutacao_audit: Annotated[
+        DiagnosticoMutacaoAuditPort,
+        Depends(get_diagnostico_mutacao_audit_port),
+    ],
 ) -> AtualizarChecklistM12Autoconf:
     """PATCH M12 (autoconf ABNT) com versão otimista."""
-    return AtualizarChecklistM12Autoconf(repo=repo)
+    return AtualizarChecklistM12Autoconf(repo=repo, mutacao_audit=mutacao_audit)
 
 
 def get_atualizar_quadro_implantacao_use_case(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    mutacao_audit: Annotated[
+        DiagnosticoMutacaoAuditPort,
+        Depends(get_diagnostico_mutacao_audit_port),
+    ],
 ) -> AtualizarQuadroImplantacao:
     """PATCH quadro de implantação (comentários e prazos) com versão otimista."""
-    return AtualizarQuadroImplantacao(repo=repo)
+    return AtualizarQuadroImplantacao(repo=repo, mutacao_audit=mutacao_audit)
+
+
+def get_criar_subtarefa_plano_diagnostico_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> CriarSubtarefaPlanoDiagnostico:
+    """POST subtarefa do plano materializado."""
+    return CriarSubtarefaPlanoDiagnostico(repo=repo)
+
+
+def get_atualizar_subtarefa_plano_diagnostico_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> AtualizarSubtarefaPlanoDiagnostico:
+    """PATCH subtarefa do plano materializado."""
+    return AtualizarSubtarefaPlanoDiagnostico(repo=repo)
 
 
 def get_normativa_score_macro_repository() -> NormativaScoreMacroRepository:

@@ -22,8 +22,8 @@ Analogia para o Allan:
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from src.domain.entities.diagnostico import (
@@ -38,7 +38,14 @@ from src.domain.entities.diagnostico import (
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
+from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.score import ScoreCompleto
+from src.infrastructure.repositories.supabase_plano_painel_sync import (
+    atualizar_subtarefa_supabase,
+    buscar_plano_painel_serializado_supabase,
+    inserir_subtarefa_supabase,
+    materializar_plano_painel_supabase,
+)
 
 if TYPE_CHECKING:
     from supabase import Client
@@ -196,6 +203,116 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             return None
         return self._para_entity(data[0])
 
+    def _salvar_e_materializar_thread(
+        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+    ) -> PlanoPainelSerializado:
+        payload = self._para_dict(diagnostico)
+        self._client.table("diagnosticos").upsert(payload).execute()
+        return materializar_plano_painel_supabase(self._client, diagnostico, score_completo)
+
+    async def salvar_e_materializar_plano_painel(
+        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+    ) -> PlanoPainelSerializado:
+        return await asyncio.to_thread(
+            self._salvar_e_materializar_thread, diagnostico, score_completo
+        )
+
+    async def buscar_plano_painel_serializado(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        return await asyncio.to_thread(
+            buscar_plano_painel_serializado_supabase, self._client, diagnostico_id, tenant_id
+        )
+
+    def _materializar_backfill_thread(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        sid, tid = str(diagnostico_id), str(tenant_id)
+        chk = (
+            self._client.table("diagnostico_plano_acao")
+            .select("id")
+            .eq("diagnostico_id", sid)
+            .eq("tenant_id", tid)
+            .eq("versao_plano", 1)
+            .limit(1)
+            .execute()
+        )
+        if chk.data:
+            return None
+        d_resp = (
+            self._client.table("diagnosticos")
+            .select("*")
+            .eq("id", sid)
+            .eq("tenant_id", tid)
+            .single()
+            .execute()
+        )
+        row_raw = d_resp.data
+        if not isinstance(row_raw, dict):
+            return None
+        row = cast("dict[str, Any]", row_raw)
+        if row.get("status") != StatusDiagnostico.FINALIZADO.value:
+            return None
+        sc_raw = row.get("score_completo")
+        if not isinstance(sc_raw, dict):
+            return None
+        try:
+            sc = ScoreCompleto.desde_dict(sc_raw)
+        except (KeyError, TypeError, ValueError):
+            return None
+        d = self._para_entity(row)
+        return materializar_plano_painel_supabase(self._client, d, sc)
+
+    async def materializar_plano_painel_idempotente_backfill(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        return await asyncio.to_thread(
+            self._materializar_backfill_thread, diagnostico_id, tenant_id
+        )
+
+    async def inserir_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        plano_acao_id: UUID,
+        titulo: str,
+        ordem: int = 0,
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            inserir_subtarefa_supabase,
+            self._client,
+            tenant_id,
+            diagnostico_id,
+            plano_acao_id,
+            titulo,
+            ordem,
+        )
+
+    async def atualizar_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        subtarefa_id: UUID,
+        *,
+        titulo: str | None = None,
+        status: str | None = None,
+        prazo: date | None = None,
+        comentarios: str | None = None,
+        ordem: int | None = None,
+    ) -> dict[str, Any] | None:
+        return await asyncio.to_thread(
+            atualizar_subtarefa_supabase,
+            self._client,
+            tenant_id,
+            diagnostico_id,
+            subtarefa_id,
+            titulo=titulo,
+            status=status,
+            prazo=prazo,
+            comentarios=comentarios,
+            ordem=ordem,
+        )
+
     # ============================================================
     # Tradução entity ↔ dict
     # ============================================================
@@ -243,6 +360,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 else None
             ),
             "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
+            "versao_plano": int(getattr(d, "versao_plano", 1) or 1),
         }
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
@@ -302,7 +420,10 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                         leg = str(v.get("comentario", "") or "").strip()
                         if leg:
                             comentarios = [leg]
-                    item_sq: dict[str, str | list[str]] = {"prazo_meta": prazo, "comentarios": comentarios}
+                    item_sq: dict[str, str | list[str]] = {
+                        "prazo_meta": prazo,
+                        "comentarios": comentarios,
+                    }
                     dp_sq = str(v.get("descricao_personalizada", "") or "").strip()
                     if dp_sq:
                         item_sq["descricao_personalizada"] = dp_sq
@@ -341,4 +462,5 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             quadro_implantacao_anotacoes=quadro,
             aceite_termos_privacidade_em=aceite_em,
             locale_relatorio=locale_relatorio,
+            versao_plano=int(row.get("versao_plano") or 1),
         )

@@ -33,6 +33,12 @@ from src.application.use_cases.atualizar_quadro_implantacao import (
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
+from src.application.use_cases.plano_painel_subtarefa import (
+    AtualizarSubtarefaPlanoDiagnostico,
+    ComandoAtualizarSubtarefaPlanoDiagnostico,
+    ComandoCriarSubtarefaPlanoDiagnostico,
+    CriarSubtarefaPlanoDiagnostico,
+)
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
     EntradaRespostaDiagnostico,
@@ -65,6 +71,8 @@ from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
     get_atualizar_quadro_implantacao_use_case,
+    get_atualizar_subtarefa_plano_diagnostico_use_case,
+    get_criar_subtarefa_plano_diagnostico_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
     get_email_service,
@@ -78,6 +86,7 @@ from src.presentation.api.dependencies import (
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.schemas import (
     ConcluirRascunhoDiagnosticoSelfServiceRequest,
+    CriarSubtarefaPlanoDiagnosticoRequest,
     DiagnosticoConclusaoPublicaDimensaoSchema,
     DiagnosticoConclusaoSelfServicePublicoResponse,
     DiagnosticoRascunhoResumoResponse,
@@ -90,6 +99,7 @@ from src.presentation.api.schemas import (
     PatchChecklistM12AutoconfRequest,
     PatchQuadroImplantacaoRequest,
     PatchRelatorioPdfRequest,
+    PatchSubtarefaPlanoDiagnosticoRequest,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
     RascunhoDiagnosticoSelfServiceResponse,
@@ -256,21 +266,34 @@ def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
     )
 
 
-def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoResponse:
-    """Monta o payload HTTP canônico (checklist/matriz derivados do domínio)."""
+async def _montar_diagnostico_response(
+    repo: DiagnosticoRepository,
+    diagnostico: Diagnostico,
+    *,
+    recomendacao_ia: str | None = None,
+) -> DiagnosticoResponse:
+    """Monta o payload HTTP canônico — prioriza plano materializado na BD (fallback motor legado)."""
     from dataclasses import asdict
 
     from src.application.services.consultoria_service import ConsultoriaService
 
-    snap_chk = getattr(diagnostico, "score_completo_snapshot", None)
-    checklist_entities = ConsultoriaService.gerar_checklist(
-        diagnostico,
-        snap_chk if isinstance(snap_chk, ScoreCompleto) else None,
-    )
-    matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
-    cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
-    checklist_data = [asdict(f) for f in checklist_entities]
-    matriz_data = [asdict(m) for m in matriz_entities]
+    blob = await repo.buscar_plano_painel_serializado(diagnostico.id, diagnostico.tenant_id)
+    if blob is not None:
+        checklist_data = list(blob.checklist)
+        matriz_data = list(blob.matriz_impacto)
+        cronograma_data = list(blob.cronograma)
+        versao_plano = blob.versao_plano
+    else:
+        snap_chk = getattr(diagnostico, "score_completo_snapshot", None)
+        checklist_entities = ConsultoriaService.gerar_checklist(
+            diagnostico,
+            snap_chk if isinstance(snap_chk, ScoreCompleto) else None,
+        )
+        matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+        cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
+        checklist_data = [asdict(f) for f in checklist_entities]
+        matriz_data = [asdict(m) for m in matriz_entities]
+        versao_plano = int(getattr(diagnostico, "versao_plano", 1) or 1)
     h_aud, v_aud = _campos_auditoria_http(diagnostico)
     return DiagnosticoResponse(
         id=diagnostico.id,
@@ -285,7 +308,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
-        recomendacao_ia=None,
+        recomendacao_ia=recomendacao_ia,
         checklist=checklist_data,
         matriz_impacto=matriz_data,
         cronograma=cronograma_data,
@@ -294,6 +317,7 @@ def _montar_diagnostico_response(diagnostico: Diagnostico) -> DiagnosticoRespons
         aceite_termos_privacidade_em=_aceite_lgpd_para_http(diagnostico),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
+        versao_plano=versao_plano,
     )
 
 
@@ -357,6 +381,7 @@ async def _executar_criar_diagnostico_core(
     payload: IniciarDiagnosticoRequest,
     use_case: RealizarDiagnostico,
     perfil_limite: str | None,
+    repo: DiagnosticoRepository,
 ) -> DiagnosticoResponse:
     """Núcleo compartilhado entre POST com conta na plataforma e POST self-service (JWT após OTP)."""
     empresa_domain = EmpresaInfo(
@@ -408,41 +433,8 @@ async def _executar_criar_diagnostico_core(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    score_por_dimensao_schema = {
-        dim.value: ScoreDimensaoSchema(valor=sn.valor, peso_total_aplicado=sn.peso_total_aplicado)
-        for dim, sn in resultado.score.score_por_dimensao.items()
-    }
-
-    score_completo_schema = ScoreCompletoSchema(
-        score_geral=ScoreDimensaoSchema(
-            valor=resultado.score.score_geral.valor,
-            peso_total_aplicado=resultado.score.score_geral.peso_total_aplicado,
-        ),
-        score_por_dimensao=score_por_dimensao_schema,
-    )
-
-    d = resultado.diagnostico
-    h_aud, v_aud = _campos_auditoria_http(d)
-    return DiagnosticoResponse(
-        id=d.id,
-        status=d.status.value,
-        plano=d.plano.value,
-        empresa_razao_social=d.empresa.razao_social,
-        empresa_faixa_faturamento=(
-            d.empresa.faixa_faturamento.value if d.empresa.faixa_faturamento is not None else None
-        ),
-        locale_relatorio=getattr(d, "locale_relatorio", "pt-BR"),
-        score=score_completo_schema,
-        relatorio_pdf_url=resultado.relatorio_pdf_url,
-        recomendacao_ia=resultado.recomendacao_ia,
-        checklist=resultado.checklist,
-        matriz_impacto=resultado.matriz_impacto,
-        cronograma=resultado.cronograma,
-        checklist_m12_autoconf=_checklist_m12_para_http(d),
-        quadro_implantacao_anotacoes=_quadro_implantacao_para_http(d),
-        aceite_termos_privacidade_em=_aceite_lgpd_para_http(d),
-        hash_evidencia=h_aud,
-        versao_otimista=v_aud,
+    return await _montar_diagnostico_response(
+        repo, resultado.diagnostico, recomendacao_ia=resultado.recomendacao_ia
     )
 
 
@@ -480,6 +472,7 @@ async def criar_diagnostico(
     ],
     current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     """Inicia um novo diagnóstico e calcula o score com base nas respostas."""
     _, tenant_id, perfil_conta = current
@@ -488,6 +481,7 @@ async def criar_diagnostico(
         payload=payload,
         use_case=use_case,
         perfil_limite=perfil_conta,
+        repo=repo,
     )
 
 
@@ -510,6 +504,7 @@ async def criar_diagnostico_self_service(
     ],
     claims: Annotated[tuple[UUID, UUID, str], Depends(get_self_service_diagnostico_claims)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     """Persiste diagnóstico no tenant self-service (verificação de posse do e-mail)."""
     _sub, tenant_id, email_norm = claims
@@ -524,6 +519,7 @@ async def criar_diagnostico_self_service(
         payload=payload,
         use_case=use_case,
         perfil_limite=None,
+        repo=repo,
     )
 
 
@@ -652,6 +648,7 @@ async def resumo_rascunho_diagnostico_self_service(
 async def concluir_rascunho_diagnostico_self_service(
     body: ConcluirRascunhoDiagnosticoSelfServiceRequest,
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     settings = get_settings()
     dsn = settings.sync_database_url
@@ -706,6 +703,7 @@ async def concluir_rascunho_diagnostico_self_service(
         payload=payload,
         use_case=use_case,
         perfil_limite=None,
+        repo=repo,
     )
     try:
         await asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row2["id"])))
@@ -745,6 +743,7 @@ async def vincular_rascunho_conta_plataforma(
     body: VincularRascunhoContaPlataformaRequest,
     current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     user_id, tenant_id, perfil_conta = current
     settings = get_settings()
@@ -794,6 +793,7 @@ async def vincular_rascunho_conta_plataforma(
         payload=payload,
         use_case=use_case,
         perfil_limite=perfil_conta,
+        repo=repo,
     )
     try:
         await asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row["id"])))
@@ -1043,7 +1043,7 @@ async def obter_diagnostico(
     if not diagnostico:
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
 
-    return _montar_diagnostico_response(diagnostico)
+    return await _montar_diagnostico_response(repo, diagnostico)
 
 
 @router.patch(
@@ -1063,10 +1063,11 @@ async def atualizar_checklist_m12_autoconf(
         AtualizarChecklistM12Autoconf,
         Depends(get_atualizar_checklist_m12_autoconf_use_case),
     ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> DiagnosticoResponse:
     """PATCH M12 — lock otimista alinhado ao PATCH de relatório PDF."""
-    _, tenant_id, _ = current
+    user_id, tenant_id, _ = current
     try:
         versao = _parse_if_match_versao(if_match)
     except ValueError as e:
@@ -1077,6 +1078,7 @@ async def atualizar_checklist_m12_autoconf(
         diagnostico_id=diagnostico_id,
         checklist_m12_autoconf=list(payload.checklist_m12_autoconf),
         versao_esperada=versao,
+        actor_user_id=user_id,
     )
     try:
         atualizado = await use_case.execute(comando)
@@ -1090,7 +1092,7 @@ async def atualizar_checklist_m12_autoconf(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return _montar_diagnostico_response(atualizado)
+    return await _montar_diagnostico_response(repo, atualizado)
 
 
 @router.patch(
@@ -1101,8 +1103,8 @@ async def atualizar_checklist_m12_autoconf(
         "Mescla no mapa persistido as chaves enviadas (meta de prazo ISO, comentários e, opcionalmente, "
         "``descricao_personalizada`` que substitui o texto canônico da ação no painel). "
         "Chaves não enviadas permanecem inalteradas; por chave, campos ausentes no PATCH preservam valores já "
-        "gravados. Formato: f{índice_frente}_a{índice_ação}. Campo legado ``comentario`` (único) ainda é aceito. "
-        "Exige diagnóstico **finalizado** e **If-Match**."
+        "gravados. Chave: ``f{índice_frente}_a{índice_ação}`` (legado) ou **UUID** ``plano_acao_id``. "
+        "Campo legado ``comentario`` (único) ainda é aceito. Exige diagnóstico **finalizado** e **If-Match**."
     ),
 )
 async def atualizar_quadro_implantacao_anotacoes(
@@ -1113,10 +1115,11 @@ async def atualizar_quadro_implantacao_anotacoes(
         AtualizarQuadroImplantacao,
         Depends(get_atualizar_quadro_implantacao_use_case),
     ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> DiagnosticoResponse:
     """PATCH quadro — lock otimista (mesmo contrato do M12)."""
-    _, tenant_id, _ = current
+    user_id, tenant_id, _ = current
     try:
         versao = _parse_if_match_versao(if_match)
     except ValueError as e:
@@ -1137,6 +1140,7 @@ async def atualizar_quadro_implantacao_anotacoes(
         diagnostico_id=diagnostico_id,
         quadro_implantacao_anotacoes=blob,
         versao_esperada=versao,
+        actor_user_id=user_id,
     )
     try:
         atualizado = await use_case.execute(comando)
@@ -1150,7 +1154,87 @@ async def atualizar_quadro_implantacao_anotacoes(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return _montar_diagnostico_response(atualizado)
+    return await _montar_diagnostico_response(repo, atualizado)
+
+
+@router.post(
+    "/{diagnostico_id}/plano-acoes/{plano_acao_id}/subtarefas",
+    response_model=DiagnosticoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Criar subtarefa do plano materializado",
+    description=(
+        "Associa uma subtarefa a uma ação do plano (UUID ``plano_acao_id`` devolvido no GET). "
+        "**Idempotency-Key** obrigatório (middleware de idempotência dos POST em ``/diagnosticos/``)."
+    ),
+)
+async def criar_subtarefa_plano_diagnostico(
+    diagnostico_id: UUID,
+    plano_acao_id: UUID,
+    payload: CriarSubtarefaPlanoDiagnosticoRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        CriarSubtarefaPlanoDiagnostico,
+        Depends(get_criar_subtarefa_plano_diagnostico_use_case),
+    ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> DiagnosticoResponse:
+    """POST subtarefa — exige diagnóstico finalizado com plano materializado."""
+    _ = idempotency_key
+    _, tenant_id, _ = current
+    cmd = ComandoCriarSubtarefaPlanoDiagnostico(
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        plano_acao_id=plano_acao_id,
+        titulo=payload.titulo,
+        ordem=payload.ordem,
+    )
+    try:
+        await use_case.execute(cmd)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    d = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
+    return await _montar_diagnostico_response(repo, d)
+
+
+@router.patch(
+    "/{diagnostico_id}/plano-subtarefas/{subtarefa_id}",
+    response_model=DiagnosticoResponse,
+    summary="Atualizar subtarefa do plano materializado",
+    description="Atualização parcial (título, status, prazo ISO, comentários, ordem).",
+)
+async def atualizar_subtarefa_plano_diagnostico(
+    diagnostico_id: UUID,
+    subtarefa_id: UUID,
+    payload: PatchSubtarefaPlanoDiagnosticoRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AtualizarSubtarefaPlanoDiagnostico,
+        Depends(get_atualizar_subtarefa_plano_diagnostico_use_case),
+    ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> DiagnosticoResponse:
+    _, tenant_id, _ = current
+    cmd = ComandoAtualizarSubtarefaPlanoDiagnostico(
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        subtarefa_id=subtarefa_id,
+        titulo=payload.titulo,
+        status=payload.status,
+        prazo=payload.prazo,
+        comentarios=payload.comentarios,
+        ordem=payload.ordem,
+    )
+    try:
+        await use_case.execute(cmd)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    d = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
+    return await _montar_diagnostico_response(repo, d)
 
 
 @router.patch("/{diagnostico_id}", response_model=DiagnosticoResponse)
@@ -1162,6 +1246,7 @@ async def atualizar_relatorio_pdf(
         AnexarRelatorioOtimista,
         Depends(get_anexar_relatorio_otimista_use_case),
     ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> DiagnosticoResponse:
     """
@@ -1169,7 +1254,7 @@ async def atualizar_relatorio_pdf(
 
     Exige `If-Match` com a `versao_otimista` retornada no GET (lock otimista).
     """
-    _, tenant_id, _ = current
+    user_id, tenant_id, _ = current
     try:
         versao = _parse_if_match_versao(if_match)
     except ValueError as e:
@@ -1180,6 +1265,7 @@ async def atualizar_relatorio_pdf(
         diagnostico_id=diagnostico_id,
         relatorio_pdf_url=payload.relatorio_pdf_url,
         versao_esperada=versao,
+        actor_user_id=user_id,
     )
     try:
         atualizado = await use_case.execute(comando)
@@ -1193,4 +1279,4 @@ async def atualizar_relatorio_pdf(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return _montar_diagnostico_response(atualizado)
+    return await _montar_diagnostico_response(repo, atualizado)

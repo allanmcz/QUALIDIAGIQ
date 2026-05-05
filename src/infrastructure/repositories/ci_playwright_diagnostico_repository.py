@@ -11,10 +11,11 @@ como um `TClientDataSet` isolado no Delphi sem gravar no Oracle.
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from src.application.services.plano_painel_derivacao import derivar_plano_painel_materializado
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
@@ -26,6 +27,8 @@ from src.domain.entities.diagnostico import (
     StatusDiagnostico,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.email_verificacao import codigo_store
 
 _TENANT_PADRAO_CI = UUID("33333333-3333-4333-8333-333333333333")
@@ -61,6 +64,8 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
 
     def __init__(self) -> None:
         self._rows: dict[UUID, Diagnostico] = {_ID_LISTA_CI: _seed_diagnostico_demo()}
+        self._planos: dict[tuple[UUID, UUID], PlanoPainelSerializado] = {}
+        self._subs_por_chave: dict[tuple[UUID, UUID, UUID], list[dict[str, Any]]] = {}
 
     async def salvar(self, diagnostico: Diagnostico) -> None:
         self._rows[diagnostico.id] = diagnostico
@@ -119,6 +124,124 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         row.definir_quadro_implantacao_anotacoes(quadro_implantacao_anotacoes)
         row.versao_otimista += 1
         return row
+
+    def _merge_subtarefas_no_plano(
+        self, plano: PlanoPainelSerializado, did: UUID, tid: UUID
+    ) -> PlanoPainelSerializado:
+        checklist_mut: list[dict[str, Any]] = []
+        for frente in plano.checklist:
+            acoes_mut: list[dict[str, Any]] = []
+            for ac in frente.get("acoes", []):
+                if not isinstance(ac, dict):
+                    continue
+                pid = ac.get("plano_acao_id")
+                if not isinstance(pid, str):
+                    acoes_mut.append(ac)
+                    continue
+                try:
+                    aid = UUID(pid)
+                except ValueError:
+                    acoes_mut.append(ac)
+                    continue
+                chave = (did, tid, aid)
+                subs = list(self._subs_por_chave.get(chave, ()))
+                ac2 = {**ac, "subtarefas": subs}
+                acoes_mut.append(ac2)
+            checklist_mut.append({**frente, "acoes": acoes_mut})
+        return PlanoPainelSerializado(
+            versao_plano=plano.versao_plano,
+            checklist=tuple(checklist_mut),
+            matriz_impacto=plano.matriz_impacto,
+            cronograma=plano.cronograma,
+            subtarefas_por_acao=plano.subtarefas_por_acao,
+        )
+
+    async def salvar_e_materializar_plano_painel(
+        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+    ) -> PlanoPainelSerializado:
+        self._rows[diagnostico.id] = diagnostico
+        deriv = derivar_plano_painel_materializado(diagnostico, score_completo)
+        self._planos[(diagnostico.id, diagnostico.tenant_id)] = deriv.serializado_http
+        return self._merge_subtarefas_no_plano(
+            deriv.serializado_http, diagnostico.id, diagnostico.tenant_id
+        )
+
+    async def buscar_plano_painel_serializado(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        base = self._planos.get((diagnostico_id, tenant_id))
+        if base is None:
+            return None
+        return self._merge_subtarefas_no_plano(base, diagnostico_id, tenant_id)
+
+    async def materializar_plano_painel_idempotente_backfill(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        if (diagnostico_id, tenant_id) in self._planos:
+            return None
+        d = await self.buscar_por_id(diagnostico_id, tenant_id)
+        if (
+            d is None
+            or d.status != StatusDiagnostico.FINALIZADO
+            or d.score_completo_snapshot is None
+        ):
+            return None
+        deriv = derivar_plano_painel_materializado(d, d.score_completo_snapshot)
+        self._planos[(diagnostico_id, tenant_id)] = deriv.serializado_http
+        return self._merge_subtarefas_no_plano(deriv.serializado_http, diagnostico_id, tenant_id)
+
+    async def inserir_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        plano_acao_id: UUID,
+        titulo: str,
+        ordem: int = 0,
+    ) -> dict[str, Any]:
+        sid = uuid4()
+        row = {
+            "id": str(sid),
+            "titulo": titulo.strip(),
+            "status": "aberta",
+            "prazo": None,
+            "comentarios": None,
+            "ordem": ordem,
+        }
+        chave = (diagnostico_id, tenant_id, plano_acao_id)
+        self._subs_por_chave.setdefault(chave, []).append(row)
+        return row
+
+    async def atualizar_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        subtarefa_id: UUID,
+        *,
+        titulo: str | None = None,
+        status: str | None = None,
+        prazo: date | None = None,
+        comentarios: str | None = None,
+        ordem: int | None = None,
+    ) -> dict[str, Any] | None:
+        for chave, lst in self._subs_por_chave.items():
+            if chave[0] != diagnostico_id or chave[1] != tenant_id:
+                continue
+            for i, row in enumerate(lst):
+                if row.get("id") == str(subtarefa_id):
+                    novo = dict(row)
+                    if titulo is not None:
+                        novo["titulo"] = titulo.strip()
+                    if status is not None:
+                        novo["status"] = status.strip()
+                    if prazo is not None:
+                        novo["prazo"] = prazo.isoformat()
+                    if comentarios is not None:
+                        novo["comentarios"] = comentarios
+                    if ordem is not None:
+                        novo["ordem"] = ordem
+                    lst[i] = novo
+                    return novo
+        return None
 
     def vincular_leads_self_service_em_memoria(
         self,

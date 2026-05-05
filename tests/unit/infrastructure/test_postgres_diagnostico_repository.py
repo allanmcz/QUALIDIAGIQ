@@ -79,6 +79,7 @@ def _row_minima(did, tid) -> dict:
         "quadro_implantacao_anotacoes": None,
         "aceite_termos_privacidade_em": None,
         "locale_relatorio": "pt-BR",
+        "versao_plano": 1,
     }
 
 
@@ -201,7 +202,9 @@ class TestPostgresDiagnosticoRepository:
                 did, tid, {"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}}, versao_esperada=1
             )
         assert out is not None
-        assert out.quadro_implantacao_anotacoes == {"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}}
+        assert out.quadro_implantacao_anotacoes == {
+            "f0_a0": {"comentarios": ["x"], "prazo_meta": ""}
+        }
 
     async def test_atualizar_m12(self) -> None:
         did, tid = uuid4(), uuid4()

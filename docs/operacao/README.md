@@ -7,6 +7,9 @@
 | Documento | Uso |
 |-----------|-----|
 | **[CHECKLIST_CONFIRMACAO_ALLAN_MVP.md](./CHECKLIST_CONFIRMACAO_ALLAN_MVP.md)** | Checklist rastreável (Git): mapa *Quem decide / Quem executa*, P5/P6, jurídico, D\*, M02/M03/M08, Beta. |
+| [MVP_CRITERIO_CORTE_E_DECLARACAO_MUST.md](./MVP_CRITERIO_CORTE_E_DECLARACAO_MUST.md) | Template ACT-K01 / ACT-K03 — critério de corte e declaração MUST. |
+| [DECISAO_RLS_SUPABASE_CLOUD_MVP.md](./DECISAO_RLS_SUPABASE_CLOUD_MVP.md) | Decisão evidência RLS cloud vs apenas CI (placeholder). |
+| [EVIDENCIA_RLS_DOIS_TENANTS_TEMPLATE.md](./EVIDENCIA_RLS_DOIS_TENANTS_TEMPLATE.md) | Template OPS para evidência P6. |
 | [DECISOES_PRODUTO_MVP_D1_D5.md](./DECISOES_PRODUTO_MVP_D1_D5.md) | Registro vivo das decisões D1–D5. |
 | [FAIXA_FATURAMENTO_AUTODECLARADA.md](./FAIXA_FATURAMENTO_AUTODECLARADA.md) | Faixa de faturamento opcional: slugs, convenção de limites MVP, LGPD, relação com porte. |
 | [STATUS_JURIDICO_MVP.md](../legal/STATUS_JURIDICO_MVP.md) | Processo jurídico MVP (termos/privacidade). |
@@ -15,6 +18,9 @@
 
 | Documento | Uso |
 |-----------|-----|
+| [CORS_PRODUCAO.md](./CORS_PRODUCAO.md) | Variável `CORS_ALLOWED_ORIGINS` e anti-padrão `*` + credentials. |
+| [RLS_TABELAS_CHECKLIST_MVP.md](./RLS_TABELAS_CHECKLIST_MVP.md) | Índice de tabelas/políticas RLS (referência às migrações). |
+| [POSTS_IDEMPOTENCIA_E_OPENAPI.md](./POSTS_IDEMPOTENCIA_E_OPENAPI.md) | Middleware Idempotency-Key em POST `/diagnosticos/*`. |
 | [RUNBOOK_DEPLOY_ROLLBACK.md](./RUNBOOK_DEPLOY_ROLLBACK.md) | Deploy e rollback. |
 | [SMOKE_MVP_FECHADO.md](./SMOKE_MVP_FECHADO.md) | Smoke manual e referência ao gate automatizado. |
 | [SQL_VERIFICACAO_SCHEMA_MVP.sql](./SQL_VERIFICACAO_SCHEMA_MVP.sql) | Verificação SQL do schema MVP. |
@@ -32,6 +38,7 @@
 
 | Documento | Uso |
 |-----------|-----|
+| [EVENTOS_NEGOCIO_LOGS.md](./EVENTOS_NEGOCIO_LOGS.md) | Eventos de negócio recomendados + correlação. |
 | [OBSERVABILIDADE_TRACE_ID.md](./OBSERVABILIDADE_TRACE_ID.md) | Trace HTTP (`X-Trace-Id`). |
 | [OTEL_OTLP_STAGING.md](./OTEL_OTLP_STAGING.md) | OTLP staging (opcional). |
 

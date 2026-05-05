@@ -84,6 +84,16 @@ function LoginPageContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {searchParams.get("sessao") === "expirada" && (
+            <div
+              className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-foreground"
+              role="status"
+              aria-live="polite"
+            >
+              A sua sessão no painel expirou ou o servidor passou a usar outra chave de assinatura (JWT).
+              Entre novamente com e-mail e senha.
+            </div>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail Corporativo</Label>

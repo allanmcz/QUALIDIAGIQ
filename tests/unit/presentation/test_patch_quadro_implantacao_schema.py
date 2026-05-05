@@ -78,7 +78,11 @@ class TestPatchQuadroImplantacaoRequest:
             PatchQuadroImplantacaoRequest.model_validate(
                 {
                     "quadro_implantacao_anotacoes": {
-                        "f0_a0": {"comentarios": [], "prazo_meta": "", "descricao_personalizada": longa},
+                        "f0_a0": {
+                            "comentarios": [],
+                            "prazo_meta": "",
+                            "descricao_personalizada": longa,
+                        },
                     }
                 }
             )

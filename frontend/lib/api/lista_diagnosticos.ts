@@ -1,3 +1,5 @@
+import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
+
 import { getAccessToken, getApiUrlForFetch } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
@@ -40,6 +42,9 @@ export async function fetchDiagnosticosResumo(
       cache: "no-store",
     });
     if (!res.ok) {
+      if (encerrarSessaoPainelSe401(res.status)) {
+        throw new Error("Sessão expirada — a abrir o login.");
+      }
       const err = await res.json().catch(() => ({}));
       const detail = (err as { detail?: string }).detail ?? res.statusText;
       throw new Error(typeof detail === "string" ? detail : `Erro ${res.status}`);

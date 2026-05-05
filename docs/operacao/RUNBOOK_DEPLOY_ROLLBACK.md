@@ -71,3 +71,5 @@ PYTHONPATH=. OPENAI_API_KEY=... DATABASE_URL=postgresql://... python scripts/ing
 
 - `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md` — Fase C (RLS) e Fase G (observabilidade).
 - `docs/operacao_rls_idempotency.md` — idempotência e RLS.
+- `docs/operacao/CORS_PRODUCAO.md` — variável `CORS_ALLOWED_ORIGINS`.
+- `docs/operacao/RLS_TABELAS_CHECKLIST_MVP.md` — índice de tabelas/políticas MVP.

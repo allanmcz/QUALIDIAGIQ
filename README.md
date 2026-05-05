@@ -62,6 +62,10 @@ services:
 
 Variáveis lidas em runtime: `OTEL_TRACING_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` (formato `chave=valor,chave2=valor2`). Ver `src/infrastructure/config/settings.py`.
 
+### CORS em produção
+
+Use **`CORS_ALLOWED_ORIGINS`** (lista CSV explícita de origens permitidas). **Nunca** `*` com cookies/credentials. Detalhe operacional: [`docs/operacao/CORS_PRODUCAO.md`](docs/operacao/CORS_PRODUCAO.md).
+
 ## 📂 Estrutura do Projeto
 
 ```

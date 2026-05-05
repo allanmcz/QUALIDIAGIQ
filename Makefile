@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo
+.PHONY: help install dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md
 
 PYTHON := python3.12
 VENV := .venv
@@ -46,6 +46,9 @@ audit-secrets: ## Heurística anti-padrões S-01 (segredos em fonte)
 
 audit-catalogo: ## G1 — invariantes estruturais em perguntas_mvp.json (avisos pilar ABNT)
 	PYTHONPATH=. $(VENV)/bin/python scripts/auditoria_catalogo_perguntas_mvp.py
+
+export-manifesto-pesos-md: ## Regenera docs/refs/MANIFESTO_PESOS_EXPORTADO.md a partir do catálogo JSON
+	PYTHONPATH=. $(VENV)/bin/python scripts/export_manifesto_pesos_md.py
 
 test-watch: ## Roda testes em modo watch (precisa pytest-watch)
 	PYTHONPATH=. $(VENV)/bin/pytest -f

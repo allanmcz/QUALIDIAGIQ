@@ -50,7 +50,7 @@ def normalizar_checklist_m12_estado_bruto(raw: object) -> list[int] | None:
             out.append(x)
             continue
         try:
-            xi = int(x)  # type: ignore[arg-type]
+            xi = int(x)
         except (TypeError, ValueError):
             return None
         if M12_LIKERT_MIN <= xi <= M12_LIKERT_MAX:

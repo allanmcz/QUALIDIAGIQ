@@ -69,6 +69,12 @@ jobs:
       - name: Ruff (lint)
         run: ruff check src/ tests/
 
+      - name: Instalar ripgrep (audit-secrets)
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+
+      - name: Auditoria segredos (S-01)
+        run: bash scripts/audit_secrets.sh
+
       - name: Mypy
         run: mypy src/
 

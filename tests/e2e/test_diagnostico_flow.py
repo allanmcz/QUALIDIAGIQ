@@ -3,6 +3,7 @@ import uuid
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from src.application.services.plano_painel_derivacao import derivar_plano_painel_materializado
 from src.presentation.api.dependencies import (
     get_diagnostico_repository,
     get_email_service,
@@ -41,6 +42,32 @@ class MockEmailService:
 class MockRepository:
     def __init__(self):
         self.db = {}
+
+    async def salvar_e_materializar_plano_painel(self, diagnostico, score_completo):
+        self.db[diagnostico.id] = diagnostico
+        return derivar_plano_painel_materializado(diagnostico, score_completo).serializado_http
+
+    async def buscar_plano_painel_serializado(self, diagnostico_id, tenant_id):
+        d = self.db.get(diagnostico_id)
+        if d is None or d.tenant_id != tenant_id or d.score_completo_snapshot is None:
+            return None
+        return derivar_plano_painel_materializado(d, d.score_completo_snapshot).serializado_http
+
+    async def materializar_plano_painel_idempotente_backfill(self, diagnostico_id, tenant_id):
+        return await self.buscar_plano_painel_serializado(diagnostico_id, tenant_id)
+
+    async def inserir_subtarefa_plano(self, *args, **kwargs):
+        return {
+            "id": str(uuid.uuid4()),
+            "titulo": "x",
+            "status": "aberta",
+            "prazo": None,
+            "comentarios": None,
+            "ordem": 0,
+        }
+
+    async def atualizar_subtarefa_plano(self, *args, **kwargs):
+        return None
 
     async def salvar(self, diagnostico):
         self.db[diagnostico.id] = diagnostico

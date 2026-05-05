@@ -23,4 +23,9 @@
 \i /docker-entrypoint-initdb.d/migrations/0020_pgvector_rag_light.sql
 \i /docker-entrypoint-initdb.d/migrations/0021_admins_perfil_conta_dev.sql
 \i /docker-entrypoint-initdb.d/migrations/0022_quadro_implantacao_anotacoes.sql
+\i /docker-entrypoint-initdb.d/migrations/0023_diagnostico_rascunhos_self_service.sql
+\i /docker-entrypoint-initdb.d/migrations/0024_diagnostico_leitura_publica_self_service.sql
+\i /docker-entrypoint-initdb.d/migrations/0025_worm_permite_reatribuir_tenant_vinculo_lead.sql
+\i /docker-entrypoint-initdb.d/migrations/0026_diagnostico_mutacao_audit.sql
+\i /docker-entrypoint-initdb.d/migrations/0027_diagnostico_plano_materializado.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

@@ -1,6 +1,8 @@
 /**
  * POST /diagnosticos/vincular-leads-self-service — traz diagnósticos OTP (mesmo e-mail) para o tenant da conta na plataforma.
  */
+import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
+
 import { getAccessToken, getApiUrlForFetch } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
@@ -28,6 +30,9 @@ export async function postVincularLeadsSelfService(): Promise<VincularLeadsSelfS
       },
     });
     if (!res.ok) {
+      if (encerrarSessaoPainelSe401(res.status)) {
+        throw new Error("Sessão expirada — a abrir o login.");
+      }
       const raw = await res.text();
       let detail = raw;
       try {

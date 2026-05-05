@@ -16,7 +16,6 @@ Este diretório concentra **planos de execução, handoffs e notas de engenharia
 | [`INDICE_PLANOS_HANDOFF.md`](./INDICE_PLANOS_HANDOFF.md) | **Índice** de planos de execução e handoffs. |
 | [`HANDOFF_PROXIMA_SESSAO_QDI.md`](./HANDOFF_PROXIMA_SESSAO_QDI.md) | Estado técnico vivo + backlog P/M. |
 | [`PLANO_EXECUCAO_EPICOS_GRANDES_QDI.md`](./PLANO_EXECUCAO_EPICOS_GRANDES_QDI.md) | Roadmap épicos E1–E5 (multi-sprint). |
-| [`HANDOFF_PLANO_EXECUCAO_2026-05-03.md`](./HANDOFF_PLANO_EXECUCAO_2026-05-03.md) | Plano HANDOFF + lista técnica sem decisões externas (2026-05-03). |
 | [`BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md`](./BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md) | Itens de engenharia sem gate de produto. |
 | [`docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md`](../docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md) | Confirmações MVP / homologação — versionado em `docs/operacao/`. |
 | [`RUNBOOK_SUPABASE_RLS.md`](./RUNBOOK_SUPABASE_RLS.md) | Operação RLS multi-tenant, migrações e checagens. |
@@ -36,5 +35,7 @@ Exemplos (lista não exaustiva): análise developer 02/05/2026, plano handoff 02
 | `REFORMULACAO_MARCA/` | Entrega de marca/tokens aplicada em `frontend/public/brand` (snapshot de trabalho). |
 | `HANDOFF_EPICOS_GRANDES_QDI_COMPLETO.md` | Versão final na pasta de concluídos (raiz limpa). |
 | `PLANO_EXECUCAO_HANDOFF_02052026.md` | Idem — histórico de execução do handoff 02/05. |
+
+**Arquivamento 2026-05-04 (planos / sessões concluídos):** `HANDOFF_PLANO_EXECUCAO_2026-05-03.md`, `HANDOFF_CICLO_Q_2026-05-02.md`, `HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md`, `HANDOFF_SESSAO_AUTONOMA_2026-05-01.md`, `HANDOFF_SESSAO_CONTINUACAO_2026-05-01.md`, `PERSISTENCIA_PAINEL.md`; duplicados na raiz `HANDOFF_EPICOS_GRANDES_QDI_COMPLETO.md` e `PLANO_EXECUCAO_HANDOFF_02052026.md` removidos (canónico em `_CONCLUIDOS_DEV/`). Índice: [`INDICE_PLANOS_HANDOFF.md`](./INDICE_PLANOS_HANDOFF.md) secção **Arquivado**.
 
 **Comandos essenciais (raiz do repositório):** `make install`, `make dev`, `make lint`, `make format`, `make test`, `make type-check` (`mypy src`), `make down`.

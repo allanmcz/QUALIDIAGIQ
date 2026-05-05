@@ -12,13 +12,18 @@
 
 ## Planos por ciclo / data
 
-| Ficheiro | Uso |
-|----------|-----|
-| [`HANDOFF_PLANO_EXECUCAO_2026-05-03.md`](./HANDOFF_PLANO_EXECUCAO_2026-05-03.md) | Plano HANDOFF engenharia 2026-05-03 (executado) |
-| [`HANDOFF_CICLO_Q_2026-05-02.md`](./HANDOFF_CICLO_Q_2026-05-02.md) | Ciclo Q (pós-marca / pré go-live) |
-| [`HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md`](./HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md) | Janela ~10 h (P5–P8) |
-| [`HANDOFF_SESSAO_AUTONOMA_2026-05-01.md`](./HANDOFF_SESSAO_AUTONOMA_2026-05-01.md) | Sessão autónoma (blocos A–E, trincheiras T1–T6) |
-| [`HANDOFF_SESSAO_CONTINUACAO_2026-05-01.md`](./HANDOFF_SESSAO_CONTINUACAO_2026-05-01.md) | Continuação pós-autonomia |
+Handoffs **executados** ou **sessões encerradas** (2026-05) estão arquivados em [`_CONCLUIDOS_DEV/`](./_CONCLUIDOS_DEV/) — tabela na secção **Arquivado** abaixo. O estado técnico vivo continua em [`HANDOFF_PROXIMA_SESSAO_QDI.md`](./HANDOFF_PROXIMA_SESSAO_QDI.md).
+
+## Arquivado — handoffs e planos encerrados (`_CONCLUIDOS_DEV/`)
+
+| Ficheiro | Nota |
+|----------|------|
+| [`HANDOFF_PLANO_EXECUCAO_2026-05-03.md`](./_CONCLUIDOS_DEV/HANDOFF_PLANO_EXECUCAO_2026-05-03.md) | Plano HANDOFF engenharia 2026-05-03 (**executado**) |
+| [`HANDOFF_CICLO_Q_2026-05-02.md`](./_CONCLUIDOS_DEV/HANDOFF_CICLO_Q_2026-05-02.md) | Ciclo Q (**executado**) |
+| [`HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md`](./_CONCLUIDOS_DEV/HANDOFF_IMPLEMENTACAO_10H_2026-05-01.md) | Janela ~10 h (P5–P8) — snapshot de sessão |
+| [`HANDOFF_SESSAO_AUTONOMA_2026-05-01.md`](./_CONCLUIDOS_DEV/HANDOFF_SESSAO_AUTONOMA_2026-05-01.md) | Sessão autónoma |
+| [`HANDOFF_SESSAO_CONTINUACAO_2026-05-01.md`](./_CONCLUIDOS_DEV/HANDOFF_SESSAO_CONTINUACAO_2026-05-01.md) | Continuação pós-autonomia |
+| [`PERSISTENCIA_PAINEL.md`](./_CONCLUIDOS_DEV/PERSISTENCIA_PAINEL.md) | Plano persistência painel — decisões D1–D5; implementação no repo concluída (2026-05-04) |
 
 ## Análises e inventários (engenharia)
 
@@ -35,6 +40,7 @@
 
 ## Outros (backlog, kits, runbooks internos)
 
+- [`FALTA_IMPLEMENTAR.md`](./FALTA_IMPLEMENTAR.md) — plano sintético do que falta concluir (executável vs gates)
 - [`BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md`](./BACKLOG_IMPLEMENTACAO_AUTONOMA_02052026.md)
 - [`RUNBOOK_SUPABASE_RLS.md`](./RUNBOOK_SUPABASE_RLS.md)
 - Pastas `ORIENTACAO_CURSOR/`, `ANALISE_30042026/`, `_CONCLUIDOS_DEV/` — arquivo e orientação Cursor

@@ -94,13 +94,17 @@ def test_m07_prioridade_checklist_por_piores_dimensoes() -> None:
     score = _score_stub_m07()
     frentes = ConsultoriaService.gerar_checklist(d, score)
     assert frentes[0].nome.startswith("Prioridade conforme lacunas")
-    # Três piores dimensões: um cartão cada, com três sub-ações numeradas no texto (chaves f0_a* estáveis).
-    assert len(frentes[0].acoes) == 3
-    assert frentes[0].acoes[0].prioridade == 1
-    assert "(1)" in frentes[0].acoes[0].descricao and "(3)" in frentes[0].acoes[0].descricao
-    assert "NCM" in frentes[0].acoes[0].descricao or "cClassTrib" in frentes[0].acoes[0].descricao
-    assert "Fiscal" in frentes[0].acoes[0].descricao
-    assert "gap analysis" in frentes[0].acoes[1].descricao.lower()
+    # Três piores dimensões x três templates = nove ações distintas (quadro f0_a0 ... f0_a8).
+    m07 = frentes[0].acoes
+    assert len(m07) == 9
+    assert [a.prioridade for a in m07] == list(range(1, 10))
+    assert "NCM" in m07[0].descricao or "cClassTrib" in m07[0].descricao
+    assert m07[0].prazo == "30 dias"
+    assert m07[1].prazo == "45 dias"
+    assert m07[2].prazo == "60 dias"
+    assert "(1)" not in m07[0].descricao
+    # 2.ª pior dimensão = Conformidade ABNT — 1.º template é análise formal de lacunas.
+    assert "análise formal de lacunas" in m07[3].descricao.lower()
 
 
 def test_matriz_impacto_seis_departamentos_com_base_legal() -> None:

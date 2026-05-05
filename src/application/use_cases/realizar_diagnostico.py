@@ -195,8 +195,10 @@ class RealizarDiagnostico:
             )
             diagnostico.relatorio_pdf_url = pdf_url
 
-        # 6. Persiste no banco de dados (Supabase PostgreSQL via RLS)
-        await self.repo.salvar(diagnostico)
+        # 6. Persiste no banco + materializa plano/matriz/cronograma (mesma operação atómica quando Postgres)
+        plano_serializado = await self.repo.salvar_e_materializar_plano_painel(
+            diagnostico, score_completo
+        )
 
         # 7. Envio de E-mail
         if self.email_service and pdf_url:
@@ -206,27 +208,13 @@ class RealizarDiagnostico:
                 pdf_url=pdf_url,
             )
 
-        # 8. Geração de Consultoria (Checklist e Matriz) liberada temporariamente para todos
-        checklist_data = None
-        matriz_data = None
-
-        from dataclasses import asdict
-
-        from src.application.services.consultoria_service import ConsultoriaService
-
-        checklist_entities = ConsultoriaService.gerar_checklist(diagnostico, score_completo)
-        matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
-        cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
-        checklist_data = [asdict(f) for f in checklist_entities]
-        matriz_data = [asdict(m) for m in matriz_entities]
-
-        # 9. Retorna o DTO estruturado
+        # 8. Retorna o DTO estruturado (checklist/matriz/cronograma alinhados ao snapshot materializado)
         return ResultadoDiagnostico(
             diagnostico=diagnostico,
             score=score_completo,
             relatorio_pdf_url=pdf_url,
             recomendacao_ia=recomendacao_ia,
-            checklist=checklist_data,
-            matriz_impacto=matriz_data,
-            cronograma=cronograma_data,
+            checklist=list(plano_serializado.checklist),
+            matriz_impacto=list(plano_serializado.matriz_impacto),
+            cronograma=list(plano_serializado.cronograma),
         )

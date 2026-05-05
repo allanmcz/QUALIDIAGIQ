@@ -127,19 +127,31 @@ export default function PainelDiagnosticosPage() {
         )}
 
         {!semSessao && erro && (
-          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <div
+            className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            role="alert"
+            aria-live="assertive"
+          >
             {erro}
           </div>
         )}
 
         {!semSessao && msgVinculo && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
+          <div
+            className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm text-foreground"
+            role="status"
+            aria-live="polite"
+          >
             {msgVinculo}
           </div>
         )}
 
         {!semSessao && !erro && itens !== null && itens.length === 0 && (
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+          <p
+            className="text-muted-foreground text-sm leading-relaxed max-w-2xl"
+            role="status"
+            aria-live="polite"
+          >
             Nenhum diagnóstico neste painel ainda. Use <strong className="text-foreground">Novo diagnóstico</strong>{" "}
             acima ou inicie em{" "}
             <Link href="/wizard" className="text-primary underline font-medium">

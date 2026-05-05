@@ -1,0 +1,36 @@
+{
+  "$schema_comment": "Casos de calibração M02 — faixas de score esperadas são orientativas até revisão de produto (ACT-E03).",
+  "versao": "1",
+  "casos": [
+    {
+      "id": "m02-cal-01-perfil-minimo",
+      "descricao": "Respostas consistentemente baixas (simula maturidade crítica/inicial).",
+      "faixa_score_geral_esperada": [0, 35],
+      "notas": "Placeholders — substituir por vetor de respostas canónico após baseline Allan."
+    },
+    {
+      "id": "m02-cal-02-mix-fiscal-fraco",
+      "descricao": "Fiscal fraco, demais dimensões médias.",
+      "faixa_score_geral_esperada": [30, 55],
+      "notas": "Validar gap máximo na dimensão fiscal."
+    },
+    {
+      "id": "m02-cal-03-equilibrado",
+      "descricao": "Distribuição intermediária em todas as dimensões.",
+      "faixa_score_geral_esperada": [45, 65],
+      "notas": ""
+    },
+    {
+      "id": "m02-cal-04-forte-abnt",
+      "descricao": "Compliance ABNT e processos elevados.",
+      "faixa_score_geral_esperada": [70, 88],
+      "notas": ""
+    },
+    {
+      "id": "m02-cal-05-exemplar",
+      "descricao": "Perfil próximo ao teto operacional do questionário.",
+      "faixa_score_geral_esperada": [85, 100],
+      "notas": "Verificar saturação de escala e pesos."
+    }
+  ]
+}

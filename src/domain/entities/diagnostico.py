@@ -175,6 +175,8 @@ class Diagnostico:
     aceite_termos_privacidade_em: datetime | None = None
     # Relatório PDF (WeasyPrint) — pt-BR default; en preparado para expansão i18n.
     locale_relatorio: str = "pt-BR"
+    # Versão do plano de ação materializado (snapshot checklist/matriz/cronograma — D3).
+    versao_plano: int = 1
 
     def finalizar(self, score_geral: float) -> None:
         """
@@ -259,6 +261,9 @@ class Diagnostico:
         self.checklist_m12_estado = list(itens)
 
     _CHAVE_QUADRO_RE = re.compile(r"^f\d+_a\d+$")
+    _CHAVE_QUADRO_UUID_RE = re.compile(
+        r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    )
     _QUADRO_MAX_COMENTARIOS_POR_ACAO = 30
     _QUADRO_MAX_CHARS_POR_COMENTARIO = 2000
     _QUADRO_MAX_DESCRICAO_PERSONALIZADA = 4000
@@ -285,9 +290,12 @@ class Diagnostico:
         limpo: dict[str, dict[str, str | list[str]]] = {}
         for chave, item in anotacoes.items():
             ck = str(chave).strip()
-            if not self._CHAVE_QUADRO_RE.match(ck):
+            chave_ok = bool(self._CHAVE_QUADRO_RE.match(ck)) or bool(
+                self._CHAVE_QUADRO_UUID_RE.match(ck)
+            )
+            if not chave_ok:
                 raise ValueError(
-                    f"Chave de anotação inválida: {ck!r}. Use o padrão f{{índice}}_a{{índice}} (ex.: f0_a2)."
+                    f"Chave de anotação inválida: {ck!r}. Use UUID da ação materializada ou f{{índice}}_a{{índice}}."
                 )
             prazo_meta = str(item.get("prazo_meta", "") or "").strip()
             if prazo_meta != "" and (
@@ -321,7 +329,10 @@ class Diagnostico:
                     "descricao_personalizada excede "
                     f"{self._QUADRO_MAX_DESCRICAO_PERSONALIZADA} caracteres."
                 )
-            entrada: dict[str, str | list[str]] = {"prazo_meta": prazo_meta, "comentarios": comentarios}
+            entrada: dict[str, str | list[str]] = {
+                "prazo_meta": prazo_meta,
+                "comentarios": comentarios,
+            }
             if desc_pers:
                 entrada["descricao_personalizada"] = desc_pers
             limpo[ck] = entrada

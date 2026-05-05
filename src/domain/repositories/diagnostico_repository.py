@@ -18,12 +18,13 @@ Analogia para o Allan:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from datetime import date
+from typing import Any
+from uuid import UUID
 
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from src.domain.entities.diagnostico import Diagnostico
+from src.domain.entities.diagnostico import Diagnostico
+from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.score import ScoreCompleto
 
 
 class DiagnosticoRepository(ABC):
@@ -101,4 +102,65 @@ class DiagnosticoRepository(ABC):
         Retorna:
             Diagnóstico atualizado se o UPDATE afetou uma linha; None em conflito de versão.
         """
+        ...
+
+    @abstractmethod
+    async def salvar_e_materializar_plano_painel(
+        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+    ) -> PlanoPainelSerializado:
+        """
+        Persiste o diagnóstico e materializa plano/matriz/cronograma na mesma transação (Postgres).
+
+        Em adaptadores sem transação atómica (ex.: PostgREST), aplica a sequência mais próxima possível.
+
+        Raises:
+            RuntimeError: falha de persistência ao materializar (fluxo novo não deve concluir «à meio»).
+        """
+        ...
+
+    @abstractmethod
+    async def buscar_plano_painel_serializado(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        """Lê snapshot materializado; None se ainda não existir (legado antes do backfill)."""
+        ...
+
+    @abstractmethod
+    async def materializar_plano_painel_idempotente_backfill(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        """
+        Materializa ``versao_plano = 1`` se o diagnóstico estiver finalizado e ainda não houver linhas.
+
+        Returns:
+            Snapshot gravado, ou None se nada foi feito (já materializado ou dados insuficientes).
+        """
+        ...
+
+    @abstractmethod
+    async def inserir_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        plano_acao_id: UUID,
+        titulo: str,
+        ordem: int = 0,
+    ) -> dict[str, Any]:
+        """Insere subtarefa ligada a uma ação materializada (tenant isolado por RLS)."""
+        ...
+
+    @abstractmethod
+    async def atualizar_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        subtarefa_id: UUID,
+        *,
+        titulo: str | None = None,
+        status: str | None = None,
+        prazo: date | None = None,
+        comentarios: str | None = None,
+        ordem: int | None = None,
+    ) -> dict[str, Any] | None:
+        """Atualiza campos opcionais da subtarefa; None se não existir no tenant."""
         ...

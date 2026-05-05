@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
+from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.presentation.api.dependencies import (
     get_current_user_tenant,
     get_realizar_diagnostico_use_case,
@@ -58,6 +59,13 @@ def _mock_use_case_sucesso() -> AsyncMock:
     mock_resultado.diagnostico.versao_otimista = 1
     mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
     mock_resultado.diagnostico.locale_relatorio = "pt-BR"
+    mock_resultado.diagnostico.relatorio_pdf_url = None
+    mock_resultado.diagnostico.score_completo_snapshot = ScoreCompleto(
+        score_geral=ScoreNumerico(valor=88.0, peso_total_aplicado=1.0),
+        score_por_dimensao={
+            Dimensao.FISCAL: ScoreNumerico(valor=88.0, peso_total_aplicado=1.0),
+        },
+    )
     mock_use_case.execute.return_value = mock_resultado
     return mock_use_case
 
@@ -132,7 +140,10 @@ def test_post_diagnostico_mesma_chave_tenant_diferente_executa_duas_vezes() -> N
         assert r_a.status_code == 201
         assert r_a.headers.get("X-Idempotent-Replay") is None
     finally:
-        app.dependency_overrides.clear()
+        # Não usar ``clear()`` — remove o mock de ``get_diagnostico_repository`` do conftest
+        # e o segundo POST instanciaria Supabase real na mesma função de teste.
+        app.dependency_overrides.pop(get_realizar_diagnostico_use_case, None)
+        app.dependency_overrides.pop(get_current_user_tenant, None)
 
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc_b
     app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid_b, "gratuito")

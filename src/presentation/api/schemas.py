@@ -8,7 +8,7 @@ Responsabilidade:
 """
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
@@ -238,7 +238,9 @@ class PatchRelatorioPdfRequest(BaseModel):
     relatorio_pdf_url: str = Field(..., min_length=1, max_length=4096)
 
 
-LikertM12Item = Annotated[int, Field(ge=1, le=5, description="Escala Likert 1 (minimo) a 5 (maximo).")]
+LikertM12Item = Annotated[
+    int, Field(ge=1, le=5, description="Escala Likert 1 (minimo) a 5 (maximo).")
+]
 
 
 class PatchChecklistM12AutoconfRequest(BaseModel):
@@ -335,7 +337,9 @@ class PatchQuadroImplantacaoRequest(BaseModel):
 
     quadro_implantacao_anotacoes: dict[str, QuadroImplantacaoAnotacaoItemSchema] = Field(
         default_factory=dict,
-        description="Mapa chave f{i}_a{j} (índices frente/ação no checklist derivado) para anotação.",
+        description=(
+            "Mapa de anotações: chave legada f{i}_a{j} ou UUID ``plano_acao_id`` da ação materializada."
+        ),
     )
 
     @field_validator("quadro_implantacao_anotacoes")
@@ -345,13 +349,39 @@ class PatchQuadroImplantacaoRequest(BaseModel):
     ) -> dict[str, QuadroImplantacaoAnotacaoItemSchema]:
         if len(v) > 200:
             raise ValueError("No máximo 200 anotações no quadro de implantação.")
-        pat = re.compile(r"^f\d+_a\d+$")
+        pat_legado = re.compile(r"^f\d+_a\d+$")
         for k in v:
-            if not pat.match(k.strip()):
+            ks = k.strip()
+            if pat_legado.match(ks):
+                continue
+            try:
+                UUID(ks)
+            except ValueError as e:
                 raise ValueError(
-                    f"Chave inválida: {k!r}. Use o padrão f{{índice}}_a{{índice}} (ex.: f0_a2)."
-                )
+                    f"Chave inválida: {k!r}. Use UUID da ação materializada ou f{{índice}}_a{{índice}}."
+                ) from e
         return v
+
+
+class CriarSubtarefaPlanoDiagnosticoRequest(BaseModel):
+    """Corpo do POST de subtarefa (plano materializado)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    titulo: str = Field(min_length=1, max_length=500)
+    ordem: int = Field(default=0, ge=0, le=10_000)
+
+
+class PatchSubtarefaPlanoDiagnosticoRequest(BaseModel):
+    """Corpo do PATCH de subtarefa — todos os campos opcionais (parcial)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    titulo: str | None = Field(default=None, max_length=500)
+    status: str | None = Field(default=None, max_length=32)
+    prazo: date | None = None
+    comentarios: str | None = Field(default=None, max_length=8000)
+    ordem: int | None = Field(default=None, ge=0, le=10_000)
 
 
 class QuestionarioPerguntaItemSchema(BaseModel):
@@ -641,6 +671,11 @@ class DiagnosticoResponse(BaseModel):
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
     hash_evidencia: str | None = None
     versao_otimista: int | None = None
+    versao_plano: int = Field(
+        default=1,
+        ge=1,
+        description="Versão do snapshot do plano de ação materializado (checklist/matriz/cronograma).",
+    )
     leitura_token: str | None = Field(
         default=None,
         description=(

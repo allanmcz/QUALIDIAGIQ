@@ -393,14 +393,18 @@ class TestQuadroImplantacaoAnotacoes:
             },
         }
 
-    def test_rejeita_lista_comentarios_grande_demais(self, empresa_fixture, respondente_fixture) -> None:
+    def test_rejeita_lista_comentarios_grande_demais(
+        self, empresa_fixture, respondente_fixture
+    ) -> None:
         diag = Diagnostico(
             tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
         )
         diag.finalizar(55.0)
         grande = [f"c{i}" for i in range(31)]
         with pytest.raises(ValueError, match="30"):
-            diag.definir_quadro_implantacao_anotacoes({"f0_a0": {"comentarios": grande, "prazo_meta": ""}})
+            diag.definir_quadro_implantacao_anotacoes(
+                {"f0_a0": {"comentarios": grande, "prazo_meta": ""}}
+            )
 
     def test_rejeita_chave_invalida(self, empresa_fixture, respondente_fixture) -> None:
         diag = Diagnostico(

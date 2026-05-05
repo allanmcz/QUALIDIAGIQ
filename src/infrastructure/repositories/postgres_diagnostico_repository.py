@@ -14,13 +14,14 @@ Analogia: mesmo ``DiagnosticoRepository`` que o adapter Supabase honra, mas a «
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, cast
 from uuid import UUID
 
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
+from src.application.services.plano_painel_derivacao import derivar_plano_painel_materializado
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
@@ -34,7 +35,15 @@ from src.domain.entities.diagnostico import (
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
+from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.score import ScoreCompleto
+from src.infrastructure.repositories.postgres_plano_painel_sync import (
+    atualizar_subtarefa_sync,
+    buscar_plano_painel_serializado_sync,
+    inserir_subtarefa_sync,
+    materializar_plano_em_conexao,
+    plano_materializado_existe_sync,
+)
 
 
 def _quadro_anotacoes_de_row(row: dict[str, Any]) -> dict[str, dict[str, str | list[str]]] | None:
@@ -138,6 +147,7 @@ def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
         quadro_implantacao_anotacoes=_quadro_anotacoes_de_row(row),
         aceite_termos_privacidade_em=aceite_em,
         locale_relatorio=locale_relatorio,
+        versao_plano=int(row.get("versao_plano") or 1),
     )
 
 
@@ -184,6 +194,7 @@ def _entity_para_params(d: Diagnostico) -> dict[str, Any]:
         ),
         "aceite_termos_privacidade_em": d.aceite_termos_privacidade_em,
         "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
+        "versao_plano": int(getattr(d, "versao_plano", 1) or 1),
     }
 
 
@@ -197,7 +208,7 @@ INSERT INTO diagnosticos (
     criado_em, finalizado_em,
     hash_sha256, score_completo, versao_otimista, checklist_m12_estado,
     quadro_implantacao_anotacoes,
-    aceite_termos_privacidade_em, locale_relatorio
+    aceite_termos_privacidade_em, locale_relatorio, versao_plano
 ) VALUES (
     %(id)s, %(tenant_id)s,
     %(respondente_email)s, %(respondente_nome)s, %(respondente_cargo)s, %(respondente_telefone)s,
@@ -207,7 +218,7 @@ INSERT INTO diagnosticos (
     %(criado_em)s, %(finalizado_em)s,
     %(hash_sha256)s, %(score_completo)s, %(versao_otimista)s, %(checklist_m12_estado)s,
     %(quadro_implantacao_anotacoes)s,
-    %(aceite_termos_privacidade_em)s, %(locale_relatorio)s
+    %(aceite_termos_privacidade_em)s, %(locale_relatorio)s, %(versao_plano)s
 )
 ON CONFLICT (id) DO UPDATE SET
     tenant_id = EXCLUDED.tenant_id,
@@ -235,7 +246,8 @@ ON CONFLICT (id) DO UPDATE SET
     checklist_m12_estado = EXCLUDED.checklist_m12_estado,
     quadro_implantacao_anotacoes = EXCLUDED.quadro_implantacao_anotacoes,
     aceite_termos_privacidade_em = EXCLUDED.aceite_termos_privacidade_em,
-    locale_relatorio = EXCLUDED.locale_relatorio
+    locale_relatorio = EXCLUDED.locale_relatorio,
+    versao_plano = EXCLUDED.versao_plano
 """
 
 
@@ -251,6 +263,55 @@ def _salvar_sync(dsn: str, diagnostico: Diagnostico) -> None:
         raise
     finally:
         conn.close()
+
+
+def _salvar_e_materializar_plano_sync(
+    dsn: str, diagnostico: Diagnostico, score_completo: ScoreCompleto
+) -> PlanoPainelSerializado:
+    """Transação única: UPSERT diagnóstico + substituição idempotente do plano ``versao_plano``."""
+    vp = int(getattr(diagnostico, "versao_plano", 1) or 1)
+    deriv = derivar_plano_painel_materializado(diagnostico, score_completo, versao_plano=vp)
+    params = _entity_para_params(diagnostico)
+    params["versao_plano"] = vp
+    conn = psycopg2.connect(dsn)
+    try:
+        conn.autocommit = False
+        with conn.cursor() as cur:
+            cur.execute(_UPSERT_SQL, params)
+        materializar_plano_em_conexao(conn, diagnostico, deriv)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    out = buscar_plano_painel_serializado_sync(dsn, diagnostico.id, diagnostico.tenant_id)
+    return out if out is not None else deriv.serializado_http
+
+
+def _materializar_plano_backfill_sync(
+    dsn: str, diagnostico_id: UUID, tenant_id: UUID
+) -> PlanoPainelSerializado | None:
+    if plano_materializado_existe_sync(dsn, diagnostico_id, tenant_id, 1):
+        return None
+    d = _buscar_sync(dsn, diagnostico_id, tenant_id)
+    if d is None or d.status != StatusDiagnostico.FINALIZADO:
+        return None
+    sc = d.score_completo_snapshot
+    if sc is None:
+        return None
+    deriv = derivar_plano_painel_materializado(d, sc, versao_plano=1)
+    conn = psycopg2.connect(dsn)
+    try:
+        conn.autocommit = False
+        materializar_plano_em_conexao(conn, d, deriv)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return buscar_plano_painel_serializado_sync(dsn, diagnostico_id, tenant_id)
 
 
 def _buscar_sync(dsn: str, diagnostico_id: UUID, tenant_id: UUID) -> Diagnostico | None:
@@ -401,6 +462,70 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
 
     async def salvar(self, diagnostico: Diagnostico) -> None:
         await asyncio.to_thread(_salvar_sync, self._dsn, diagnostico)
+
+    async def salvar_e_materializar_plano_painel(
+        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+    ) -> PlanoPainelSerializado:
+        return await asyncio.to_thread(
+            _salvar_e_materializar_plano_sync, self._dsn, diagnostico, score_completo
+        )
+
+    async def buscar_plano_painel_serializado(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        return await asyncio.to_thread(
+            buscar_plano_painel_serializado_sync, self._dsn, diagnostico_id, tenant_id
+        )
+
+    async def materializar_plano_painel_idempotente_backfill(
+        self, diagnostico_id: UUID, tenant_id: UUID
+    ) -> PlanoPainelSerializado | None:
+        return await asyncio.to_thread(
+            _materializar_plano_backfill_sync, self._dsn, diagnostico_id, tenant_id
+        )
+
+    async def inserir_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        plano_acao_id: UUID,
+        titulo: str,
+        ordem: int = 0,
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            inserir_subtarefa_sync,
+            self._dsn,
+            tenant_id,
+            diagnostico_id,
+            plano_acao_id,
+            titulo,
+            ordem,
+        )
+
+    async def atualizar_subtarefa_plano(
+        self,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        subtarefa_id: UUID,
+        *,
+        titulo: str | None = None,
+        status: str | None = None,
+        prazo: date | None = None,
+        comentarios: str | None = None,
+        ordem: int | None = None,
+    ) -> dict[str, Any] | None:
+        return await asyncio.to_thread(
+            atualizar_subtarefa_sync,
+            self._dsn,
+            tenant_id,
+            diagnostico_id,
+            subtarefa_id,
+            titulo=titulo,
+            status=status,
+            prazo=prazo,
+            comentarios=comentarios,
+            ordem=ordem,
+        )
 
     async def buscar_por_id(self, diagnostico_id: UUID, tenant_id: UUID) -> Diagnostico | None:
         return await asyncio.to_thread(_buscar_sync, self._dsn, diagnostico_id, tenant_id)

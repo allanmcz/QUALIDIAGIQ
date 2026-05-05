@@ -19,7 +19,7 @@ _ROTULO_DIMENSAO_PT: dict[Dimensao, str] = {
     Dimensao.FINANCEIRA: "Financeira",
     Dimensao.OPERACIONAL: "Operacional",
     Dimensao.TECNOLOGICA: "Tecnológica",
-    Dimensao.COMPLIANCE_ABNT: "Compliance ABNT NBR 17301",
+    Dimensao.COMPLIANCE_ABNT: "Conformidade ABNT NBR 17301",
 }
 
 # M07 — três ações concretas por dimensão em lacuna (texto {rotulo} + {score_fmt}).
@@ -43,7 +43,8 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
         ),
         (
             "Definir roteiro de homologação NF-e/NFS-e com ERP e parceiro fiscal: lotes de teste, "
-            "validação de XML, rollback e critérios de go-live antes do piloto produtivo.",
+            "validação de XML, plano de reversão em caso de falha e critérios de entrada em produção "
+            "antes do piloto produtivo.",
             "TI / Fiscal",
             "60 dias",
             "NT 2025.002; NTs CGNFS-e (série RFB)",
@@ -52,22 +53,24 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     Dimensao.FINANCEIRA: [
         (
             "Construir modelo mensal de fluxo de caixa com abas de sensibilidade CBS/IBS "
-            "(alíquota de referência + bandas) confrontando com baseline atual de PIS/COFINS/ICMS — "
+            "(alíquota de referência + bandas) confrontando com a referência atual de PIS/COFINS/ICMS — "
             "lacuna «{rotulo}» (score {score_fmt}/100).",
-            "Controladoria / FP&A",
+            "Controladoria / Planejamento financeiro",
             "30 dias",
             "LC 214/2025 arts. 28-32; EC 132/2023",
         ),
         (
-            "Recalcular margem por linha de produto/serviço com «shadow P&L» tributário "
-            "(sem alterar contabilidade formal) e anexar premissas ao comitê de reforma.",
+            "Recalcular margem por linha de produto/serviço com demonstração de resultados sombra "
+            "(simulação de DRE tributária sem alterar a escrituração oficial) e anexar premissas ao "
+            "comitê de reforma.",
             "Controladoria",
             "45 dias",
             "LC 214/2025 (transição); ABNT NBR 17301:2026 cap. 9",
         ),
         (
             "Rever cláusulas de repasse, reajuste e preço mínimo em contratos de longo prazo à luz "
-            "da transição de contribuições indiretas (reprecificação / gross-up CBS).",
+            "da transição de contribuições indiretas (reprecificação e cláusula de compensação CBS — "
+            "«gross-up»).",
             "Jurídico / Comercial",
             "60 dias",
             "LC 214/2025 art. 415; CC art. 478",
@@ -82,8 +85,8 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
             "LC 214/2025 (transparência contábil e escrituração)",
         ),
         (
-            "Instituir conciliação mensal SPED versus razão ERP (receitas, devoluções, créditos) com "
-            "checklist de evidências para auditoria interna e fiscalização futura.",
+            "Instituir conciliação mensal SPED face à razão contábil no ERP (receitas, devoluções, "
+            "créditos) com roteiro de evidências para auditoria interna e fiscalização futura.",
             "Contabilidade / Fiscal",
             "45 dias",
             "ABNT NBR 17301:2026 cap. 7.1",
@@ -98,32 +101,33 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     ],
     Dimensao.ESTRATEGICA: [
         (
-            "Submeter à diretoria um dossiê executivo (≤5 páginas) com trade-offs da reforma "
-            "(margem, capital de giro, capex em TI/fiscal) e três cenários quantificados — "
-            "lacuna «{rotulo}» (score {score_fmt}/100).",
+            "Submeter à diretoria um dossiê executivo (até 5 páginas) com os compromissos da reforma "
+            "(margem, capital de giro, investimentos em capital em TI e fiscal) e três cenários "
+            "quantificados — lacuna «{rotulo}» (score {score_fmt}/100).",
             "Diretoria / Estratégia",
             "30 dias",
             "EC 132/2023; LC 214/2025 art. 5º",
         ),
         (
-            "Alinhar calendário decisório do board (aprovações de investimento em ERP, contratos "
-            "críticos e política de preços) ao cronograma normativo da LC 214/2025.",
-            "Estratégia / PMO",
+            "Alinhar calendário decisório da alta administração (aprovações de investimento em ERP, "
+            "contratos críticos e política de preços) ao cronograma normativo da LC 214/2025.",
+            "Estratégia / Gestão de projetos",
             "45 dias",
             "LC 214/2025 (transição 2026-2033)",
         ),
         (
-            "Mapear M&A, leilões ou expansão geográfica previstos em 24-36 meses contra riscos "
-            "de sinergia fiscal e goodwill tributário pós-reforma.",
-            "M&A / Jurídico",
+            "Mapear fusões e aquisições, leilões ou expansão geográfica previstos em 24-36 meses face a "
+            "riscos de sinergia fiscal e de ágio (goodwill) tributário pós-reforma.",
+            "Fusões e aquisições / Jurídico",
             "60 dias",
             "EC 132/2023; LC 214/2025",
         ),
     ],
     Dimensao.OPERACIONAL: [
         (
-            "Documentar SOP ponta a ponta (pedido → faturamento → logística → devolução) com "
-            "checkpoints fiscais, SLAs e evidências — lacuna «{rotulo}» (score {score_fmt}/100).",
+            "Documentar procedimento operacional padronizado (POP) ponta a ponta "
+            "(pedido → faturamento → logística → devolução) com pontos de controlo fiscal, metas de "
+            "prazo e qualidade acordadas e evidências — lacuna «{rotulo}» (score {score_fmt}/100).",
             "Operações / Qualidade",
             "30 dias",
             "ABNT NBR 17301:2026 cap. 7",
@@ -145,9 +149,9 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     ],
     Dimensao.TECNOLOGICA: [
         (
-            "Publicar roadmap técnico de releases do ERP/módulo fiscal (patch NT 2025.002, "
-            "APIs SEFAZ, retenção de XML) com dependências e janela de congelamento — "
-            "lacuna «{rotulo}» (score {score_fmt}/100).",
+            "Publicar roteiro técnico de entregas de versão do ERP/módulo fiscal (atualização NT 2025.002, "
+            "interfaces com as SEFAZ, retenção de XML) com dependências e janela de congelamento de "
+            "alterações — lacuna «{rotulo}» (score {score_fmt}/100).",
             "TI / Arquitetura",
             "30 dias",
             "NT 2025.002",
@@ -160,8 +164,9 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
             "LC 214/2025 arts. 12-15",
         ),
         (
-            "Avaliar integrações EDI/API com clientes e fornecedores que exigirão novo pacote "
-            "de dados fiscais (cadastro dual legado versus CBS/IBS).",
+            "Avaliar integrações por troca eletrônica de dados (EDI) e por interfaces de programa (API) "
+            "com clientes e fornecedores que exigirão novo pacote de dados fiscais (cadastro duplo "
+            "legado face a CBS/IBS).",
             "TI / Integrações",
             "60 dias",
             "NT 2025.002; NTs CGNFS-e",
@@ -169,17 +174,17 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     ],
     Dimensao.COMPLIANCE_ABNT: [
         (
-            "Executar gap analysis formal contra controles da ABNT NBR 17301:2026 (caps. 5 a 9) "
-            "e registrar achados priorizados em matriz causa versus impacto — lacuna «{rotulo}» "
+            "Executar análise formal de lacunas face aos controlos da ABNT NBR 17301:2026 (caps. 5 a 9) "
+            "e registrar achados priorizados em matriz causa e impacto — lacuna «{rotulo}» "
             "(score {score_fmt}/100).",
-            "Compliance / Auditoria interna",
+            "Conformidade / Auditoria interna",
             "45 dias",
             "ABNT NBR 17301:2026",
         ),
         (
             "Implementar trilha de evidências PDCA para incidentes fiscais (registro, tratamento, "
             "ação corretiva, lição aprendida) conforme cap. 10.",
-            "Compliance / Qualidade",
+            "Conformidade / Qualidade",
             "60 dias",
             "ABNT NBR 17301:2026 cap. 10",
         ),
@@ -231,37 +236,33 @@ class ConsultoriaService:
         Orquestra recomendações iniciais a partir das **piores dimensões** no score (M07).
 
         Regra determinística: usa só o snapshot quantitativo do diagnóstico (sem LLM).
-        Para cada dimensão entre as três piores, gera **três ações** objetivas (cadastro, processo,
-        artefato entregável) — evita texto genérico do tipo «priorizar plano de ação».
+        Para cada dimensão entre as três piores, gera **três ações distintas** (cadastro, processo,
+        artefato entregável) — uma linha por meta (30/45/60 dias típicos), para o quadro ``f{i}_a{j}``
+        e o PDF permanecerem legíveis (evita um único bloco gigante ``(1)…(2)…(3)``).
         """
         piores = sorted(score.score_por_dimensao.items(), key=lambda kv: kv[1].valor)[:3]
         acoes: list[AcaoChecklist] = []
-        for idx, (dim, sn) in enumerate(piores, start=1):
+        for dim_idx, (dim, sn) in enumerate(piores, start=1):
             rotulo = _ROTULO_DIMENSAO_PT.get(dim, dim.value.replace("_", " "))
             score_fmt = f"{sn.valor:.1f}"
             crit = "Crítica" if sn.valor < 45.0 else "Alta"
             templates = _LACUNAS_ACOES_POR_DIMENSAO.get(dim)
             if not templates:
                 continue
-            # Um cartão por dimensão em lacuna (mantém f0_a0..f0_a2 estáveis para quadro persistido).
-            partes_fmt = [tpl[0].format(rotulo=rotulo, score_fmt=score_fmt) for tpl in templates]
-            desc = " ".join(f"({k}) {t}" for k, t in enumerate(partes_fmt, start=1))
-            responsaveis = sorted({tpl[1] for tpl in templates})
-            prazos = sorted({tpl[2] for tpl in templates})
-            bases = [tpl[3] for tpl in templates]
-            resp_txt = " / ".join(responsaveis)
-            prazo_txt = f"Metas: {', '.join(prazos)}"
-            base_txt = "; ".join(bases)
-            acoes.append(
-                AcaoChecklist(
-                    desc,
-                    resp_txt,
-                    prazo_txt,
-                    crit,
-                    base_txt,
-                    idx,
+            for tpl_idx, tpl in enumerate(templates):
+                desc = tpl[0].format(rotulo=rotulo, score_fmt=score_fmt)
+                # Ordem estável na frente M07: pior dimensão (1-3), depois sub-ação (1-3).
+                prioridade = (dim_idx - 1) * len(templates) + tpl_idx + 1
+                acoes.append(
+                    AcaoChecklist(
+                        desc,
+                        tpl[1],
+                        tpl[2],
+                        crit,
+                        tpl[3],
+                        prioridade,
+                    )
                 )
-            )
         return FrenteTrabalho(
             nome="Prioridade conforme lacunas do score (automático — M07)",
             acoes=acoes,
@@ -272,7 +273,7 @@ class ConsultoriaService:
         """
         Cronograma em 5 horizontes (M06) — referências da LC 214/2025 e transição.
 
-        Analogia Winthor: equivalente a um roteiro de projeto por “fases de go-live”.
+        Analogia Winthor: equivalente a um roteiro de projeto por fases de entrada em produção.
         """
         return [
             {
@@ -297,7 +298,7 @@ class ConsultoriaService:
             },
             {
                 "fase": "60-96 meses (transição plena)",
-                "foco": "IBS/CBS plenos; revisão de políticas de preços e compliance.",
+                "foco": "IBS/CBS plenos; revisão de políticas de preços e de conformidade tributária.",
                 "referencia_normativa": "EC 132/2023; ABNT NBR 17301:2026",
             },
         ]
@@ -308,7 +309,7 @@ class ConsultoriaService:
         refs = "ABNT NBR 17301:2026"
         return [
             AcaoChecklist(
-                "Política de compliance tributário formalizada e divulgada?",
+                "Política de conformidade tributária formalizada e divulgada?",
                 "Governança",
                 "Curto prazo",
                 "Alta",
@@ -324,7 +325,7 @@ class ConsultoriaService:
                 2,
             ),
             AcaoChecklist(
-                "Controles sobre obrigações tributárias documentados (ITs/fluxos)?",
+                "Controles sobre obrigações tributárias documentados (instruções de trabalho e fluxos)?",
                 "Fiscal",
                 "Médio prazo",
                 "Alta",
@@ -364,7 +365,7 @@ class ConsultoriaService:
                 7,
             ),
             AcaoChecklist(
-                "Indicadores de desempenho fiscal/compliance acompanhados pela diretoria?",
+                "Indicadores de desempenho fiscal e de conformidade acompanhados pela diretoria?",
                 "Diretoria",
                 "Curto prazo",
                 "Alta",
@@ -430,7 +431,7 @@ class ConsultoriaService:
                     nome="TI / ERP / Sistema Fiscal",
                     acoes=[
                         AcaoChecklist(
-                            "Levantar gap funcional do ERP",
+                            "Mapear lacunas funcionais do ERP face às exigências da reforma (NF-e, CBS)",
                             "TI / Fiscal",
                             "Dez/2025",
                             "Crítica",
@@ -438,7 +439,7 @@ class ConsultoriaService:
                             20,
                         ),
                         AcaoChecklist(
-                            "Aplicar patches fornecidos pelo ERP",
+                            "Aplicar pacotes de correção (patches) fornecidos pelo fornecedor do ERP",
                             "TI",
                             "Mar/2026",
                             "Crítica",
@@ -477,7 +478,7 @@ class ConsultoriaService:
                 nome="Contratos e Cláusulas Tributárias",
                 acoes=[
                     AcaoChecklist(
-                        "Padronizar nova cláusula tributária (gross-up CBS)",
+                        "Padronizar cláusula de compensação da oneração CBS («gross-up»)",
                         "Jurídico",
                         "Fev/2026",
                         "Crítica",
@@ -528,7 +529,7 @@ class ConsultoriaService:
             ),
             ImpactoDepartamento(
                 "TI",
-                "Adequação do ERP e da NF-e (layout CBS / campos da NT 2025.002)",
+                "Adequação do ERP e da NF-e (estrutura de campos CBS conforme NT 2025.002)",
                 "Crítica",
                 "NT 2025.002",
             ),

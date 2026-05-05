@@ -103,6 +103,24 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     if m12 != 1:
         erros.append("Coluna public.diagnosticos.checklist_m12_estado ausente (migração 0011).")
 
+    vp = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'versao_plano'
+    """)
+    if vp != 1:
+        erros.append("Coluna public.diagnosticos.versao_plano ausente (migração 0027).")
+
+    plano_tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'diagnostico_plano_acao'
+    """)
+    if plano_tbl != 1:
+        erros.append("Tabela public.diagnostico_plano_acao ausente (migração 0027).")
+
     rls = await conn.fetchval("""
         SELECT c.relrowsecurity
         FROM pg_class c
@@ -151,6 +169,23 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     """)
     if adm_rls is not True:
         erros.append("RLS não habilitada em public.admins (migração 0019_rls_completo).")
+
+    dma = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'diagnostico_mutacao_audit'
+    """)
+    if dma != 1:
+        erros.append("Tabela public.diagnostico_mutacao_audit ausente (aplique migração 0026).")
+    else:
+        dma_rls = await conn.fetchval("""
+            SELECT c.relrowsecurity
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = 'diagnostico_mutacao_audit'
+        """)
+        if dma_rls is not True:
+            erros.append("RLS não habilitada em public.diagnostico_mutacao_audit (migração 0026).")
 
     return erros
 
@@ -295,7 +330,7 @@ def main() -> int:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    msg = "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id)."
+    msg = "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id + 0026 auditoria mutação)."
     if strict_cnae:
         msg += " Modo strict: CNAE (extensões + 1332 subclasses) + normativa score macro (0015)."
     if rag_light:

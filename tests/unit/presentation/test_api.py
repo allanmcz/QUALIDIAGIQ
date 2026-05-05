@@ -15,6 +15,7 @@ from src.domain.entities.diagnostico import (
     Respondente,
     SetorMacro,
 )
+from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
@@ -30,6 +31,16 @@ from tests.conftest import (
 )
 
 client = TestClient(app)
+
+
+def _score_completo_snapshot_http(score_geral: float, dim_fiscal: float) -> ScoreCompleto:
+    """Snapshot mínimo para ``_montar_diagnostico_response`` (motor HTTP legado)."""
+    return ScoreCompleto(
+        score_geral=ScoreNumerico(valor=score_geral, peso_total_aplicado=1.0),
+        score_por_dimensao={
+            Dimensao.FISCAL: ScoreNumerico(valor=dim_fiscal, peso_total_aplicado=1.0),
+        },
+    )
 
 
 def _diag_finalizado_micro() -> Diagnostico:
@@ -156,6 +167,8 @@ def test_criar_diagnostico_com_sucesso():
     mock_resultado.diagnostico.versao_otimista = 1
     mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
     mock_resultado.diagnostico.locale_relatorio = "pt-BR"
+    mock_resultado.diagnostico.relatorio_pdf_url = None
+    mock_resultado.diagnostico.score_completo_snapshot = _score_completo_snapshot_http(100.0, 100.0)
 
     mock_use_case.execute.return_value = mock_resultado
 
@@ -326,6 +339,8 @@ def test_criar_diagnostico_self_service_jwt_valido_sucesso():
     mock_resultado.diagnostico.versao_otimista = 2
     mock_resultado.diagnostico.aceite_termos_privacidade_em = datetime.now(UTC)
     mock_resultado.diagnostico.locale_relatorio = "pt-BR"
+    mock_resultado.diagnostico.relatorio_pdf_url = None
+    mock_resultado.diagnostico.score_completo_snapshot = _score_completo_snapshot_http(88.5, 90.0)
     mock_use_case.execute.return_value = mock_resultado
 
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_use_case
@@ -358,6 +373,7 @@ def test_obter_diagnostico_com_sucesso():
     mock_diagnostico.locale_relatorio = "pt-BR"
 
     mock_repo.buscar_por_id.return_value = mock_diagnostico
+    mock_repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
 
     uid = uuid.uuid4()
     tid = uuid.uuid4()
