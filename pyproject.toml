@@ -47,8 +47,8 @@ dependencies = [
     "cachetools>=5.5.0",
     "tenacity>=9.0.0",
     "python-dateutil>=2.9.0",
-    "passlib[bcrypt]>=1.7.4",
-    # passlib 1.7.4 não é compatível com bcrypt 5.x (__about__ removido) — verify() pode lançar e derrubar POST /auth/login.
+    "argon2-cffi>=23.1.0",
+    # verify() de hashes bcrypt legados (rehash no login — ADR-010). Remover após janela de transição.
     "bcrypt>=4.0.1,<5",
     "PyJWT>=2.8.0",
     "sentry-sdk[fastapi]>=2.19.0",

@@ -15,11 +15,17 @@ import jwt
 import psycopg2
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from src.application.ports.email_service import EmailServicePort
+from src.infrastructure.auth.password_hashing import (
+    gerar_hash_senha,
+    precisa_rehash,
+    resolver_algoritmo_armazenado,
+    verificar_senha,
+)
 from src.infrastructure.auth.postgres_admin_login import (
+    atualizar_hash_senha_admin_postgres,
     buscar_admin_por_email_postgres,
     inserir_admin_postgres,
 )
@@ -36,7 +42,6 @@ logger = structlog.get_logger(__name__)
 _VALIDADE_MINUTOS_CODIGO = 10
 
 router = APIRouter(prefix="/auth", tags=["Conta na plataforma"])
-pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=12, deprecated="auto")
 
 
 class LoginRequest(BaseModel):
@@ -52,7 +57,7 @@ class CadastroConsultorB2BRequest(BaseModel):
     password: str = Field(
         min_length=8,
         max_length=256,
-        description="Senha com pelo menos 8 caracteres (bcrypt no servidor).",
+        description="Senha com pelo menos 8 caracteres (Argon2id no servidor; ADR-010).",
     )
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
@@ -205,22 +210,11 @@ async def login(request: LoginRequest) -> LoginResponse:
                 detail="Cadastro de administrador incompleto (senha não definida). Recrie o usuário.",
             )
         hash_norm = str(hash_bruto).strip()
-
-        try:
-            senha_ok = pwd_context.verify(request.password, hash_norm)
-        except ValueError as e:
-            logger.exception(
-                "login_hash_bcrypt_invalido",
-                email=request.email,
-                erro=str(e),
-            )
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=(
-                    "Hash de senha do administrador é inválido ou incompatível com o bcrypt atual. "
-                    "Gere nova senha com: python -m src.scripts.criar_admin (ou atualize o registro em `admins`)."
-                ),
-            ) from e
+        raw_algo = user.get("hash_algoritmo")
+        algoritmo = resolver_algoritmo_armazenado(
+            hash_norm, str(raw_algo) if raw_algo is not None else None
+        )
+        senha_ok = verificar_senha(request.password, hash_norm, algoritmo)
 
         if not senha_ok:
             raise HTTPException(
@@ -245,6 +239,38 @@ async def login(request: LoginRequest) -> LoginResponse:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Registro de administrador com identificador inválido no banco.",
             ) from e
+
+        if precisa_rehash(hash_norm, algoritmo):
+            novo_hash, novo_algo = gerar_hash_senha(request.password)
+            try:
+                if dsn_login:
+                    atualizar_hash_senha_admin_postgres(
+                        user_id,
+                        novo_hash,
+                        novo_algo,
+                        dsn_login,
+                    )
+                    logger.info(
+                        "login_admin_rehash_argon2id",
+                        admin_id=str(user_id),
+                        algoritmo_anterior=algoritmo,
+                    )
+                else:
+                    client_up = get_supabase_client()
+                    client_up.table("admins").update(
+                        {"hashed_password": novo_hash, "hash_algoritmo": novo_algo}
+                    ).eq("id", str(user_id)).execute()
+                    logger.info(
+                        "login_admin_rehash_argon2id_supabase",
+                        admin_id=str(user_id),
+                        algoritmo_anterior=algoritmo,
+                    )
+            except Exception as exc_rehash:
+                logger.warning(
+                    "login_rehash_argon2id_falhou",
+                    admin_id=str(user_id),
+                    erro=str(exc_rehash),
+                )
 
         perfil_raw = user.get("perfil_conta") or "gratuito"
         perfil_login = str(perfil_raw).strip().lower()
@@ -317,7 +343,7 @@ async def cadastro_consultor_b2b(body: CadastroConsultorB2BRequest) -> LoginResp
 
     email_norm = codigo_store.normalizar_email(str(body.email))
     nome_limpo = body.nome.strip()
-    hashed = pwd_context.hash(body.password)
+    hashed, hash_algo_cad = gerar_hash_senha(body.password)
     tenant_novo = uuid4()
 
     try:
@@ -336,6 +362,7 @@ async def cadastro_consultor_b2b(body: CadastroConsultorB2BRequest) -> LoginResp
                     tenant_id=tenant_novo,
                     dsn_sync=dsn_cad,
                     perfil_conta="gratuito",
+                    hash_algoritmo=hash_algo_cad,
                 )
             except ValueError as e:
                 msg = str(e).lower()
@@ -362,6 +389,7 @@ async def cadastro_consultor_b2b(body: CadastroConsultorB2BRequest) -> LoginResp
                     {
                         "email": email_norm,
                         "hashed_password": hashed,
+                        "hash_algoritmo": hash_algo_cad,
                         "nome": nome_limpo[:255],
                         "tenant_id": str(tenant_novo),
                         "perfil_conta": "gratuito",

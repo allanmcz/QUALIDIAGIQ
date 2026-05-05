@@ -29,4 +29,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0025_worm_permite_reatribuir_tenant_vinculo_lead.sql
 \i /docker-entrypoint-initdb.d/migrations/0026_diagnostico_mutacao_audit.sql
 \i /docker-entrypoint-initdb.d/migrations/0027_diagnostico_plano_materializado.sql
+\i /docker-entrypoint-initdb.d/migrations/0028_admins_hash_algoritmo.sql
 \echo 'QualiDiagIQ: migrações concluídas.'
