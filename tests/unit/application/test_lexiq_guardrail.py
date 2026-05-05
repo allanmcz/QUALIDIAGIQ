@@ -22,6 +22,16 @@ def test_detecta_nt() -> None:
     assert texto_tem_ancora_normativa("Campo NT 2025.002.") is True
 
 
+def test_detecta_lc227() -> None:
+    """LC 227/2026 deve ser âncora válida (P0-03 — lei corrigida no regex)."""
+    assert texto_tem_ancora_normativa("Transição LC 227/2026 art. 3.") is True
+
+
+def test_lc225_nao_e_ancora_valida() -> None:
+    """LC 225/2026 não existe como lei formal citável neste contexto — não é âncora válida."""
+    assert texto_tem_ancora_normativa("Conforme LC 225/2026.") is False
+
+
 def test_rejeita_sem_fonte() -> None:
     assert texto_tem_ancora_normativa("Melhore seus processos tributários.") is False
 

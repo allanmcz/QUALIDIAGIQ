@@ -25,7 +25,8 @@ _PADROES_ANCORA = (
     re.compile(r"ABNT\s*NBR\s*17301"),
     re.compile(r"ABNT\s*NBR\s*ISO\s*37301", re.I),
     re.compile(r"NT\s*2025\.00[0-9]", re.I),
-    re.compile(r"LC\s*225/2026"),
+    # LC 227/2026 — atualização normativa pós-LC 214/2025 (P0-03: typo 225 gerava falso negativo).
+    re.compile(r"LC\s*227/2026"),
 )
 
 
@@ -41,7 +42,7 @@ def mensagem_rejeicao_guardrail() -> str:
     """Texto estável devolvido ao usuário quando a IA não cita base reconhecível."""
     return (
         "Recomendação não exibida: o texto gerado não continha âncora normativa verificável "
-        "(ex.: LC 214/2025, EC 132/2023, ABNT NBR 17301:2026). "
+        "(ex.: LC 214/2025, LC 227/2026, EC 132/2023, ABNT NBR 17301:2026). "
         "Princípio Tributiq (Lexiq): sem citação válida, a resposta é rejeitada."
     )
 

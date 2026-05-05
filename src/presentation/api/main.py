@@ -79,10 +79,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if dsn_sentry:
         import sentry_sdk
 
+        from src.infrastructure.observability.sentry_scrubber import scrubber_sentry
+
         sentry_sdk.init(
             dsn=dsn_sentry,
             traces_sample_rate=0.1,
             environment=(settings.app_env or "development").strip(),
+            send_default_pii=False,
+            before_send=scrubber_sentry,
         )
     engine = None
     sync_url = settings.sync_database_url
