@@ -15,8 +15,9 @@ import os
 import sys
 from uuid import UUID
 
-from passlib.context import CryptContext
 from supabase import create_client
+
+from src.infrastructure.auth.password_hashing import gerar_hash_senha
 
 
 def main() -> int:
@@ -38,8 +39,7 @@ def main() -> int:
         print("Erro: defina SUPABASE_URL e SUPABASE_ANON_KEY (ou SUPABASE_KEY).", file=sys.stderr)
         return 1
 
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    hashed = pwd_context.hash(args.password)
+    hashed, hash_algo = gerar_hash_senha(args.password)
 
     client = create_client(url, key)
     try:
@@ -47,6 +47,7 @@ def main() -> int:
             {
                 "email": args.email,
                 "hashed_password": hashed,
+                "hash_algoritmo": hash_algo,
                 "nome": args.nome,
                 "tenant_id": str(args.tenant_id),
             }

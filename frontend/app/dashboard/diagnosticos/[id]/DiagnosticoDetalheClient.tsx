@@ -609,7 +609,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     if (ok) setM12ModalIndex(null);
   }, [m12ModalIndex, m12ModalDraft, m12Likert, salvarM12LikertCompleto]);
 
-  const barGapColors = ["#b91c1c", "#ea580c", "#ca8a04", "#65a30d", "#16a34a"];
+  // Paleta alinhada a tokens score (P0-08) — contrastes melhores em fundo claro.
+  const barGapColors = ["#991b1b", "#c2410c", "#a16207", "#4d7c0f", "#15803d"];
 
   /** Plano avançado: novo fluxo no assistente sem herdar rascunho local nem pendência de gravação. */
   const irRefazerDiagnostico = useCallback(() => {

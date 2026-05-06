@@ -3,7 +3,7 @@ Lookup de administrador (conta na plataforma) na tabela `admins` do Postgres.
 
 Camada: Infrastructure
 Usado quando há ``DATABASE_URL`` (Docker Compose, CI): o login não depende do REST Supabase em :54321.
-Mesmo contrato de senha bcrypt que ``passlib`` na rota ``POST /auth/login``.
+Hashes de senha: Argon2id + legado bcrypt — vide ``password_hashing.py`` e ADR-010.
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ def buscar_admin_por_email_postgres(email: str, dsn_sync: str) -> dict[str, Any]
                     id::text AS id,
                     email,
                     hashed_password,
+                    COALESCE(hash_algoritmo, 'bcrypt') AS hash_algoritmo,
                     nome,
                     tenant_id::text AS tenant_id,
                     COALESCE(perfil_conta, 'gratuito') AS perfil_conta
@@ -60,6 +61,7 @@ def inserir_admin_postgres(
     tenant_id: UUID,
     dsn_sync: str,
     perfil_conta: str = "gratuito",
+    hash_algoritmo: str = "argon2id",
 ) -> UUID:
     """
     Insere linha em `admins` e devolve o `id` gerado.
@@ -73,16 +75,19 @@ def inserir_admin_postgres(
     perfil = perfil_conta.strip().lower()
     if perfil not in ("gratuito", "avancado"):
         perfil = "gratuito"
+    algo = hash_algoritmo.strip().lower()
+    if algo not in ("argon2id", "bcrypt"):
+        algo = "argon2id"
     conn = psycopg2.connect(dsn_sync)
     try:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO admins (email, hashed_password, nome, tenant_id, perfil_conta)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO admins (email, hashed_password, nome, tenant_id, perfil_conta, hash_algoritmo)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (norm_email, hashed_password, nome_limpo, tenant_id, perfil),
+                (norm_email, hashed_password, nome_limpo, tenant_id, perfil, algo),
             )
             row = cur.fetchone()
         conn.commit()
@@ -95,6 +100,40 @@ def inserir_admin_postgres(
     except Exception:
         conn.rollback()
         raise
+    finally:
+        conn.close()
+
+
+def atualizar_hash_senha_admin_postgres(
+    admin_id: UUID,
+    hashed_password: str,
+    hash_algoritmo: str,
+    dsn_sync: str,
+) -> None:
+    """
+    Atualiza hash e algoritmo após login (rehash gradual bcrypt → Argon2id).
+
+    Args:
+        admin_id: PK em ``admins``.
+        hashed_password: Novo hash PHC.
+        hash_algoritmo: ``argon2id`` ou ``bcrypt``.
+        dsn_sync: URL ``postgresql://...`` síncrona.
+    """
+    algo = hash_algoritmo.strip().lower()
+    if algo not in ("argon2id", "bcrypt"):
+        algo = "argon2id"
+    conn = psycopg2.connect(dsn_sync)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE admins
+                SET hashed_password = %s, hash_algoritmo = %s
+                WHERE id = %s
+                """,
+                (hashed_password, algo, admin_id),
+            )
+        conn.commit()
     finally:
         conn.close()
 

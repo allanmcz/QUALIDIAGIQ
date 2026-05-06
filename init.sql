@@ -5,7 +5,8 @@
 \i /docker-entrypoint-initdb.d/migrations/0002_schema_core.sql
 \i /docker-entrypoint-initdb.d/migrations/0003_rls_policies.sql
 \i /docker-entrypoint-initdb.d/migrations/0004_seed_dev_admin.sql
-\i /docker-entrypoint-initdb.d/migrations/0005_worm_evidencia_audit.sql
+\i /docker-entrypoint-initdb.d/migrations/0005a_ci_playwright_admin.sql
+\i /docker-entrypoint-initdb.d/migrations/0005b_worm_evidencia_audit.sql
 \i /docker-entrypoint-initdb.d/migrations/0006_worm_column_granular.sql
 \i /docker-entrypoint-initdb.d/migrations/0007_idempotency_responses.sql
 \i /docker-entrypoint-initdb.d/migrations/0008_idempotency_comentarios_operacao.sql
@@ -28,4 +29,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0025_worm_permite_reatribuir_tenant_vinculo_lead.sql
 \i /docker-entrypoint-initdb.d/migrations/0026_diagnostico_mutacao_audit.sql
 \i /docker-entrypoint-initdb.d/migrations/0027_diagnostico_plano_materializado.sql
+\i /docker-entrypoint-initdb.d/migrations/0028_admins_hash_algoritmo.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

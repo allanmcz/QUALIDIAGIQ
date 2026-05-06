@@ -16,12 +16,22 @@ const tributiqBrand = {
   "gray-900": "#111827",
 };
 
+/**
+ * Níveis de score — P0-08 WCAG AA.
+ * - tokens base: gráficos / fundos;
+ * - *-ink: texto sobre fundo claro (≥ 4,5:1 com #FFFFFF; validar se mudar o canvas).
+ */
 const scoreLevels = {
   indefinido: "#9CA3AF",
+  "indefinido-ink": "#57534E",
   baixo: "#DC2626",
+  "baixo-ink": "#991B1B",
   medio: "#EAB308",
+  "medio-ink": "#A16207",
   alto: "#16A34A",
+  "alto-ink": "#166534",
   excelente: "#0D7F3F",
+  "excelente-ink": "#0A5C2E",
 };
 
 const config = {

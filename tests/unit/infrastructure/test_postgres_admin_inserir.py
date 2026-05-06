@@ -139,6 +139,7 @@ class TestInserirAdminPostgres:
         assert out == novo
         bind = mock_cursor.execute.call_args[0][1]
         assert bind[4] == "gratuito"
+        assert bind[5] == "argon2id"
 
     def test_nome_somente_espacos_grava_none(self) -> None:
         novo = uuid4()
