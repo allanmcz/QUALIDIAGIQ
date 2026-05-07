@@ -39,12 +39,23 @@ Variáveis críticas do front: ver `RUNBOOK_DEPLOY_ROLLBACK.md` (tabela `NEXT_PU
 | # | Tarefa | Critério |
 |---|--------|----------|
 | A1 | Branch/release alinhada ao commit que vai a produção | `git log -1` = artefacto que vai ser deployado |
-| A2 | **API:** `make test` + `make lint` (+ `make type-check` se política do release) verdes **na mesma base** | Sem surpresas “só no laptop” |
+| A2 | **API:** `make test` + `make lint` (+ `make type-check` se política do release) verdes **na mesma base** | Sem surpresas “só no laptop”; inclui integração LGPD (ver abaixo) |
 | A3 | **Front:** `npm run build` (+ `npm run test:e2e` se pipeline não cobrir regressão wizard) | Build sem erro |
 | A4 | **DDL:** migrações aplicadas **antes** de expor tráfego novo — ordem em `init.sql` / `make migrate` conforme ambiente | Sem migração pendente crítica |
 | A5 | **Secrets:** `JWT_SECRET_KEY`, `DATABASE_URL` / Supabase, idempotência Postgres se usada; **sem** `CORS_ALLOWED_ORIGINS=*` com credentials | Conferir `settings` / painel do host |
 
-**PWA:** ADR-011 **B1** (manifest + viewport) — sem service worker; risco de cache SW **não** aplica neste release.
+**PWA (ADR-011):** **B1** = manifest + viewport. **B2** = `public/sw.js` + registo client-side em produção — validar wizard/login após deploy se SW activo.
+
+### Evidência automatizada — LGPD `/privacidade` (CI / pré-release)
+
+Contrato HTTP coberto em `tests/integration/test_privacidade_api.py` (POST/GET/PATCH, filtros, 400/404). Faz parte de `make test` quando o pacote de release inclui esses commits.
+
+```bash
+# Foco manual no módulo (atenção: `make test` já é o gate completo com cobertura)
+PYTHONPATH=. .venv/bin/pytest tests/integration/test_privacidade_api.py -q
+```
+
+**Produção / smoke manual:** após login Bearer, validar `POST /privacidade/solicitacoes` com `Idempotency-Key`, `GET /privacidade/solicitacoes` e `PATCH .../status` conforme `RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md`.
 
 ---
 
@@ -83,6 +94,8 @@ Executar **pelo menos** os itens **1–5** de `SMOKE_MVP_FECHADO.md` contra URLs
 
 Se falhar em **4 ou 5**: considerar rollback da API ou front conforme `RUNBOOK_DEPLOY_ROLLBACK.md`.
 
+**Opcional (LGPD técnico):** se o release incluir fluxo de solicitações do titular, smoke rápido `POST/GET/PATCH` em `/privacidade/solicitacoes` (Bearer + `Idempotency-Key` no POST) alinhado ao runbook.
+
 ### Registo rápido (copiar/colar no PR ou diário)
 
 ```text
@@ -92,6 +105,7 @@ Commit/tag:
 API URL:
 Resultado make go-live:
 Resultado smoke itens 1-5:
+Resultado pytest LGPD (opcional): tests/integration/test_privacidade_api.py OK / N/A
 Decisão final: GO / NO-GO / ROLLBACK
 ```
 
@@ -115,7 +129,9 @@ Decisão final: GO / NO-GO / ROLLBACK
 | [SMOKE_MVP_FECHADO.md](./SMOKE_MVP_FECHADO.md) | Itens 1–8 + `make mvp-gate` |
 | [CORS_PRODUCAO.md](./CORS_PRODUCAO.md) | Lista explícita de origens |
 | [RLS_TABELAS_CHECKLIST_MVP.md](./RLS_TABELAS_CHECKLIST_MVP.md) | Conferência políticas |
-| [ADR-011](../../.github/adr/ADR-011-pwa-next14-qualidiagiq.md) | PWA B1 sem SW |
+| [ADR-011](../../.github/adr/ADR-011-pwa-next14-qualidiagiq.md) | PWA B1 + B2 (SW); política de cache |
+| [RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md](./RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md) | API `/privacidade/solicitacoes` + operações sensíveis |
+| `tests/integration/test_privacidade_api.py` | Integração HTTP LGPD (pytest) |
 
 ---
 

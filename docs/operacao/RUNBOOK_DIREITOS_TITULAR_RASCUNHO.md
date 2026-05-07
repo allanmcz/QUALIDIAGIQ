@@ -17,7 +17,7 @@
 1. Identificar `tenant_id` e `diagnostico_id`.  
 2. Para painel: claim JWT deve permitir `SELECT` na linha (RLS).  
 3. Para self-service: validar `respondente_email` / tokens de leitura conforme rotas existentes (`conclusao-visualizacao`, etc.).  
-4. **Registar** pedido em log de auditoria (futura tabela — ver ADR-012).
+4. **Registar** pedido na tabela `qdi.lgpd_titular_solicitacao` (migração **0028**) via rotas Bearer documentadas em §7 abaixo — **log estruturado**/trace para auditoria; fluxo jurídico completo em ADR-012.
 
 ## 3. O que é exportável (portabilidade / acesso)
 
@@ -44,6 +44,18 @@
 1. Suporte interno valida identidade.  
 2. **DPO** decide casos limítrofes WORM × eliminação.  
 3. Engenharia executa apenas scripts/runbooks **aprovados** e **com backup**.
+
+## 7. API técnica (MVP de enfileiramento — sessão painel)
+
+Requer **Bearer JWT** do tenant e header **`Idempotency-Key`** no `POST`. Detalhes de OpenAPI: tag **Privacidade (LGPD)** no `/docs`.
+
+| Método | Caminho | Notas |
+|--------|---------|--------|
+| `POST` | `/privacidade/solicitacoes` | Cria pedido (tipo, canal, texto); idempotência por chave |
+| `GET` | `/privacidade/solicitacoes` | Lista; query opcional `?status=` |
+| `PATCH` | `/privacidade/solicitacoes/{id}/status` | Atualiza estado operacional da solicitação |
+
+**Testes de contrato:** `tests/integration/test_privacidade_api.py` (CI via `make test`).
 
 ---
 
