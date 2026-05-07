@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md
+.PHONY: help install dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min
 
 PYTHON := python3.12
 VENV := .venv
@@ -112,3 +112,9 @@ frontend-init: ## Inicializa o frontend Next.js (executar uma vez)
 	cd frontend && npm install @anthropic-ai/sdk lucide-react @radix-ui/react-progress recharts
 
 all: install dev ## Setup completo + sobe ambiente
+
+go-live: ## Executa pré-voo técnico do checklist de go-live (~45min)
+	@bash scripts/go_live_45min.sh
+
+go-live-45min: ## Alias para go-live (compatibilidade)
+	@bash scripts/go_live_45min.sh

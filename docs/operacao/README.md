@@ -19,7 +19,7 @@
 
 | Documento | Uso |
 |-----------|-----|
-| [CHECKLIST_GO_LIVE_45MIN.md](./CHECKLIST_GO_LIVE_45MIN.md) | Cutover rápido (~45 min): pré-voo, ordem deploy, smoke, rollback express. |
+| [CHECKLIST_GO_LIVE_45MIN.md](./CHECKLIST_GO_LIVE_45MIN.md) | Cutover rápido (~45 min): pré-voo, ordem deploy, smoke, rollback express. Inclui execução via `make go-live`. |
 | [CORS_PRODUCAO.md](./CORS_PRODUCAO.md) | Variável `CORS_ALLOWED_ORIGINS` e anti-padrão `*` + credentials. |
 | [RLS_TABELAS_CHECKLIST_MVP.md](./RLS_TABELAS_CHECKLIST_MVP.md) | Índice de tabelas/políticas RLS (referência às migrações). |
 | [POSTS_IDEMPOTENCIA_E_OPENAPI.md](./POSTS_IDEMPOTENCIA_E_OPENAPI.md) | Middleware Idempotency-Key em POST `/diagnosticos/*`. |

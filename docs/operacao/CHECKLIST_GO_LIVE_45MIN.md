@@ -6,6 +6,19 @@
 
 **Antes de começar:** ter URLs finais de **API** e **site**, credenciais de deploy (CI ou SSH), e **backup** ou snapshot do Postgres se for aplicar DDL.
 
+### Execução assistida (automatiza A + C)
+
+```bash
+# modo padrão (sem E2E; com verify-schema strict)
+make go-live
+
+# modo completo (inclui E2E e type-check)
+QDI_GO_LIVE_RUN_E2E=1 QDI_GO_LIVE_RUN_TYPECHECK=1 make go-live
+
+# API de produção e sem acesso DB local (pula verify-schema)
+QDI_API_BASE_URL="https://api.seudominio.com" QDI_GO_LIVE_SKIP_SCHEMA=1 make go-live
+```
+
 ---
 
 ## Onde isto corre na tua infra (1 min — preencher uma vez)
@@ -69,6 +82,18 @@ Executar **pelo menos** os itens **1–5** de `SMOKE_MVP_FECHADO.md` contra URLs
 5. Lista `GET /diagnosticos/`
 
 Se falhar em **4 ou 5**: considerar rollback da API ou front conforme `RUNBOOK_DEPLOY_ROLLBACK.md`.
+
+### Registo rápido (copiar/colar no PR ou diário)
+
+```text
+Data/hora:
+Executor:
+Commit/tag:
+API URL:
+Resultado make go-live:
+Resultado smoke itens 1-5:
+Decisão final: GO / NO-GO / ROLLBACK
+```
 
 ---
 
