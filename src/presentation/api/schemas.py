@@ -384,6 +384,65 @@ class PatchSubtarefaPlanoDiagnosticoRequest(BaseModel):
     ordem: int | None = Field(default=None, ge=0, le=10_000)
 
 
+class RegistrarSolicitacaoTitularLgpdRequest(BaseModel):
+    """Corpo do POST /privacidade/solicitacoes (art. 18)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    diagnostico_id: UUID | None = Field(
+        default=None,
+        description="Opcional: vínculo com um diagnóstico específico no tenant.",
+    )
+    tipo: str = Field(
+        ...,
+        min_length=3,
+        max_length=32,
+        description="acesso, correcao, anonimizacao, eliminacao, portabilidade ou oposicao.",
+    )
+    canal: str = Field(
+        default="plataforma",
+        min_length=4,
+        max_length=24,
+        description="plataforma, self_service ou dpo_email.",
+    )
+    solicitante_email: str = Field(..., min_length=5, max_length=254)
+    payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadados da solicitação (texto livre/estrutura simples).",
+    )
+
+
+class AtualizarStatusSolicitacaoTitularLgpdRequest(BaseModel):
+    """PATCH operacional de status da solicitação."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    status: str = Field(
+        ...,
+        min_length=4,
+        max_length=24,
+        description="recebida, em_analise, deferida, indeferida ou concluida.",
+    )
+    observacao_interna: str | None = Field(default=None, max_length=4000)
+
+
+class SolicitacaoTitularLgpdResponse(BaseModel):
+    """Resposta HTTP da solicitação LGPD registrada."""
+
+    id: UUID
+    tenant_id: UUID
+    diagnostico_id: UUID | None
+    tipo: str
+    status: str
+    canal: str
+    solicitante_email: str
+    payload: dict[str, Any]
+    observacao_interna: str | None
+    actor_user_id: UUID | None
+    criado_em: datetime
+    atualizado_em: datetime
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 

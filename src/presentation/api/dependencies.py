@@ -21,19 +21,29 @@ from src.application.ports.lead_diagnostico_vinculo_port import (
     LeadDiagnosticoVinculoPort,
     NopLeadDiagnosticoVinculoAdapter,
 )
+from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
 from src.application.use_cases.atualizar_quadro_implantacao import AtualizarQuadroImplantacao
+from src.application.use_cases.atualizar_status_solicitacao_titular_lgpd import (
+    AtualizarStatusSolicitacaoTitularLgpd,
+)
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
+)
+from src.application.use_cases.listar_solicitacao_titular_lgpd import (
+    ListarSolicitacaoTitularLgpd,
 )
 from src.application.use_cases.plano_painel_subtarefa import (
     AtualizarSubtarefaPlanoDiagnostico,
     CriarSubtarefaPlanoDiagnostico,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
+from src.application.use_cases.registrar_solicitacao_titular_lgpd import (
+    RegistrarSolicitacaoTitularLgpd,
+)
 from src.application.use_cases.vincular_diagnosticos_lead_self_service import (
     VincularDiagnosticosLeadSelfService,
 )
@@ -61,6 +71,9 @@ from src.infrastructure.adapters.noop_diagnostico_mutacao_audit_adapter import (
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.postgres_diagnostico_mutacao_audit_adapter import (
     PostgresDiagnosticoMutacaoAuditAdapter,
+)
+from src.infrastructure.adapters.postgres_lgpd_titular_solicitacao_adapter import (
+    PostgresLgpdTitularSolicitacaoAdapter,
 )
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
@@ -300,6 +313,48 @@ def get_lead_diagnostico_vinculo_port() -> LeadDiagnosticoVinculoPort:
             tenant_self_service=settings.self_service_tenant_id,
         )
     return NopLeadDiagnosticoVinculoAdapter()
+
+
+def get_lgpd_titular_solicitacao_port() -> LgpdTitularSolicitacaoPort:
+    """Port LGPD: exige DSN síncrono para persistir trilha de solicitações do titular."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Fluxo LGPD indisponível sem DATABASE_URL síncrono.",
+        )
+    return PostgresLgpdTitularSolicitacaoAdapter(dsn_sync=dsn)
+
+
+def get_registrar_solicitacao_titular_lgpd_use_case(
+    port: Annotated[
+        LgpdTitularSolicitacaoPort,
+        Depends(get_lgpd_titular_solicitacao_port),
+    ],
+) -> RegistrarSolicitacaoTitularLgpd:
+    """POST de solicitação do titular (art. 18)."""
+    return RegistrarSolicitacaoTitularLgpd(port=port)
+
+
+def get_listar_solicitacao_titular_lgpd_use_case(
+    port: Annotated[
+        LgpdTitularSolicitacaoPort,
+        Depends(get_lgpd_titular_solicitacao_port),
+    ],
+) -> ListarSolicitacaoTitularLgpd:
+    """GET de solicitações do titular por tenant."""
+    return ListarSolicitacaoTitularLgpd(port=port)
+
+
+def get_atualizar_status_solicitacao_titular_lgpd_use_case(
+    port: Annotated[
+        LgpdTitularSolicitacaoPort,
+        Depends(get_lgpd_titular_solicitacao_port),
+    ],
+) -> AtualizarStatusSolicitacaoTitularLgpd:
+    """PATCH de status operacional de solicitação LGPD."""
+    return AtualizarStatusSolicitacaoTitularLgpd(port=port)
 
 
 def get_vincular_diagnosticos_lead_self_service_use_case(

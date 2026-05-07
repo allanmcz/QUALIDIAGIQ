@@ -123,6 +123,13 @@ def create_app() -> FastAPI:
                 "Público; exige DATABASE_URL no backend. Rate limit por IP (middleware público)."
             ),
         },
+        {
+            "name": "Privacidade LGPD",
+            "description": (
+                "Solicitações operacionais de direitos do titular (Lei 13.709/2018 art. 18) "
+                "no tenant autenticado."
+            ),
+        },
     ]
 
     app = FastAPI(
@@ -181,6 +188,7 @@ def create_app() -> FastAPI:
         diagnostico_self_service_router,
         mock_storage_router,
         normativa_router,
+        privacidade_router,
     )
 
     app.include_router(diagnostico_router.router)
@@ -189,6 +197,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router.router)
     app.include_router(normativa_router.router)
     app.include_router(cnae_router.router)
+    app.include_router(privacidade_router.router)
     app.include_router(mock_storage_router.router)
 
     if settings.otel_tracing_enabled:

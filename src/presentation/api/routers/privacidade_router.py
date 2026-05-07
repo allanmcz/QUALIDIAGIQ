@@ -1,0 +1,195 @@
+"""
+Rotas HTTP para solicitações LGPD do titular.
+
+Camada: Presentation
+Responsabilidade: roteamento, validação Pydantic e conversão para casos de uso.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated
+from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime)
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+
+from src.application.ports.lgpd_titular_solicitacao_port import (
+    CanalSolicitacaoTitular,
+    StatusSolicitacaoTitular,
+    TipoSolicitacaoTitular,
+)
+from src.application.use_cases.atualizar_status_solicitacao_titular_lgpd import (
+    AtualizarStatusSolicitacaoTitularLgpd,
+    ComandoAtualizarStatusSolicitacaoTitularLgpd,
+)
+from src.application.use_cases.listar_solicitacao_titular_lgpd import (
+    ComandoListarSolicitacaoTitularLgpd,
+    ListarSolicitacaoTitularLgpd,
+)
+from src.application.use_cases.registrar_solicitacao_titular_lgpd import (
+    ComandoRegistrarSolicitacaoTitularLgpd,
+    RegistrarSolicitacaoTitularLgpd,
+)
+from src.presentation.api.dependencies import (
+    get_atualizar_status_solicitacao_titular_lgpd_use_case,
+    get_current_user_tenant,
+    get_listar_solicitacao_titular_lgpd_use_case,
+    get_registrar_solicitacao_titular_lgpd_use_case,
+)
+from src.presentation.api.schemas import (
+    AtualizarStatusSolicitacaoTitularLgpdRequest,
+    RegistrarSolicitacaoTitularLgpdRequest,
+    SolicitacaoTitularLgpdResponse,
+)
+
+router = APIRouter(prefix="/privacidade", tags=["Privacidade LGPD"])
+
+
+def _parse_tipo(raw: str) -> TipoSolicitacaoTitular:
+    try:
+        return TipoSolicitacaoTitular(raw.strip().lower())
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tipo LGPD inválido.",
+        ) from e
+
+
+def _parse_canal(raw: str) -> CanalSolicitacaoTitular:
+    try:
+        return CanalSolicitacaoTitular(raw.strip().lower())
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Canal LGPD inválido.",
+        ) from e
+
+
+def _parse_status(raw: str) -> StatusSolicitacaoTitular:
+    try:
+        return StatusSolicitacaoTitular(raw.strip().lower())
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Status LGPD inválido.",
+        ) from e
+
+
+def _to_response(model: object) -> SolicitacaoTitularLgpdResponse:
+    from src.application.ports.lgpd_titular_solicitacao_port import SolicitacaoTitular
+
+    row = model
+    if not isinstance(row, SolicitacaoTitular):
+        raise TypeError("Modelo de solicitação LGPD inválido.")
+    return SolicitacaoTitularLgpdResponse(
+        id=row.id,
+        tenant_id=row.tenant_id,
+        diagnostico_id=row.diagnostico_id,
+        tipo=row.tipo.value,
+        status=row.status.value,
+        canal=row.canal.value,
+        solicitante_email=row.solicitante_email,
+        payload=dict(row.payload),
+        observacao_interna=row.observacao_interna,
+        actor_user_id=row.actor_user_id,
+        criado_em=row.criado_em,
+        atualizado_em=row.atualizado_em,
+    )
+
+
+@router.post(
+    "/solicitacoes",
+    response_model=SolicitacaoTitularLgpdResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar solicitação LGPD do titular",
+    description=(
+        "Abre solicitação operacional do art. 18 (acesso, correção, anonimização, eliminação, "
+        "portabilidade, oposição) no tenant do JWT. Requer header Idempotency-Key."
+    ),
+)
+async def registrar_solicitacao_lgpd(
+    payload: RegistrarSolicitacaoTitularLgpdRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        RegistrarSolicitacaoTitularLgpd,
+        Depends(get_registrar_solicitacao_titular_lgpd_use_case),
+    ],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> SolicitacaoTitularLgpdResponse:
+    """POST de solicitação LGPD por tenant autenticado."""
+    _ = idempotency_key
+    user_id, tenant_id, _ = current
+    cmd = ComandoRegistrarSolicitacaoTitularLgpd(
+        tenant_id=tenant_id,
+        diagnostico_id=payload.diagnostico_id,
+        tipo=_parse_tipo(payload.tipo),
+        canal=_parse_canal(payload.canal),
+        solicitante_email=payload.solicitante_email,
+        payload=payload.payload,
+        actor_user_id=user_id,
+    )
+    try:
+        created = await use_case.execute(cmd)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return _to_response(created)
+
+
+@router.get(
+    "/solicitacoes",
+    response_model=list[SolicitacaoTitularLgpdResponse],
+    summary="Listar solicitações LGPD do tenant",
+    description="Lista solicitações do tenant autenticado, com filtro opcional por status.",
+)
+async def listar_solicitacoes_lgpd(
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        ListarSolicitacaoTitularLgpd,
+        Depends(get_listar_solicitacao_titular_lgpd_use_case),
+    ],
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[SolicitacaoTitularLgpdResponse]:
+    """GET paginado de solicitações LGPD no tenant do JWT."""
+    _, tenant_id, _ = current
+    status_enum = _parse_status(status_filter) if status_filter else None
+    rows = await use_case.execute(
+        ComandoListarSolicitacaoTitularLgpd(
+            tenant_id=tenant_id,
+            status=status_enum,
+            limit=limit,
+        )
+    )
+    return [_to_response(row) for row in rows]
+
+
+@router.patch(
+    "/solicitacoes/{solicitacao_id}/status",
+    response_model=SolicitacaoTitularLgpdResponse,
+    summary="Atualizar status de solicitação LGPD",
+    description="Atualiza status operacional (backoffice) da solicitação no tenant autenticado.",
+)
+async def atualizar_status_solicitacao_lgpd(
+    solicitacao_id: UUID,
+    payload: AtualizarStatusSolicitacaoTitularLgpdRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AtualizarStatusSolicitacaoTitularLgpd,
+        Depends(get_atualizar_status_solicitacao_titular_lgpd_use_case),
+    ],
+) -> SolicitacaoTitularLgpdResponse:
+    """PATCH de status da solicitação LGPD por tenant."""
+    user_id, tenant_id, _ = current
+    updated = await use_case.execute(
+        ComandoAtualizarStatusSolicitacaoTitularLgpd(
+            tenant_id=tenant_id,
+            solicitacao_id=solicitacao_id,
+            status=_parse_status(payload.status),
+            observacao_interna=payload.observacao_interna,
+            actor_user_id=user_id,
+        )
+    )
+    if updated is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Solicitação não encontrada"
+        )
+    return _to_response(updated)
