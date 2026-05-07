@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
@@ -20,5 +21,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  return <TooltipProvider delayDuration={200}>{children}</TooltipProvider>;
+  return (
+    <TooltipProvider delayDuration={200}>
+      <ServiceWorkerRegister />
+      {children}
+    </TooltipProvider>
+  );
 }

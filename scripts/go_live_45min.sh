@@ -12,6 +12,13 @@ RUN_TYPECHECK="${QDI_GO_LIVE_RUN_TYPECHECK:-0}"
 SKIP_SCHEMA="${QDI_GO_LIVE_SKIP_SCHEMA:-0}"
 TRACE_ID="${QDI_TRACE_ID:-go-live-45min-$(date +%Y%m%d%H%M%S)}"
 
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "❌ Dependência ausente: '$1'"
+    exit 1
+  fi
+}
+
 log() {
   printf "\n[%s] %s\n" "$(date +%H:%M:%S)" "$1"
 }
@@ -36,6 +43,10 @@ EOF
 }
 
 main() {
+  require_cmd curl
+  require_cmd rg
+  require_cmd make
+
   print_context
 
   run_step "A1 - Commit de release" git log -1 --oneline
@@ -57,6 +68,9 @@ main() {
   if [[ "$SKIP_SCHEMA" == "1" ]]; then
     log "C1 - verify-schema-mvp-strict pulado (QDI_GO_LIVE_SKIP_SCHEMA=1)."
   else
+    if [[ -z "${QDI_POSTGRES_TEST_URL:-}" ]]; then
+      log "C1 - QDI_POSTGRES_TEST_URL não definido; make usará default local (127.0.0.1:60322)."
+    fi
     run_step "C1 - Verify schema strict" make verify-schema-mvp-strict
   fi
 
