@@ -7,7 +7,7 @@
 | Artefacto | Estado |
 |-----------|--------|
 | `frontend/app/termos/page.tsx` | Minuta pública; **aprovada** (parecer externo + aprovação produto — ver abaixo). |
-| `frontend/app/privacidade/page.tsx` | Política MVP LGPD; **aprovada** no mesmo pacote. |
+| `frontend/app/privacidade/page.tsx` | Política MVP LGPD; **aprovada**; secção **`#dpo`** com e-mail via `NEXT_PUBLIC_LGPD_DPO_*`. |
 | Aceite técnico persistido | Campo `aceite_termos_privacidade_em` no POST `/diagnosticos/` (migração **0012**) |
 
 ## Aprovação produto (controlador)
@@ -28,10 +28,19 @@
 
 Substituir ou acrescentar PDF se houver nova versão assinada; manter este `STATUS_*` alinhado ao ficheiro vigente.
 
+## Canal DPO (implementação técnica)
+
+| Campo | Valor |
+|-------|-------|
+| **URL pública** | `https://<site>/privacidade#dpo` (âncora `id="dpo"`). |
+| **Configuração** | `NEXT_PUBLIC_LGPD_DPO_EMAIL` (obrigatório para exibir o mailto); opcional `NEXT_PUBLIC_LGPD_DPO_NOME`, `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VERSAO`, `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VIGENCIA`. |
+| **Exemplo institucional** | `dpo@tributiq.com.br` em `frontend/.env.example`, `frontend/.env.production.example` e serviço `web` do `docker-compose.yml` — **substituir** se o encarregado ou domínio forem outros. |
+| **Rodapé** | Link **DPO** em `frontend/components/layout/Footer.tsx` → `/privacidade#dpo`. |
+
 ## Pendências operacionais (não substituem o parecer)
 
-1. **Canal de titular** (e-mail/DPO) nas páginas — preencher com contacto oficial **em produção** quando o domínio e o DPO estiverem fixos.
-2. **Versão publicada** — registrar número/data da política após cada revisão (controle de mudanças / changelog interno).
+1. **Produção:** confirmar que o e-mail exibido é o **canal oficial** acordado com o DPO nomeado (Res. ANPD nº 18/2024) e alterar variáveis de deploy se for diferente do exemplo.
+2. **Versão publicada** — opcional: `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VERSAO` e `_VIGENCIA`; ou registo só no changelog interno.
 
 ## Critério de aceite para “jurídico OK” no checklist MVP
 

@@ -1,10 +1,15 @@
 import Link from "next/link";
 
+import { getDpoPublicContact, getPoliticaPublicMeta } from "@/lib/legal/dpoPublic";
+
 export const metadata = {
   title: "Política de Privacidade | QualiDiagIQ",
 };
 
 export default function PrivacidadePage() {
+  const dpo = getDpoPublicContact();
+  const politicaMeta = getPoliticaPublicMeta();
+
   return (
     <div className="container max-w-3xl py-12 space-y-6">
       <Link href="/wizard" className="text-sm text-primary hover:underline">
@@ -13,10 +18,46 @@ export default function PrivacidadePage() {
       <h1 className="text-3xl font-bold tracking-tight">Política de privacidade (MVP QDI)</h1>
       <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
         <strong>Status:</strong> minuta <strong>aprovada</strong> (parecer jurídico de 5 mai. 2026) e{" "}
-        <strong>aprovada para publicação</strong> pelo controlador, com o mesmo enquadramento de Termos. LGPD (Lei
-        13.709/2018). Em produção: indicar canal DPO, versão e data de vigência no corpo público quando o domínio
-        estiver definitivo.
+        <strong>aprovada para publicação</strong> pelo controlador. LGPD (Lei 13.709/2018).
+        {politicaMeta ? (
+          <>
+            {" "}
+            <strong>Versão {politicaMeta.versao}</strong> · vigência <strong>{politicaMeta.vigenciaIso}</strong>.
+          </>
+        ) : null}{" "}
+        Canal do encarregado (DPO) na secção abaixo{dpo ? "" : " — defina `NEXT_PUBLIC_LGPD_DPO_EMAIL` no deploy"}.
       </p>
+      <section
+        id="dpo"
+        className="scroll-mt-24 rounded-md border bg-muted/40 px-4 py-3 text-sm leading-relaxed"
+        aria-labelledby="dpo-heading"
+      >
+        <h2 id="dpo-heading" className="text-base font-semibold tracking-tight">
+          Encarregado de Proteção de Dados (DPO)
+        </h2>
+        {dpo ? (
+          <p className="mt-2 text-muted-foreground">
+            {dpo.nomeExibicao ? (
+              <>
+                <span className="text-foreground">{dpo.nomeExibicao}</span> —{" "}
+              </>
+            ) : null}
+            contacto para exercício de direitos do titular e questões de tratamento de dados:{" "}
+            <a className="font-medium text-primary underline" href={`mailto:${dpo.email}`}>
+              {dpo.email}
+            </a>
+            .
+          </p>
+        ) : (
+          <p className="mt-2 text-muted-foreground">
+            O endereço público do encarregado será exibido aqui quando{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">NEXT_PUBLIC_LGPD_DPO_EMAIL</code> estiver
+            definido no ambiente do site (ex.: build de produção). Até lá, utilize o contacto institucional do
+            controlador (Tributiq) indicado na página de suporte ou no contrato comercial.
+          </p>
+        )}
+      </section>
+
       <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
         <li>
           <strong>Controlador:</strong> Tributiq / QualiDiagIQ — contato pelo canal oficial do produto.
@@ -49,7 +90,22 @@ export default function PrivacidadePage() {
         </li>
         <li>
           <strong>Direitos do titular:</strong> confirmação, acesso, correção, anonimização, eliminação
-          e portabilidade, nos limites da lei — canal a definir em produção.
+          e portabilidade, nos limites da lei —{" "}
+          {dpo ? (
+            <>
+              contacto do DPO:{" "}
+              <a className="text-primary underline font-medium" href={`mailto:${dpo.email}`}>
+                {dpo.email}
+              </a>{" "}
+              (ver também{" "}
+              <a className="text-primary underline font-medium" href="#dpo">
+                secção DPO
+              </a>
+              ).
+            </>
+          ) : (
+            <>canal do DPO acima, quando configurado, ou contacto institucional do controlador.</>
+          )}
         </li>
       </ul>
       <p className="text-sm text-muted-foreground pt-2">

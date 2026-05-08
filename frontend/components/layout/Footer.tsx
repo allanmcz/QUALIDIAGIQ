@@ -31,6 +31,9 @@ export function Footer() {
           <Link href="/privacidade" className="whitespace-nowrap hover:underline">
             Política de Privacidade
           </Link>
+          <Link href="/privacidade#dpo" className="whitespace-nowrap hover:underline">
+            DPO
+          </Link>
           <Link href="/avaliacao-contador" className="whitespace-nowrap hover:underline">
             Avaliação (contador)
           </Link>

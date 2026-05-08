@@ -46,7 +46,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **1** | Tag / release MVP + `CHANGELOG_MVP` — **estado:** **não definido** | Allan (momento, nome da tag e critério de corte) | Allan ou CI — git tag, entrada no changelog **após** fecho desta decisão |
 | **2** | Parecer + **aprovação produto** **`/termos`** e **`/privacidade`** | **Allan** (produto) | Registo em `docs/legal/STATUS_JURIDICO_MVP.md` + checklist secção 2 |
 | **2** | Retenção telefone + alinhamento legal | Allan + **jurídico** (política de dados) | Jurídico (texto) + Eng (campos/API se mudar) |
-| **2** | Canal titular / DPO operacional | Allan (aprova contacto público) | Jurídico (copy DPO) + Ops/site (publicação) |
+| **2** | Canal titular / DPO no site | **Allan** (aprova contacto público) | `NEXT_PUBLIC_LGPD_DPO_*` + `/privacidade#dpo` — ver `docs/legal/STATUS_JURIDICO_MVP.md` |
 | **3** | **D1** Free / fluxo contínuo vs conta na plataforma | **Allan** (**fechado 2026-05-02**) | Eng — `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` § D1 |
 | **3** | **D3** Faturamento / setor fino | **Allan** | Eng — se houver novo requisito |
 | **3** | **D4** URL canónica produção | **Allan** (assinatura da URL final) | Ops / Eng — DNS, `NEXT_PUBLIC_*`, CORS |
@@ -87,7 +87,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | [x] | Parecer externo sobre **`/termos`** e **`/privacidade`** | `docs/legal/STATUS_JURIDICO_MVP.md` · PDF em `docs/legal/` | 2026-05-07 | Arquivo: `PARECER JURÍDICO - QualiDiagIQ_7242.pdf` |
 | [x] | **Aprovação produto (controlador)** da minuta **`/termos`** + **`/privacidade`** para publicação | `docs/legal/STATUS_JURIDICO_MVP.md` § Aprovação produto | 2026-05-07 | Sujeita a implementar apontamentos do parecer e DPO/versão em URL de produção. |
 | [ ] | Retenção **telefone respondente** alinhada a texto legal + processo interno | LGPD handoff MVP | | Telefone e prazos constam da política; **processo interno** de retenção/arquivo continua a cargo do controlador. |
-| [ ] | Canal titular / DPO operacional | registar contacto público | | |
+| [x] | Canal titular / DPO operacional | `frontend/lib/legal/dpoPublic.ts` · `/privacidade#dpo` · env `NEXT_PUBLIC_LGPD_DPO_*` | 2026-05-07 | Canal público no site; **confirmar** em deploy de produção o e-mail do encarregado nomeado (exemplo repo: `dpo@tributiq.com.br`). |
 
 ---
 
