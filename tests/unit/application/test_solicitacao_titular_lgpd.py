@@ -77,6 +77,14 @@ class FakeLgpdTitularSolicitacaoPort(LgpdTitularSolicitacaoPort):
             rows = [r for r in rows if r.status == status]
         return rows[:limit]
 
+    async def buscar_por_id(
+        self, *, tenant_id: UUID, solicitacao_id: UUID
+    ) -> SolicitacaoTitular | None:
+        for row in self._rows:
+            if row.tenant_id == tenant_id and row.id == solicitacao_id:
+                return row
+        return None
+
     async def atualizar_status(
         self,
         *,

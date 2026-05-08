@@ -41,6 +41,32 @@ def _from_row(row: dict[str, Any]) -> SolicitacaoTitular:
     )
 
 
+def _buscar_sync(
+    dsn: str,
+    *,
+    tenant_id: UUID,
+    solicitacao_id: UUID,
+) -> SolicitacaoTitular | None:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM lgpd_titular_solicitacao
+                WHERE id = %s
+                  AND tenant_id = %s
+                """,
+                (str(solicitacao_id), str(tenant_id)),
+            )
+            raw = cur.fetchone()
+        if raw is None:
+            return None
+        return _from_row(cast("dict[str, Any]", raw))
+    finally:
+        conn.close()
+
+
 def _criar_sync(
     dsn: str,
     *,
@@ -171,6 +197,19 @@ class PostgresLgpdTitularSolicitacaoAdapter(LgpdTitularSolicitacaoPort):
 
     def __init__(self, dsn_sync: str) -> None:
         self._dsn = dsn_sync
+
+    async def buscar_por_id(
+        self,
+        *,
+        tenant_id: UUID,
+        solicitacao_id: UUID,
+    ) -> SolicitacaoTitular | None:
+        return await asyncio.to_thread(
+            _buscar_sync,
+            self._dsn,
+            tenant_id=tenant_id,
+            solicitacao_id=solicitacao_id,
+        )
 
     async def criar(
         self,

@@ -17,9 +17,35 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
     StatusSolicitacaoTitular,
     TipoSolicitacaoTitular,
 )
-from src.presentation.api.dependencies import get_lgpd_titular_solicitacao_port
+from src.application.ports.lgpd_anonimizacao_executor_port import (
+    LgpdAnonimizacaoExecutorPort,
+)
+from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
+    ExecutarAnonimizacaoRespondenteLgpd,
+)
+from src.presentation.api.dependencies import (
+    get_executar_anonimizacao_respondente_lgpd_use_case,
+    get_lgpd_titular_solicitacao_port,
+)
 from src.presentation.api.main import app
 from tests.conftest import cabecalho_auth_bearer
+
+
+class RecordingAnonimizacaoExecutor(LgpdAnonimizacaoExecutorPort):
+    """Executor fake para asserts HTTP sem Postgres."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[UUID, UUID, UUID, UUID]] = []
+
+    async def aplicar_anonimizacao_respondente(
+        self,
+        *,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        solicitacao_id: UUID,
+        actor_user_id: UUID,
+    ) -> None:
+        self.calls.append((tenant_id, diagnostico_id, solicitacao_id, actor_user_id))
 
 
 class FakeLgpdPort(LgpdTitularSolicitacaoPort):
@@ -69,6 +95,14 @@ class FakeLgpdPort(LgpdTitularSolicitacaoPort):
             selected = [r for r in selected if r.status == status]
         return selected[:limit]
 
+    async def buscar_por_id(
+        self, *, tenant_id: UUID, solicitacao_id: UUID
+    ) -> SolicitacaoTitular | None:
+        for row in self.rows:
+            if row.id == solicitacao_id and row.tenant_id == tenant_id:
+                return row
+        return None
+
     async def atualizar_status(
         self,
         *,
@@ -97,6 +131,21 @@ def privacidade_overrides() -> FakeLgpdPort:
     fake = FakeLgpdPort()
     app.dependency_overrides[get_lgpd_titular_solicitacao_port] = lambda: fake
     yield fake
+    app.dependency_overrides = {}
+
+
+@pytest.fixture
+def privacidade_anonimizar_overrides() -> tuple[FakeLgpdPort, RecordingAnonimizacaoExecutor]:
+    fake_port = FakeLgpdPort()
+    executor = RecordingAnonimizacaoExecutor()
+    app.dependency_overrides[get_lgpd_titular_solicitacao_port] = lambda: fake_port
+    app.dependency_overrides[get_executar_anonimizacao_respondente_lgpd_use_case] = (
+        lambda: ExecutarAnonimizacaoRespondenteLgpd(
+            port_solicitacoes=fake_port,
+            executor=executor,
+        )
+    )
+    yield fake_port, executor
     app.dependency_overrides = {}
 
 
@@ -272,3 +321,89 @@ async def test_patch_privacidade_400_status_invalido(
         headers=headers,
     )
     assert response.status_code == 400
+
+
+def _deferida_anonimizacao(
+    *,
+    tenant_id: UUID,
+    usuario_id: UUID,
+    solicitacao_id: UUID,
+    diagnostico_id: UUID,
+) -> SolicitacaoTitular:
+    now = datetime.now(UTC)
+    return SolicitacaoTitular(
+        id=solicitacao_id,
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        tipo=TipoSolicitacaoTitular.ANONIMIZACAO,
+        status=StatusSolicitacaoTitular.DEFERIDA,
+        canal=CanalSolicitacaoTitular.PLATAFORMA,
+        solicitante_email="titular@example.com",
+        payload={},
+        observacao_interna=None,
+        actor_user_id=usuario_id,
+        criado_em=now,
+        atualizado_em=now,
+    )
+
+
+@pytest.mark.asyncio
+async def test_post_anonimizar_respondente_chama_executor(
+    async_client,
+    privacidade_anonimizar_overrides: tuple[FakeLgpdPort, RecordingAnonimizacaoExecutor],
+):
+    fake_port, executor = privacidade_anonimizar_overrides
+    tenant_id = uuid4()
+    usuario_id = uuid4()
+    solicitacao_id = uuid4()
+    diagnostico_id = uuid4()
+    fake_port.rows.append(
+        _deferida_anonimizacao(
+            tenant_id=tenant_id,
+            usuario_id=usuario_id,
+            solicitacao_id=solicitacao_id,
+            diagnostico_id=diagnostico_id,
+        )
+    )
+    headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+    resp = await async_client.post(
+        f"/privacidade/diagnosticos/{diagnostico_id}/anonimizar-respondente",
+        json={"solicitacao_id": str(solicitacao_id)},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["diagnostico_id"] == str(diagnostico_id)
+    assert body["solicitacao_id"] == str(solicitacao_id)
+    assert executor.calls == [(tenant_id, diagnostico_id, solicitacao_id, usuario_id)]
+
+
+@pytest.mark.asyncio
+async def test_post_anonimizar_respondente_400_se_nao_deferida(
+    async_client,
+    privacidade_anonimizar_overrides: tuple[FakeLgpdPort, RecordingAnonimizacaoExecutor],
+):
+    fake_port, executor = privacidade_anonimizar_overrides
+    tenant_id = uuid4()
+    usuario_id = uuid4()
+    solicitacao_id = uuid4()
+    diagnostico_id = uuid4()
+    fake_port.rows.append(
+        replace(
+            _deferida_anonimizacao(
+                tenant_id=tenant_id,
+                usuario_id=usuario_id,
+                solicitacao_id=solicitacao_id,
+                diagnostico_id=diagnostico_id,
+            ),
+            status=StatusSolicitacaoTitular.EM_ANALISE,
+        )
+    )
+    headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+    resp = await async_client.post(
+        f"/privacidade/diagnosticos/{diagnostico_id}/anonimizar-respondente",
+        json={"solicitacao_id": str(solicitacao_id)},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert executor.calls == []

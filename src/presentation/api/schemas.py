@@ -443,6 +443,29 @@ class SolicitacaoTitularLgpdResponse(BaseModel):
     atualizado_em: datetime
 
 
+class AnonimizarRespondenteLgpdHttpRequest(BaseModel):
+    """POST /privacidade/diagnosticos/{id}/anonimizar-respondente — exige solicitação ``deferida``."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    solicitacao_id: UUID = Field(
+        ...,
+        description="Identificador da linha em lgpd_titular_solicitacao (tipo anonimizacao, status deferida).",
+    )
+
+
+class AnonimizarRespondenteLgpdHttpResponse(BaseModel):
+    """Confirmação após transação (log + UPDATE diagnóstico + conclusão da solicitação)."""
+
+    diagnostico_id: UUID
+    solicitacao_id: UUID
+    status_solicitacao: str = "concluida"
+    mensagem: str = (
+        "Anonimização dos campos do respondente aplicada; registo em lgpd_anonimizacao_log "
+        "(email sentinel + nome marcador + remoção de cargo/telefone)."
+    )
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 

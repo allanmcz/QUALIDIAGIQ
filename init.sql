@@ -29,4 +29,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0026_diagnostico_mutacao_audit.sql
 \i /docker-entrypoint-initdb.d/migrations/0027_diagnostico_plano_materializado.sql
 \i /docker-entrypoint-initdb.d/migrations/0028_lgpd_titular_solicitacao.sql
+\i /docker-entrypoint-initdb.d/migrations/0029_lgpd_anonimizacao_log_worm.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

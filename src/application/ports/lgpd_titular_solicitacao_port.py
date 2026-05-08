@@ -92,6 +92,15 @@ class LgpdTitularSolicitacaoPort(ABC):
         """Lista solicitações do tenant, mais recentes primeiro."""
 
     @abstractmethod
+    async def buscar_por_id(
+        self,
+        *,
+        tenant_id: UUID,
+        solicitacao_id: UUID,
+    ) -> SolicitacaoTitular | None:
+        """Retorna a solicitação do tenant ou ``None``."""
+
+    @abstractmethod
     async def atualizar_status(
         self,
         *,
