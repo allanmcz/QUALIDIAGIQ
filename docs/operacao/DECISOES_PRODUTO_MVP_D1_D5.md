@@ -6,7 +6,7 @@ Atualizar esta tabela quando houver **sign-off**; valores **Default repo** refle
 
 **Decisão:** O utilizador **pode continuar o diagnóstico sem estar logado** até ao ponto em que o produto exija **gravar o resultado na API**. Para **persistir** o diagnóstico (POST), há **sessão na plataforma** (login/cadastro) como caminho com Bearer, **sem obrigar** cadastro no primeiro ecrã; em paralelo, **OTP no e-mail** + `POST /diagnosticos/self-service` grava sem conta prévia. Na **mesma jornada**, o utilizador pode **opcionalmente** associar-se a um percurso de **contacto com consultor** (follow-up comercial ou especialista) **ou** optar por **concluir sozinho** (relatório self-service, sem promessa de contacto humano), mediante **opt-in explícito** quando houver tratamento de dados para CRM ou contacto ativo.
 
-**Implicações:** (1) UX deve comunicar claramente os dois modos (“continuar”, “falar com consultor”) sem misturar consentimentos. (2) **LGPD / `/privacidade`**: revisão jurídica para distinguir base legal e finalidade entre “execução do diagnóstico” e “contacto comercial/consultoria”. (3) Operação: SLA de consultor aplica-se apenas a leads que **manifestarem** essa opção. (4) **Gravação sem conta na plataforma prévia:** persistência na API via **OTP no e-mail** + `POST /diagnosticos/self-service` (vínculo ao e-mail); **cadastro ou login** depois permite **vincular** esses diagnósticos ao tenant da conta — ver `.cursor/rules/qdi-gravacao-diagnostico-email.mdc`.
+**Implicações:** (1) UX deve comunicar claramente os dois modos (“continuar”, “falar com consultor”) sem misturar consentimentos. (2) **LGPD / `/privacidade`:** minuta **aprovada** em parecer externo e pelo controlador (2026-05-07 — ver `docs/legal/STATUS_JURIDICO_MVP.md`); manter bases legais e finalidades alinhadas à operação. (3) Operação: SLA de consultor aplica-se apenas a leads que **manifestarem** essa opção. (4) **Gravação sem conta na plataforma prévia:** persistência na API via **OTP no e-mail** + `POST /diagnosticos/self-service` (vínculo ao e-mail); **cadastro ou login** depois permite **vincular** esses diagnósticos ao tenant da conta — ver `.cursor/rules/qdi-gravacao-diagnostico-email.mdc`.
 
 **D2 (2026-05-02, corrigido conforme Allan):** CNPJ é **opcional** no wizard e na API; se informado, valida-se DV e persiste-se o vínculo PJ. Ver `.cursor/rules/qdi-cnpj-opcional.mdc`.
 
@@ -16,7 +16,7 @@ Atualizar esta tabela quando houver **sign-off**; valores **Default repo** refle
 
 - **Baseline técnico** alinhado ao gate MVP: LGPD **0012**, smoke automatizado (`tests/integration/test_smoke_mvp_fechado_api.py`), RLS dois tenants (`tests/integration/test_mvp_gate_postgres.py`), CI em `release/**` e tags `v*` / `mvp-*`.
 - **D1:** ver secção **D1 — 2026-05-02** acima (**decidido**). **D3 / D4 / D5** seguem conforme tabela.
-- **Processo jurídico:** ver `docs/legal/STATUS_JURIDICO_MVP.md` (parecer externo ainda obrigatório para go-live comercial).
+- **Processo jurídico:** minuta **`/termos`** e **`/privacidade`** com parecer externo e **aprovação produto** (2026-05-07) — `docs/legal/STATUS_JURIDICO_MVP.md`; canal DPO e versão em URL de produção seguem operacionais.
 
 | ID | Tema | Status | Decisão registrada | Impacto técnico |
 |----|------|--------|-------------------|-----------------|

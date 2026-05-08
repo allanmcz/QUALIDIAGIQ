@@ -5,7 +5,7 @@ export const metadata = {
 };
 
 /**
- * Versão MVP — revisão jurídica obrigatória antes de produção comercial.
+ * Minuta aprovada em parecer jurídico externo e pelo controlador (2026-05); ver docs/legal/.
  */
 export default function TermosPage() {
   return (
@@ -14,9 +14,10 @@ export default function TermosPage() {
         Voltar ao início
       </Link>
       <h1 className="text-3xl font-bold tracking-tight">Termos de uso (MVP QDI)</h1>
-      <p className="text-muted-foreground">
-        Texto-base para transparência no produto. Substitua por versão assinada pela assessoria jurídica
-        antes do go-live institucional.
+      <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
+        <strong>Status:</strong> minuta <strong>aprovada</strong> (parecer jurídico de 5 mai. 2026 — Pereira e Rodrigues
+        Advogados) e <strong>aprovada para publicação</strong> pelo controlador. Manter o texto alinhado à operação real e
+        aos apontamentos do parecer; versão e vigência em produção seguem controlo de mudanças interno.
       </p>
       <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
         <li>
@@ -24,7 +25,7 @@ export default function TermosPage() {
           Reforma do Consumo — EC 132/2023, LC 214/2025 e normas correlatas).
         </li>
         <li>
-          <strong>Natureza do parecer:</strong> ferramenta de apoio à decisão; não substitui auditoria,
+          <strong>Natureza do serviço:</strong> ferramenta de apoio à decisão; não substitui auditoria,
           consultoria fiscal individualizada nem obrigações perante o fisco.
         </li>
         <li>

@@ -44,7 +44,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 | **1** | P6 — RLS evidência no **Supabase hospedado** (projeto cloud) | Allan (**aceita** evidência ou **dispensa** explicitamente) | Ops / credenciais — `RUNBOOK_DEPLOY_ROLLBACK.md`, `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md` |
 | **1** | Migrações schema MVP até **0016** (incl. `locale_relatorio`; **0015** CNAE/macros onde aplicável) — **estado:** **0015** e **0016** aplicadas | Allan (autoriza release/schema) | Allan, Ops ou pipeline — `psql` / `make verify-schema-mvp-strict` · `scripts/verify_mvp_schema.py` |
 | **1** | Tag / release MVP + `CHANGELOG_MVP` — **estado:** **não definido** | Allan (momento, nome da tag e critério de corte) | Allan ou CI — git tag, entrada no changelog **após** fecho desta decisão |
-| **2** | Parecer **`/termos`** e **`/privacidade`** | Allan (aceita ou pede revisão) | **Advogado** (externo ou jurídico da casa) |
+| **2** | Parecer + **aprovação produto** **`/termos`** e **`/privacidade`** | **Allan** (produto) | Registo em `docs/legal/STATUS_JURIDICO_MVP.md` + checklist secção 2 |
 | **2** | Retenção telefone + alinhamento legal | Allan + **jurídico** (política de dados) | Jurídico (texto) + Eng (campos/API se mudar) |
 | **2** | Canal titular / DPO operacional | Allan (aprova contacto público) | Jurídico (copy DPO) + Ops/site (publicação) |
 | **3** | **D1** Free / fluxo contínuo vs conta na plataforma | **Allan** (**fechado 2026-05-02**) | Eng — `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md` § D1 |
@@ -84,8 +84,9 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 
 | OK | Item | Documento / evidência | Data | Notas |
 |:--:|------|----------------------|------|-------|
-| [ ] | Parecer externo sobre **`/termos`** e **`/privacidade`** | `docs/legal/STATUS_JURIDICO_MVP.md` | | |
-| [ ] | Retenção **telefone respondente** alinhada a texto legal + processo interno | LGPD handoff MVP | | **Eng (2026-05-02):** telefone pode aparecer no **bloco lead do PDF** junto com e-mail; política de retenção continua a exigir parecer jurídico. |
+| [x] | Parecer externo sobre **`/termos`** e **`/privacidade`** | `docs/legal/STATUS_JURIDICO_MVP.md` · PDF em `docs/legal/` | 2026-05-07 | Arquivo: `PARECER JURÍDICO - QualiDiagIQ_7242.pdf` |
+| [x] | **Aprovação produto (controlador)** da minuta **`/termos`** + **`/privacidade`** para publicação | `docs/legal/STATUS_JURIDICO_MVP.md` § Aprovação produto | 2026-05-07 | Sujeita a implementar apontamentos do parecer e DPO/versão em URL de produção. |
+| [ ] | Retenção **telefone respondente** alinhada a texto legal + processo interno | LGPD handoff MVP | | Telefone e prazos constam da política; **processo interno** de retenção/arquivo continua a cargo do controlador. |
 | [ ] | Canal titular / DPO operacional | registar contacto público | | |
 
 ---

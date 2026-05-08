@@ -11,9 +11,11 @@ export default function PrivacidadePage() {
         Voltar ao diagnóstico
       </Link>
       <h1 className="text-3xl font-bold tracking-tight">Política de privacidade (MVP QDI)</h1>
-      <p className="text-muted-foreground">
-        Este texto é uma versão MVP para atendimento à LGPD (Lei 13.709/2018) no fluxo do wizard.
-        Revise com assessoria jurídica antes de produção.
+      <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
+        <strong>Status:</strong> minuta <strong>aprovada</strong> (parecer jurídico de 5 mai. 2026) e{" "}
+        <strong>aprovada para publicação</strong> pelo controlador, com o mesmo enquadramento de Termos. LGPD (Lei
+        13.709/2018). Em produção: indicar canal DPO, versão e data de vigência no corpo público quando o domínio
+        estiver definitivo.
       </p>
       <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
         <li>

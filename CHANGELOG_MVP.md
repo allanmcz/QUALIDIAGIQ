@@ -1,5 +1,9 @@
 # Changelog — marcos MVP QDI
 
+## 2026-05-07 — Jurídico + aprovação produto
+
+- Parecer formal sobre `/termos` e `/privacidade` arquivado em `docs/legal/` (PDF); **aprovação produto** da minuta para publicação registada em `docs/legal/STATUS_JURIDICO_MVP.md`; UI `/termos` e `/privacidade` com estado «aprovada». Ver `docs/CHANGELOG_MVP.md` **[Unreleased]**.
+
 ## 2026-05 — Sprint 11 handoff (segurança / multi-tenant)
 
 - `Settings`: `SecretStr` para JWT; validação de produção (Supabase HTTPS, DB, SMTP).

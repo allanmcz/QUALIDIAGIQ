@@ -1,7 +1,7 @@
 # Handoff jurídico — DPO, RIPD e alinhamento WORM×LGPD (template)
 
 **Uso:** preencher sem dados pessoais reais; anexar parecer fora do Git se necessário.  
-**Ligações:** `ADR-012` · `docs/operacao/RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md` · processo jurídico MVP (ficheiro local `docs/legal/STATUS_JURIDICO_MVP.md` — pasta `docs/legal/` ignorada pelo Git; sincronizar cópia conforme política interna).
+**Ligações:** `ADR-012` · `docs/operacao/RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md` · processo jurídico MVP · `docs/legal/STATUS_JURIDICO_MVP.md` (parecer PDF na mesma pasta, versionado).
 
 ---
 

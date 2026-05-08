@@ -11,7 +11,7 @@ Esta pasta concentra **documentação de produto, operação e conformidade** ve
 | **`docs/CHANGELOG_MVP.md`** | Registro de entregas orientadas ao MVP fechado. |
 | **`docs/refs/`** | PRD-base, MoSCoW, questionário, metodologia (quando presentes no clone — podem exigir `git add -f` conforme política local). |
 | **`docs/01_arquitetura.md`**, **`docs/02_dominio_qdi.md`**, **`docs/00_INDICE.md`** | Arquitetura e domínio (workspace; versionação conforme `.gitignore`). |
-| **`docs/legal/`** | Status e processo jurídico MVP (quando versionado). |
+| **`docs/legal/`** | `STATUS_JURIDICO_MVP.md` e parecer formal em PDF (exceção em `.gitignore`). |
 | **`_DEVELOPER/`** | **Planos de execução**, handoff próxima sessão, roadmap sprint, análises P6/`asChild`, notas de desenvolvimento. Índice: `_DEVELOPER/INDICE_PLANOS_HANDOFF.md`. **Pacote MVP 05/05/2026** (inclui cenário **D** — demo local supervisionada, sem go-live público): `_DEVELOPER/MVP_05052026/README.md`. |
 
 ## Ligações rápidas

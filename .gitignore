@@ -57,6 +57,7 @@ supabase/.temp/
 # Outputs
 output/
 *.pdf
+!docs/legal/**/*.pdf
 
 # OpenAPI gerado localmente (regenerar com make openapi-export)
 docs/api/openapi.generated.json
@@ -71,6 +72,10 @@ docs/*
 # Operação — runbooks, smoke, SQL de verificação (exceção — versionados)
 !docs/operacao/
 !docs/operacao/**
+
+# Jurídico — status MVP + parecer (exceção — versionados)
+!docs/legal/
+!docs/legal/**
 
 # Mapa da documentação (índice humano — versionado)
 !docs/README.md
