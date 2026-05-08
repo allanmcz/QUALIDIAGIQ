@@ -95,6 +95,9 @@ export default function PainelDiagnosticosPage() {
                   >
                     {vinculando ? "Importando…" : "Importar do fluxo OTP (gratuito)"}
                   </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard/privacidade">Privacidade LGPD</Link>
+                  </Button>
                 </div>
                 <p
                   id="ajuda-importar-otp"

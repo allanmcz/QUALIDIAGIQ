@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -51,10 +52,24 @@ export default function DashboardLayout({
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="sticky top-0 z-40 w-full border-b bg-white">
         <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-          <div className="flex gap-6 md:gap-10">
-            <a href="/dashboard/diagnosticos" className="flex items-center space-x-2">
-              <span className="inline-block font-bold">QualiDiagIQ</span>
-            </a>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 md:gap-x-10">
+            <Link href="/dashboard/diagnosticos" className="flex items-center space-x-2 font-bold">
+              QualiDiagIQ
+            </Link>
+            <nav className="flex items-center gap-4 text-sm">
+              <Link
+                href="/dashboard/diagnosticos"
+                className="text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline"
+              >
+                Diagnósticos
+              </Link>
+              <Link
+                href="/dashboard/privacidade"
+                className="text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline"
+              >
+                Privacidade LGPD
+              </Link>
+            </nav>
           </div>
           <div className="flex flex-1 items-center justify-end space-x-4">
             <nav className="flex items-center space-x-4">
