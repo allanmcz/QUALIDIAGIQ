@@ -86,7 +86,7 @@ Legenda breve: **Decide** = quem assina política, critério de “passou/não p
 |:--:|------|----------------------|------|-------|
 | [x] | Parecer externo sobre **`/termos`** e **`/privacidade`** | `docs/legal/STATUS_JURIDICO_MVP.md` · PDF em `docs/legal/` | 2026-05-07 | Arquivo: `PARECER JURÍDICO - QualiDiagIQ_7242.pdf` |
 | [x] | **Aprovação produto (controlador)** da minuta **`/termos`** + **`/privacidade`** para publicação | `docs/legal/STATUS_JURIDICO_MVP.md` § Aprovação produto | 2026-05-07 | Sujeita a implementar apontamentos do parecer e DPO/versão em URL de produção. |
-| [ ] | Retenção **telefone respondente** alinhada a texto legal + processo interno | LGPD handoff MVP | | Telefone e prazos constam da política; **processo interno** de retenção/arquivo continua a cargo do controlador. |
+| [x] | Retenção **telefone respondente** alinhada a texto legal + processo interno | `docs/legal/STATUS_JURIDICO_MVP.md` · `/privacidade#retencao-telefone` · API `/privacidade/solicitacoes` | 2026-05-07 | Texto público + baseline operacional; SLA de resposta documentado pela operação junto ao DPO. |
 | [x] | Canal titular / DPO operacional | `frontend/lib/legal/dpoPublic.ts` · `/privacidade#dpo` · env `NEXT_PUBLIC_LGPD_DPO_*` | 2026-05-07 | Canal público no site; **confirmar** em deploy de produção o e-mail do encarregado nomeado (exemplo repo: `dpo@tributiq.com.br`). |
 
 ---

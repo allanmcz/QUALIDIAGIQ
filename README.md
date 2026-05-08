@@ -8,7 +8,7 @@
 > **Diagnóstico Tributário Automatizado para a Reforma Tributária do Consumo**
 > Módulo do ecossistema **Tributiq** · 6 produtos Quali*IQ · `014-SAAS_REFORMA`
 > **Sigla:** QDI
-> **Status:** MVP em planejamento — Sprint 1 a iniciar
+> **Status:** MVP desenvolvido (FastAPI + Next.js 14 + Postgres); usar `docs/operacao/CHECKLIST_GO_LIVE_45MIN.md` para cortes em produção.
 
 ---
 
@@ -101,7 +101,7 @@ Use **`CORS_ALLOWED_ORIGINS`** (lista CSV explícita de origens permitidas). **N
 │   ├── infrastructure/         ← Adapters (Supabase, Ollama/LLM, WeasyPrint)
 │   └── presentation/           ← API FastAPI
 ├── tests/                      ← pytest (unit + integration + e2e)
-├── frontend/                   ← Next.js 14 (a inicializar no Sprint 2)
+├── frontend/                   ← Next.js 14 — wizard, painel e páginas institucionais
 ├── pyproject.toml              ← Dependências Python + tooling
 ├── Dockerfile                  ← Multi-stage build
 ├── docker-compose.yml          ← DB + API + Web
@@ -187,7 +187,7 @@ make qa-backend      # lint + mypy + pytest (gate release backend)
 make lint            # lint com ruff
 make format          # black + ruff format
 make type-check      # mypy strict
-make migrate         # migrações Supabase (TODO)
+make migrate         # SQL em src/infrastructure/db/migrations/*.sql no Postgres do `docker compose` (db)
 make down            # para Docker
 make clean           # limpa .pyc, caches
 make frontend-init   # inicializa Next.js (uma vez)

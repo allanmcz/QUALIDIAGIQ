@@ -23,6 +23,7 @@ export default function TermosPage() {
           Política de Privacidade
         </Link>
         .
+      </p>
       <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
         <li>
           <strong>Objeto:</strong> uso do serviço QualiDiagIQ (diagnóstico de maturidade tributária frente à
@@ -31,6 +32,16 @@ export default function TermosPage() {
         <li>
           <strong>Natureza do serviço:</strong> ferramenta de apoio à decisão; não substitui auditoria,
           consultoria fiscal individualizada nem obrigações perante o fisco.
+        </li>
+        <li>
+          <strong>Limitação ao marketing consumerista:</strong> a caracterização jurídica da relação (incl.
+          eventual incidência do CDC) depende do caso concreto; uso empresarial (B2B) é o âmbito típico, sem
+          promessa de &quot;conformidade fiscal absoluta&quot; ou blindagem perante autoridades.
+        </li>
+        <li>
+          <strong>Dados declarados e outputs:</strong> o score e o relatório resultam exclusivamente das
+          informações fornecidas pelo utilizador ou pela sua organização; erros ou omissões nesses dados não
+          imputam ao Provedor, sem prejuízo de eventual falha interna demonstrável do sistema.
         </li>
         <li>
           <strong>Cadastro e veracidade:</strong> o usuário declara que os dados informados são verdadeiros;
@@ -42,7 +53,8 @@ export default function TermosPage() {
         </li>
         <li>
           <strong>Limitação de responsabilidade:</strong> na máxima extensão permitida pela lei aplicável,
-          exclusão de danos indiretos ou lucros cessantes decorrentes do uso do diagnóstico automatizado.
+          exclusão de danos indiretos ou lucros cessantes decorrentes do uso do diagnóstico automatizado,
+          observando eventual modulação em sede judicial concreta.
         </li>
         <li>
           <strong>LGPD:</strong> tratamento de dados conforme{" "}

@@ -40,6 +40,8 @@ def _grupo_rota_publica(path: str) -> str | None:
         return "public_diag_catalogo"
     if path.startswith("/referencia/cnae"):
         return "public_cnae"
+    if path == "/public/institucional":
+        return "public_institucional"
     return None
 
 

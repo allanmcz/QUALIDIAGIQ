@@ -1,5 +1,9 @@
 # Changelog — marcos MVP QDI
 
+## 2026-05-07 — API pública institucional
+
+- `GET /public/institucional` (DPO + retenção referência); `LGPD_*` em settings; teste de shape em `test_openapi_public_endpoints_shapes.py`.
+
 ## 2026-05-07 — Jurídico + aprovação produto
 
 - Parecer formal sobre `/termos` e `/privacidade` arquivado em `docs/legal/` (PDF); **aprovação produto** da minuta para publicação registada em `docs/legal/STATUS_JURIDICO_MVP.md`; UI `/termos` e `/privacidade` com estado «aprovada». Ver `docs/CHANGELOG_MVP.md` **[Unreleased]**.

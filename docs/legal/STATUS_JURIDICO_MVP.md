@@ -35,12 +35,16 @@ Substituir ou acrescentar PDF se houver nova versão assinada; manter este `STAT
 | **URL pública** | `https://<site>/privacidade#dpo` (âncora `id="dpo"`). |
 | **Configuração** | `NEXT_PUBLIC_LGPD_DPO_EMAIL` (obrigatório para exibir o mailto); opcional `NEXT_PUBLIC_LGPD_DPO_NOME`, `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VERSAO`, `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VIGENCIA`. |
 | **Exemplo institucional** | `dpo@tributiq.com.br` em `frontend/.env.example`, `frontend/.env.production.example` e serviço `web` do `docker-compose.yml` — **substituir** se o encarregado ou domínio forem outros. |
-| **Rodapé** | Link **DPO** em `frontend/components/layout/Footer.tsx` → `/privacidade#dpo`. |
+| **API (paridade)** | `GET /public/institucional` — `lgpd_dpo_email`, `lgpd_retencao_referencia_dias`, caminho `/privacidade/solicitacoes` |
 
 ## Pendências operacionais (não substituem o parecer)
 
 1. **Produção:** confirmar que o e-mail exibido é o **canal oficial** acordado com o DPO nomeado (Res. ANPD nº 18/2024) e alterar variáveis de deploy se for diferente do exemplo.
 2. **Versão publicada** — opcional: `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VERSAO` e `_VIGENCIA`; ou registo só no changelog interno.
+
+### Retenção do telefone (baseline controlador — 2026-05)
+
+O fluxo de pedidos tramita pelo DPO (`/privacidade#dpo`) e pela API autenticada `POST /privacidade/solicitacoes` (vide `tests/integration/test_privacidade_api.py`). A secção **`#retencao-telefone`** na página `/privacidade` descreve o enquadramento para equipas operacionais; prazos de SLA de resposta ao titular seguem política interna do controlador.
 
 ## Critério de aceite para “jurídico OK” no checklist MVP
 

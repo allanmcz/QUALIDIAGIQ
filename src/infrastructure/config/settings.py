@@ -212,6 +212,19 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS"),
     )
 
+    lgpd_dpo_email: str = Field(
+        default="",
+        validation_alias=AliasChoices("LGPD_DPO_EMAIL"),
+        description="E-mail público do encarregado (DPO) — GET /public/institucional e futuros templates da API.",
+    )
+    lgpd_retention_days: int = Field(
+        default=180,
+        ge=1,
+        le=36500,
+        validation_alias=AliasChoices("LGPD_RETENTION_DAYS"),
+        description="Referência numérica de ciclo de retenção (dias) para políticas operacionais — não substitui texto legal.",
+    )
+
     # Idempotência (POST /diagnosticos/) — MVP em memória; produção pode usar Redis
     idempotency_ttl_seconds: int = Field(
         default=3600,

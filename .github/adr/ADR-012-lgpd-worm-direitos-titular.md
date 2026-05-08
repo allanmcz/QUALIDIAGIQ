@@ -80,14 +80,14 @@ flowchart LR
   B -->|diagnóstico finalizado| E[Anonimização ou resposta fundamentada]
 ```
 
-> **Nota:** endpoints acima são **placeholders de desenho** — **não implementados** até fechar coluna “Bloqueio” na tabela de decisões.
+> **Nota (2026-05):** endpoints **implementados** para tramitação operacional sob **`/privacidade/solicitacoes`** (Bearer + `Idempotency-Key` no POST — migração `0028`, testes em `tests/integration/test_privacidade_api.py`). Os diagramas nomeiam URIs históricas de exportação/anónimização directa (`/privacidade/solicitar-*`) como **referência conceitual**; o modelo actual passa pelo registo typed de solicitação até evoluções WORM+PII.
 
 ## Próximos passos (engenharia **após** parecer jurídico)
 
-- [ ] Modelo `log_anonimizacao` (ou equivalente) alinhado a RLS  
-- [ ] Endpoints sob prefixo único (`/privacidade/` ou `/titular/`) + auth forte  
-- [ ] Testes integração dois tenants  
-- [ ] Runbook: `docs/operacao/RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md`
+- [ ] Modelo `log_anonimizacao` (ou equivalente) alinhado a RLS (execução automática/anónima ainda pendente conforme política).
+- [x] Prefixo **`/privacidade`** com auth forte — rotas **`/solicitacoes`** (POST/GET/PATCH) MVP.
+- [x] Suite integração LGPD específica — `tests/integration/test_privacidade_api.py` (isolamento por tenant JWT).
+- [x] Runbook rascunho — `docs/operacao/RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md`
 
 ## Referências legais
 

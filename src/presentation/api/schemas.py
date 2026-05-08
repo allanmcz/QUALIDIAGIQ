@@ -591,6 +591,40 @@ class MetodologiaResponse(BaseModel):
     )
 
 
+class InstitucionalPublicResponse(BaseModel):
+    """Conteúdo de GET /public/institucional — canal DPO e referências LGPD configuradas na API."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "lgpd_dpo_email": "dpo@tributiq.com.br",
+                "lgpd_retencao_referencia_dias": 180,
+                "privacidade_solicitacoes_path": "/privacidade/solicitacoes",
+            },
+        },
+    )
+
+    lgpd_dpo_email: str | None = Field(
+        default=None,
+        description="E-mail do encarregado (LGPD) definido na API; espelhar no front com NEXT_PUBLIC_LGPD_DPO_EMAIL.",
+    )
+    lgpd_retencao_referencia_dias: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "Valor operacional de LGPD_RETENTION_DAYS na API (referência para políticas internas; "
+            "a Política de Privacidade publicada prevalece)."
+        ),
+    )
+    privacidade_solicitacoes_path: str = Field(
+        default="/privacidade/solicitacoes",
+        description=(
+            "Caminho relativo dos endpoints autenticados de solicitação LGPD do titular "
+            "(migração 0028, Bearer + Idempotency-Key no POST)."
+        ),
+    )
+
+
 class ValidarAncoraNormativaRequest(BaseModel):
     """
     Texto livre para heurística MVP (plano ANALISE §E1).

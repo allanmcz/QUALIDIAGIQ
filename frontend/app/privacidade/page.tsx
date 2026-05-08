@@ -58,6 +58,24 @@ export default function PrivacidadePage() {
         )}
       </section>
 
+      <section
+        id="retencao-telefone"
+        className="scroll-mt-24 rounded-md border bg-muted/30 px-4 py-3 text-sm leading-relaxed"
+        aria-labelledby="retencao-telefone-heading"
+      >
+        <h2 id="retencao-telefone-heading" className="text-base font-semibold tracking-tight">
+          Telefone do respondente — retenção e titularidade
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          O telefone opcional mantém-se associado ao registo do diagnóstico no mesmo período de retenção daquele
+          registo. Pedidos dos titulares (acesso, correção, anonimização, eliminação nos limites legais) tramitam pelo
+          canal do DPO; em caso de pedido fundamentado sobre este dado, o controlador registra a solicitação, avalia o
+          enquadramento com o WORM/auditoria e responde no prazo interno definido pela operação — alinhado ao runbook{" "}
+          <span className="font-mono text-xs">RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md</span> e aos endpoints autenticados{" "}
+          <span className="font-mono text-xs">POST/GET/PATCH /privacidade/solicitacoes</span> na API.
+        </p>
+      </section>
+
       <ul className="list-disc pl-6 space-y-2 text-sm leading-relaxed">
         <li>
           <strong>Controlador:</strong> Tributiq / QualiDiagIQ — contato pelo canal oficial do produto.
@@ -73,7 +91,11 @@ export default function PrivacidadePage() {
         <li>
           <strong>Telefone do respondente (opcional):</strong> quando informado, utilizado para contato
           comercial na plataforma relacionado ao diagnóstico; mantido pelo mesmo período de retenção do registro do
-          diagnóstico no PostgreSQL (Supabase); exclusão e titularidade conforme canal definido em produção.
+          diagnóstico no PostgreSQL (Supabase); exclusão e titularidade — ver{" "}
+          <Link href="/privacidade#retencao-telefone" className="text-primary underline font-medium">
+            retenção e titularidade (telefone)
+          </Link>
+          .
         </li>
         <li>
           <strong>Relatório PDF (WeasyPrint):</strong> na peça gerada para download, o bloco explícito de

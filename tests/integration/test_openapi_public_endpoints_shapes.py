@@ -88,3 +88,16 @@ class TestOpenApiPublicEndpointShapes:
         assert out["valido"] is False
         assert isinstance(out.get("motivo_rejeicao"), (str, type(None)))
         assert out.get("motivo_rejeicao")
+
+    @pytest.mark.asyncio
+    async def test_get_public_institucional_shape(self, async_client: AsyncClient) -> None:
+        r = await async_client.get("/public/institucional")
+        assert r.status_code == 200
+        out = r.json()
+        assert "lgpd_retencao_referencia_dias" in out
+        assert isinstance(out["lgpd_retencao_referencia_dias"], int)
+        assert out["lgpd_retencao_referencia_dias"] >= 1
+        email = out.get("lgpd_dpo_email")
+        assert email is None or isinstance(email, str)
+        assert isinstance(out.get("privacidade_solicitacoes_path"), str)
+        assert str(out["privacidade_solicitacoes_path"]).startswith("/")

@@ -77,6 +77,8 @@ services:
       # :- evita WARN do Compose quando as variáveis não existem no host (LLM é opcional em dev).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LGPD_DPO_EMAIL: "${LGPD_DPO_EMAIL:-dpo@tributiq.com.br}"
+      LGPD_RETENTION_DAYS: "${LGPD_RETENTION_DAYS:-180}"
     ports:
       - "60000:8000"
     volumes:

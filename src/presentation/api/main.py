@@ -189,8 +189,10 @@ def create_app() -> FastAPI:
         mock_storage_router,
         normativa_router,
         privacidade_router,
+        public_institucional_router,
     )
 
+    app.include_router(public_institucional_router.router)
     app.include_router(diagnostico_router.router)
     app.include_router(diagnostico_self_service_router.router)
     app.include_router(diagnostico_core_router.router)
