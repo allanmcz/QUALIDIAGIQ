@@ -10,15 +10,15 @@ from uuid import UUID, uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from src.application.ports.lgpd_anonimizacao_executor_port import (
+    LgpdAnonimizacaoExecutorPort,
+)
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     LgpdTitularSolicitacaoPort,
     SolicitacaoTitular,
     StatusSolicitacaoTitular,
     TipoSolicitacaoTitular,
-)
-from src.application.ports.lgpd_anonimizacao_executor_port import (
-    LgpdAnonimizacaoExecutorPort,
 )
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,

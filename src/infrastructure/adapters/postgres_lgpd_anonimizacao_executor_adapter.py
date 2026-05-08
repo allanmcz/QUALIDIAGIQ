@@ -7,7 +7,7 @@ Camada: Infrastructure
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
