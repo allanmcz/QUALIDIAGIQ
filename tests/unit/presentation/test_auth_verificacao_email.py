@@ -1,6 +1,6 @@
 """Testes dos endpoints públicos de verificação de e-mail por OTP."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -80,6 +80,35 @@ def test_self_service_token_codigo_invalido(client_smtp_ok: TestClient):
     res = client_smtp_ok.post(
         "/auth/self-service/token",
         json={"email": "bad@svc.br", "codigo": "000000"},
+    )
+    assert res.status_code == 400
+
+
+def test_confirmar_codigo_contem_letras_400(client_smtp_ok: TestClient):
+    res = client_smtp_ok.post(
+        "/auth/verificar-email/confirmar",
+        json={"email": "x@y.z", "codigo": "12ab45"},
+    )
+    assert res.status_code == 400
+    assert "números" in (res.json().get("detail") or "")
+
+
+def test_solicitar_codigo_429_rate_limit(client_smtp_ok: TestClient):
+    with patch(
+        "src.presentation.api.routers.auth_router.codigo_store.pode_reenviar",
+        return_value=False,
+    ):
+        res = client_smtp_ok.post(
+            "/auth/verificar-email/solicitar",
+            json={"email": "bloqueado@rate.limit"},
+        )
+    assert res.status_code == 429
+
+
+def test_self_service_token_codigo_com_letras_400(client_smtp_ok: TestClient):
+    res = client_smtp_ok.post(
+        "/auth/self-service/token",
+        json={"email": "a@b.c", "codigo": "1a3456"},
     )
     assert res.status_code == 400
 

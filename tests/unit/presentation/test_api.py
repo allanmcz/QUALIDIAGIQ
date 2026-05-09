@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from src.application.errors import ConflitoVersaoOtimistaError
+from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
@@ -19,7 +19,11 @@ from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumeric
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
+    get_atualizar_quadro_implantacao_use_case,
+    get_atualizar_subtarefa_plano_diagnostico_use_case,
+    get_criar_subtarefa_plano_diagnostico_use_case,
     get_current_user_tenant,
+    get_diagnostico_repository,
     get_realizar_diagnostico_use_case,
 )
 from src.presentation.api.main import app
@@ -606,3 +610,431 @@ def test_obter_diagnostico_nao_encontrado():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Diagnóstico não encontrado"
+
+
+def test_patch_relatorio_pdf_use_case_value_error_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ValueError("URL de relatório rejeitada")
+
+    app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}",
+        json={"relatorio_pdf_url": "https://exemplo/arquivo.doc"},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "relatório" in response.json()["detail"]
+
+
+def test_patch_relatorio_pdf_diagnostico_nao_encontrado_404():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = DiagnosticoNaoEncontradoError()
+
+    app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}",
+        json={"relatorio_pdf_url": "https://x/y.pdf"},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Diagnóstico não encontrado"
+
+
+def test_patch_checklist_m12_use_case_value_error_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ValueError("lista com tamanho inválido")
+
+    app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}/checklist-m12-autoconf",
+        json={"checklist_m12_autoconf": [3] * 10},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "inválido" in response.json()["detail"]
+
+
+def test_patch_checklist_m12_diagnostico_nao_encontrado_404():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = DiagnosticoNaoEncontradoError()
+
+    app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}/checklist-m12-autoconf",
+        json={"checklist_m12_autoconf": [3] * 10},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+
+
+def test_patch_quadro_implantacao_conflito_412():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ConflitoVersaoOtimistaError("versão esperada diferente")
+
+    app.dependency_overrides[get_atualizar_quadro_implantacao_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}/quadro-implantacao-anotacoes",
+        json={
+            "quadro_implantacao_anotacoes": {
+                "f0_a0": {
+                    "comentario": "",
+                    "comentarios": [],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "",
+                },
+            },
+        },
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": "1",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 412
+
+
+def test_patch_quadro_implantacao_diagnostico_nao_encontrado_404_quadro():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = DiagnosticoNaoEncontradoError()
+
+    app.dependency_overrides[get_atualizar_quadro_implantacao_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}/quadro-implantacao-anotacoes",
+        json={
+            "quadro_implantacao_anotacoes": {
+                "f0_a0": {
+                    "comentario": "",
+                    "comentarios": [],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "",
+                },
+            },
+        },
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": "1",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+
+
+def test_patch_quadro_implantacao_use_case_value_error_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ValueError("quadro inválido")
+
+    app.dependency_overrides[get_atualizar_quadro_implantacao_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}/quadro-implantacao-anotacoes",
+        json={
+            "quadro_implantacao_anotacoes": {
+                "f0_a0": {
+                    "comentario": "",
+                    "comentarios": [],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "",
+                },
+            },
+        },
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": "1",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+
+
+def test_patch_quadro_implantacao_sem_if_match_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+
+    app.dependency_overrides[get_atualizar_quadro_implantacao_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}/quadro-implantacao-anotacoes",
+        json={
+            "quadro_implantacao_anotacoes": {
+                "f2_a3": {
+                    "comentario": "",
+                    "comentarios": [],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "",
+                },
+            },
+        },
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "If-Match" in response.json()["detail"]
+    mock_uc.execute.assert_not_called()
+
+
+def test_patch_quadro_implantacao_comentario_unico_para_lista():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_out = copy.deepcopy(_diag_finalizado_micro())
+    d_out.tenant_id = tid
+    d_out.versao_otimista = 2
+
+    mock_uc = AsyncMock()
+    mock_uc.execute.return_value = d_out
+    mock_repo = AsyncMock()
+    mock_repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_atualizar_quadro_implantacao_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.patch(
+        f"/diagnosticos/{d_out.id}/quadro-implantacao-anotacoes",
+        json={
+            "quadro_implantacao_anotacoes": {
+                "f1_a0": {
+                    "comentario": "  nota única  ",
+                    "comentarios": [],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "  ",
+                },
+            },
+        },
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    cmd = mock_uc.execute.await_args.args[0]
+    assert cmd.quadro_implantacao_anotacoes["f1_a0"]["comentarios"] == ["nota única"]
+
+
+def test_post_subtarefa_plano_use_case_value_error_400():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ValueError("ação inexistente")
+
+    app.dependency_overrides[get_criar_subtarefa_plano_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    plano_acao = uuid.uuid4()
+    response = client.post(
+        f"/diagnosticos/{did}/plano-acoes/{plano_acao}/subtarefas",
+        json={"titulo": "Sub A", "ordem": 0},
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "inexistente" in response.json()["detail"]
+
+
+def test_post_subtarefa_repo_nao_encontra_diagnostico_404():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(return_value=None)
+
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_criar_subtarefa_plano_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    plano_acao = uuid.uuid4()
+    response = client.post(
+        f"/diagnosticos/{did}/plano-acoes/{plano_acao}/subtarefas",
+        json={"titulo": "Sub B", "ordem": 1},
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+
+
+def test_patch_subtarefa_plano_diag_inexistente_404():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(return_value=None)
+
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_atualizar_subtarefa_plano_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    subtarefa = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}/plano-subtarefas/{subtarefa}",
+        json={"titulo": "Nova"},
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+
+
+def test_patch_subtarefa_plano_bad_request_via_use_case():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = ValueError("transição ilegal")
+
+    app.dependency_overrides[get_atualizar_subtarefa_plano_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    subtarefa = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}/plano-subtarefas/{subtarefa}",
+        json={"titulo": "X"},
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+
+
+def test_post_subtarefa_plano_sucesso_201():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(return_value=None)
+
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+    mock_repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_criar_subtarefa_plano_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    plano_acao = uuid.uuid4()
+    response = client.post(
+        f"/diagnosticos/{d_snap.id}/plano-acoes/{plano_acao}/subtarefas",
+        json={"titulo": "Subtarefa criada", "ordem": 2},
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert response.json()["id"] == str(d_snap.id)
+    mock_uc.execute.assert_awaited_once()
+
+
+def test_patch_subtarefa_plano_sucesso_200():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(return_value=None)
+
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+    mock_repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_atualizar_subtarefa_plano_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    subtarefa = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{d_snap.id}/plano-subtarefas/{subtarefa}",
+        json={"titulo": "Atualizado"},
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(d_snap.id)
+    mock_uc.execute.assert_awaited_once()

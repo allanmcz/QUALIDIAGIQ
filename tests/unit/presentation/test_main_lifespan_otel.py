@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.infrastructure.config.settings import get_settings
+from src.presentation.api.main import _parse_otlp_headers, lifespan
 
 
 @pytest.fixture
@@ -35,6 +36,52 @@ def test_lifespan_cria_engine_quando_database_url(
         mock_ce.return_value.dispose.assert_called_once()
 
 
+def test_instrumenar_otel_com_otlp_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    clear_settings_cache: None,
+) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318/v1/traces")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", 'x-api-key="abc"')
+    get_settings.cache_clear()
+
+    fake_settings = MagicMock()
+    fake_settings.otel_exporter_otlp_endpoint = "http://collector:4318/v1/traces"
+    fake_settings.otel_exporter_otlp_headers = 'x-api-key="abc"'
+    fake_settings.otel_service_name = "qdi-api-test"
+
+    mock_provider = MagicMock()
+    processor_cls = MagicMock()
+
+    with (
+        patch(
+            "opentelemetry.sdk.trace.TracerProvider",
+            return_value=mock_provider,
+        ),
+        patch("opentelemetry.trace.set_tracer_provider") as mock_set,
+        patch(
+            "opentelemetry.instrumentation.fastapi.FastAPIInstrumentor.instrument_app",
+        ) as mock_instr,
+        patch(
+            "opentelemetry.sdk.trace.export.BatchSpanProcessor",
+            processor_cls,
+        ),
+        patch(
+            "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
+            return_value=MagicMock(),
+        ),
+    ):
+        from src.presentation.api.main import _instrumentar_otel
+
+        dummy_app = MagicMock()
+        _instrumentar_otel(dummy_app, fake_settings)
+
+    mock_instr.assert_called_once_with(dummy_app)
+    mock_provider.add_span_processor.assert_called_once()
+    processor_cls.assert_called_once()
+    mock_set.assert_called_once_with(mock_provider)
+
+
 def test_create_app_chama_otel_quando_flag(
     monkeypatch: pytest.MonkeyPatch,
     clear_settings_cache: None,
@@ -48,3 +95,46 @@ def test_create_app_chama_otel_quando_flag(
 
         create_app()
         mock_otel.assert_called_once()
+
+
+def test_parse_otlp_headers_vazio_retorna_none() -> None:
+    assert _parse_otlp_headers("") is None
+    assert _parse_otlp_headers("   ") is None
+
+
+def test_parse_otlp_headers_parseia_pares_csv() -> None:
+    headers = _parse_otlp_headers('k=v, token="abc",empty=')
+    assert headers is not None
+    assert headers.get("k") == "v"
+    assert headers.get("token") == "abc"
+
+
+@pytest.mark.anyio
+async def test_lifespan_inicializa_sentry_quando_dsn(
+    monkeypatch: pytest.MonkeyPatch,
+    clear_settings_cache: None,
+) -> None:
+    """Se ``sentry_dsn`` estiver preenchido, ``sentry_sdk.init`` deve ser chamado no startup."""
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    get_settings.cache_clear()
+
+    fake_settings = MagicMock()
+    fake_settings.sync_database_url = ""
+    fake_settings.sentry_dsn = " https://deadbeef@sentry.ing/1 "
+    fake_settings.idempotency_ttl_seconds = 60
+    fake_settings.app_env = "development"
+
+    mock_app = MagicMock()
+    mock_app.state = MagicMock()
+
+    with (
+        patch("src.presentation.api.main.get_settings", return_value=fake_settings),
+        patch("src.presentation.api.main.configurar_logging") as mock_log,
+        patch("sentry_sdk.init") as mock_sentry_init,
+    ):
+        async with lifespan(mock_app):
+            pass
+
+    mock_log.assert_called_once()
+    mock_sentry_init.assert_called_once()

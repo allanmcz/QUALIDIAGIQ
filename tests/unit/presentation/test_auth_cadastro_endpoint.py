@@ -118,3 +118,88 @@ class TestAuthCadastroEndpoint:
             )
         assert r.status_code == 400
         assert "regra" in (r.json().get("detail") or "").lower()
+
+    def test_cadastro_409_valueerror_duplicado_explicito_na_mensagem(self) -> None:
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.get_settings",
+                return_value=_settings_com_dsn(),
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                return_value=None,
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                side_effect=ValueError("registro já cadastrado na base"),
+            ),
+        ):
+            r = client.post(
+                "/auth/cadastro",
+                json={
+                    "nome": "Dup",
+                    "email": "dup_explicito@teste.com",
+                    "password": "12345678",
+                },
+            )
+        assert r.status_code == 409
+
+    def test_cadastro_500_jwt_emit_erro_apos_insert(self) -> None:
+        import jwt
+
+        uid = uuid4()
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.get_settings",
+                return_value=_settings_com_dsn(),
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                return_value=None,
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                return_value=uid,
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.create_access_token",
+                side_effect=jwt.InvalidAudienceError("falha de teste"),
+            ),
+        ):
+            r = client.post(
+                "/auth/cadastro",
+                json={
+                    "nome": "Jwt",
+                    "email": "jwt_fail@teste.com",
+                    "password": "12345678",
+                },
+            )
+        assert r.status_code == 500
+        assert "token" in (r.json().get("detail") or "").lower()
+
+    def test_cadastro_409_excecao_generica_com_unique_na_mensagem(self) -> None:
+        """Ramo ``except Exception`` com erro de unicidade ⇒ 409."""
+
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.get_settings",
+                return_value=_settings_com_dsn(),
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                return_value=None,
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                return_value=uuid4(),
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.create_access_token",
+                side_effect=RuntimeError("duplicate unique key value violates"),
+            ),
+        ):
+            r = client.post(
+                "/auth/cadastro",
+                json={"nome": "A", "email": "uniq_ex@test.com", "password": "12345678"},
+            )
+        assert r.status_code == 409
