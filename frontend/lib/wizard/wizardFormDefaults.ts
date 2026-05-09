@@ -26,4 +26,5 @@ export const DEFAULT_WIZARD_FORM_VALUES: DiagnosticoPayloadFormInput = {
   plano: "gratuito",
   respostas: [],
   aceite_termos_privacidade: false,
+  force_refresh_cnpj: false,
 };

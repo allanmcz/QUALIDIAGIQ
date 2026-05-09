@@ -235,6 +235,47 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("IDEMPOTENCY_MAX_ENTRIES"),
     )
 
+    #: TTL (segundos) por classe de volatilidade — defaults: cadastral 30d, qualificação 24h, situação 4h.
+    qdi_cnpj_ttl_cadastral_seconds: int = Field(
+        default=30 * 24 * 3600,
+        ge=60,
+        le=366 * 24 * 3600,
+        validation_alias=AliasChoices("QDI_CNPJ_TTL_CADASTRAL_SECONDS"),
+        description="TTL dados cadastrais (razão social, natureza, abertura) — cache Postgres.",
+    )
+    qdi_cnpj_ttl_qualificacao_seconds: int = Field(
+        default=24 * 3600,
+        ge=60,
+        le=366 * 24 * 3600,
+        validation_alias=AliasChoices("QDI_CNPJ_TTL_QUALIFICACAO_SECONDS"),
+        description="TTL qualificação (CNAE, capital, endereço fiscal via payload).",
+    )
+    qdi_cnpj_ttl_situacao_seconds: int = Field(
+        default=4 * 3600,
+        ge=60,
+        le=366 * 24 * 3600,
+        validation_alias=AliasChoices("QDI_CNPJ_TTL_SITUACAO_SECONDS"),
+        description="TTL situação cadastral (ATIVA/BAIXADA etc.).",
+    )
+
+    qdi_cnpj_brasil_api_base_url: str = Field(
+        default="https://brasilapi.com.br/api/cnpj/v1",
+        validation_alias=AliasChoices("QDI_CNPJ_BRASIL_API_BASE_URL"),
+        description="Base URL BrasilAPI (sem barra final); path `/{cnpj}`.",
+    )
+    qdi_cnpj_minha_receita_url_template: str = Field(
+        default="https://minhareceita.org/{cnpj}",
+        validation_alias=AliasChoices("QDI_CNPJ_MINHA_RECEITA_URL_TEMPLATE"),
+        description="Template Minha Receita — substitui `{cnpj}` pelos 14 dígitos.",
+    )
+    qdi_cnpj_http_timeout_seconds: float = Field(
+        default=12.0,
+        ge=1.0,
+        le=120.0,
+        validation_alias=AliasChoices("QDI_CNPJ_HTTP_TIMEOUT_SECONDS"),
+        description="Timeout HTTP por tentativa (BrasilAPI ou fallback).",
+    )
+
     @model_validator(mode="after")
     def _jwt_secret_minimo(self) -> Self:
         """Em development permite fallback local; fora disso exige chave forte."""

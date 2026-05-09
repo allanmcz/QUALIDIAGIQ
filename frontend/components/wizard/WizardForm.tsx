@@ -1,5 +1,7 @@
 "use client";
 
+import { Controller } from "react-hook-form";
+
 import {
   Card,
   CardContent,
@@ -23,6 +25,7 @@ import { TOTAL_STEPS } from "@/lib/wizard/wizardFormDefaults";
  */
 export function WizardForm() {
   const w = useWizardState();
+  const empresaCnpjDigitosLen = String(w.watch("empresa.cnpj") ?? "").replace(/\D/g, "").length;
 
   const navProps = {
     step: w.step,
@@ -111,7 +114,17 @@ export function WizardForm() {
                 onSubmit={(e) => e.preventDefault()}
               >
                 {w.step === 1 && (
-                  <WizardStepIdentificacao register={w.register} control={w.control} errors={w.errors} />
+                  <WizardStepIdentificacao
+                    register={w.register}
+                    control={w.control}
+                    errors={w.errors}
+                    hasToken={w.hasToken}
+                    consultaCnpjLoading={w.consultaCnpjLoading}
+                    consultaCnpjFeedback={w.consultaCnpjFeedback}
+                    forceRefreshConsultaCnpj={w.forceRefreshConsultaCnpjUi}
+                    setForceRefreshConsultaCnpj={w.setForceRefreshConsultaCnpjUi}
+                    onConsultarCnpjPublico={() => void w.consultarCnpjNoWizard()}
+                  />
                 )}
                 {w.step === 2 && (
                   <WizardStepPerfilEmpresa
@@ -166,6 +179,28 @@ export function WizardForm() {
               aria-label="Navegação do questionário"
               className="flex w-full shrink-0 flex-col-reverse gap-3 border-t border-primary/10 bg-muted/50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between md:px-6"
             >
+              {w.ultimaPerguntaDoQuestionario && w.hasToken && empresaCnpjDigitosLen === 14 ? (
+                <Controller
+                  name="force_refresh_cnpj"
+                  control={w.control}
+                  render={({ field }) => (
+                    <label className="order-first flex max-w-xl cursor-pointer items-start gap-2 text-xs leading-snug text-muted-foreground sm:order-none sm:flex-1 sm:pb-0">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-input"
+                        checked={Boolean(field.value)}
+                        onBlur={field.onBlur}
+                        onChange={field.onChange}
+                        ref={field.ref}
+                      />
+                      <span>
+                        Opcional: ao finalizar o diagnóstico, voltar às fontes públicas pelo CNPJ ignorando cache (TTL —
+                        momento típico antes da gravação imutável / WORM).
+                      </span>
+                    </label>
+                  )}
+                />
+              ) : null}
               <WizardNavigationButtons {...navProps} larguraCheiaEmMobile />
             </div>
           ) : null}

@@ -106,12 +106,21 @@ class DiagnosticoRepository(ABC):
 
     @abstractmethod
     async def salvar_e_materializar_plano_painel(
-        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+        self,
+        diagnostico: Diagnostico,
+        score_completo: ScoreCompleto,
+        *,
+        historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
+        cnpj_consulta_id: UUID | None = None,
     ) -> PlanoPainelSerializado:
         """
         Persiste o diagnóstico e materializa plano/matriz/cronograma na mesma transação (Postgres).
 
         Em adaptadores sem transação atómica (ex.: PostgREST), aplica a sequência mais próxima possível.
+
+        Args:
+            historico_campos_empresa_cnpj: Trilha append-only de merge CNPJ antes da evidência WORM.
+            cnpj_consulta_id: FK opcional para ``cnpj_consultas``.
 
         Raises:
             RuntimeError: falha de persistência ao materializar (fluxo novo não deve concluir «à meio»).

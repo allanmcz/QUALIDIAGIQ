@@ -17,7 +17,9 @@ import {
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
   getAccessToken,
 } from "@/lib/api/config";
+import { postConsultarCnpjAutenticado, rotuloFonteConsultaCnpj } from "@/lib/api/consulta_cnpj";
 import { postDiagnostico } from "@/lib/api/diagnostico";
+import { aplicarCanonicoNoFormularioEmpresa } from "@/lib/cnpj/canonical_merge";
 import {
   postRascunhoDiagnosticoSelfService,
   postVincularRascunhoContaPlataforma,
@@ -76,6 +78,10 @@ export function useWizardState() {
     hasDraft: boolean;
     hasPending: boolean;
   } | null>(null);
+  /** Pré-consulta CNPJ (`POST /referencia/cnpj/consulta_cnpj`) com sessão na plataforma. */
+  const [consultaCnpjLoading, setConsultaCnpjLoading] = useState(false);
+  const [consultaCnpjFeedback, setConsultaCnpjFeedback] = useState<string | null>(null);
+  const [forceRefreshConsultaCnpjUi, setForceRefreshConsultaCnpjUi] = useState(false);
 
   useEffect(() => {
     setTokenChecked(true);
@@ -183,6 +189,49 @@ export function useWizardState() {
       setValue("respondente.email", emailLs, { shouldDirty: true, shouldValidate: false });
     }
   }, [getValues, setValue]);
+
+  const consultarCnpjNoWizard = useCallback(async () => {
+    if (!getAccessToken()) {
+      setConsultaCnpjFeedback(
+        "Para buscar dados públicos pelo CNPJ, inicie sessão na plataforma (este passo não substitui rascunho + OTP).",
+      );
+      return;
+    }
+    const okCnpj = await trigger("empresa.cnpj");
+    if (!okCnpj) return;
+
+    const cnpj14 = String(getValues("empresa.cnpj") ?? "").replace(/\D/g, "");
+    if (cnpj14.length !== 14) {
+      setConsultaCnpjFeedback("Informe um CNPJ com 14 dígitos e DV válidos antes de buscar.");
+      return;
+    }
+
+    setConsultaCnpjLoading(true);
+    setConsultaCnpjFeedback(null);
+    try {
+      const data = await postConsultarCnpjAutenticado({
+        cnpj14,
+        forceRefresh: forceRefreshConsultaCnpjUi,
+      });
+      aplicarCanonicoNoFormularioEmpresa(data.canonico, setValue);
+      await trigger([
+        "empresa.razao_social",
+        "empresa.porte",
+        "empresa.regime",
+        "empresa.cnae_principal",
+        "empresa.uf",
+        "empresa.setor_macro",
+      ]);
+      setConsultaCnpjFeedback(
+        `Campos da empresa atualizados (fonte: ${rotuloFonteConsultaCnpj(data.fonte)}). Verifique o perfil no passo seguinte.`,
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Falha na consulta CNPJ.";
+      setConsultaCnpjFeedback(msg);
+    } finally {
+      setConsultaCnpjLoading(false);
+    }
+  }, [trigger, getValues, setValue, forceRefreshConsultaCnpjUi]);
 
   const [cnaeSugestoes, setCnaeSugestoes] = useState<CnaeSubclasseItem[]>([]);
   /** Texto no input (código ou busca por descrição); o formulário só guarda 7 dígitos após seleção/blur válido. */
@@ -796,5 +845,10 @@ export function useWizardState() {
     hasToken,
     ultimaPerguntaDoQuestionario,
     TOTAL_STEPS,
+    consultaCnpjLoading,
+    consultaCnpjFeedback,
+    consultarCnpjNoWizard,
+    forceRefreshConsultaCnpjUi,
+    setForceRefreshConsultaCnpjUi,
   };
 }

@@ -20,8 +20,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+from uuid import UUID, uuid4
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
+from src.application.services.cnpj_consulta_mapeamento import mesclar_empresa_com_sugestao_cnpj
+from src.application.services.cnpj_consulta_service import CnpjConsultaService
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
@@ -43,8 +46,6 @@ def _locale_relatorio_pdf_normalizado(raw: str) -> str:
 
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from src.application.ports.email_service import EmailServicePort
     from src.application.ports.llm_service import LlmServicePort
     from src.application.ports.pdf_generator import PdfGeneratorPort
@@ -73,6 +74,9 @@ class ComandoRealizarDiagnostico:
     plano: str = "gratuito"
     aceite_termos_privacidade: bool = False
     locale_relatorio: str = "pt-BR"
+    #: Força nova consulta às fontes públicas ignorando TTL — LC 214/2025 (previsibilidade da evidência).
+    force_refresh_cnpj: bool = False
+    trace_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,6 +106,7 @@ class RealizarDiagnostico:
         email_service: EmailServicePort | None = None,
         llm_service: LlmServicePort | None = None,
         base_normativa_port: BaseNormativaPort | None = None,
+        cnpj_consulta_service: CnpjConsultaService | None = None,
     ) -> None:
         self.repo = repo
         self.calcular_score_use_case = calcular_score_use_case
@@ -110,9 +115,34 @@ class RealizarDiagnostico:
         self.email_service = email_service
         self.llm_service = llm_service
         self.base_normativa_port = base_normativa_port
+        self._cnpj_consulta_service = cnpj_consulta_service
 
     async def execute(self, comando: ComandoRealizarDiagnostico) -> ResultadoDiagnostico:
         """Executa o pipeline completo do diagnóstico."""
+        historico_cnpj: list[tuple[str, str | None, str]] = []
+        consulta_cnpj_uuid: UUID | None = None
+        empresa_efetiva = comando.empresa
+
+        if comando.force_refresh_cnpj and comando.empresa.cnpj:
+            if self._cnpj_consulta_service is None:
+                raise ValueError(
+                    "force_refresh_cnpj exige DATABASE_URL e rede para consulta CNPJ no servidor."
+                )
+            mat = await self._cnpj_consulta_service.materializar_consulta(
+                tenant_id=comando.tenant_id,
+                cnpj_14=comando.empresa.cnpj,
+                idempotency_key=f"worm-finaliza-{uuid4()}",
+                force_refresh=True,
+                diagnostico_id=None,
+                trace_id=comando.trace_id,
+            )
+            empresa_efetiva, historico_cnpj = mesclar_empresa_com_sugestao_cnpj(
+                comando.empresa,
+                mat.payload_canonico,
+                cnpj_consulta_14=mat.cnpj_14,
+            )
+            consulta_cnpj_uuid = mat.consulta_id
+
         # 1. Cria a entidade no estado inicial
         try:
             plano_enum = PlanoDiagnostico(comando.plano.lower())
@@ -121,7 +151,7 @@ class RealizarDiagnostico:
 
         diagnostico = Diagnostico(
             tenant_id=comando.tenant_id,
-            empresa=comando.empresa,
+            empresa=empresa_efetiva,
             respondente=comando.respondente,
             plano=plano_enum,
             locale_relatorio=_locale_relatorio_pdf_normalizado(comando.locale_relatorio),
@@ -168,7 +198,7 @@ class RealizarDiagnostico:
             base_normativa = _ANCORA_FIXA_LLM
             if self.base_normativa_port is not None:
                 chunks_ctx = await self.base_normativa_port.buscar_contexto(
-                    f"{comando.empresa.regime.value} {comando.empresa.setor_macro.value}",
+                    f"{diagnostico.empresa.regime.value} {diagnostico.empresa.setor_macro.value}",
                     top_k=3,
                     threshold=0.0,
                 )
@@ -197,7 +227,10 @@ class RealizarDiagnostico:
 
         # 6. Persiste no banco + materializa plano/matriz/cronograma (mesma operação atómica quando Postgres)
         plano_serializado = await self.repo.salvar_e_materializar_plano_painel(
-            diagnostico, score_completo
+            diagnostico,
+            score_completo,
+            historico_campos_empresa_cnpj=historico_cnpj or None,
+            cnpj_consulta_id=consulta_cnpj_uuid,
         )
 
         # 7. Envio de E-mail

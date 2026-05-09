@@ -311,6 +311,7 @@ async def _executar_criar_diagnostico_core(
     use_case: RealizarDiagnostico,
     perfil_limite: str | None,
     repo: DiagnosticoRepository,
+    trace_id: str | None = None,
 ) -> DiagnosticoResponse:
     """Núcleo compartilhado entre POST com conta na plataforma e POST self-service (JWT após OTP)."""
     empresa_domain = EmpresaInfo(
@@ -355,6 +356,8 @@ async def _executar_criar_diagnostico_core(
         plano=plano_efetivo,
         aceite_termos_privacidade=payload.aceite_termos_privacidade,
         locale_relatorio=payload.locale_relatorio,
+        force_refresh_cnpj=payload.force_refresh_cnpj,
+        trace_id=trace_id,
     )
 
     try:

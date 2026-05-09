@@ -124,6 +124,13 @@ def create_app() -> FastAPI:
             ),
         },
         {
+            "name": "Referência CNPJ",
+            "description": (
+                "Consulta cadastral CNPJ com cache TTL triplo (env), BrasilAPI e fallback Minha Receita. "
+                "Autenticado (JWT); Idempotency-Key obrigatória."
+            ),
+        },
+        {
             "name": "Privacidade LGPD",
             "description": (
                 "Solicitações operacionais de direitos do titular (Lei 13.709/2018 art. 18) "
@@ -184,6 +191,7 @@ def create_app() -> FastAPI:
     from src.presentation.api.routers import (
         auth_router,
         cnae_router,
+        cnpj_router,
         diagnostico_core_router,
         diagnostico_self_service_router,
         mock_storage_router,
@@ -199,6 +207,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router.router)
     app.include_router(normativa_router.router)
     app.include_router(cnae_router.router)
+    app.include_router(cnpj_router.router)
     app.include_router(privacidade_router.router)
     app.include_router(mock_storage_router.router)
 

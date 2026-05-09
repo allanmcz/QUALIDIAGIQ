@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime)
 
-from fastapi import APIRouter, Body, Depends, Query, status
+from fastapi import APIRouter, Body, Depends, Query, Request, status
 
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
@@ -58,6 +58,7 @@ async def listar_diagnosticos(
     ),
 )
 async def criar_diagnostico(
+    request: Request,
     payload: Annotated[
         IniciarDiagnosticoRequest,
         Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
@@ -68,12 +69,15 @@ async def criar_diagnostico(
 ) -> DiagnosticoResponse:
     """Inicia um novo diagnóstico e calcula o score com base nas respostas."""
     _, tenant_id, perfil_conta = current
+    tid = getattr(request.state, "trace_id", None)
+    trace_id = str(tid).strip() if tid else None
     return await diagnostico_helpers._executar_criar_diagnostico_core(
         tenant_id=tenant_id,
         payload=payload,
         use_case=use_case,
         perfil_limite=perfil_conta,
         repo=repo,
+        trace_id=trace_id,
     )
 
 

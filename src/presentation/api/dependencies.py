@@ -23,6 +23,7 @@ from src.application.ports.lead_diagnostico_vinculo_port import (
 )
 from src.application.ports.lgpd_anonimizacao_executor_port import LgpdAnonimizacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
+from src.application.services.cnpj_consulta_service import CnpjConsultaService, CnpjTtlSegundos
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
 from src.application.use_cases.atualizar_quadro_implantacao import AtualizarQuadroImplantacao
@@ -31,6 +32,7 @@ from src.application.use_cases.atualizar_status_solicitacao_titular_lgpd import 
 )
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
+from src.application.use_cases.consultar_cnpj import ConsultarCnpjUseCase
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,
 )
@@ -65,6 +67,7 @@ from src.domain.repositories.normativa_score_macro_repository import (
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
 from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNormativaAdapter
 from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
+from src.infrastructure.adapters.cnpj_provedor_externo_http import CnpjProvedorExternoHttpAdapter
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
 from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
 from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
@@ -100,6 +103,9 @@ from src.infrastructure.repositories.embutidas_normativa_score_macro_repository 
 )
 from src.infrastructure.repositories.postgres_cnae_subclasse_repository import (
     PostgresCnaeSubclasseRepository,
+)
+from src.infrastructure.repositories.postgres_cnpj_consulta_repository import (
+    PostgresCnpjConsultaRepository,
 )
 from src.infrastructure.repositories.postgres_diagnostico_repository import (
     PostgresDiagnosticoRepository,
@@ -651,6 +657,39 @@ def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter | Anthropi
     )
 
 
+def _cnpj_consulta_service_optional() -> CnpjConsultaService | None:
+    """Monta serviço de CNPJ quando há Postgres local (mesmo critério do repositório de diagnóstico)."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if not dsn:
+        return None
+    repo = PostgresCnpjConsultaRepository(dsn)
+    provedor = CnpjProvedorExternoHttpAdapter(settings)
+    ttl = CnpjTtlSegundos(
+        cadastral=settings.qdi_cnpj_ttl_cadastral_seconds,
+        qualificacao=settings.qdi_cnpj_ttl_qualificacao_seconds,
+        situacao=settings.qdi_cnpj_ttl_situacao_seconds,
+    )
+    return CnpjConsultaService(repo=repo, provedor=provedor, ttl_segundos=ttl)
+
+
+def get_consultar_cnpj_use_case(
+    repo_diag: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> ConsultarCnpjUseCase:
+    """POST ``/referencia/cnpj/consulta_cnpj`` — exige Postgres para trilha ``cnpj_consultas``."""
+    svc = _cnpj_consulta_service_optional()
+    if svc is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Consulta CNPJ indisponível: configure DATABASE_URL na API.",
+        )
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    assert dsn is not None
+    cnpj_repo = PostgresCnpjConsultaRepository(dsn)
+    return ConsultarCnpjUseCase(service=svc, cnpj_repo=cnpj_repo, diagnostico_repo=repo_diag)
+
+
 def get_buscar_cnae_subclasses_use_case() -> BuscarCnaeSubclasses:
     """
     Lookup CNAE via Postgres (`DATABASE_URL`).
@@ -693,4 +732,5 @@ def get_realizar_diagnostico_use_case(
         email_service=email_service,
         llm_service=llm_service,
         base_normativa_port=base_normativa_port,
+        cnpj_consulta_service=_cnpj_consulta_service_optional(),
     )

@@ -211,8 +211,15 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         return materializar_plano_painel_supabase(self._client, diagnostico, score_completo)
 
     async def salvar_e_materializar_plano_painel(
-        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+        self,
+        diagnostico: Diagnostico,
+        score_completo: ScoreCompleto,
+        *,
+        historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
+        cnpj_consulta_id: UUID | None = None,
     ) -> PlanoPainelSerializado:
+        _ = historico_campos_empresa_cnpj
+        _ = cnpj_consulta_id
         return await asyncio.to_thread(
             self._salvar_e_materializar_thread, diagnostico, score_completo
         )

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Controller } from "react-hook-form";
 import type { Control, FieldErrors, UseFormRegister } from "react-hook-form";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { DiagnosticoPayloadFormInput } from "@/lib/schemas/wizard";
@@ -14,31 +15,92 @@ export type WizardStepIdentificacaoProps = {
   register: UseFormRegister<DiagnosticoPayloadFormInput>;
   control: Control<DiagnosticoPayloadFormInput>;
   errors: FieldErrors<DiagnosticoPayloadFormInput>;
+  hasToken: boolean;
+  consultaCnpjLoading: boolean;
+  consultaCnpjFeedback: string | null;
+  forceRefreshConsultaCnpj: boolean;
+  setForceRefreshConsultaCnpj: (v: boolean) => void;
+  onConsultarCnpjPublico: () => void;
 };
 
-export function WizardStepIdentificacao({ register, control, errors }: WizardStepIdentificacaoProps) {
+export function WizardStepIdentificacao({
+  register,
+  control,
+  errors,
+  hasToken,
+  consultaCnpjLoading,
+  consultaCnpjFeedback,
+  forceRefreshConsultaCnpj,
+  setForceRefreshConsultaCnpj,
+  onConsultarCnpjPublico,
+}: WizardStepIdentificacaoProps) {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h3 className="text-sm font-semibold text-foreground tracking-tight">Cadastro da empresa</h3>
         <p className="text-xs text-muted-foreground mt-1">
-          CNPJ opcional; se preenchido, use 14 dígitos com DV válidos. Razão social conforme identificação da empresa.
+          CNPJ opcional; se preenchido, use 14 dígitos com DV válidos. Com sessão na plataforma pode pré-preencher
+          dados públicos (cadastro nacional) antes de seguir — sem conta, continue manualmente até confirmar por
+          e-mail (OTP).
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <Label htmlFor="cnpj">CNPJ (opcional)</Label>
-          <Input
-            id="cnpj"
-            placeholder="00.000.000/0000-00"
-            inputMode="numeric"
-            autoComplete="organization"
-            {...register("empresa.cnpj")}
-            className={errors.empresa?.cnpj ? "border-destructive" : ""}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
+            <Input
+              id="cnpj"
+              placeholder="00.000.000/0000-00"
+              inputMode="numeric"
+              autoComplete="organization"
+              {...register("empresa.cnpj")}
+              className={cn("flex-1", errors.empresa?.cnpj ? "border-destructive" : "")}
+            />
+            <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full sm:w-auto whitespace-nowrap"
+                disabled={consultaCnpjLoading || !hasToken}
+                title={
+                  !hasToken
+                    ? "Disponível com sessão iniciada na plataforma (Bearer JWT)."
+                    : "Consulta dados públicos (BrasilAPI; reserva só em falha de rede)."
+                }
+                onClick={() => void onConsultarCnpjPublico()}
+              >
+                {consultaCnpjLoading ? "Consultando…" : "Buscar dados públicos"}
+              </Button>
+              {hasToken ? (
+                <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer select-none leading-snug px-0.5">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-input"
+                    checked={forceRefreshConsultaCnpj}
+                    onChange={(e) => setForceRefreshConsultaCnpj(e.target.checked)}
+                  />
+                  <span>Ignorar cache nesta consulta — nova chamada às fontes públicas.</span>
+                </label>
+              ) : null}
+            </div>
+          </div>
           {errors.empresa?.cnpj && <p className="text-sm text-destructive">{errors.empresa.cnpj.message}</p>}
+          {consultaCnpjFeedback ? (
+            <p
+              className={cn(
+                "text-xs leading-relaxed rounded-md border px-2 py-2",
+                consultaCnpjFeedback.toLowerCase().includes("atualizado") ||
+                  consultaCnpjFeedback.toLowerCase().includes("campos")
+                  ? "border-primary/25 bg-primary/5 text-foreground"
+                  : "border-destructive/30 bg-destructive/5 text-destructive",
+              )}
+              role="status"
+            >
+              {consultaCnpjFeedback}
+            </p>
+          ) : null}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <Label htmlFor="razao_social">Razão Social *</Label>
           <Input
             id="razao_social"

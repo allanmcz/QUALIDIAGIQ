@@ -265,8 +265,37 @@ def _salvar_sync(dsn: str, diagnostico: Diagnostico) -> None:
         conn.close()
 
 
+def _inserir_historico_cnpj_cur(
+    cur: Any,
+    tenant_id: UUID,
+    diagnostico_id: UUID,
+    itens: list[tuple[str, str | None, str]],
+    cnpj_consulta_id: UUID | None,
+) -> None:
+    """Grava trilha append-only ligada à consulta CNPJ (mesma transação do UPSERT)."""
+    if not itens:
+        return
+    cid = str(cnpj_consulta_id) if cnpj_consulta_id else None
+    tid, did = str(tenant_id), str(diagnostico_id)
+    for campo, anterior, novo in itens:
+        cur.execute(
+            """
+            INSERT INTO diagnostico_empresa_campo_historico (
+                tenant_id, diagnostico_id, cnpj_consulta_id,
+                campo, valor_anterior, valor_novo
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (tid, did, cid, campo, anterior, novo),
+        )
+
+
 def _salvar_e_materializar_plano_sync(
-    dsn: str, diagnostico: Diagnostico, score_completo: ScoreCompleto
+    dsn: str,
+    diagnostico: Diagnostico,
+    score_completo: ScoreCompleto,
+    *,
+    historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
+    cnpj_consulta_id: UUID | None = None,
 ) -> PlanoPainelSerializado:
     """Transação única: UPSERT diagnóstico + substituição idempotente do plano ``versao_plano``."""
     vp = int(getattr(diagnostico, "versao_plano", 1) or 1)
@@ -278,6 +307,13 @@ def _salvar_e_materializar_plano_sync(
         conn.autocommit = False
         with conn.cursor() as cur:
             cur.execute(_UPSERT_SQL, params)
+            _inserir_historico_cnpj_cur(
+                cur,
+                diagnostico.tenant_id,
+                diagnostico.id,
+                historico_campos_empresa_cnpj or [],
+                cnpj_consulta_id,
+            )
         materializar_plano_em_conexao(conn, diagnostico, deriv)
         conn.commit()
     except Exception:
@@ -464,10 +500,20 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
         await asyncio.to_thread(_salvar_sync, self._dsn, diagnostico)
 
     async def salvar_e_materializar_plano_painel(
-        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+        self,
+        diagnostico: Diagnostico,
+        score_completo: ScoreCompleto,
+        *,
+        historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
+        cnpj_consulta_id: UUID | None = None,
     ) -> PlanoPainelSerializado:
         return await asyncio.to_thread(
-            _salvar_e_materializar_plano_sync, self._dsn, diagnostico, score_completo
+            _salvar_e_materializar_plano_sync,
+            self._dsn,
+            diagnostico,
+            score_completo,
+            historico_campos_empresa_cnpj=historico_campos_empresa_cnpj,
+            cnpj_consulta_id=cnpj_consulta_id,
         )
 
     async def buscar_plano_painel_serializado(

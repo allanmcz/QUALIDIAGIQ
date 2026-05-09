@@ -127,6 +127,11 @@ export const DiagnosticoPayloadSchema = z.object({
   aceite_termos_privacidade: z.boolean().refine((v) => v === true, {
     message: "É necessário aceitar o tratamento dos dados conforme a política de privacidade.",
   }),
+  /**
+   * Opcional na UI — se `true` e `empresa.cnpj` preenchido: o servidor ignora cache TTL
+   * e refaz consulta às fontes públicas antes de fechar o diagnóstico (WORM + histórico).
+   */
+  force_refresh_cnpj: z.boolean().default(false),
 });
 
 export type DiagnosticoPayload = z.infer<typeof DiagnosticoPayloadSchema>;

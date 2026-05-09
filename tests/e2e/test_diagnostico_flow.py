@@ -43,7 +43,10 @@ class MockRepository:
     def __init__(self):
         self.db = {}
 
-    async def salvar_e_materializar_plano_painel(self, diagnostico, score_completo):
+    async def salvar_e_materializar_plano_painel(
+        self, diagnostico, score_completo, **kwargs: object
+    ):
+        _ = kwargs
         self.db[diagnostico.id] = diagnostico
         return derivar_plano_painel_materializado(diagnostico, score_completo).serializado_http
 

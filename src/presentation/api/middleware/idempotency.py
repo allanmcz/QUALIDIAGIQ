@@ -50,6 +50,7 @@ def _exige_idempotencia(request: Request) -> bool:
         "/diagnosticos/rascunho-self-service/vincular-conta",
         "/diagnosticos/vincular-leads-self-service",
         "/diagnosticos/vincular-leads-self-service/",
+        "/referencia/cnpj/consulta_cnpj",
     )
 
 

@@ -14,7 +14,7 @@ from uuid import UUID
 
 import psycopg2
 import structlog
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, status
 
 from src.application.ports.email_service import EmailServicePort
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
@@ -73,6 +73,7 @@ logger = structlog.get_logger(__name__)
     ),
 )
 async def criar_diagnostico_self_service(
+    request: Request,
     payload: Annotated[
         IniciarDiagnosticoRequest,
         Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
@@ -89,12 +90,15 @@ async def criar_diagnostico_self_service(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="O e-mail do respondente deve ser o mesmo confirmado por OTP.",
         )
+    tid = getattr(request.state, "trace_id", None)
+    trace_id = str(tid).strip() if tid else None
     return await diagnostico_helpers._executar_criar_diagnostico_core(
         tenant_id=tenant_id,
         payload=payload,
         use_case=use_case,
         perfil_limite=None,
         repo=repo,
+        trace_id=trace_id,
     )
 
 
@@ -223,6 +227,7 @@ async def resumo_rascunho_diagnostico_self_service(
     ),
 )
 async def concluir_rascunho_diagnostico_self_service(
+    request: Request,
     body: ConcluirRascunhoDiagnosticoSelfServiceRequest,
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
@@ -275,12 +280,15 @@ async def concluir_rascunho_diagnostico_self_service(
             detail="Inconsistência entre rascunho e respondente.",
         )
     tenant_ss = settings.self_service_tenant_id
+    tid = getattr(request.state, "trace_id", None)
+    trace_id = str(tid).strip() if tid else None
     out = await diagnostico_helpers._executar_criar_diagnostico_core(
         tenant_id=tenant_ss,
         payload=payload,
         use_case=use_case,
         perfil_limite=None,
         repo=repo,
+        trace_id=trace_id,
     )
     try:
         await asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row2["id"])))
@@ -317,6 +325,7 @@ async def concluir_rascunho_diagnostico_self_service(
     ),
 )
 async def vincular_rascunho_conta_plataforma(
+    request: Request,
     body: VincularRascunhoContaPlataformaRequest,
     current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     use_case: Annotated[RealizarDiagnostico, Depends(get_realizar_diagnostico_use_case)],
@@ -365,12 +374,15 @@ async def vincular_rascunho_conta_plataforma(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="O e-mail do respondente no rascunho deve ser o mesmo da sua conta na plataforma.",
         )
+    tid = getattr(request.state, "trace_id", None)
+    trace_id = str(tid).strip() if tid else None
     out = await diagnostico_helpers._executar_criar_diagnostico_core(
         tenant_id=tenant_id,
         payload=payload,
         use_case=use_case,
         perfil_limite=perfil_conta,
         repo=repo,
+        trace_id=trace_id,
     )
     try:
         await asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row["id"])))

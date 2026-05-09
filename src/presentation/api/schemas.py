@@ -170,6 +170,13 @@ class IniciarDiagnosticoRequest(BaseModel):
             "Ciência explícita dos termos de uso e desta política de privacidade (LGPD Lei 13.709/2018)."
         ),
     )
+    force_refresh_cnpj: bool = Field(
+        default=False,
+        description=(
+            "Se verdadeiro e ``empresa.cnpj`` preenchido: nova consulta às fontes públicas ignorando TTL "
+            "antes de fechar evidência WORM; merge com histórico em ``diagnostico_empresa_campo_historico``."
+        ),
+    )
 
     @field_validator("aceite_termos_privacidade")
     @classmethod
@@ -816,3 +823,70 @@ class CnaeBuscaResponse(BaseModel):
     """Resposta paginada leve do GET `/referencia/cnae/subclasses`."""
 
     itens: list[CnaeSubclasseItemSchema]
+
+
+class ConsultarCnpjRequest(BaseModel):
+    """Corpo POST `/referencia/cnpj/consulta_cnpj` — exige JWT com ``tenant_id``."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    cnpj: str = Field(
+        ...,
+        min_length=14,
+        max_length=18,
+        description="CNPJ com ou sem máscara — armazenado e consultado com 14 dígitos.",
+    )
+    force_refresh: bool = Field(
+        default=False,
+        description="Ignora cache TTL e força nova chamada às fontes públicas.",
+    )
+    aplicar_no_diagnostico_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Se informado: merge nos campos empresa_* apenas quando o diagnóstico está "
+            "``em_andamento`` (WORM bloqueia alteração pós-finalização)."
+        ),
+    )
+
+    @field_validator("cnpj")
+    @classmethod
+    def validar_cnpj_consulta(cls, v: str) -> str:
+        raw = normalizar_cnpj_apenas_digitos(v or "")
+        if len(raw) != 14:
+            raise ValueError("CNPJ deve conter exatos 14 dígitos numéricos")
+        if len(set(raw)) == 1:
+            raise ValueError("CNPJ inválido")
+        if not cnpj_com_digitos_verificadores_validos(raw):
+            raise ValueError("CNPJ inválido: dígitos verificadores não conferem")
+        return raw
+
+
+class CnpjCanonicoResponse(BaseModel):
+    """Recorte canónico persistido em ``cnpj_consultas.payload_canonico`` (volatilidades TTL)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cnpj: str
+    razao_social: str | None = None
+    nome_fantasia: str | None = None
+    cnae_principal: str | None = None
+    uf: str | None = None
+    situacao_cadastral: str | None = None
+    porte: str | None = None
+    regime: str | None = None
+    setor_macro: str | None = None
+    municipio: str | None = None
+    logradouro: str | None = None
+
+
+class ConsultarCnpjResponse(BaseModel):
+    """Resposta à consulta materializada (idempotente por ``Idempotency-Key`` + tenant)."""
+
+    consulta_id: UUID
+    cnpj: str
+    fonte: str = Field(description="``brasil_api`` ou ``minha_receita``.")
+    canonico: CnpjCanonicoResponse
+    expira_cadastral_em: datetime
+    expira_qualificacao_em: datetime
+    expira_situacao_em: datetime
+    aplicado_em_diagnostico_em_andamento: bool = False

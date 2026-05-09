@@ -157,8 +157,15 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         )
 
     async def salvar_e_materializar_plano_painel(
-        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+        self,
+        diagnostico: Diagnostico,
+        score_completo: ScoreCompleto,
+        *,
+        historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
+        cnpj_consulta_id: UUID | None = None,
     ) -> PlanoPainelSerializado:
+        _ = historico_campos_empresa_cnpj
+        _ = cnpj_consulta_id
         self._rows[diagnostico.id] = diagnostico
         deriv = derivar_plano_painel_materializado(diagnostico, score_completo)
         self._planos[(diagnostico.id, diagnostico.tenant_id)] = deriv.serializado_http
