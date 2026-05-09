@@ -88,3 +88,25 @@ async def test_enviar_relatorio_retorna_false_quando_erro_interno() -> None:
     with patch("src.infrastructure.adapters.email_smtp.smtplib.SMTP", return_value=mock_smtp_inst):
         ok = await adapter.enviar_email_com_relatorio("a@b.c", "A", "https://z")
     assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_enviar_relatorio_com_starttls_login_quando_credenciais(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SMTP_USER", "usr")
+    monkeypatch.setenv("SMTP_PASS", "sec")
+    adapter = SmtpEmailAdapter()
+    adapter.smtp_host = "smtp.example.org"
+    adapter.smtp_port = 587
+
+    mock_smtp_inst = MagicMock()
+    mock_smtp_inst.__enter__.return_value = mock_smtp_inst
+    mock_smtp_inst.__exit__.return_value = None
+
+    with patch("src.infrastructure.adapters.email_smtp.smtplib.SMTP", return_value=mock_smtp_inst):
+        ok = await adapter.enviar_email_com_relatorio("lead@test.io", "Maria", "https://blob/x.pdf")
+    assert ok is True
+    mock_smtp_inst.starttls.assert_called_once()
+    mock_smtp_inst.login.assert_called_once_with("usr", "sec")
+    mock_smtp_inst.send_message.assert_called_once()

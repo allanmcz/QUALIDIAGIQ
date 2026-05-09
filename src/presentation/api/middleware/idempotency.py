@@ -169,7 +169,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     ttl_sec,
                     tenant_id,
                 )
-            elif composta not in self._cache:
+            else:
+                # Em memória: se chegámos aqui com 2xx, não houve replay (`hit` era None).
                 self._cache[composta] = cached
 
         return out

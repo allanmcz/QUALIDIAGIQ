@@ -8,7 +8,11 @@ from uuid import UUID
 import pytest
 
 from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
-from src.infrastructure.idempotency.postgres_backend import idempotency_get, idempotency_put
+from src.infrastructure.idempotency.postgres_backend import (
+    idempotency_cleanup_expired,
+    idempotency_get,
+    idempotency_put,
+)
 
 _TID = UUID("00000000-0000-0000-0000-000000000000")
 
@@ -59,6 +63,16 @@ def test_idempotency_get_hit(mock_engine: MagicMock) -> None:
     assert hit.status_code == 201
     assert hit.body == b'{"ok":true}'
     assert ("content-type", "application/json") in hit.headers
+
+
+def test_idempotency_cleanup_expired_executa_delete(mock_engine: MagicMock) -> None:
+    conn = mock_engine.begin.return_value.__enter__.return_value
+    conn.execute.reset_mock()
+
+    idempotency_cleanup_expired(mock_engine)
+
+    chamadas_sql = [str(c.args[0]) for c in conn.execute.call_args_list if c.args]
+    assert any("DELETE FROM idempotency_responses" in s for s in chamadas_sql)
 
 
 def test_idempotency_put_executa_insert(mock_engine: MagicMock) -> None:

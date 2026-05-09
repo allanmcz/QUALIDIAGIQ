@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -131,6 +131,38 @@ class TestSolicitacaoTitularLgpdUseCases:
         assert created.tenant_id == tenant_id
         assert created.solicitante_email == "allan@empresa.com"
         assert created.status == StatusSolicitacaoTitular.RECEBIDA
+
+    @pytest.mark.asyncio
+    async def test_registrar_rejeita_email_curto_demais(self) -> None:
+        port = FakeLgpdTitularSolicitacaoPort()
+        use_case = RegistrarSolicitacaoTitularLgpd(port=port)
+        with pytest.raises(ValueError, match="E-mail do solicitante"):
+            await use_case.execute(
+                ComandoRegistrarSolicitacaoTitularLgpd(
+                    tenant_id=uuid4(),
+                    diagnostico_id=None,
+                    tipo=TipoSolicitacaoTitular.ACESSO,
+                    canal=CanalSolicitacaoTitular.PLATAFORMA,
+                    solicitante_email="a@b",
+                    payload={},
+                )
+            )
+
+    @pytest.mark.asyncio
+    async def test_registrar_payload_nao_dict_vira_dict_vazio(self) -> None:
+        port = FakeLgpdTitularSolicitacaoPort()
+        use_case = RegistrarSolicitacaoTitularLgpd(port=port)
+        created = await use_case.execute(
+            ComandoRegistrarSolicitacaoTitularLgpd(
+                tenant_id=uuid4(),
+                diagnostico_id=None,
+                tipo=TipoSolicitacaoTitular.CORRECAO,
+                canal=CanalSolicitacaoTitular.PLATAFORMA,
+                solicitante_email="titular@empresa.com.br",
+                payload=cast("dict[str, Any]", "payload-invalido"),
+            )
+        )
+        assert created.payload == {}
 
     @pytest.mark.asyncio
     async def test_listar_com_filtro_status(self) -> None:

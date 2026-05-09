@@ -144,6 +144,30 @@ class TestAuthCadastroEndpoint:
             )
         assert r.status_code == 409
 
+    def test_cadastro_500_excecao_generica_sem_duplicidade(self) -> None:
+        """``except Exception`` sem palavras-chave unique/duplicate ⇒ HTTP 500 genérico."""
+
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.get_settings",
+                return_value=_settings_com_dsn(),
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                return_value=None,
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                side_effect=RuntimeError("falha de persistência inesperada"),
+            ),
+        ):
+            r = client.post(
+                "/auth/cadastro",
+                json={"nome": "A", "email": "erro_gen@teste.com", "password": "12345678"},
+            )
+        assert r.status_code == 500
+        assert "interno" in (r.json().get("detail") or "").lower()
+
     def test_cadastro_500_jwt_emit_erro_apos_insert(self) -> None:
         import jwt
 

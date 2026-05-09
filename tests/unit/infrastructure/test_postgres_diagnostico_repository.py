@@ -22,6 +22,7 @@ from src.domain.value_objects.plano_painel_serializado import PlanoPainelSeriali
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.infrastructure.repositories.postgres_diagnostico_repository import (
     PostgresDiagnosticoRepository,
+    _inserir_historico_cnpj_cur,
     _materializar_plano_backfill_sync,
     _patch_m12_sync,
     _patch_quadro_sync,
@@ -195,6 +196,21 @@ class TestPostgresDiagnosticoRepository:
         assert out is not None
         assert out.id == did
 
+    async def test_atualizar_quadro_implantacao_none_quando_conflito(self) -> None:
+        did, tid = uuid4(), uuid4()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn = _mock_conn_cursor(mock_cursor)
+        with patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ):
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            out = await repo.atualizar_quadro_implantacao_com_versao(
+                did, tid, {"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}}, versao_esperada=9
+            )
+        assert out is None
+
     async def test_atualizar_quadro_implantacao(self) -> None:
         did, tid = uuid4(), uuid4()
         mock_cursor = MagicMock()
@@ -214,6 +230,21 @@ class TestPostgresDiagnosticoRepository:
         assert out.quadro_implantacao_anotacoes == {
             "f0_a0": {"comentarios": ["x"], "prazo_meta": ""}
         }
+
+    async def test_atualizar_m12_none_quando_conflito(self) -> None:
+        did, tid = uuid4(), uuid4()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn = _mock_conn_cursor(mock_cursor)
+        with patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ):
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            out = await repo.atualizar_checklist_m12_com_versao(
+                did, tid, [1] * 10, versao_esperada=99
+            )
+        assert out is None
 
     async def test_atualizar_m12(self) -> None:
         did, tid = uuid4(), uuid4()
@@ -294,6 +325,35 @@ def test_salvar_e_materializar_plano_sync_fluxo_feliz() -> None:
     assert out == plano_serializado
     mock_conn.commit.assert_called_once()
     mock_mat.assert_called_once()
+    mock_conn.close.assert_called_once()
+
+
+def test_salvar_e_materializar_plano_sync_rollback_quando_materializar_falha() -> None:
+    d = _diag_minimo()
+    d.finalizar(70.0)
+    sc = _score_completo_snapshot()
+    mock_cursor = MagicMock()
+    mock_conn = _mock_conn_cursor(mock_cursor)
+    deriv = MagicMock()
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.derivar_plano_painel_materializado",
+            return_value=deriv,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.materializar_plano_em_conexao",
+            side_effect=RuntimeError("falha ao materializar"),
+        ),
+        pytest.raises(RuntimeError, match="materializar"),
+    ):
+        _salvar_e_materializar_plano_sync("postgresql://u:p@localhost:1/db", d, sc)
+
+    mock_conn.rollback.assert_called_once()
     mock_conn.close.assert_called_once()
 
 
@@ -404,6 +464,68 @@ def test_materializar_plano_backfill_sync_materializa_quando_elegivel() -> None:
     mock_conn.close.assert_called_once()
 
 
+def test_materializar_plano_backfill_sync_rollback_quando_materializar_falha() -> None:
+    did, tid = uuid4(), uuid4()
+    d = _diag_minimo()
+    d.tenant_id = tid
+    d.finalizar(70.0)
+    d.score_completo_snapshot = _score_completo_snapshot()
+    mock_conn = MagicMock()
+    mock_conn.autocommit = False
+    deriv = MagicMock()
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.plano_materializado_existe_sync",
+            return_value=False,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository._buscar_sync",
+            return_value=d,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.derivar_plano_painel_materializado",
+            return_value=deriv,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.materializar_plano_em_conexao",
+            side_effect=RuntimeError("erro materializar backfill"),
+        ),
+        pytest.raises(RuntimeError, match="materializar backfill"),
+    ):
+        _materializar_plano_backfill_sync("postgresql://u:p@localhost:1/db", did, tid)
+
+    mock_conn.rollback.assert_called_once()
+    mock_conn.close.assert_called_once()
+
+
+def test_inserir_historico_cnpj_cur_sem_itens_nao_chama_execute() -> None:
+    cur = MagicMock()
+    _inserir_historico_cnpj_cur(cur, uuid4(), uuid4(), [], None)
+    cur.execute.assert_not_called()
+
+
+def test_inserir_historico_cnpj_cur_grava_linhas() -> None:
+    cur = MagicMock()
+    tid, did, cq = uuid4(), uuid4(), uuid4()
+    _inserir_historico_cnpj_cur(
+        cur,
+        tid,
+        did,
+        [("empresa_uf", "SP", "RJ")],
+        cq,
+    )
+    cur.execute.assert_called_once()
+    args = cur.execute.call_args[0][1]
+    assert args[0] == str(tid)
+    assert args[1] == str(did)
+    assert args[2] == str(cq)
+
+
 def test_quadro_anotacoes_de_row_limpeza_e_legado() -> None:
     row = {
         "quadro_implantacao_anotacoes": {
@@ -413,6 +535,7 @@ def test_quadro_anotacoes_de_row_limpeza_e_legado() -> None:
                 "descricao_personalizada": "  desc ",
             },
             "legado": {"comentario": "  nota única  "},
+            "so_brancos": {"prazo_meta": "", "comentarios": ["", "  "]},
             "ignorar": "nao-dict",
         }
     }
@@ -421,6 +544,7 @@ def test_quadro_anotacoes_de_row_limpeza_e_legado() -> None:
     assert out["ok"]["comentarios"] == ["x", "y"]
     assert out["ok"]["descricao_personalizada"] == "desc"
     assert out["legado"]["comentarios"] == ["nota única"]
+    assert out["so_brancos"]["comentarios"] == []
 
 
 def test_row_dict_para_entity_com_defaults_defensivos() -> None:

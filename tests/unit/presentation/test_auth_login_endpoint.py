@@ -264,6 +264,35 @@ class TestAuthLoginPostgres:
         assert r.status_code == 200
         mock_client.table.assert_called_with("admins")
 
+    def test_login_supabase_sem_resultados_400(self) -> None:
+        """``response.data`` vazio ⇒ mesmo fluxo que utilizador inexistente."""
+        settings = MagicMock()
+        settings.sync_database_url = None
+        settings.jwt_expire_minutes = 60
+        settings.jwt_algorithm = "HS256"
+        settings.jwt_secret_key = MagicMock()
+        settings.jwt_secret_key.get_secret_value.return_value = os.environ.get(
+            "JWT_SECRET_KEY", "test-secret-key-for-pytest-only-32chars!!"
+        )
+
+        mock_client = MagicMock()
+        mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            MagicMock(data=[])
+        )
+
+        with (
+            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
+            patch(
+                "src.presentation.api.routers.auth_router.get_supabase_client",
+                return_value=mock_client,
+            ),
+        ):
+            r = TestClient(app).post(
+                "/auth/login",
+                json={"email": "naoexiste@sb.io", "password": "qualquer"},
+            )
+        assert r.status_code == 400
+
     def test_login_500_jwt_encode_falha(self) -> None:
         user, pwd = _usuario_valido_bcryp()
         settings = _jwt_settings()

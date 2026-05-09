@@ -647,6 +647,7 @@ def test_post_vincular_leads_email_admin_vazio_403() -> None:
 
 def test_post_vincular_leads_sucesso_200() -> None:
     """Caminho feliz do router: use case devolve UUIDs e resposta materializa total + lista."""
+
     class S:
         sync_database_url = "postgresql://local"
         self_service_tenant_id = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")

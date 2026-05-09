@@ -86,3 +86,20 @@ class TestGerarQuestionarioAdaptativoUseCase:
 
         perguntas = use_case.execute(empresa)
         assert len(perguntas) == 3
+
+    def test_sem_perguntas_aplicaveis_levanta(self, banco_perguntas_mock) -> None:
+        """Banco só com condicional LR + empresa Simples ⇒ lista filtrada vazia."""
+        apenas_lr = [p for p in banco_perguntas_mock if p.codigo == "Q-LR"]
+        assert len(apenas_lr) == 1
+        use_case = GerarQuestionarioAdaptativoUseCase(apenas_lr)
+        empresa = EmpresaInfo(
+            cnpj="12345678000195",
+            razao_social="SN",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        with pytest.raises(ValueError, match="Nenhuma pergunta encontrada"):
+            use_case.execute(empresa)

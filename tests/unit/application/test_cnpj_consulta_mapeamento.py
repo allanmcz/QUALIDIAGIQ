@@ -122,6 +122,22 @@ class TestSugestaoDesdePayloadReceita:
                 },
                 "mei",
             ),
+            (
+                {
+                    "regime_tributario": [
+                        {"ano": "não-converte", "forma_de_tributacao": "LUCRO PRESUMIDO"},
+                    ]
+                },
+                "lucro_presumido",
+            ),
+            (
+                {"regime_tributario": [{"ano": 2025, "forma_de_tributacao": "SIMPLES NACIONAL"}]},
+                "simples_nacional",
+            ),
+            (
+                {"regime_tributario": [{"ano": 2025, "forma_de_tributacao": "LUCRO REAL"}]},
+                "lucro_real",
+            ),
         ],
     )
     def test_regime_via_flags_ou_lista(
@@ -129,6 +145,11 @@ class TestSugestaoDesdePayloadReceita:
     ) -> None:
         p = {**self._base(), **payload_extra}
         assert sugestao_desde_payload_receita(p)["regime"] == regime_esperado
+
+    def test_inferencia_setor_macro_cnae_fora_faixas_conhecidas_servicos(self) -> None:
+        """Prefixo CNAE que não cai em agro/indústria/consumo/comércio ⇒ ``servicos``."""
+        p = {**self._base(), "cnae_fiscal": "4812300"}
+        assert sugestao_desde_payload_receita(p)["setor_macro"] == "servicos"
 
     def test_uf_curta_ou_invalida(self) -> None:
         p = {**self._base(), "uf": "S"}
@@ -245,3 +266,82 @@ class TestMesclarEmpresaComSugestaoCnpj:
         assert nova.setor_macro == SetorMacro.SERVICOS
         assert ("empresa_regime", "mei", "lucro_real") in hist
         assert ("empresa_setor_macro", "comercio", "servicos") in hist
+
+    def test_sobrescreve_uf_quando_diferente(self) -> None:
+        emp = EmpresaInfo(
+            cnpj="33014556000196",
+            razao_social="X",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.MEI,
+            cnae_principal="4711302",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        nova, hist = mesclar_empresa_com_sugestao_cnpj(
+            emp, {"uf": "RJ"}, cnpj_consulta_14="33014556000196"
+        )
+        assert nova.uf == "RJ"
+        assert ("empresa_uf", "SP", "RJ") in hist
+
+    def test_sobrescreve_porte_quando_valido_e_diferente(self) -> None:
+        emp = EmpresaInfo(
+            cnpj="33014556000196",
+            razao_social="X",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.MEI,
+            cnae_principal="4711302",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        nova, hist = mesclar_empresa_com_sugestao_cnpj(
+            emp, {"porte": "medio"}, cnpj_consulta_14="33014556000196"
+        )
+        assert nova.porte == PorteEmpresa.MEDIO
+        assert ("empresa_porte", "micro", "medio") in hist
+
+    def test_preenche_uf_quando_empresa_sem_uf(self) -> None:
+        emp = EmpresaInfo(
+            cnpj="33014556000196",
+            razao_social="X",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.MEI,
+            cnae_principal="4711302",
+            uf="  ",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        nova, hist = mesclar_empresa_com_sugestao_cnpj(
+            emp, {"uf": "RJ"}, cnpj_consulta_14="33014556000196"
+        )
+        assert nova.uf == "RJ"
+        assert ("empresa_uf", None, "RJ") in hist
+
+    def test_preenche_cnae_quando_vazio(self) -> None:
+        emp = EmpresaInfo(
+            cnpj="33014556000196",
+            razao_social="X",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.MEI,
+            cnae_principal="       ",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        nova, hist = mesclar_empresa_com_sugestao_cnpj(
+            emp, {"cnae_principal": "4711302"}, cnpj_consulta_14="33014556000196"
+        )
+        assert nova.cnae_principal == "4711302"
+        assert ("empresa_cnae", None, "4711302") in hist
+
+    def test_regime_igual_nao_gera_historico(self) -> None:
+        emp = EmpresaInfo(
+            cnpj="33014556000196",
+            razao_social="X",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="4711302",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        _, hist = mesclar_empresa_com_sugestao_cnpj(
+            emp, {"regime": "simples_nacional"}, cnpj_consulta_14="33014556000196"
+        )
+        assert not any(h[0] == "empresa_regime" for h in hist)

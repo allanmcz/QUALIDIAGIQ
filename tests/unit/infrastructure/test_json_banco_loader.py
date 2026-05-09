@@ -174,6 +174,31 @@ def test_carregar_rejeita_item_pergunta_nao_objeto(tmp_path) -> None:
         carregar_perguntas_de_arquivo(p)
 
 
+def test_condicao_nao_objeto_erro(tmp_path) -> None:
+    p = tmp_path / "condicao_string.json"
+    p.write_text(
+        json.dumps(
+            {
+                "versao_catalogo": "t",
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Teste",
+                        "peso": 1.0,
+                        "tipo": "binaria",
+                        "condicao": "nao-pode-ser-string",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="objeto ou null"):
+        carregar_perguntas_de_arquivo(p)
+
+
 def test_parse_condicao_rejeita_tipos_invalidos(tmp_path) -> None:
     p = tmp_path / "condicao_invalida.json"
     p.write_text(

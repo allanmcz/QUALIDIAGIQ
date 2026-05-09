@@ -33,6 +33,31 @@ class TestPatchQuadroImplantacaoRequest:
         )
         assert m.quadro_implantacao_anotacoes["f0_a0"].comentarios == ["A", "B"]
 
+    def test_comentarios_null_equivale_lista_vazia(self) -> None:
+        m = PatchQuadroImplantacaoRequest.model_validate(
+            {
+                "quadro_implantacao_anotacoes": {
+                    "f0_a0": {"comentarios": None, "prazo_meta": ""},
+                }
+            }
+        )
+        assert m.quadro_implantacao_anotacoes["f0_a0"].comentarios == []
+
+    def test_aceita_descricao_personalizada_no_teto_4000(self) -> None:
+        texto = "d" * 4000
+        m = PatchQuadroImplantacaoRequest.model_validate(
+            {
+                "quadro_implantacao_anotacoes": {
+                    "f0_a0": {
+                        "comentarios": [],
+                        "prazo_meta": "",
+                        "descricao_personalizada": texto,
+                    },
+                }
+            }
+        )
+        assert len(m.quadro_implantacao_anotacoes["f0_a0"].descricao_personalizada) == 4000
+
     def test_rejeita_chave_invalida(self) -> None:
         with pytest.raises(ValidationError, match="Chave"):
             PatchQuadroImplantacaoRequest.model_validate(
@@ -49,6 +74,16 @@ class TestPatchQuadroImplantacaoRequest:
                 {
                     "quadro_implantacao_anotacoes": {
                         "f1_a2": {"comentario": "", "prazo_meta": "01/08/2026"},
+                    }
+                }
+            )
+
+    def test_rejeita_prazo_meta_formato_nao_iso(self) -> None:
+        with pytest.raises(ValidationError, match="prazo_meta"):
+            PatchQuadroImplantacaoRequest.model_validate(
+                {
+                    "quadro_implantacao_anotacoes": {
+                        "f0_a1": {"comentarios": [], "prazo_meta": "20260801"},
                     }
                 }
             )
@@ -83,6 +118,49 @@ class TestPatchQuadroImplantacaoRequest:
                             "prazo_meta": "",
                             "descricao_personalizada": longa,
                         },
+                    }
+                }
+            )
+
+    def test_merge_comentario_legado_quando_lista_vazia(self) -> None:
+        m = PatchQuadroImplantacaoRequest.model_validate(
+            {
+                "quadro_implantacao_anotacoes": {
+                    "f0_a0": {"comentario": "  Nota legada  ", "comentarios": []},
+                }
+            }
+        )
+        assert m.quadro_implantacao_anotacoes["f0_a0"].comentarios == ["Nota legada"]
+
+    def test_rejeita_comentarios_nao_lista(self) -> None:
+        """``field_validator(..., mode='before')`` com ``TypeError`` (Pydantic não envolve)."""
+        with pytest.raises(TypeError, match="lista de strings"):
+            PatchQuadroImplantacaoRequest.model_validate(
+                {
+                    "quadro_implantacao_anotacoes": {
+                        "f0_a0": {"comentarios": "não é lista", "prazo_meta": ""},
+                    }
+                }
+            )
+
+    def test_rejeita_mais_de_30_comentarios(self) -> None:
+        varios = [f"c{i}" for i in range(31)]
+        with pytest.raises(ValidationError, match="30"):
+            PatchQuadroImplantacaoRequest.model_validate(
+                {
+                    "quadro_implantacao_anotacoes": {
+                        "f0_a0": {"comentarios": varios, "prazo_meta": ""},
+                    }
+                }
+            )
+
+    def test_rejeita_comentario_item_longo(self) -> None:
+        longo = "x" * 2001
+        with pytest.raises(ValidationError, match="2000"):
+            PatchQuadroImplantacaoRequest.model_validate(
+                {
+                    "quadro_implantacao_anotacoes": {
+                        "f0_a0": {"comentarios": [longo], "prazo_meta": ""},
                     }
                 }
             )

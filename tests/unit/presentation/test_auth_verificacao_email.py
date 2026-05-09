@@ -1,6 +1,6 @@
 """Testes dos endpoints públicos de verificação de e-mail por OTP."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -111,6 +111,62 @@ def test_self_service_token_codigo_com_letras_400(client_smtp_ok: TestClient):
         json={"email": "a@b.c", "codigo": "1a3456"},
     )
     assert res.status_code == 400
+
+
+def test_solicitar_codigo_em_development_regista_log_diagnostico():
+    """Ramo ``app_env == development`` após envio SMTP bem-sucedido."""
+    mock_mail = AsyncMock()
+    mock_mail.enviar_codigo_verificacao_email.return_value = True
+    app.dependency_overrides[get_email_service] = lambda: mock_mail
+    dev_settings = MagicMock()
+    dev_settings.app_env = "development"
+    try:
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.get_settings",
+                return_value=dev_settings,
+            ),
+            patch("src.presentation.api.routers.auth_router.logger") as log_mock,
+        ):
+            client = TestClient(app)
+            res = client.post(
+                "/auth/verificar-email/solicitar",
+                json={"email": "devlog@otp.br"},
+            )
+        assert res.status_code == 200
+        chamadas_info = [c for c in log_mock.info.call_args_list if c.args]
+        assert any(c.args[0] == "email_verificacao_codigo_dev" for c in chamadas_info)
+    finally:
+        app.dependency_overrides.pop(get_email_service, None)
+
+
+def test_solicitar_codigo_em_production_nao_regista_log_diagnostico():
+    """Fora de ``development`` o evento ``email_verificacao_codigo_dev`` não deve ser emitido."""
+    mock_mail = AsyncMock()
+    mock_mail.enviar_codigo_verificacao_email.return_value = True
+    app.dependency_overrides[get_email_service] = lambda: mock_mail
+    prod_settings = MagicMock()
+    prod_settings.app_env = "production"
+    try:
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.get_settings",
+                return_value=prod_settings,
+            ),
+            patch("src.presentation.api.routers.auth_router.logger") as log_mock,
+        ):
+            client = TestClient(app)
+            res = client.post(
+                "/auth/verificar-email/solicitar",
+                json={"email": "prodlog@otp.br"},
+            )
+        assert res.status_code == 200
+        eventos = tuple(
+            c.args[0] for c in log_mock.info.call_args_list if c.args and isinstance(c.args[0], str)
+        )
+        assert "email_verificacao_codigo_dev" not in eventos
+    finally:
+        app.dependency_overrides.pop(get_email_service, None)
 
 
 def test_solicitar_falha_smtp_nao_registra_codigo():

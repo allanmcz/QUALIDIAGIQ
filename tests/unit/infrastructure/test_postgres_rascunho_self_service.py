@@ -59,8 +59,14 @@ class _FakeConn:
 
 
 class _ConnFactory:
-    def __init__(self, fetch_rows: list[dict[str, Any] | None]) -> None:
+    def __init__(
+        self,
+        fetch_rows: list[dict[str, Any] | None],
+        *,
+        execute_error: Exception | None = None,
+    ) -> None:
         self.fetch_rows = list(fetch_rows)
+        self.execute_error = execute_error
         self.executes: list[tuple[Any, ...]] = []
         self.committed = False
         self.rolled_back = False
@@ -69,6 +75,8 @@ class _ConnFactory:
         return _FakeConn(self)
 
     def on_execute(self, *args: object, **kwargs: object) -> None:
+        if self.execute_error is not None:
+            raise self.execute_error
         self.executes.append((args, kwargs))
 
     def on_fetchone(self) -> dict[str, Any] | None:
@@ -203,3 +211,29 @@ def test_marcar_consumido_executa_update(
     patch_psycopg2_connect(f)
     marcar_rascunho_consumido_sync("postgresql://test", UUID(str(uuid4())))
     assert f.committed is True
+
+
+def test_inserir_rascunho_rollback_quando_execute_falha(
+    monkeypatch: pytest.MonkeyPatch, patch_psycopg2_connect: Any
+) -> None:
+    f = _ConnFactory(fetch_rows=[], execute_error=RuntimeError("disc cheio"))
+    patch_psycopg2_connect(f)
+    with pytest.raises(RuntimeError, match="disc cheio"):
+        inserir_rascunho_sync(
+            "postgresql://test",
+            tenant_id=uuid4(),
+            email_norm="e@x.com",
+            payload_dict={},
+        )
+    assert f.rolled_back is True
+    assert f.committed is False
+
+
+def test_marcar_consumido_rollback_quando_execute_falha(
+    monkeypatch: pytest.MonkeyPatch, patch_psycopg2_connect: Any
+) -> None:
+    f = _ConnFactory(fetch_rows=[], execute_error=OSError("io"))
+    patch_psycopg2_connect(f)
+    with pytest.raises(OSError, match="io"):
+        marcar_rascunho_consumido_sync("postgresql://test", UUID(str(uuid4())))
+    assert f.rolled_back is True

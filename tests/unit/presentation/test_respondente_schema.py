@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from src.presentation.api.schemas import EmpresaSchema, IniciarDiagnosticoRequest
+from src.presentation.api.schemas import EmpresaSchema, IniciarDiagnosticoRequest, RespondenteSchema
 
 
 def _empresa_min() -> dict:
@@ -18,6 +18,23 @@ def _empresa_min() -> dict:
         "uf": "SP",
         "setor_macro": "comercio",
     }
+
+
+class TestIniciarDiagnosticoAceitePrivacidade:
+    """Checkbox LGPD obrigatório conforme wizard."""
+
+    def test_rejeita_aceite_termos_false(self) -> None:
+        with pytest.raises(ValidationError, match="privacidade"):
+            IniciarDiagnosticoRequest.model_validate(
+                {
+                    "empresa": _empresa_min(),
+                    "respondente": {"email": "a@b.com", "nome": "Maria"},
+                    "respostas": [
+                        {"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}
+                    ],
+                    "aceite_termos_privacidade": False,
+                }
+            )
 
 
 class TestRespondenteSchemaNomeObrigatorio:
@@ -62,6 +79,38 @@ class TestRespondenteSchemaNomeObrigatorio:
         assert body.respondente.nome == "Maria"
 
 
+class TestRespondenteTelefoneBr:
+    """Validador opcional BR (10/11 dígitos após limpeza)."""
+
+    def test_telefone_none_e_vazio_opcional(self) -> None:
+        r = RespondenteSchema(email="z@z.com", nome="N", telefone=None)
+        assert r.telefone is None
+        r2 = RespondenteSchema.model_validate({"email": "z@z.com", "nome": "N", "telefone": ""})
+        assert r2.telefone is None
+        r3 = RespondenteSchema.model_validate(
+            {"email": "z@z.com", "nome": "N", "telefone": " ()- "}
+        )
+        assert r3.telefone is None
+
+    def test_normaliza_fixo_dez_digitos(self) -> None:
+        r = RespondenteSchema.model_validate(
+            {"email": "z@z.com", "nome": "N", "telefone": "(11) 3456-7890"}
+        )
+        assert r.telefone == "1134567890"
+
+    def test_normaliza_celular_onze_digitos(self) -> None:
+        r = RespondenteSchema.model_validate(
+            {"email": "z@z.com", "nome": "N", "telefone": "11987654321"}
+        )
+        assert r.telefone == "11987654321"
+
+    def test_rejeita_digitos_forado_faixa_tipica(self) -> None:
+        with pytest.raises(ValidationError, match="10 ou 11"):
+            RespondenteSchema.model_validate(
+                {"email": "z@z.com", "nome": "N", "telefone": "123456789"}
+            )
+
+
 class TestEmpresaSchemaCnpjOpcional:
     """POST /diagnosticos: CNPJ opcional; se informado, DV válido (regra produto QDI)."""
 
@@ -86,4 +135,22 @@ class TestEmpresaSchemaCnpjOpcional:
         d = _empresa_min()
         d["cnpj"] = "1234567800019"
         with pytest.raises(ValidationError):
+            EmpresaSchema.model_validate(d)
+
+    def test_rejeita_cnpj_todos_digitos_iguais(self) -> None:
+        d = _empresa_min()
+        d["cnpj"] = "11.111.111/1111-11"
+        with pytest.raises(ValidationError, match="iguais"):
+            EmpresaSchema.model_validate(d)
+
+    def test_rejeita_cnpj_quatorze_digitos_com_dv_invalido(self) -> None:
+        d = _empresa_min()
+        d["cnpj"] = "12345678000190"
+        with pytest.raises(ValidationError, match="verificadores"):
+            EmpresaSchema.model_validate(d)
+
+    def test_rejeita_uf_fora_catalogo_ibge(self) -> None:
+        d = _empresa_min()
+        d["uf"] = "ZX"
+        with pytest.raises(ValidationError, match="UF"):
             EmpresaSchema.model_validate(d)

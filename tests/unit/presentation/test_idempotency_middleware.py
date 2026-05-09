@@ -6,14 +6,21 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from cachetools import TTLCache
 from fastapi.testclient import TestClient
+from starlette.applications import Starlette
+from starlette.datastructures import MutableHeaders
+from starlette.requests import Request
 
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
+from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
 from src.presentation.api.dependencies import (
     get_current_user_tenant,
     get_realizar_diagnostico_use_case,
 )
 from src.presentation.api.main import app
+from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
 from tests.conftest import cabecalho_auth_bearer
 
 client = TestClient(app)
@@ -242,8 +249,6 @@ def test_post_diagnostico_aceita_header_idempotency_key_minusculo() -> None:
 
 def test_post_diagnostico_replay_via_postgres_engine_curto_circuito() -> None:
     """Com ``app.state.idempotency_engine``, o hit vem de ``idempotency_get`` (thread)."""
-    from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
-
     cached = CorpoCacheadoIdempotencia(
         status_code=201,
         body=b'{"ok":true,"id":"00000000-0000-0000-0000-000000000001"}',
@@ -288,3 +293,263 @@ def test_post_diagnostico_replay_via_postgres_engine_curto_circuito() -> None:
 def test_get_health_nao_exige_idempotency_key() -> None:
     r = client.get("/health")
     assert r.status_code == 200
+
+
+def test_post_diagnostico_chama_idempotency_put_quando_engine_postgres() -> None:
+    """Após 2xx, o middleware persiste o corpo em ``idempotency_put`` (thread síncrona)."""
+    mock_put = MagicMock()
+    prev_engine = getattr(app.state, "idempotency_engine", None)
+    engine_holder = MagicMock()
+    app.state.idempotency_engine = engine_holder
+    app.state.idempotency_ttl_seconds = 120
+
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    mock_uc = _mock_use_case_sucesso()
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    headers = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+    }
+
+    async def to_thread_eager(fn: object, /, *args: object, **kwargs: object) -> object:
+        return fn(*args, **kwargs)
+
+    try:
+        with (
+            patch(
+                "src.infrastructure.idempotency.postgres_backend.idempotency_get",
+                return_value=None,
+            ),
+            patch(
+                "src.infrastructure.idempotency.postgres_backend.idempotency_put",
+                mock_put,
+            ),
+            patch(
+                "src.presentation.api.middleware.idempotency.asyncio.to_thread",
+                side_effect=to_thread_eager,
+            ),
+        ):
+            r = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+        if prev_engine is None:
+            delattr(app.state, "idempotency_engine")
+        else:
+            app.state.idempotency_engine = prev_engine
+
+    assert r.status_code == 201
+    mock_put.assert_called_once()
+    args_put = mock_put.call_args[0]
+    assert args_put[0] is engine_holder
+    assert args_put[3] == 120
+    assert args_put[4] == tid
+
+
+def _starlette_app_sem_engine_postgres() -> Starlette:
+    """App mínimo com estado esperado pelo middleware (cache em memória)."""
+    app = Starlette()
+    app.state.idempotency_engine = None
+    app.state.idempotency_ttl_seconds = 3600
+    return app
+
+
+def _scope_post_diagnosticos(
+    starlette_app: Starlette,
+    header_pairs: list[tuple[bytes, bytes]],
+    *,
+    client_host: tuple[str, int] | None = ("127.0.0.1", 3333),
+) -> dict[str, object]:
+    scope: dict[str, object] = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "path": "/diagnosticos/",
+        "raw_path": b"/diagnosticos/",
+        "query_string": b"",
+        "headers": header_pairs,
+        "scheme": "http",
+        "server": ("test", 80),
+        "app": starlette_app,
+    }
+    if client_host is not None:
+        scope["client"] = client_host
+    return scope
+
+
+@pytest.mark.asyncio
+async def test_dispatch_extrai_corpo_via_body_quando_sem_body_iterator() -> None:
+    """Resposta sem ``body_iterator`` (objeto legado) deve usar ``body`` — ramo else."""
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"88888888-8888-8888-8888-888888888888"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class RespostaSoBody:
+        """ASGI legado / mock sem iterador — só ``body`` bytes."""
+
+        status_code = 201
+        media_type = "application/json"
+        body = b'{"via":"body"}'
+        headers = MutableHeaders({"content-type": "application/json"})
+
+    async def call_next(_: Request) -> RespostaSoBody:
+        return RespostaSoBody()
+
+    async def receive() -> dict[str, object]:  # pragma: no cover — ASGI mínimo
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.status_code == 201
+    assert resp.body == b'{"via":"body"}'
+
+
+@pytest.mark.asyncio
+async def test_dispatch_corpo_nao_bytes_converte_bytes() -> None:
+    """``body`` não-``bytes`` (ex.: ``bytearray``) deve passar por ``bytes(raw)``."""
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"77777777-7777-7777-7777-777777777777"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class RespostaBytearray:
+        status_code = 200
+        media_type = "application/json"
+        body = bytearray(b'{"bb":1}')
+        headers = MutableHeaders({"content-type": "application/json"})
+
+    async def call_next(_: Request) -> RespostaBytearray:
+        return RespostaBytearray()
+
+    async def receive() -> dict[str, object]:  # pragma: no cover
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.body == b'{"bb":1}'
+
+
+@pytest.mark.asyncio
+async def test_dispatch_agrega_chunks_do_body_iterator() -> None:
+    """Ramo ``async for`` sobre ``body_iterator`` (resposta streaming típica)."""
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"66666666-6666-6666-6666-666666666666"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class RespostaChunked:
+        status_code = 201
+        media_type = "application/json"
+        headers = MutableHeaders({"content-type": "application/json"})
+
+        def __init__(self) -> None:
+            async def _gen() -> object:
+                yield b'{"st":'
+                yield b'"ok"}'
+
+            self.body_iterator = _gen()
+
+    async def call_next(_: Request) -> RespostaChunked:
+        return RespostaChunked()
+
+    async def receive() -> dict[str, object]:  # pragma: no cover
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.body == b'{"st":"ok"}'
+
+
+@pytest.mark.asyncio
+async def test_dispatch_body_iterator_sem_chunks_corpo_vazio() -> None:
+    """Iterador presente mas sem iterações — cobre saída imediata do ``async for``."""
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"44444444-4444-4444-4444-444444444444"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class RespostaIteratorVazio:
+        status_code = 200
+        media_type = "application/json"
+        headers = MutableHeaders({"content-type": "application/json"})
+
+        def __init__(self) -> None:
+            async def _sem_chunks() -> None:
+                if False:  # pragma: no cover — mantém generator assíncrono vazio
+                    yield b""
+
+            self.body_iterator = _sem_chunks()
+
+    async def call_next(_: Request) -> RespostaIteratorVazio:
+        return RespostaIteratorVazio()
+
+    async def receive() -> dict[str, object]:  # pragma: no cover
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.body == b""
+
+
+@pytest.mark.asyncio
+async def test_dispatch_sem_body_nem_iterator_corpo_vazio() -> None:
+    """``body_iterator`` ausente e ``body`` None → corpo permanece vazio (limite)."""
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"55555555-5555-5555-5555-555555555555"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class RespostaVazia:
+        status_code = 204
+        media_type = None
+        body = None
+        headers = MutableHeaders()
+
+    async def call_next(_: Request) -> RespostaVazia:
+        return RespostaVazia()
+
+    async def receive() -> dict[str, object]:  # pragma: no cover
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.body == b""

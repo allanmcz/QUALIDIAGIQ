@@ -36,6 +36,47 @@ def test_lifespan_cria_engine_quando_database_url(
         mock_ce.return_value.dispose.assert_called_once()
 
 
+def test_instrumentar_otel_console_sem_endpoint(
+    clear_settings_cache: None,
+) -> None:
+    """Ramificação ``else``: ConsoleSpanExporter quando não há OTLP endpoint."""
+    fake_settings = MagicMock()
+    fake_settings.otel_exporter_otlp_endpoint = ""
+    fake_settings.otel_exporter_otlp_headers = None
+    fake_settings.otel_service_name = "qdi-console-smoke"
+
+    mock_provider = MagicMock()
+    processor_cls = MagicMock()
+
+    with (
+        patch(
+            "opentelemetry.sdk.trace.TracerProvider",
+            return_value=mock_provider,
+        ),
+        patch("opentelemetry.trace.set_tracer_provider") as mock_set,
+        patch(
+            "opentelemetry.instrumentation.fastapi.FastAPIInstrumentor.instrument_app",
+        ) as mock_instr,
+        patch(
+            "opentelemetry.sdk.trace.export.BatchSpanProcessor",
+            processor_cls,
+        ),
+        patch(
+            "opentelemetry.sdk.trace.export.ConsoleSpanExporter",
+            return_value=MagicMock(),
+        ) as mock_console,
+    ):
+        from src.presentation.api.main import _instrumentar_otel
+
+        dummy_app = MagicMock()
+        _instrumentar_otel(dummy_app, fake_settings)
+
+    mock_console.assert_called_once()
+    mock_instr.assert_called_once_with(dummy_app)
+    processor_cls.assert_called_once()
+    mock_set.assert_called_once_with(mock_provider)
+
+
 def test_instrumenar_otel_com_otlp_endpoint(
     monkeypatch: pytest.MonkeyPatch,
     clear_settings_cache: None,
@@ -107,6 +148,14 @@ def test_parse_otlp_headers_parseia_pares_csv() -> None:
     assert headers is not None
     assert headers.get("k") == "v"
     assert headers.get("token") == "abc"
+
+
+def test_parse_otlp_headers_ignora_partes_sem_igual_retorna_so_validas() -> None:
+    assert _parse_otlp_headers("só-lixo,key=ok") == {"key": "ok"}
+
+
+def test_parse_otlp_headers_somentes_invalidas_retorna_none() -> None:
+    assert _parse_otlp_headers("a,b,c") is None
 
 
 @pytest.mark.anyio

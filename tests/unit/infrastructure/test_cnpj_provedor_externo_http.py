@@ -147,3 +147,144 @@ async def test_fallback_minha_receita_tambem_falha() -> None:
         pytest.raises(RuntimeError, match="Indisponível"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+
+
+@pytest.mark.asyncio
+async def test_rede_brasil_dispara_fallback() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mr_payload = {"cnpj": "33014556000196", "razao_social": "Z", "cnae_fiscal": 4711302, "uf": "RJ"}
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(
+        side_effect=[httpx.RequestError("sem rede"), _resp(200, mr_payload)],
+    )
+
+    with patch(
+        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        _d, fonte, _st, _ms = await adapter.buscar_cnpj("33014556000196")
+    assert fonte == "minha_receita"
+
+
+@pytest.mark.asyncio
+async def test_429_dispara_fallback() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mr_payload = {"cnpj": "33014556000196", "razao_social": "Z", "cnae_fiscal": 4711302, "uf": "RJ"}
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(side_effect=[_resp(429), _resp(200, mr_payload)])
+
+    with patch(
+        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        _d, fonte, _st, _ms = await adapter.buscar_cnpj("33014556000196")
+    assert fonte == "minha_receita"
+
+
+@pytest.mark.asyncio
+async def test_brasil_json_invalido() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    bad = MagicMock()
+    bad.status_code = 200
+    bad.json.side_effect = ValueError("não é JSON")
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(return_value=bad)
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        pytest.raises(ValueError, match="JSON válido"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")
+
+
+@pytest.mark.asyncio
+async def test_brasil_payload_nao_dict() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    bad = _resp(200, {})  # overwritten below
+    bad.json.return_value = ["lista"]
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(return_value=bad)
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        pytest.raises(ValueError, match="Payload BrasilAPI"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")
+
+
+@pytest.mark.asyncio
+async def test_fallback_mr_http_400() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(side_effect=[_resp(503), _resp(404)])
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        pytest.raises(RuntimeError, match="Minha Receita falhou com HTTP 404"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")
+
+
+@pytest.mark.asyncio
+async def test_fallback_mr_json_invalido() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mr_bad = MagicMock()
+    mr_bad.status_code = 200
+    mr_bad.json.side_effect = ValueError("bad json")
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(side_effect=[_resp(503), mr_bad])
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        pytest.raises(RuntimeError, match="Minha Receita não retornou JSON"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")
+
+
+@pytest.mark.asyncio
+async def test_fallback_mr_payload_nao_dict() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mr_bad = MagicMock()
+    mr_bad.status_code = 200
+    mr_bad.json.return_value = None
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(side_effect=[_resp(503), mr_bad])
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        pytest.raises(RuntimeError, match="Payload Minha Receita"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")

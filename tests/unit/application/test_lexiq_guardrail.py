@@ -22,6 +22,19 @@ def test_detecta_nt() -> None:
     assert texto_tem_ancora_normativa("Campo NT 2025.002.") is True
 
 
+def test_detecta_lc225() -> None:
+    assert texto_tem_ancora_normativa("Conforme LC 225/2026.") is True
+
+
+def test_detecta_iso37301_case_insensitive() -> None:
+    assert texto_tem_ancora_normativa("ABNT NBR ISO 37301 governança.") is True
+
+
+def test_texto_vazio_rejeita() -> None:
+    assert texto_tem_ancora_normativa("") is False
+    assert texto_tem_ancora_normativa("   ") is False
+
+
 def test_rejeita_sem_fonte() -> None:
     assert texto_tem_ancora_normativa("Melhore seus processos tributários.") is False
 

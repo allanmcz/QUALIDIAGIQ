@@ -104,3 +104,54 @@ def test_buscar_conclusao_com_token_retorna_linha(mock_conn: MagicMock) -> None:
     assert out is not None
     assert out["empresa_razao_social"] == "Empresa Mock"
     mock_conn.close.assert_called_once()
+
+
+def test_inserir_leitura_rollback_quando_execute_falha(mock_conn: MagicMock) -> None:
+    cur = mock_conn.cursor.return_value.__enter__.return_value
+    cur.execute.side_effect = RuntimeError("insert falhou")
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_leitura_publica_self_service.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        pytest.raises(RuntimeError, match="insert falhou"),
+    ):
+        inserir_leitura_publica_self_service_sync("postgresql://test", uuid4(), uuid4())
+
+    mock_conn.rollback.assert_called_once()
+    mock_conn.close.assert_called_once()
+
+
+def test_buscar_conclusao_token_ok_mas_diagnostico_sumiu(mock_conn: MagicMock) -> None:
+    """Token válido na primeira query mas linha em ``diagnosticos`` ausente."""
+    diag_id = uuid4()
+    tenant_id = uuid4()
+
+    cur1 = MagicMock()
+    cur1.fetchone.return_value = {"ok": 1}
+    cm1 = MagicMock()
+    cm1.__enter__.return_value = cur1
+    cm1.__exit__.return_value = False
+
+    cur2 = MagicMock()
+    cur2.fetchone.return_value = None
+    cm2 = MagicMock()
+    cm2.__enter__.return_value = cur2
+    cm2.__exit__.return_value = False
+
+    mock_conn.cursor.side_effect = [cm1, cm2]
+
+    with patch(
+        "src.infrastructure.repositories.postgres_diagnostico_leitura_publica_self_service.psycopg2.connect",
+        return_value=mock_conn,
+    ):
+        out = buscar_diagnostico_conclusao_publica_sync(
+            "postgresql://test",
+            diagnostico_id=diag_id,
+            tenant_id_esperado=tenant_id,
+            token_plain="z" * 32,
+        )
+
+    assert out is None
+    mock_conn.close.assert_called_once()

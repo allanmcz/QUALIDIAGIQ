@@ -7,6 +7,7 @@ import pytest
 from src.application.ports.base_normativa_port import BaseNormativaPort, ChunkNormativo
 from src.application.services.lexiq_guardrail import (
     filtrar_resposta_recomendacao_llm,
+    mensagem_rejeicao_guardrail,
     validar_ancora_normativa_rag,
 )
 
@@ -58,6 +59,13 @@ class TestValidarAncoraNormativaRag:
         assert not v.aceito
         assert v.motivo == "score_abaixo_threshold"
 
+    @pytest.mark.asyncio
+    async def test_texto_vazio_retorna_motivo_texto_vazio(self) -> None:
+        port = _PortFake([])
+        v = await validar_ancora_normativa_rag("  ", port, threshold=0.65)
+        assert not v.aceito
+        assert v.motivo == "texto_vazio"
+
 
 class TestFiltrarRespostaRecomendacaoLlm:
     """Integração regex vs RAG em ``filtrar_resposta_recomendacao_llm``."""
@@ -81,3 +89,59 @@ class TestFiltrarRespostaRecomendacaoLlm:
             rag_threshold=0.5,
         )
         assert "Melhore governança" in out
+
+    @pytest.mark.asyncio
+    async def test_texto_vazio_retorna_mensagem_rejeicao(self) -> None:
+        out = await filtrar_resposta_recomendacao_llm(
+            "   ",
+            base_normativa_port=None,
+        )
+        assert out == mensagem_rejeicao_guardrail()
+
+    @pytest.mark.asyncio
+    async def test_rag_rejeita_mas_regex_salva_com_ancora(self) -> None:
+        port = _PortFake([ChunkNormativo(texto="fraco", score=0.1, fonte="x")])
+        texto = "Planejar transição conforme LC 214/2025."
+        out = await filtrar_resposta_recomendacao_llm(
+            texto,
+            base_normativa_port=port,
+            rag_threshold=0.65,
+        )
+        assert out == texto.strip()
+
+    @pytest.mark.asyncio
+    async def test_erro_no_rag_cai_no_fallback_regex(self) -> None:
+        class _PortQuebra(BaseNormativaPort):
+            async def buscar_contexto(
+                self,
+                query: str,
+                *,
+                top_k: int = 3,
+                threshold: float = 0.0,
+            ) -> list[ChunkNormativo]:
+                raise RuntimeError("falha pgvector fictícia")
+
+        texto = "Ver LC 214/2025."
+        out = await filtrar_resposta_recomendacao_llm(
+            texto,
+            base_normativa_port=_PortQuebra(),
+        )
+        assert out == texto
+
+    @pytest.mark.asyncio
+    async def test_erro_no_rag_sem_regex_retorna_rejeicao(self) -> None:
+        class _PortQuebra(BaseNormativaPort):
+            async def buscar_contexto(
+                self,
+                query: str,
+                *,
+                top_k: int = 3,
+                threshold: float = 0.0,
+            ) -> list[ChunkNormativo]:
+                raise RuntimeError("indisponível")
+
+        out = await filtrar_resposta_recomendacao_llm(
+            "Texto sem referência normativa reconhecível.",
+            base_normativa_port=_PortQuebra(),
+        )
+        assert out == mensagem_rejeicao_guardrail()

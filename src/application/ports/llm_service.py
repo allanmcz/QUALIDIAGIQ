@@ -12,4 +12,4 @@ class LlmServicePort(Protocol):
         Recebe o contexto da empresa (respostas, pontuações) e a base normativa
         e devolve um parágrafo/texto em markdown com a recomendação da IA.
         """
-        ...
+        ...  # pragma: no cover

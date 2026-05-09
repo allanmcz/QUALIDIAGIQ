@@ -320,11 +320,9 @@ class QuadroImplantacaoAnotacaoItemSchema(BaseModel):
 
     @field_validator("descricao_personalizada")
     @classmethod
-    def descricao_personalizada_tamanho(cls, v: str) -> str:
-        s = (v or "").strip()
-        if len(s) > 4000:
-            raise ValueError("descricao_personalizada deve ter no máximo 4000 caracteres.")
-        return s
+    def descricao_personalizada_strip(cls, v: str) -> str:
+        """Normaliza whitespace; teto 4000 vem de ``Field(max_length=...)`` (evita duplicar erro)."""
+        return (v or "").strip()
 
     @model_validator(mode="after")
     def merge_comentario_legado_em_lista(self) -> Self:

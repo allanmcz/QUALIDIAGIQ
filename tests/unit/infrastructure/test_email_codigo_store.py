@@ -30,3 +30,24 @@ class TestCodigoStoreEmail:
 
     def test_normalizar_email(self):
         assert codigo_store.normalizar_email(" X@Y.Z ") == "x@y.z"
+
+    def test_pode_reenviar_false_antes_intervalo(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ramo quando último envio foi há menos de ``_RATE_SEGUNDOS`` segundos."""
+        em = codigo_store.normalizar_email("cooldown@test.br")
+        with codigo_store._lock:
+            codigo_store._ultimo_envio[em] = 1_000_000.0
+        monkeypatch.setattr(
+            "src.infrastructure.email_verificacao.codigo_store.time.monotonic",
+            lambda: 1_000_000.0 + 10.0,
+        )
+        assert codigo_store.pode_reenviar(em) is False
+
+    def test_pode_reenviar_true_apos_intervalo(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        em = codigo_store.normalizar_email("liberado@test.br")
+        with codigo_store._lock:
+            codigo_store._ultimo_envio[em] = 1_000_000.0
+        monkeypatch.setattr(
+            "src.infrastructure.email_verificacao.codigo_store.time.monotonic",
+            lambda: 1_000_000.0 + 50.0,
+        )
+        assert codigo_store.pode_reenviar(em) is True

@@ -63,3 +63,78 @@ def test_producao_config_valida(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings()
     assert s.supabase_url.startswith("https://")
     assert len(s.jwt_secret_key.get_secret_value()) >= 32
+
+
+def test_development_jwt_curto_normaliza_para_segredo_local(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("JWT_SECRET_KEY", "curto")
+    s = Settings()
+    assert len(s.jwt_secret_key.get_secret_value()) >= 32
+    assert "dev-only-secret" in s.jwt_secret_key.get_secret_value()
+
+
+def test_jwt_curto_ambiente_nao_development_lanca(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("JWT_SECRET_KEY", "curto")
+    with pytest.raises(ValueError, match="32"):
+        Settings()
+
+
+def test_producao_rejeita_smtp_localhost(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("SMTP_HOST", "localhost")
+    with pytest.raises(ValueError, match="localhost"):
+        Settings()
+
+
+def test_producao_rejeita_smtp_ipv6_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("SMTP_HOST", "::1")
+    with pytest.raises(ValueError, match="ambiente local"):
+        Settings()
+
+
+def test_ci_playwright_integrado_em_producao_proibido(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("QDI_CI_PLAYWRIGHT_INTEGRATED", "true")
+    with pytest.raises(ValueError, match="development"):
+        Settings()
+
+
+def test_ci_playwright_integrado_exige_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("JWT_SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("QDI_CI_PLAYWRIGHT_INTEGRATED", "true")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    with pytest.raises(ValueError, match="DATABASE_URL"):
+        Settings()
+
+
+def test_sync_database_url_none_sem_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "k" * 32)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    s = Settings()
+    assert s.sync_database_url is None
+
+
+def test_sync_database_url_mysql_retorna_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("DATABASE_URL", "mysql://user@host/db")
+    s = Settings()
+    assert s.sync_database_url is None
+
+
+def test_sync_database_url_postgresql_puro_preservado(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@db.example:5432/app")
+    s = Settings()
+    assert s.sync_database_url == "postgresql://u:p@db.example:5432/app"
+
+
+def test_sync_database_url_asyncpg_convertido(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@db.example:5432/app")
+    s = Settings()
+    assert s.sync_database_url == "postgresql://u:p@db.example:5432/app"

@@ -1,0 +1,248 @@
+"""Testes unitários — ``RealizarDiagnostico`` (orquestração sem I/O real)."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock
+from uuid import uuid4
+
+import pytest
+
+from src.application.ports.base_normativa_port import ChunkNormativo
+from src.application.services.cnpj_consulta_service import ConsultaCnpjMaterializada
+from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
+from src.application.use_cases.realizar_diagnostico import (
+    ComandoRealizarDiagnostico,
+    EntradaRespostaDiagnostico,
+    RealizarDiagnostico,
+)
+from src.domain.entities.diagnostico import (
+    EmpresaInfo,
+    PlanoDiagnostico,
+    PorteEmpresa,
+    RegimeTributario,
+    Respondente,
+    SetorMacro,
+)
+from src.domain.entities.questionario import Pergunta, TipoPergunta
+from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.score import Dimensao
+from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
+    EmbutidasNormativaScoreMacroRepository,
+)
+
+
+def _pergunta_fiscal() -> Pergunta:
+    return Pergunta(
+        codigo="Q-FISC-T",
+        dimensao=Dimensao.FISCAL,
+        texto="Teste",
+        peso=1.0,
+        tipo=TipoPergunta.TERNARIA,
+    )
+
+
+def _empresa_com_cnpj() -> EmpresaInfo:
+    return EmpresaInfo(
+        cnpj="33014556000196",
+        razao_social="ACME",
+        porte=PorteEmpresa.MICRO,
+        regime=RegimeTributario.SIMPLES_NACIONAL,
+        cnae_principal="4711302",
+        uf="SP",
+        setor_macro=SetorMacro.COMERCIO,
+    )
+
+
+def _plano_vazio() -> PlanoPainelSerializado:
+    return PlanoPainelSerializado(
+        versao_plano=1,
+        checklist=(),
+        matriz_impacto=(),
+        cronograma=(),
+    )
+
+
+def _comando_base(
+    *,
+    aceite: bool = True,
+    plano: str = "gratuito",
+    force_refresh_cnpj: bool = False,
+    empresa: EmpresaInfo | None = None,
+) -> ComandoRealizarDiagnostico:
+    p = _pergunta_fiscal()
+    return ComandoRealizarDiagnostico(
+        tenant_id=uuid4(),
+        empresa=empresa or _empresa_com_cnpj(),
+        respondente=Respondente(email="resp@teste.br", nome="Resp"),
+        entradas_resposta=[
+            EntradaRespostaDiagnostico(pergunta=p, valor_bruto="sim"),
+        ],
+        plano=plano,
+        aceite_termos_privacidade=aceite,
+        force_refresh_cnpj=force_refresh_cnpj,
+    )
+
+
+@pytest.fixture
+def calcular_real() -> CalcularScoreUseCase:
+    return CalcularScoreUseCase(normativa_repo=EmbutidasNormativaScoreMacroRepository())
+
+
+@pytest.mark.asyncio
+async def test_force_refresh_cnpj_sem_servico_levanta(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        cnpj_consulta_service=None,
+    )
+    cmd = _comando_base(force_refresh_cnpj=True)
+    with pytest.raises(ValueError, match="force_refresh_cnpj"):
+        await uc.execute(cmd)
+    repo.salvar_e_materializar_plano_painel.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_aceite_termos_false_levanta(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    uc = RealizarDiagnostico(repo=repo, calcular_score_use_case=calcular_real)
+    cmd = _comando_base(aceite=False)
+    with pytest.raises(ValueError, match="aceite dos termos"):
+        await uc.execute(cmd)
+
+
+@pytest.mark.asyncio
+async def test_plano_desconhecido_cai_gratuito(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    uc = RealizarDiagnostico(repo=repo, calcular_score_use_case=calcular_real)
+    cmd = _comando_base(plano="plano_inexistente_xyz")
+    res = await uc.execute(cmd)
+    assert res.diagnostico.plano == PlanoDiagnostico.GRATUITO
+
+
+@pytest.mark.asyncio
+async def test_llm_so_ancora_fixa_sem_port_normativa(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    llm = AsyncMock()
+    llm.gerar_recomendacao = AsyncMock(return_value="Sugestão IA")
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_service=llm,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert res.recomendacao_ia == "Sugestão IA"
+    llm.gerar_recomendacao.assert_awaited_once()
+    ctx = llm.gerar_recomendacao.call_args.kwargs["base_normativa"]
+    assert "EC 132/2023" in ctx
+    assert "LC 214/2025" in ctx
+
+
+@pytest.mark.asyncio
+async def test_llm_com_port_sem_chunks_mantem_ancora(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    llm = AsyncMock()
+    llm.gerar_recomendacao = AsyncMock(return_value="ok")
+    norm = AsyncMock()
+    norm.buscar_contexto = AsyncMock(return_value=[])
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_service=llm,
+        base_normativa_port=norm,
+    )
+    await uc.execute(_comando_base())
+    norm.buscar_contexto.assert_awaited_once()
+    base = llm.gerar_recomendacao.call_args.kwargs["base_normativa"]
+    assert "EC 132/2023" in base
+    assert "trecho-rag" not in base
+
+
+@pytest.mark.asyncio
+async def test_llm_com_chunks_injeta_rag(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    llm = AsyncMock()
+    llm.gerar_recomendacao = AsyncMock(return_value="ok")
+    norm = AsyncMock()
+    norm.buscar_contexto = AsyncMock(
+        return_value=[ChunkNormativo(texto="trecho-rag LC 214", score=0.9, fonte="lexiq")]
+    )
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_service=llm,
+        base_normativa_port=norm,
+    )
+    await uc.execute(_comando_base())
+    base = llm.gerar_recomendacao.call_args.kwargs["base_normativa"]
+    assert "trecho-rag LC 214" in base
+
+
+@pytest.mark.asyncio
+async def test_pdf_storage_e_email_quando_configurado(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    pdf = AsyncMock()
+    pdf.gerar_pdf_diagnostico = AsyncMock(return_value=b"%PDF-1.4 fake")
+    storage = AsyncMock()
+    storage.upload_pdf = AsyncMock(return_value="https://storage.example/r.pdf")
+    email = AsyncMock()
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        pdf_generator=pdf,
+        storage_service=storage,
+        email_service=email,
+    )
+    res = await uc.execute(_comando_base())
+    assert res.relatorio_pdf_url == "https://storage.example/r.pdf"
+    pdf.gerar_pdf_diagnostico.assert_awaited_once()
+    storage.upload_pdf.assert_awaited_once()
+    email.enviar_email_com_relatorio.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_force_refresh_chama_materializar_e_propaga_historico(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    exp = datetime.now(UTC) + timedelta(hours=1)
+    mat = ConsultaCnpjMaterializada(
+        consulta_id=uuid4(),
+        cnpj_14="33014556000196",
+        payload_bruto={"razao_social": "Nova Razão Oficial"},
+        payload_canonico={
+            "cnpj": "33014556000196",
+            "razao_social": "Nova Razão Oficial",
+            "cnae_principal": "4711302",
+            "uf": "SP",
+            "porte": "micro",
+            "regime": "simples_nacional",
+            "setor_macro": "comercio",
+        },
+        fonte="brasil_api",
+        expira_cadastral_at=exp,
+        expira_qualificacao_at=exp,
+        expira_situacao_at=exp,
+    )
+    cnpj_svc = AsyncMock()
+    cnpj_svc.materializar_consulta = AsyncMock(return_value=mat)
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        cnpj_consulta_service=cnpj_svc,
+    )
+    await uc.execute(_comando_base(force_refresh_cnpj=True))
+    cnpj_svc.materializar_consulta.assert_awaited_once()
+    kw = repo.salvar_e_materializar_plano_painel.call_args.kwargs
+    assert kw["cnpj_consulta_id"] == mat.consulta_id
+    hist = kw["historico_campos_empresa_cnpj"]
+    assert hist is not None
+    assert any(h[0] == "empresa_razao_social" for h in hist)

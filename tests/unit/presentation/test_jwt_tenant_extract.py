@@ -30,6 +30,26 @@ def test_nil_bearer_sem_token_apos_prefixo() -> None:
     assert tenant_id_from_bearer_authorization("Bearer   ", _JWT_SECRET, _ALGO) == NIL_TENANT_ID
 
 
+def test_nil_bearer_so_espacos_apos_prefixo_explicito() -> None:
+    """Após prefixo Bearer, remainder vazio (só espaços) ⇒ NIL sem decode."""
+    assert (
+        tenant_id_from_bearer_authorization("Bearer \n\t\r  ", _JWT_SECRET, _ALGO) == NIL_TENANT_ID
+    )
+
+
+def test_nil_bearer_sem_espaco_apos_literal_bearer() -> None:
+    """Sem ``'bearer '`` (espaço obrigatório) o header falha antes do parse do JWT."""
+    assert tenant_id_from_bearer_authorization("Bearer", _JWT_SECRET, _ALGO) == NIL_TENANT_ID
+
+
+def test_nil_jwt_invalido_exceto_decode_pyjwt() -> None:
+    """Token presente mas inválido — ``jwt.decode`` levanta (bloco ``except``)."""
+    assert (
+        tenant_id_from_bearer_authorization("Bearer nao.um.jwt", _JWT_SECRET, _ALGO)
+        == NIL_TENANT_ID
+    )
+
+
 def test_nil_jwt_sem_claim_tenant_id() -> None:
     token = jwt.encode({"sub": str(uuid.uuid4())}, _JWT_SECRET, algorithm="HS256")
     assert (

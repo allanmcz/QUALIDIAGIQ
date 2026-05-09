@@ -139,3 +139,39 @@ class TestCalcularScoreUseCase:
         ]
         with pytest.raises(ValueError, match=r"falta a dimensão"):
             use_case.execute(perguntas=perguntas_mock, respostas=respostas)
+
+    def test_rejeita_quando_todas_respostas_nao_se_aplica(self, perguntas_mock):
+        """Todas as perguntas excluídas da média ⇒ nenhuma dimensão com peso aplicado (motor M03)."""
+        duas_ternarias = [
+            perguntas_mock[0],
+            Pergunta(
+                id=uuid.UUID("00000000-0000-0000-0000-000000000099"),
+                codigo="Q-FISC-002",
+                dimensao=Dimensao.FISCAL,
+                texto="Fiscal 2",
+                peso=3.0,
+                tipo=TipoPergunta.TERNARIA,
+            ),
+        ]
+        use_case = _motor_padrao()
+        diag_id = uuid.uuid4()
+        respostas = [
+            Resposta(
+                diagnostico_id=diag_id,
+                pergunta_id=duas_ternarias[0].id,
+                pergunta_tipo=TipoPergunta.TERNARIA,
+                valor_bruto="nao_se_aplica",
+            ),
+            Resposta(
+                diagnostico_id=diag_id,
+                pergunta_id=duas_ternarias[1].id,
+                pergunta_tipo=TipoPergunta.TERNARIA,
+                valor_bruto="nao_se_aplica",
+            ),
+        ]
+        with pytest.raises(ValueError, match="Nenhuma dimensão obteve score"):
+            use_case.execute(
+                perguntas=duas_ternarias,
+                respostas=respostas,
+                data_referencia_normativa=date(2026, 5, 1),
+            )

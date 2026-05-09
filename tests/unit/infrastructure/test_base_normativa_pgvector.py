@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import asyncpg.exceptions
 import pytest
 
 from src.infrastructure.adapters.base_normativa_pgvector import (
@@ -46,6 +47,40 @@ async def test_embedding_openai_extrai_vetor() -> None:
 async def test_embedding_openai_texto_vazio_lanca() -> None:
     with pytest.raises(ValueError, match="vazio"):
         await _embedding_openai("  ", api_key="k", model="m")
+
+
+@pytest.mark.asyncio
+async def test_embedding_openai_sem_lista_data_runtime_error() -> None:
+    fake_resp = MagicMock()
+    fake_resp.raise_for_status = MagicMock()
+    fake_resp.json = MagicMock(return_value={"data": []})
+    mock_client = MagicMock()
+    mock_client.post = AsyncMock(return_value=fake_resp)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        pytest.raises(RuntimeError, match="sem data"),
+    ):
+        await _embedding_openai("x", api_key="sk", model="m")
+
+
+@pytest.mark.asyncio
+async def test_embedding_openai_embedding_invalido_runtime_error() -> None:
+    fake_resp = MagicMock()
+    fake_resp.raise_for_status = MagicMock()
+    fake_resp.json = MagicMock(return_value={"data": [{"embedding": "não-lista"}]})
+    mock_client = MagicMock()
+    mock_client.post = AsyncMock(return_value=fake_resp)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        pytest.raises(RuntimeError, match="embedding inválido"),
+    ):
+        await _embedding_openai("x", api_key="sk", model="m")
 
 
 @pytest.mark.asyncio
@@ -95,3 +130,92 @@ async def test_pgvector_adapter_query_vazia_retorna_lista_vazia() -> None:
     )
     out = await ad.buscar_contexto("   ", top_k=3)
     assert out == []
+
+
+@pytest.mark.asyncio
+async def test_pgvector_adapter_embedding_falha_retorna_vazio() -> None:
+    fake_conn = MagicMock()
+    fake_conn.fetch = AsyncMock()
+    fake_conn.close = AsyncMock()
+
+    with (
+        patch(
+            "src.infrastructure.adapters.base_normativa_pgvector._embedding_openai",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("API fora"),
+        ),
+        patch(
+            "src.infrastructure.adapters.base_normativa_pgvector.asyncpg.connect",
+            new_callable=AsyncMock,
+            return_value=fake_conn,
+        ),
+    ):
+        ad = PgvectorBaseNormativaAdapter(
+            dsn="postgresql://u:p@localhost:5432/db",
+            openai_api_key="sk",
+        )
+        out = await ad.buscar_contexto("imposto", top_k=3)
+
+    assert out == []
+    fake_conn.fetch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_pgvector_adapter_fetch_falha_retorna_vazio() -> None:
+    fake_conn = MagicMock()
+    fake_conn.fetch = AsyncMock(side_effect=asyncpg.exceptions.PostgresError("vector"))
+    fake_conn.close = AsyncMock()
+
+    with (
+        patch(
+            "src.infrastructure.adapters.base_normativa_pgvector._embedding_openai",
+            new_callable=AsyncMock,
+            return_value=[0.1, 0.2],
+        ),
+        patch(
+            "src.infrastructure.adapters.base_normativa_pgvector.asyncpg.connect",
+            new_callable=AsyncMock,
+            return_value=fake_conn,
+        ),
+    ):
+        ad = PgvectorBaseNormativaAdapter(
+            dsn="postgresql://u:p@localhost:5432/db",
+            openai_api_key="sk",
+        )
+        out = await ad.buscar_contexto("x", top_k=3)
+
+    assert out == []
+    fake_conn.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_pgvector_adapter_filtra_score_abaixo_threshold() -> None:
+    rows = [
+        {"texto": "alto", "score": 0.9, "fonte": "LC", "artigo": None},
+        {"texto": "baixo", "score": 0.1, "fonte": "LC", "artigo": "art. 1"},
+    ]
+    fake_conn = MagicMock()
+    fake_conn.fetch = AsyncMock(return_value=rows)
+    fake_conn.close = AsyncMock()
+
+    with (
+        patch(
+            "src.infrastructure.adapters.base_normativa_pgvector._embedding_openai",
+            new_callable=AsyncMock,
+            return_value=[0.0] * 4,
+        ),
+        patch(
+            "src.infrastructure.adapters.base_normativa_pgvector.asyncpg.connect",
+            new_callable=AsyncMock,
+            return_value=fake_conn,
+        ),
+    ):
+        ad = PgvectorBaseNormativaAdapter(
+            dsn="postgresql://u:p@localhost:5432/db",
+            openai_api_key="sk",
+        )
+        out = await ad.buscar_contexto("q", top_k=10, threshold=0.5)
+
+    assert len(out) == 1
+    assert out[0].texto == "alto"
+    assert out[0].artigo is None

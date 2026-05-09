@@ -36,6 +36,26 @@ def test_consultar_cnpj_rejeita_idempotency_vazio() -> None:
         app.dependency_overrides.pop(get_current_user_tenant, None)
 
 
+def test_consultar_cnpj_rejeita_idempotency_string_vazio_explicito() -> None:
+    """Header presente mas vazio após ``strip`` ⇒ 400 (paridade com apenas espaços)."""
+    uid = uuid4()
+    tid = uuid4()
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    try:
+        res = client.post(
+            "/referencia/cnpj/consulta_cnpj",
+            headers={
+                **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+                "Idempotency-Key": "",
+            },
+            json={"cnpj": CNPJ_OK},
+        )
+        assert res.status_code == 400
+        assert "Idempotency" in str(res.json().get("detail", ""))
+    finally:
+        app.dependency_overrides.pop(get_current_user_tenant, None)
+
+
 def test_consultar_cnpj_valor_erro_bad_request() -> None:
     uid = uuid4()
     tid = uuid4()
