@@ -37,3 +37,18 @@ class TestChecklistM12Likert:
 
     def test_normalizar_rejeita_lista_curta(self) -> None:
         assert normalizar_checklist_m12_estado_bruto([1, 2, 3]) is None
+
+    def test_normalizar_none_retorna_none(self) -> None:
+        """JSONB ausente no repositório não vira lista Likert."""
+        assert normalizar_checklist_m12_estado_bruto(None) is None
+
+    def test_normalizar_string_numerica_via_int(self) -> None:
+        """Elementos não-bool passam por conversão int quando não são int válido direto."""
+        raw = ["1", "2", "3", "4", "5", "1", "2", "3", "4", "5"]
+        assert normalizar_checklist_m12_estado_bruto(raw) == [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
+
+    def test_normalizar_elemento_invalido_retorna_none(self) -> None:
+        assert normalizar_checklist_m12_estado_bruto(["x"] + [3] * 9) is None
+
+    def test_normalizar_elemento_fora_likert_apos_coercao_retorna_none(self) -> None:
+        assert normalizar_checklist_m12_estado_bruto([99] + [3] * 9) is None

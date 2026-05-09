@@ -244,6 +244,24 @@ class TestDiagnostico:
         assert diag.hash_evidencia is not None
         assert len(diag.hash_evidencia) == 64
 
+    def test_registrar_evidencia_rejeita_score_geral_corrompido(
+        self, empresa_fixture, respondente_fixture
+    ) -> None:
+        """Invariante defensiva: finalizado sem score_geral é estado inválido."""
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(score_geral=70.0)
+        diag.score_geral = None  # corrupção de estado só para cobrir invariante defensiva
+        sc = ScoreCompleto(
+            score_geral=ScoreNumerico(valor=70.0, peso_total_aplicado=1.0),
+            score_por_dimensao={
+                Dimensao.FISCAL: ScoreNumerico(valor=70.0, peso_total_aplicado=1.0),
+            },
+        )
+        with pytest.raises(ValueError, match=r"Score geral ausente"):
+            diag.registrar_score_completo_para_evidencia(sc)
+
     def test_registrar_evidencia_rejeita_se_nao_finalizado(
         self, empresa_fixture, respondente_fixture
     ):
@@ -423,4 +441,62 @@ class TestQuadroImplantacaoAnotacoes:
         with pytest.raises(DiagnosticoNaoFinalizavelError, match="quadro"):
             diag.definir_quadro_implantacao_anotacoes(
                 {"f0_a0": {"comentarios": [], "prazo_meta": ""}}
+            )
+
+    def test_rejeita_mais_de_cem_acoes_anotadas(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        grande = {f"f{i}_a0": {"comentarios": [], "prazo_meta": ""} for i in range(201)}
+        with pytest.raises(ValueError, match="200"):
+            diag.definir_quadro_implantacao_anotacoes(grande)
+
+    def test_rejeita_prazo_meta_iso_invalido(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            diag.definir_quadro_implantacao_anotacoes(
+                {"f0_a0": {"comentarios": [], "prazo_meta": "15-06-2026"}}
+            )
+
+    def test_lista_comentarios_vazia_cai_em_comentario_legado(
+        self, empresa_fixture, respondente_fixture
+    ) -> None:
+        """Ramo 309-316: itens só com whitespace não contam; usa ``comentario`` legado."""
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        diag.definir_quadro_implantacao_anotacoes(
+            {"f0_a0": {"comentarios": ["  ", ""], "comentario": "  Só legado  ", "prazo_meta": ""}}
+        )
+        assert diag.quadro_implantacao_anotacoes == {
+            "f0_a0": {"comentarios": ["Só legado"], "prazo_meta": ""},
+        }
+
+    def test_rejeita_comentario_demasiado_longo(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        longo = "x" * 2001
+        with pytest.raises(ValueError, match="2000"):
+            diag.definir_quadro_implantacao_anotacoes(
+                {"f0_a0": {"comentarios": [longo], "prazo_meta": ""}}
+            )
+
+    def test_rejeita_descricao_personalizada_demasiado_longa(
+        self, empresa_fixture, respondente_fixture
+    ) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.finalizar(55.0)
+        longo = "y" * 4001
+        with pytest.raises(ValueError, match="4000"):
+            diag.definir_quadro_implantacao_anotacoes(
+                {"f0_a0": {"comentarios": [], "prazo_meta": "", "descricao_personalizada": longo}}
             )

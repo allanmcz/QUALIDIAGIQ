@@ -431,3 +431,42 @@ class TestResposta:
         )
         with pytest.raises(ValueError, match=r"entre 0 e 100"):
             resposta_fora.calcular_pontuacao(p_num)
+
+    def test_calculo_numerica_rejeita_valor_nao_convertivel(self) -> None:
+        p_num = Pergunta(
+            codigo="Q-N2",
+            dimensao=Dimensao.FISCAL,
+            texto="Numérica",
+            peso=1.0,
+            tipo=TipoPergunta.NUMERICA,
+        )
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.NUMERICA,
+            valor_bruto="não é número",
+        )
+        with pytest.raises(ValueError, match=r"Valor numérico inválido"):
+            resposta.calcular_pontuacao(p_num)
+
+    def test_extrair_json_escalar_rejeita_nao_lista(self, pergunta_multipla) -> None:
+        """JSON válido mas não lista (ex.: número) deve falhar antes do cálculo."""
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto="42",
+        )
+        with pytest.raises(ValueError, match=r"lista"):
+            resposta.calcular_pontuacao(pergunta_multipla)
+
+    def test_extrair_valor_bruto_nem_lista_nem_string_rejeita(self, pergunta_multipla) -> None:
+        """Tipos não serializados na API devem falhar explicitamente."""
+        resposta = Resposta(
+            diagnostico_id=uuid.uuid4(),
+            pergunta_id=uuid.uuid4(),
+            pergunta_tipo=TipoPergunta.MULTIPLA_ESCOLHA,
+            valor_bruto=123,  # int — não suportado em _extrair_lista_selecionados
+        )
+        with pytest.raises(ValueError, match=r"Formato inválido"):
+            resposta.calcular_pontuacao(pergunta_multipla)

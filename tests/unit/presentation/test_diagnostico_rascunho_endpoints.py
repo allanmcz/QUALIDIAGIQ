@@ -645,6 +645,57 @@ def test_post_vincular_leads_email_admin_vazio_403() -> None:
     assert r.status_code == 403
 
 
+def test_post_vincular_leads_sucesso_200() -> None:
+    """Caminho feliz do router: use case devolve UUIDs e resposta materializa total + lista."""
+    class S:
+        sync_database_url = "postgresql://local"
+        self_service_tenant_id = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+
+    uid = uuid4()
+    tid = uuid4()
+    headers = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)
+
+    id1 = UUID("77777777-7777-4777-8777-777777777777")
+    id2 = UUID("88888888-8888-4888-8888-888888888888")
+
+    mock_uc = AsyncMock()
+    mock_uc.execute.return_value = [id1, id2]
+
+    with (
+        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(
+            dss,
+            "buscar_email_admin_por_id_e_tenant_postgres",
+            return_value="admin@ok.br",
+        ),
+    ):
+        app.dependency_overrides[get_vincular_diagnosticos_lead_self_service_use_case] = (
+            lambda: mock_uc
+        )
+        try:
+            r = TestClient(app).post(
+                "/diagnosticos/vincular-leads-self-service",
+                headers={
+                    **headers,
+                    "Idempotency-Key": "f0e1d2c3-b4a5-6789-affe-0fedcba98765",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(
+                get_vincular_diagnosticos_lead_self_service_use_case,
+                None,
+            )
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total_vinculados"] == 2
+    assert set(body["diagnostico_ids"]) == {
+        str(id1),
+        str(id2),
+    }
+    mock_uc.execute.assert_called_once()
+
+
 def test_post_vincular_leads_value_error_do_use_case_400() -> None:
     class S:
         sync_database_url = "postgresql://local"
@@ -922,5 +973,506 @@ def test_post_vincular_leads_buscar_email_psycopg2_503() -> None:
             )
         finally:
             app.dependency_overrides.pop(get_vincular_diagnosticos_lead_self_service_use_case, None)
+
+    assert r.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_post_concluir_primeira_busca_sem_rascunho_400(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+        self_service_tenant_id = uuid4()
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> None:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return None
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            r = await rascunho_async_client.post(
+                "/diagnosticos/rascunho-self-service/concluir",
+                json={"resgate_token": "n" * 32, "codigo": "123456"},
+                headers={"Idempotency-Key": "i7j8k9l0-m1n2-3456-opqr-s34567890123"},
+            )
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_post_concluir_segunda_busca_sem_rascunho_apos_otp_400(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+        self_service_tenant_id = uuid4()
+
+    rid = str(uuid4())
+    row_ok = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"]),
+        "payload_json": PAYLOAD_MIN,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+
+    chamadas = {"n": 0}
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        n = getattr(fn, "__name__", "")
+        if n == "buscar_rascunho_ativo_por_token_sync":
+            chamadas["n"] += 1
+            return row_ok if chamadas["n"] == 1 else None
+        raise AssertionError(n)
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/concluir",
+                    json={"resgate_token": "o" * 32, "codigo": "111111"},
+                    headers={"Idempotency-Key": "j8k9l0m1-n2o3-4567-pqrs-t45678901234"},
+                )
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_post_concluir_payload_json_inconsistente_500(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+        self_service_tenant_id = uuid4()
+
+    rid = str(uuid4())
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"]),
+        "payload_json": 999,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/concluir",
+                    json={"resgate_token": "p" * 32, "codigo": "222222"},
+                    headers={"Idempotency-Key": "k9l0m1n2-o3p4-5678-qrst-u56789012345"},
+                )
+    assert r.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_post_concluir_email_respondente_diferente_rascunho_403(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+        self_service_tenant_id = uuid4()
+
+    rid = str(uuid4())
+    email_rasc = codigo_store.normalizar_email("fixo@rascunho.br")
+    payload_outro = dict(PAYLOAD_MIN)
+    payload_outro["respondente"] = {"email": "outro@mail.br", "nome": "X"}
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": email_rasc,
+        "payload_json": payload_outro,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/concluir",
+                    json={"resgate_token": "q" * 32, "codigo": "333333"},
+                    headers={"Idempotency-Key": "l0m1n2o3-p4q5-6789-rstu-v67890123456"},
+                )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_post_concluir_inserir_leitura_publica_falha_503(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+        self_service_tenant_id = uuid4()
+
+    rid = str(uuid4())
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"]),
+        "payload_json": PAYLOAD_MIN,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        n = getattr(fn, "__name__", "")
+        if n == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        if n == "marcar_rascunho_consumido_sync":
+            return None
+        if n == "inserir_leitura_publica_self_service_sync":
+            raise psycopg2.ProgrammingError("sim insert leitura")
+        raise AssertionError(n)
+
+    async def fake_core(*_a: object, **_k: object) -> DiagnosticoResponse:
+        return DiagnosticoResponse(
+            id=UUID("44444444-4444-4444-8444-444444444444"),
+            status="finalizado",
+            plano="gratuito",
+            empresa_razao_social="ACME",
+            score=ScoreCompletoSchema(
+                score_geral=ScoreDimensaoSchema(valor=50.0, peso_total_aplicado=1.0),
+                score_por_dimensao={
+                    "fiscal": ScoreDimensaoSchema(valor=50.0, peso_total_aplicado=1.0),
+                },
+            ),
+        )
+
+    orig_core = dh._executar_criar_diagnostico_core
+    dh._executar_criar_diagnostico_core = fake_core
+    try:
+        with patch.object(dss, "get_settings", return_value=S()):
+            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+                    r = await rascunho_async_client.post(
+                        "/diagnosticos/rascunho-self-service/concluir",
+                        json={"resgate_token": "r" * 32, "codigo": "444444"},
+                        headers={"Idempotency-Key": "m1n2o3p4-q5r6-789a-stuv-w78901234567"},
+                    )
+    finally:
+        dh._executar_criar_diagnostico_core = orig_core
+
+    assert r.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_sem_rascunho_400(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="n2o3p4q5-r6s7-890b-tuvw-x89012345678",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> None:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return None
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(
+                dss,
+                "buscar_email_admin_por_id_e_tenant_postgres",
+                return_value="admin@test.io",
+            ):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/vincular-conta",
+                    json={"resgate_token": "s" * 32},
+                    headers=headers,
+                )
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_lookup_admin_psycopg_503(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    rid = str(uuid4())
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"]),
+        "payload_json": PAYLOAD_MIN,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="o3p4q5r6-s7t8-901c-vwxy-y90123456789",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(
+                dss,
+                "buscar_email_admin_por_id_e_tenant_postgres",
+                side_effect=psycopg2.DatabaseError("lookup falhou"),
+            ):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/vincular-conta",
+                    json={"resgate_token": "t" * 32},
+                    headers=headers,
+                )
+    assert r.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_sem_email_admin_403(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    rid = str(uuid4())
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"]),
+        "payload_json": PAYLOAD_MIN,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="p4q5r6s7-t8u9-012d-wxyz-z0123456789a",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss, "buscar_email_admin_por_id_e_tenant_postgres", return_value=""):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/vincular-conta",
+                    json={"resgate_token": "u" * 32},
+                    headers=headers,
+                )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_payload_inconsistente_500(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    rid = str(uuid4())
+    em = codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"])
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": em,
+        "payload_json": None,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="q5r6s7t8-u9v0-123e-xyza-a1234567890b",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss, "buscar_email_admin_por_id_e_tenant_postgres", return_value=em):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/vincular-conta",
+                    json={"resgate_token": "v" * 32},
+                    headers=headers,
+                )
+    assert r.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_email_admin_diferente_respondente_403(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    rid = str(uuid4())
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"]),
+        "payload_json": PAYLOAD_MIN,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="r6s7t8u9-v0w1-234f-yzab-b2345678901c",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(
+                dss,
+                "buscar_email_admin_por_id_e_tenant_postgres",
+                return_value="consultor_alien@test.io",
+            ):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/vincular-conta",
+                    json={"resgate_token": "w" * 32},
+                    headers=headers,
+                )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_marcar_consumido_falha_503(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    rid = str(uuid4())
+    em = codigo_store.normalizar_email(PAYLOAD_MIN["respondente"]["email"])
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": em,
+        "payload_json": PAYLOAD_MIN,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="s7t8u9v0-w1x2-345g-zabc-c3456789012d",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        n = getattr(fn, "__name__", "")
+        if n == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        if n == "marcar_rascunho_consumido_sync":
+            raise psycopg2.OperationalError("erro ao fechar")
+        raise AssertionError(n)
+
+    async def fake_core(*_a: object, **_k: object) -> DiagnosticoResponse:
+        return DiagnosticoResponse(
+            id=UUID("55555555-5555-5555-8555-555555555555"),
+            status="finalizado",
+            plano="gratuito",
+            empresa_razao_social="ACME Rascunho LTDA",
+            score=ScoreCompletoSchema(
+                score_geral=ScoreDimensaoSchema(valor=60.0, peso_total_aplicado=1.0),
+                score_por_dimensao={
+                    "fiscal": ScoreDimensaoSchema(valor=60.0, peso_total_aplicado=1.0),
+                },
+            ),
+        )
+
+    orig_core = dh._executar_criar_diagnostico_core
+    dh._executar_criar_diagnostico_core = fake_core
+    try:
+        with patch.object(dss, "get_settings", return_value=S()):
+            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(
+                    dss,
+                    "buscar_email_admin_por_id_e_tenant_postgres",
+                    return_value=em,
+                ):
+                    r = await rascunho_async_client.post(
+                        "/diagnosticos/rascunho-self-service/vincular-conta",
+                        json={"resgate_token": "y" * 32},
+                        headers=headers,
+                    )
+    finally:
+        dh._executar_criar_diagnostico_core = orig_core
+
+    assert r.status_code == 503
+
+
+def test_post_vincular_leads_execucao_use_case_psycopg_503() -> None:
+    """Ramo ``except psycopg2.Error`` após chamada ao use case em vincular leads."""
+
+    class S:
+        sync_database_url = "postgresql://local"
+        self_service_tenant_id = UUID("ffffffff-ffff-4fff-8fff-ffffffffffff")
+
+    uid = uuid4()
+    tid = uuid4()
+    headers = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = psycopg2.OperationalError("update falhou")
+
+    with (
+        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(
+            dss,
+            "buscar_email_admin_por_id_e_tenant_postgres",
+            return_value="ok@tst.io",
+        ),
+    ):
+        app.dependency_overrides[get_vincular_diagnosticos_lead_self_service_use_case] = (
+            lambda: mock_uc
+        )
+        try:
+            r = TestClient(app).post(
+                "/diagnosticos/vincular-leads-self-service",
+                headers={**headers, "Idempotency-Key": "u9v0w1x2-y3z4-567i-bcde-e56789012345f"},
+            )
+        finally:
+            app.dependency_overrides.pop(
+                get_vincular_diagnosticos_lead_self_service_use_case,
+                None,
+            )
 
     assert r.status_code == 503

@@ -45,3 +45,21 @@ async def test_ollama_adapter_request_error_retorna_fallback_amigavel() -> None:
         out = await adapter.gerar_recomendacao("ctx", "base")
 
     assert "indisponibilidade" in out.lower()
+
+
+@pytest.mark.asyncio
+async def test_ollama_adapter_erro_inesperado_retorna_fallback_generico() -> None:
+    """Cobre ramo de exceção não-httpx (ex.: bug em serialização JSON)."""
+    adapter = OllamaLlmAdapter(timeout_seconds=5.0)
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(side_effect=RuntimeError("json quebrado"))
+    mock_client = MagicMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        out = await adapter.gerar_recomendacao("ctx", "base")
+
+    assert "erro ao processar" in out.lower()

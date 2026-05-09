@@ -68,6 +68,53 @@ class TestAuditarCatalogoPerguntasMvp:
         )
         assert erros
 
+    def test_rejeita_quando_perguntas_nao_e_lista(self, tmp_path: Path) -> None:
+        p = tmp_path / "z.json"
+        p.write_text(json.dumps({"perguntas": "invalido"}), encoding="utf-8")
+        erros, avisos = auditar_catalogo_perguntas_mvp(str(p), esperado_perguntas=1)
+        assert erros == ["Campo 'perguntas' deve ser lista."]
+        assert avisos == []
+
+    def test_detecta_objeto_invalido_tipo_invalido_e_contagem(self, tmp_path: Path) -> None:
+        p = tmp_path / "k.json"
+        p.write_text(
+            json.dumps(
+                {
+                    "perguntas": [
+                        123,
+                        {"codigo": "Q-BAD", "tipo": "desconhecido", "pilar_abnt": "P1"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        erros, _ = auditar_catalogo_perguntas_mvp(str(p), esperado_perguntas=3)
+        assert any("Esperadas 3 perguntas" in e for e in erros)
+        assert any("Entrada não-objeto" in e for e in erros)
+        assert any("tipo inválido" in e for e in erros)
+
+    def test_multipla_total_nao_int_nao_dispara_regra_de_minimo(self, tmp_path: Path) -> None:
+        """Cobre o ramo em que ``multipla_total`` existe mas não é inteiro."""
+        p = tmp_path / "m.json"
+        p.write_text(
+            json.dumps(
+                {
+                    "perguntas": [
+                        {
+                            "codigo": "Q-M",
+                            "tipo": "multipla_escolha",
+                            "multipla_total": "2",
+                            "pilar_abnt": "ABNT NBR 17301",
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        erros, avisos = auditar_catalogo_perguntas_mvp(str(p), esperado_perguntas=1)
+        assert erros == []
+        assert avisos == []
+
 
 @pytest.mark.parametrize("extra_args,expect_ok", [([], True), (["--strict"], False)])
 def test_script_cli_exit_code(extra_args: list[str], expect_ok: bool) -> None:

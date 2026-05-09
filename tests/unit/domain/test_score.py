@@ -6,6 +6,7 @@ from src.domain.value_objects.score import (
     PercentilSetorial,
     ScoreCompleto,
     ScoreNumerico,
+    pesos_macro_dimensao_para_dict_iso,
 )
 
 
@@ -146,6 +147,14 @@ class TestPercentilSetorial:
             )
 
 
+class TestPesosMacroDimensao:
+    def test_pesos_macro_dimensao_para_dict_iso_cobre_todas_dimensoes(self) -> None:
+        d = pesos_macro_dimensao_para_dict_iso()
+        assert len(d) == len(Dimensao)
+        assert d["fiscal"] == 1.5
+        assert d["compliance_abnt_17301"] == 1.2
+
+
 class TestScoreCompletoSerializacao:
     def test_para_dict_e_desde_dict_preserva_dados(self):
         sg = ScoreNumerico(valor=72.0, peso_total_aplicado=10.0, perguntas_consideradas=("Q-001",))
@@ -158,3 +167,25 @@ class TestScoreCompletoSerializacao:
         reconstruido = ScoreCompleto.desde_dict(blob)
         assert reconstruido.score_geral.valor == original.score_geral.valor
         assert reconstruido.score_por_dimensao[Dimensao.FISCAL].valor == 80.0
+
+    def test_para_dict_e_desde_dict_com_percentil_setorial(self) -> None:
+        ps = PercentilSetorial(
+            percentil=42,
+            setor_referencia="Comércio",
+            porte_referencia="Médio",
+            uf_referencia="SP",
+            n_amostra=100,
+        )
+        original = ScoreCompleto(
+            score_geral=ScoreNumerico(valor=60.0, peso_total_aplicado=1.0),
+            score_por_dimensao={
+                Dimensao.FISCAL: ScoreNumerico(valor=60.0, peso_total_aplicado=1.0),
+            },
+            score_relativo_setor=ps,
+        )
+        blob = original.para_dict_serializavel()
+        assert blob["score_relativo_setor"]["percentil"] == 42
+        reconstruido = ScoreCompleto.desde_dict(blob)
+        assert reconstruido.score_relativo_setor is not None
+        assert reconstruido.score_relativo_setor.percentil == 42
+        assert reconstruido.score_relativo_setor.uf_referencia == "SP"

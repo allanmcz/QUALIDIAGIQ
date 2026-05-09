@@ -7,7 +7,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from src.infrastructure.auth.postgres_admin_login import inserir_admin_postgres
+from src.infrastructure.auth.postgres_admin_login import (
+    buscar_admin_por_email_postgres,
+    buscar_email_admin_por_id_e_tenant_postgres,
+    inserir_admin_postgres,
+)
 
 
 class TestInserirAdminPostgres:
@@ -162,3 +166,91 @@ class TestInserirAdminPostgres:
             )
         bind = mock_cursor.execute.call_args[0][1]
         assert bind[2] is None
+
+
+class TestBuscarAdminPostgres:
+    def test_buscar_admin_por_email_normaliza_e_retorna_dict(self) -> None:
+        row = {
+            "id": str(uuid4()),
+            "email": "admin@teste.com",
+            "hashed_password": "h",
+            "nome": "Admin",
+            "tenant_id": str(uuid4()),
+            "perfil_conta": "gratuito",
+        }
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = row
+        mock_cm = MagicMock()
+        mock_cm.__enter__.return_value = mock_cursor
+        mock_cm.__exit__.return_value = None
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cm
+
+        with patch(
+            "src.infrastructure.auth.postgres_admin_login.psycopg2.connect", return_value=mock_conn
+        ):
+            out = buscar_admin_por_email_postgres("  ADMIN@TESTE.COM  ", "postgresql://x")
+
+        assert out is not None
+        assert out["email"] == "admin@teste.com"
+        bind = mock_cursor.execute.call_args[0][1]
+        assert bind == ("admin@teste.com",)
+        mock_conn.close.assert_called_once()
+
+    def test_buscar_admin_por_email_sem_linha_retorna_none(self) -> None:
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
+        mock_cm = MagicMock()
+        mock_cm.__enter__.return_value = mock_cursor
+        mock_cm.__exit__.return_value = None
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cm
+
+        with patch(
+            "src.infrastructure.auth.postgres_admin_login.psycopg2.connect", return_value=mock_conn
+        ):
+            assert buscar_admin_por_email_postgres("x@teste.com", "postgresql://x") is None
+
+        mock_conn.close.assert_called_once()
+
+    def test_buscar_email_por_id_tenant_retorna_lower(self) -> None:
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {"email": "  ADMIN@TESTE.COM "}
+        mock_cm = MagicMock()
+        mock_cm.__enter__.return_value = mock_cursor
+        mock_cm.__exit__.return_value = None
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cm
+        admin_id = uuid4()
+        tenant_id = uuid4()
+
+        with patch(
+            "src.infrastructure.auth.postgres_admin_login.psycopg2.connect", return_value=mock_conn
+        ):
+            out = buscar_email_admin_por_id_e_tenant_postgres(admin_id, tenant_id, "postgresql://x")
+
+        assert out == "admin@teste.com"
+        bind = mock_cursor.execute.call_args[0][1]
+        assert bind == (admin_id, tenant_id)
+        mock_conn.close.assert_called_once()
+
+    def test_buscar_email_por_id_tenant_sem_linha_ou_email_retorna_none(self) -> None:
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [None, {"email": None}]
+        mock_cm = MagicMock()
+        mock_cm.__enter__.return_value = mock_cursor
+        mock_cm.__exit__.return_value = None
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cm
+
+        with patch(
+            "src.infrastructure.auth.postgres_admin_login.psycopg2.connect", return_value=mock_conn
+        ):
+            assert (
+                buscar_email_admin_por_id_e_tenant_postgres(uuid4(), uuid4(), "postgresql://x")
+                is None
+            )
+            assert (
+                buscar_email_admin_por_id_e_tenant_postgres(uuid4(), uuid4(), "postgresql://x")
+                is None
+            )

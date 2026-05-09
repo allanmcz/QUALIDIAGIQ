@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -18,8 +18,17 @@ from src.domain.entities.diagnostico import (
     SetorMacro,
     StatusDiagnostico,
 )
+from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.infrastructure.repositories.postgres_diagnostico_repository import (
     PostgresDiagnosticoRepository,
+    _materializar_plano_backfill_sync,
+    _patch_m12_sync,
+    _patch_quadro_sync,
+    _patch_relatorio_sync,
+    _quadro_anotacoes_de_row,
+    _row_dict_para_entity,
+    _salvar_e_materializar_plano_sync,
 )
 
 
@@ -223,3 +232,234 @@ class TestPostgresDiagnosticoRepository:
             )
         assert out is not None
         assert out.checklist_m12_estado == [5] * 10
+
+    async def test_metodos_proxy_usam_asyncio_to_thread(self) -> None:
+        repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+        d = _diag_minimo()
+        sc = _score_completo_snapshot()
+        did, tid = uuid4(), uuid4()
+
+        with patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.asyncio.to_thread",
+            new_callable=AsyncMock,
+        ) as mock_to_thread:
+            mock_to_thread.return_value = None
+            await repo.salvar_e_materializar_plano_painel(d, sc)
+            await repo.buscar_plano_painel_serializado(did, tid)
+            await repo.materializar_plano_painel_idempotente_backfill(did, tid)
+            await repo.inserir_subtarefa_plano(tid, did, uuid4(), "sub", 1)
+            await repo.atualizar_subtarefa_plano(tid, did, uuid4(), titulo="x")
+
+        assert mock_to_thread.await_count == 5
+
+
+def _score_completo_snapshot():
+    return ScoreCompleto(
+        score_geral=ScoreNumerico(valor=70.0, peso_total_aplicado=1.0),
+        score_por_dimensao={Dimensao.FISCAL: ScoreNumerico(valor=70.0, peso_total_aplicado=1.0)},
+    )
+
+
+def test_salvar_e_materializar_plano_sync_fluxo_feliz() -> None:
+    d = _diag_minimo()
+    d.finalizar(70.0)
+    sc = _score_completo_snapshot()
+    mock_cursor = MagicMock()
+    mock_conn = _mock_conn_cursor(mock_cursor)
+    plano_serializado = PlanoPainelSerializado(
+        versao_plano=1, checklist=(), matriz_impacto=(), cronograma=()
+    )
+    deriv = MagicMock()
+    deriv.serializado_http = plano_serializado
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.derivar_plano_painel_materializado",
+            return_value=deriv,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.materializar_plano_em_conexao"
+        ) as mock_mat,
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.buscar_plano_painel_serializado_sync",
+            return_value=plano_serializado,
+        ),
+    ):
+        out = _salvar_e_materializar_plano_sync("postgresql://u:p@localhost:1/db", d, sc)
+
+    assert out == plano_serializado
+    mock_conn.commit.assert_called_once()
+    mock_mat.assert_called_once()
+    mock_conn.close.assert_called_once()
+
+
+def test_salvar_e_materializar_plano_sync_rollback_em_erro() -> None:
+    d = _diag_minimo()
+    d.finalizar(70.0)
+    sc = _score_completo_snapshot()
+    mock_cursor = MagicMock()
+    mock_conn = _mock_conn_cursor(mock_cursor)
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.derivar_plano_painel_materializado",
+            side_effect=RuntimeError("falha ao derivar"),
+        ),
+        pytest.raises(RuntimeError, match="falha ao derivar"),
+    ):
+        _salvar_e_materializar_plano_sync("postgresql://u:p@localhost:1/db", d, sc)
+
+    mock_conn.rollback.assert_not_called()
+
+
+def test_materializar_plano_backfill_sync_retorna_none_quando_ja_existe() -> None:
+    with patch(
+        "src.infrastructure.repositories.postgres_diagnostico_repository.plano_materializado_existe_sync",
+        return_value=True,
+    ):
+        out = _materializar_plano_backfill_sync("postgresql://u:p@localhost:1/db", uuid4(), uuid4())
+    assert out is None
+
+
+def test_materializar_plano_backfill_sync_fluxos_de_nao_materializar() -> None:
+    did, tid = uuid4(), uuid4()
+    d = _diag_minimo()
+    d.tenant_id = tid
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.plano_materializado_existe_sync",
+            return_value=False,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository._buscar_sync",
+            side_effect=[None, d, d],
+        ),
+    ):
+        assert (
+            _materializar_plano_backfill_sync("postgresql://u:p@localhost:1/db", did, tid) is None
+        )
+        d.status = StatusDiagnostico.EM_ANDAMENTO
+        assert (
+            _materializar_plano_backfill_sync("postgresql://u:p@localhost:1/db", did, tid) is None
+        )
+        d.status = StatusDiagnostico.FINALIZADO
+        d.score_completo_snapshot = None
+        assert (
+            _materializar_plano_backfill_sync("postgresql://u:p@localhost:1/db", did, tid) is None
+        )
+
+
+def test_materializar_plano_backfill_sync_materializa_quando_elegivel() -> None:
+    did, tid = uuid4(), uuid4()
+    d = _diag_minimo()
+    d.tenant_id = tid
+    d.finalizar(70.0)
+    d.score_completo_snapshot = _score_completo_snapshot()
+    mock_conn = MagicMock()
+    mock_conn.autocommit = False
+    deriv = MagicMock()
+    plano_serializado = PlanoPainelSerializado(
+        versao_plano=1, checklist=(), matriz_impacto=(), cronograma=()
+    )
+
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.plano_materializado_existe_sync",
+            return_value=False,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository._buscar_sync",
+            return_value=d,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.derivar_plano_painel_materializado",
+            return_value=deriv,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.materializar_plano_em_conexao"
+        ) as mock_mat,
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.buscar_plano_painel_serializado_sync",
+            return_value=plano_serializado,
+        ),
+    ):
+        out = _materializar_plano_backfill_sync("postgresql://u:p@localhost:1/db", did, tid)
+
+    assert out == plano_serializado
+    mock_mat.assert_called_once()
+    mock_conn.commit.assert_called_once()
+    mock_conn.close.assert_called_once()
+
+
+def test_quadro_anotacoes_de_row_limpeza_e_legado() -> None:
+    row = {
+        "quadro_implantacao_anotacoes": {
+            "ok": {
+                "prazo_meta": " 2026-07-01 ",
+                "comentarios": [" x ", "", "y"],
+                "descricao_personalizada": "  desc ",
+            },
+            "legado": {"comentario": "  nota única  "},
+            "ignorar": "nao-dict",
+        }
+    }
+    out = _quadro_anotacoes_de_row(row)
+    assert out is not None
+    assert out["ok"]["comentarios"] == ["x", "y"]
+    assert out["ok"]["descricao_personalizada"] == "desc"
+    assert out["legado"]["comentarios"] == ["nota única"]
+
+
+def test_row_dict_para_entity_com_defaults_defensivos() -> None:
+    did, tid = uuid4(), uuid4()
+    row = _row_minima(did, tid)
+    row["score_completo"] = {"bad": "shape"}
+    row["respondente_email"] = None
+    row["empresa_faixa_faturamento"] = "invalida"
+    row["empresa_cnae"] = "   "
+    row["checklist_m12_estado"] = ["x"] * 10
+    row["aceite_termos_privacidade_em"] = "2026-05-09T10:00:00Z"
+    row["quadro_implantacao_anotacoes"] = {"k": {"comentario": "ok"}}
+    entity = _row_dict_para_entity(row)
+    assert entity.respondente.email == "nao-informado@placeholder.qdi"
+    assert entity.empresa.faixa_faturamento is None
+    assert entity.empresa.cnae_principal == "6201500"
+    assert entity.checklist_m12_estado is None
+    assert entity.aceite_termos_privacidade_em is not None
+
+
+@pytest.mark.parametrize(
+    "fn,args",
+    [
+        (_patch_relatorio_sync, ("http://x.pdf", 1)),
+        (_patch_quadro_sync, ({"f0_a0": {"comentarios": [], "prazo_meta": ""}}, 1)),
+        (_patch_m12_sync, ([1] * 10, 1)),
+    ],
+)
+def test_patch_sync_rollback_em_excecao(fn, args) -> None:
+    did, tid = uuid4(), uuid4()
+    mock_cursor = MagicMock()
+    mock_cursor.execute.side_effect = RuntimeError("erro update")
+    mock_conn = _mock_conn_cursor(mock_cursor)
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ),
+        pytest.raises(RuntimeError, match="erro update"),
+    ):
+        fn("postgresql://u:p@localhost:1/db", did, tid, *args)
+    mock_conn.rollback.assert_called_once()

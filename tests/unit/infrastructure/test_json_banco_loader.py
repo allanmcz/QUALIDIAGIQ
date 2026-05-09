@@ -158,3 +158,146 @@ def test_carregar_lista_vazia_erro(tmp_path) -> None:
     )
     with pytest.raises(ValueError, match="vazia"):
         carregar_perguntas_de_arquivo(p)
+
+
+def test_carregar_rejeita_raiz_nao_objeto(tmp_path) -> None:
+    p = tmp_path / "raiz_lista.json"
+    p.write_text(json.dumps([{"perguntas": []}]), encoding="utf-8")
+    with pytest.raises(ValueError, match="Raiz do JSON deve ser um objeto"):
+        carregar_perguntas_de_arquivo(p)
+
+
+def test_carregar_rejeita_item_pergunta_nao_objeto(tmp_path) -> None:
+    p = tmp_path / "item_invalido.json"
+    p.write_text(json.dumps({"perguntas": ["x"]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="perguntas\\[0\\] deve ser objeto"):
+        carregar_perguntas_de_arquivo(p)
+
+
+def test_parse_condicao_rejeita_tipos_invalidos(tmp_path) -> None:
+    p = tmp_path / "condicao_invalida.json"
+    p.write_text(
+        json.dumps(
+            {
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Teste",
+                        "peso": 1.0,
+                        "tipo": "binaria",
+                        "condicao": {"regimes_permitidos": "lucro_real"},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="regimes_permitidos deve ser lista"):
+        carregar_perguntas_de_arquivo(p)
+
+
+def test_rotulos_escala_rejeita_string_vazia(tmp_path) -> None:
+    p = tmp_path / "rotulos_vazios.json"
+    p.write_text(
+        json.dumps(
+            {
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Escala",
+                        "peso": 1.0,
+                        "tipo": "escala_1_5",
+                        "rotulos_escala": ["1", "2", " ", "4", "5"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="não pode conter string vazia"):
+        carregar_perguntas_de_arquivo(p)
+
+
+@pytest.mark.parametrize(
+    "condicao,msg",
+    [
+        ({"setores_permitidos": "industria"}, "setores_permitidos deve ser lista"),
+        ({"setores_excluidos": "servicos"}, "setores_excluidos deve ser lista"),
+        ({"portes_permitidos": "medio"}, "portes_permitidos deve ser lista"),
+    ],
+)
+def test_parse_condicao_rejeita_listas_obrigatorias(tmp_path, condicao, msg) -> None:
+    p = tmp_path / "condicao_lista_obrigatoria.json"
+    p.write_text(
+        json.dumps(
+            {
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Teste",
+                        "peso": 1.0,
+                        "tipo": "binaria",
+                        "condicao": condicao,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match=msg):
+        carregar_perguntas_de_arquivo(p)
+
+
+def test_carregar_opcoes_quando_lista_nao_vazia(tmp_path) -> None:
+    p = tmp_path / "opcoes_ok.json"
+    p.write_text(
+        json.dumps(
+            {
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Teste",
+                        "peso": 1.0,
+                        "tipo": "multipla_escolha",
+                        "multipla_total": 2,
+                        "opcoes": ["a", "b"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    lista = carregar_perguntas_de_arquivo(p)
+    assert lista[0].opcoes == ("a", "b")
+
+
+def test_rotulos_escala_rejeita_quando_nao_lista(tmp_path) -> None:
+    p = tmp_path / "rotulos_nao_lista.json"
+    p.write_text(
+        json.dumps(
+            {
+                "perguntas": [
+                    {
+                        "id": "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+                        "codigo": "Q-X",
+                        "dimensao": "contabil",
+                        "texto": "Escala",
+                        "peso": 1.0,
+                        "tipo": "escala_1_5",
+                        "rotulos_escala": "1,2,3,4,5",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="deve ser lista ou null"):
+        carregar_perguntas_de_arquivo(p)

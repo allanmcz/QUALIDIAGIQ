@@ -16,6 +16,12 @@ from src.infrastructure.config.settings import get_settings
 from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
     MemoriaLeadDiagnosticoVinculoAdapter,
 )
+from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
+    EmbutidasNormativaScoreMacroRepository,
+)
+from src.infrastructure.repositories.postgres_normativa_score_macro_repository import (
+    PostgresNormativaScoreMacroRepository,
+)
 from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
@@ -222,3 +228,80 @@ def test_get_lead_nop_sem_dsn_sem_ci(monkeypatch: pytest.MonkeyPatch) -> None:
     get_settings.cache_clear()
     port = deps.get_lead_diagnostico_vinculo_port()
     assert isinstance(port, NopLeadDiagnosticoVinculoAdapter)
+
+
+def test_get_normativa_score_macro_postgres_com_dsn() -> None:
+    mock_s = MagicMock()
+    mock_s.sync_database_url = "postgresql://user:pass@localhost/db"
+    with patch("src.presentation.api.dependencies.get_settings", return_value=mock_s):
+        repo = deps.get_normativa_score_macro_repository()
+    assert isinstance(repo, PostgresNormativaScoreMacroRepository)
+
+
+def test_get_normativa_score_macro_embutidas_sem_dsn() -> None:
+    mock_s = MagicMock()
+    mock_s.sync_database_url = None
+    with patch("src.presentation.api.dependencies.get_settings", return_value=mock_s):
+        repo = deps.get_normativa_score_macro_repository()
+    assert isinstance(repo, EmbutidasNormativaScoreMacroRepository)
+
+
+def test_perfil_empresa_questionario_rejeita_cnpj_nao_numerico() -> None:
+    with pytest.raises(HTTPException) as ei:
+        deps.perfil_empresa_para_questionario(
+            razao_social="Empresa SA",
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+            faixa_faturamento=None,
+            cnpj="12.345.678/0001-95",
+        )
+    assert ei.value.status_code == 400
+    assert "dígitos" in str(ei.value.detail)
+
+
+def test_perfil_empresa_questionario_rejeita_cnpj_todos_iguais() -> None:
+    with pytest.raises(HTTPException) as ei:
+        deps.perfil_empresa_para_questionario(
+            razao_social="Empresa SA",
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+            faixa_faturamento=None,
+            cnpj="1" * 14,
+        )
+    assert ei.value.status_code == 400
+
+
+def test_perfil_empresa_questionario_rejeita_cnpj_dv_invalido() -> None:
+    with pytest.raises(HTTPException) as ei:
+        deps.perfil_empresa_para_questionario(
+            razao_social="Empresa SA",
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+            faixa_faturamento=None,
+            cnpj="12345678000194",
+        )
+    assert ei.value.status_code == 400
+
+
+def test_perfil_empresa_questionario_rejeita_cnae_nao_numerico() -> None:
+    with pytest.raises(HTTPException) as ei:
+        deps.perfil_empresa_para_questionario(
+            razao_social="Empresa SA",
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="123456A",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+            faixa_faturamento=None,
+            cnpj="",
+        )
+    assert ei.value.status_code == 400

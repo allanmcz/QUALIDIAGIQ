@@ -37,9 +37,9 @@ logs: ## Acompanha logs em tempo real
 test: ## Roda todos os testes com cobertura
 	PYTHONPATH=. $(VENV)/bin/pytest
 
-test-domain: ## Cobertura mínima 85% em src/domain (princípio §10 do .cursorrules)
-	PYTHONPATH=. $(VENV)/bin/coverage run --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q
-	$(VENV)/bin/coverage report --include='src/domain/*' --fail-under=85 --show-missing
+test-domain: ## Cobertura 100% em src/domain (statements + branches; ver _DEVELOPER/PLANO_EXECUCAO_COBERTURA_100.md)
+	PYTHONPATH=. $(VENV)/bin/coverage run --branch --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q
+	$(VENV)/bin/coverage report --include='src/domain/*' --fail-under=100 --show-missing
 
 audit-secrets: ## Heurística anti-padrões S-01 (segredos em fonte)
 	@bash scripts/audit_secrets.sh

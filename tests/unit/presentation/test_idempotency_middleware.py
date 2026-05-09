@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -191,3 +191,100 @@ def test_post_diagnostico_chaves_idempotencia_distintas_executa_duas_vezes() -> 
     assert r1.headers.get("X-Idempotent-Replay") is None
     assert r2.headers.get("X-Idempotent-Replay") is None
     assert mock_uc.execute.call_count == 2
+
+
+def test_post_diagnostico_idempotency_key_muito_longa_400() -> None:
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: _mock_use_case_sucesso()
+
+    idem_ok = "a" * 128
+    idem_bad = "b" * 129
+    h_ok = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": idem_ok,
+    }
+    h_bad = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": idem_bad,
+    }
+
+    try:
+        r_bad = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=h_bad)
+        assert r_bad.status_code == 400
+        assert "128" in r_bad.json().get("detail", "")
+
+        r_ok = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=h_ok)
+        assert r_ok.status_code == 201
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_post_diagnostico_aceita_header_idempotency_key_minusculo() -> None:
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: _mock_use_case_sucesso()
+
+    headers = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "idempotency-key": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    }
+
+    try:
+        r = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 201
+
+
+def test_post_diagnostico_replay_via_postgres_engine_curto_circuito() -> None:
+    """Com ``app.state.idempotency_engine``, o hit vem de ``idempotency_get`` (thread)."""
+    from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
+
+    cached = CorpoCacheadoIdempotencia(
+        status_code=201,
+        body=b'{"ok":true,"id":"00000000-0000-0000-0000-000000000001"}',
+        headers=(
+            ("content-type", "application/json"),
+            ("x-parcelado-teste", "1"),
+        ),
+    )
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+
+    prev_engine = getattr(app.state, "idempotency_engine", None)
+    app.state.idempotency_engine = MagicMock()
+
+    mock_uc = _mock_use_case_sucesso()
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    headers = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+    }
+
+    try:
+        with patch(
+            "src.infrastructure.idempotency.postgres_backend.idempotency_get",
+            return_value=cached,
+        ):
+            r = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=headers)
+        assert r.status_code == 201
+        assert r.headers.get("X-Idempotent-Replay") == "true"
+        assert r.json().get("ok") is True
+        assert mock_uc.execute.call_count == 0
+    finally:
+        app.dependency_overrides.clear()
+        if prev_engine is None:
+            delattr(app.state, "idempotency_engine")
+        else:
+            app.state.idempotency_engine = prev_engine
+
+
+def test_get_health_nao_exige_idempotency_key() -> None:
+    r = client.get("/health")
+    assert r.status_code == 200
