@@ -27,6 +27,8 @@
 
 ## T1.1 — Gate MVP com Postgres no Docker (`make mvp-gate`)
 
+**Checklist passo-a-passo (executável):** [`CHECKLIST_T1_1_MVP_GATE_DOCKER.md`](./CHECKLIST_T1_1_MVP_GATE_DOCKER.md).
+
 **Objetivo:** mesmo Postgres que o `docker-compose.yml` expõe em desenvolvimento (imagem **pgvector/pgvector:pg16**, migrações), sem obrigar Supabase cloud para o MVP.
 
 **Stack:**
