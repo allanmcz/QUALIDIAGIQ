@@ -100,6 +100,19 @@ jobs:
             htmlcov/
           retention-days: 14
 
+      # Repositório privado: definir secret CODECOV_TOKEN em GitHub → Settings → Secrets.
+      # Repositório público: upload costuma funcionar sem token (ver documentação Codecov).
+      - name: Codecov (upload coverage.xml)
+        if: ${{ always() && hashFiles('coverage.xml') != '' }}
+        uses: codecov/codecov-action@v4
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          flags: backend
+          name: qualidiagiq-backend
+          fail_ci_if_error: false
+
       - name: Auditoria catálogo MVP (G1 — invariantes JSON)
         run: PYTHONPATH=. python scripts/auditoria_catalogo_perguntas_mvp.py
 

@@ -1,0 +1,15 @@
+# Codecov — QualiDiagIQ (QDI)
+# O gate obrigatório de cobertura continua no pytest/pyproject (fail_under=100 + branches).
+# Aqui o relatório do Codecov é informativo no PR (evita falha duplicada por limiar externo).
+
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
