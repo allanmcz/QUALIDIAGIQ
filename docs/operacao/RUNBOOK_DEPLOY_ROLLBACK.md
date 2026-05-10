@@ -38,6 +38,8 @@ Executar checklist em `docs/operacao/SMOKE_MVP_FECHADO.md` (mínimo itens 1–5)
 
 ### Verificação objetiva de schema (release com Postgres aplicado)
 
+**Dev / gates MVP no repositório:** usar Postgres do Docker Compose (`make dev`) em **`127.0.0.1:60322`** como alvo de `QDI_POSTGRES_TEST_URL` (ver `docs/operacao/DEMO_MAC_DEV.md`).
+
 Com cliente `psql` e Python do projeto (`.venv` ou CI):
 
 ```bash
@@ -61,7 +63,7 @@ QDI_VERIFY_SCHEMA_RAG=1 QDI_POSTGRES_TEST_URL="$POSTGRES_CI_URL" python scripts/
 # ou: python scripts/verify_mvp_schema.py --rag "$POSTGRES_CI_URL"
 ```
 
-Após migrações, popular embeddings (dev/staging) com `OPENAI_API_KEY` e `DATABASE_URL` síncrono:
+Após migrações, popular embeddings (local Docker **60322**, staging ou pré-prod) com `OPENAI_API_KEY` e `DATABASE_URL` síncrono:
 
 ```bash
 PYTHONPATH=. OPENAI_API_KEY=... DATABASE_URL=postgresql://... python scripts/ingestao_rag_baseline.py

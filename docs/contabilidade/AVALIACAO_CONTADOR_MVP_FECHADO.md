@@ -128,7 +128,7 @@ Não são substituto do teu julgamento profissional, mas **reduzem custo de due 
 | Artefacto | O que prova |
 |-----------|-------------|
 | `make test` / CI verde | Regressão automatizada do motor e da API. |
-| `make mvp-gate` | Smoke crítico + schema **0012** + teste RLS dois tenants (ambiente com Postgres). |
+| `make mvp-gate` | Smoke crítico + schema **0012** + teste RLS dois tenants — evidência típica: Postgres Docker Compose **`127.0.0.1:60322`** (`make dev`, `QDI_POSTGRES_TEST_URL`). |
 | `make verify-schema-mvp` (script `scripts/verify_mvp_schema.py`) | Colunas LGPD/M12 e políticas RLS presentes no banco alvo. |
 
 ---

@@ -1,5 +1,7 @@
 -- Verificação somente leitura — MVP QDI (schema pós-migrações 0011/0012 + RLS).
--- Executar no SQL Editor do Supabase (ou psql) após aplicar migrações.
+-- Caminho primário dev/MVP: `psql` (ou cliente SQL) contra Postgres do Docker Compose — host `127.0.0.1`, porta `60322` (`make dev`; ver `docker-compose.yml`).
+-- Equivalente automatizado no repo: `make verify-schema-mvp` / `make verify-schema-mvp-strict` com `QDI_POSTGRES_TEST_URL` ou `DATABASE_URL`.
+-- Opcional em projeto gerido: SQL Editor do Supabase após aplicar as mesmas migrações.
 -- Esperado: cada subconsulta deve retornar exatamente uma linha com status = ok.
 
 SELECT 'aceite_lgpd_0012' AS check_id,

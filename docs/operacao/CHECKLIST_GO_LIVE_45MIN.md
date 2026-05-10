@@ -4,6 +4,8 @@
 **Stack assumida pelo repo:** FastAPI + Postgres (Supabase ou self-hosted) + Next.js 14.  
 **Analogia (ERP):** é o “roteiro de virada de versão” antes de abrir a filial para uso real — mesma ordem que um script de migração + smoke na base.
 
+**Desenvolvimento / evidência MVP (não é este cutover):** gates `make mvp-gate`, `make verify-schema-mvp-strict` e smoke RLS usam **Docker Compose** — `make dev`, Postgres **`127.0.0.1:60322`**, API típica **`http://127.0.0.1:60000`**, `QDI_POSTGRES_TEST_URL` / `DATABASE_URL` conforme `docs/operacao/DEMO_MAC_DEV.md`. Segunda evidência opcional em **Supabase gerido** antes do go-live público (G3).
+
 **Antes de começar:** ter URLs finais de **API** e **site**, credenciais de deploy (CI ou SSH), e **backup** ou snapshot do Postgres se for aplicar DDL.
 
 ### Execução assistida (automatiza A + C)
@@ -80,7 +82,7 @@ Se algo falhar: **parar** antes de misturar versão nova de API com schema antig
 
 | # | Tarefa | Critério |
 |---|--------|----------|
-| C1 | Schema strict (se Postgres acessível da máquina de ops) | `make verify-schema-mvp-strict` com `QDI_POSTGRES_TEST_URL` / URL de serviço — ver `RUNBOOK_DEPLOY_ROLLBACK.md` |
+| C1 | Schema strict (se Postgres acessível da máquina de ops) | `make verify-schema-mvp-strict` com `QDI_POSTGRES_TEST_URL` / URL de serviço (em dry-run local: Compose **60322**) — ver `RUNBOOK_DEPLOY_ROLLBACK.md` |
 | C2 | Health API | `GET /health` → `200`; `X-Trace-Id` presente (`SMOKE_MVP_FECHADO.md` item 1) |
 | C3 | Endpoints públicos | `GET /public/institucional` e `GET /diagnosticos/metodologia` → `200` em `QDI_API_BASE_URL` (automático em `scripts/go_live_45min.sh` após C2) |
 

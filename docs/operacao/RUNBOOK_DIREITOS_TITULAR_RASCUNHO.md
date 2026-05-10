@@ -33,11 +33,13 @@
 
 ## 5. Prazos internos (SLA)
 
-| Etapa | SLA proposto (ajustar com negócio) |
-|-------|-----------------------------------|
+| Etapa | SLA (baseline DEV_09052026_V2 — workshop J3) |
+|-------|-----------------------------------------------|
 | Ack do pedido | 48 h úteis |
-| Resposta simples (acesso/export) | 15 dias úteis (referência art. 18) |
-| Casos complexos / anonimização | Definir com DPO |
+| Resposta simples (acesso/export) | **15 dias úteis** (LGPD art. 19, II — referência legal mínima) |
+| Casos complexos / anonimização | Definir com DPO (extensão fundamentada, quando aplicável) |
+
+Constante técnica de referência: `LGPD_PRAZO_RESPOSTA_ART18_DIAS_UTEIS` em `src/application/services/privacidade_operacao.py`.
 
 ## 6. Escalação
 
@@ -55,6 +57,7 @@ Requer **Bearer JWT** do tenant. **`Idempotency-Key`** obrigatória nos `POST` i
 | `GET` | `/privacidade/solicitacoes` | Lista; query opcional `?status=` |
 | `PATCH` | `/privacidade/solicitacoes/{id}/status` | Atualiza estado operacional da solicitação |
 | `POST` | `/privacidade/diagnosticos/{id}/anonimizar-respondente` | Execução técnica após anonimização **deferida** |
+| `POST` | `/privacidade/diagnosticos/{id}/eliminar-diagnostico` | Eliminação física só se diagnóstico **não** `finalizado`; se `finalizado`, **422** — usar anonimização |
 | `GET` | `/privacidade/diagnosticos/{id}/export-portabilidade` | Query `solicitacao_id` + `formato=json` ou `pacote_pdf` |
 | `GET` | `/diagnosticos/{id}/retificacoes` | Cadeia append-only (sem UPDATE no diagnóstico original) |
 | `POST` | `/diagnosticos/{id}/retificacao` | Nova retificação; **Idempotency-Key** obrigatória |

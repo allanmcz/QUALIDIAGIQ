@@ -20,7 +20,8 @@
 
 ## Verificação automatizada
 
+- **Ambiente típico dev/MVP:** Postgres do Docker Compose (`make dev`, **`127.0.0.1:60322`**) + `QDI_POSTGRES_TEST_URL` / `DATABASE_URL` alinhados — mesmas migrações que CI.
 - `make mvp-gate` / `tests/integration/test_mvp_gate_postgres.py` — isolamento dois tenants.
 - `make verify-schema-mvp` / `verify-schema-mvp-strict` — colunas e presença de políticas esperadas no script.
 
-Runbook cloud: `_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`.
+Runbook para políticas em **projeto Supabase gerido** (segunda evidência opcional): `_DEVELOPER/RUNBOOK_SUPABASE_RLS.md`.

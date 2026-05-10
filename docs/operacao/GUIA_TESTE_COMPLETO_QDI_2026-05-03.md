@@ -2,7 +2,7 @@
 
 > **Data:** 2026-05-03  
 > **Objetivo:** validar **API**, **Postgres** (migrações + RAG opcional), **Next.js** e **fluxos críticos** (wizard, idempotência, dashboard M05/M06/M12) num mesmo dia, com comandos copy-paste.  
-> **Não cobre:** sign-off PDF Allan, smoke Supabase cloud de produção, decisões M09/M02 (ver `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md`).
+> **Não cobre:** sign-off PDF Allan, segunda evidência opcional em **Supabase gerido** pré-go-live (fora do fluxo local), decisões M09/M02 (ver `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md`).
 
 ---
 

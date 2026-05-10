@@ -13,7 +13,7 @@
 *Resumo assinado por produto/engenharia: os 12 MUST do PRD estão atendidos no sentido de “funcional + auditável mínimo”, com excepções listadas abaixo.*
 
 - Data: 
-- Excepções documentadas: (ex.: P5 aguarda sign-off PDF, P6 aguarda cloud)
+- Excepções documentadas: (ex.: P5 aguarda sign-off PDF; P6 baseline = Docker/CI — segunda evidência cloud opcional pré-go-live)
 
 ## Referência
 

@@ -14,7 +14,7 @@ Com Postgres acessível (`QDI_POSTGRES_TEST_URL` ou Docker na porta padrão):
 - `make verify-schema-mvp` — só leitura no Postgres alvo (`DATABASE_URL` ou `QDI_POSTGRES_TEST_URL`; default Compose `127.0.0.1:60322`). Em Supabase, equivalente: `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql`.
 - O job **GitHub Actions** já roda o pytest completo após aplicar todas as migrações no Postgres de serviço.
 
-Passos **2** (login Supabase real), **3** (wizard UI) e **8** (PDF real) continuam manuais ou cobertos por **Playwright** / ambiente com WeasyPrint.
+Passos **2** (login na API / sessão na plataforma — típico em **`http://127.0.0.1:60001`** com stack `make dev`), **3** (wizard UI) e **8** (PDF real) continuam manuais ou cobertos por **Playwright** / ambiente com WeasyPrint.
 
 **Portas típicas (Compose do repo):**
 

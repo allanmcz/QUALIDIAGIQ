@@ -2,7 +2,9 @@
 
 **Data de criação:** 2026-05-10  
 **Origem:** `_DEVELOPER/DEV_09052026_V2/BACKLOG_TAREFAS_T1_T4.md` e `PLANO_PROXIMOS_PASSOS_2026-05-10.md`  
-**Objetivo:** transformar os bloqueios T1/T2 em passos executáveis sem versionar credenciais, substituindo a execução direta em Supabase cloud nesta sessão.
+**Objetivo:** transformar os bloqueios T1/T2 em passos executáveis sem versionar credenciais, usando **Docker Compose** do repositório (`make dev` / `docker compose up -d`) como **ambiente de desenvolvimento** padrão para T1.1 e T1.3 (alinhado a `DECISOES_CONSOLIDADAS_DEV_09052026_V2` — G3: evidência Docker/CI para MVP). **Supabase cloud** permanece opcional **antes do go-live público** (ex.: até 30/06/2026) se quiseres segunda evidência.
+
+**Ver também:** [CHECKLIST_IMPLEMENTACAO_MVP_POS_DOCKER_DEV.md](./CHECKLIST_IMPLEMENTACAO_MVP_POS_DOCKER_DEV.md) — lista única para marcar `[x]` item a item (T1.1–T1.4, T2, T4.1, lacunas CI).
 
 > Regra operacional: evidências podem conter logs, hashes, screenshots e atas, mas nunca URLs com senha, tokens JWT, service role key, dumps de dados pessoais ou segredos de deploy.
 
@@ -28,14 +30,22 @@ make test
 npm run lint
 ```
 
-## T1.1 — `make mvp-gate` em cloud espelho
+## T1.1 — `make mvp-gate` com Postgres no Docker (desenvolvimento)
 
-**Objetivo:** validar o gate automatizado em ambiente que reflita produção, preferencialmente Supabase staging, não apenas Docker Compose local.
+**Objetivo:** validar o gate automatizado contra o **mesmo Postgres** que o `docker-compose.yml` expõe em desenvolvimento (imagem **pgvector/pgvector:pg16**, migrações via `init.sql`), sem obrigar Supabase cloud para o MVP.
 
-**Comandos:**
+**Pré-requisito:** stack de desenvolvimento no ar (BD saudável):
 
 ```bash
-export QDI_POSTGRES_TEST_URL="postgresql://...staging.supabase.co:5432/postgres"
+make dev
+# ou: docker compose up -d db
+# porta host do Postgres: 60322 (mapeamento definido no compose)
+```
+
+**Comandos (credenciais padrão do serviço `db`):**
+
+```bash
+export QDI_POSTGRES_TEST_URL="${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"
 export DATABASE_URL="$QDI_POSTGRES_TEST_URL"
 
 make mvp-gate
@@ -44,10 +54,10 @@ make verify-schema-mvp-strict
 
 **Critérios de aceite:**
 
-- [ ] `make mvp-gate` verde em ambiente cloud espelho.
-- [ ] `make verify-schema-mvp-strict` OK usando `QDI_POSTGRES_TEST_URL`.
-- [ ] Log datado anexado em `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` ou artefato operacional equivalente.
-- [ ] Evidência sem credenciais, host sensível completo ou secrets.
+- [ ] `make mvp-gate` verde com `QDI_POSTGRES_TEST_URL` apontando ao Postgres do Docker local.
+- [ ] `make verify-schema-mvp-strict` OK com a mesma URL.
+- [ ] Log datado anexado em `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` ou artefato operacional equivalente (sem passwords na evidência versionada).
+- [ ] Opcional pós-MVP / pré-go-live público: repetir gate contra **Supabase gerido** e arquivar segunda evidência (ver decisão consolidada G3).
 
 ## T1.2 — 5 PDFs reais com sign-off contábil
 
@@ -76,14 +86,14 @@ make verify-schema-mvp-strict
 - [ ] Sign-off contábil do Allan formalizado em ata datada.
 - [ ] `docs/operacao/WEASYPRINT_RUNTIME.md` cumprido em todos os checkpoints aplicáveis.
 
-## T1.3 — Smoke RLS 2 tenants em Supabase staging
+## T1.3 — Smoke RLS 2 tenants (Postgres Docker local)
 
-**Objetivo:** evidenciar isolamento multi-tenant em ambiente cloud.
+**Objetivo:** evidenciar isolamento multi-tenant no **Postgres do Docker Compose** (mesmo critério semântico que CI/`make mvp-gate`), sem obrigar projeto Supabase cloud para o MVP.
 
 **Passos:**
 
-1. Aplicar migrações até a revisão de produção no ambiente staging.
-2. Criar 2 usuários/tenants de teste com JWTs distintos.
+1. Garantir `make dev` (ou pelo menos `docker compose up -d db`) e migrações aplicadas até à revisão acordada (`init.sql` + pasta `migrations` montada no bootstrap).
+2. Criar 2 utilizadores/tenants de teste com JWTs distintos (API local típica: `http://127.0.0.1:60000` quando o serviço `api` está no compose).
 3. Inserir diagnóstico no tenant A.
 4. Com JWT do tenant B, executar `GET /diagnosticos/{id_A}`.
 5. Confirmar retorno `404`, lista vazia ou negativa equivalente documentada.
@@ -91,10 +101,11 @@ make verify-schema-mvp-strict
 
 **Critérios de aceite:**
 
-- [ ] `docs/operacao/EVIDENCIA_RLS_DOIS_TENANTS_TEMPLATE.md` preenchido com data, ambiente e executor.
+- [ ] `docs/operacao/EVIDENCIA_RLS_DOIS_TENANTS_TEMPLATE.md` preenchido com data, executor e menção explícita **«Postgres Docker Compose — 127.0.0.1:60322»** (ou URL efectiva sem secrets).
 - [ ] Captura/log anexado em checklist operacional, screenshot SQL ou nota em `docs/operacao/CHECKLIST_CONFIRMACAO_ALLAN_MVP.md`.
 - [ ] Caixa "Isolamento confirmado" marcada.
 - [ ] Nenhum token JWT real versionado.
+- [ ] Opcional: repetir o mesmo roteiro num projeto **Supabase cloud** antes do go-live público (G3 — segunda evidência).
 
 ## T2.1 — Workshop J4 WORM × anonimização × eliminação
 
@@ -201,5 +212,5 @@ make verify-schema-mvp-strict
 ## Fechamento operacional
 
 - [ ] Atualizar `docs/operacao/ROADMAP_HANDOFF_PROGRESSO_SYNC.md` com data, hash Git e estado real.
-- [ ] Registrar no changelog/ata da semana o que ficou manual/cloud.
+- [ ] Registrar no changelog/ata da semana o que ficou manual ou evidência **cloud** opcional (pré-go-live público).
 - [ ] Commitar apenas documentação/copy revisada, sem artefatos sensíveis.

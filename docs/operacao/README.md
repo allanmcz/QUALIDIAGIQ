@@ -1,14 +1,15 @@
 # Operação — documentação QDI
 
-Índice dos artefactos em `docs/operacao/` (runbooks, gates MVP, decisões de produto). **Planos de execução e handoffs:** `_DEVELOPER/INDICE_PLANOS_HANDOFF.md` — **plano mestre gate MVP:** `_DEVELOPER/HANDOFF_PLANO_MVP_FECHADO.md`.
+Índice dos artefactos em `docs/operacao/` (runbooks, gates MVP, decisões de produto). **Handoff imediato (última sessão):** [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md). **Planos legados `_DEVELOPER/`:** `INDICE_PLANOS_HANDOFF.md` / `HANDOFF_PLANO_MVP_FECHADO.md` (pastas internas podem estar ignoradas pelo Git).
 
 ## Confirmações produto e gates
 
 | Documento | Uso |
 |-----------|-----|
+| **[CHECKLIST_IMPLEMENTACAO_MVP_POS_DOCKER_DEV.md](./CHECKLIST_IMPLEMENTACAO_MVP_POS_DOCKER_DEV.md)** | Checklist rastreável **implementação** pós-Docker: T1.1 gate, T1.2 PDFs, T1.3 RLS, T1.4 MUST, resumo T2/T4.1, lacunas CI. |
 | **[CHECKLIST_CONFIRMACAO_ALLAN_MVP.md](./CHECKLIST_CONFIRMACAO_ALLAN_MVP.md)** | Checklist rastreável (Git): mapa *Quem decide / Quem executa*, P5/P6, jurídico, D\*, M02/M03/M08, Beta. |
 | [MVP_CRITERIO_CORTE_E_DECLARACAO_MUST.md](./MVP_CRITERIO_CORTE_E_DECLARACAO_MUST.md) | Template ACT-K01 / ACT-K03 — critério de corte e declaração MUST. |
-| [DECISAO_RLS_SUPABASE_CLOUD_MVP.md](./DECISAO_RLS_SUPABASE_CLOUD_MVP.md) | Decisão evidência RLS cloud vs apenas CI (placeholder). |
+| [DECISAO_RLS_SUPABASE_CLOUD_MVP.md](./DECISAO_RLS_SUPABASE_CLOUD_MVP.md) | RLS: Docker Compose primário em dev/MVP; cloud opcional pré-go-live (G3). |
 | [EVIDENCIA_RLS_DOIS_TENANTS_TEMPLATE.md](./EVIDENCIA_RLS_DOIS_TENANTS_TEMPLATE.md) | Template OPS para evidência P6. |
 | [DECISOES_PRODUTO_MVP_D1_D5.md](./DECISOES_PRODUTO_MVP_D1_D5.md) | Registro vivo das decisões D1–D5. |
 | [FAIXA_FATURAMENTO_AUTODECLARADA.md](./FAIXA_FATURAMENTO_AUTODECLARADA.md) | Faixa de faturamento opcional: slugs, convenção de limites MVP, LGPD, relação com porte. |

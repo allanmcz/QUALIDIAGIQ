@@ -2,7 +2,7 @@
 
 Este ficheiro **substitui** no histórico versionado o painel em `_DEVELOPER/DEV_DIAG_04052026/ROADMAP_HANDOFF_REFACTOR_LGPD_PWA.md` (pasta `_DEVELOPER/` ignorada pelo Git).
 
-**Última sincronização:** 2026-05-10 — hash Git `4d4c02c` (`test(qdi-api): contrato estático OpenAPI e endurecer go-live 45min`). ADR-012 técnico fechado; export/retificação LGPD/WORM; OpenAPI versionado com CI drift + teste contrato estático; go-live A2c/C3; migração `0035`.
+**Última sincronização:** 2026-05-10 — ver também **handoff de descanso:** [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md) (estado Git, commits sugeridos, pendências T1–T4). Marco técnico deste dia: eliminação LGPD pré-WORM (`POST .../eliminar-diagnostico`), SLA 15 dias úteis em `/privacidade`, checklist MVP pós-Docker e política sem commit automático por agente.
 
 ## Painel
 
@@ -13,7 +13,7 @@ Este ficheiro **substitui** no histórico versionado o painel em `_DEVELOPER/DEV
 | PLANO janela 23h | HANDOFF | Concluído | ADR-011 B1 · ADR-012 desenho · runbook · templates jurídicos |
 | P0-07 LGPD técnico | C.2 | Em produção (técnico) | Migração `0028`; `POST/GET/PATCH` `/privacidade/solicitacoes` · `tests/integration/test_privacidade_api.py` · `make test`. Processo DPO / RIPD art. 18 completo → **ADR-012** + jurídico |
 | P0-06 PWA | D | B1 + B2 | Manifest + `sw.js` + registo client-side; validação pós-deploy quando SW activo |
-| ADR-012 LGPD/WORM | J | Fechado tecnicamente | ADR aceito; export portável `GET /privacidade/diagnosticos/{id}/export-portabilidade`; anonimização executável; runbook direitos do titular. RIPD/DPO permanecem trilho jurídico-operacional. |
+| ADR-012 LGPD/WORM | J | Fechado tecnicamente | ADR aceito; export portável `GET /privacidade/diagnosticos/{id}/export-portabilidade`; anonimização executável; **`POST .../eliminar-diagnostico`** (pré-`finalizado`; `finalizado` → 422 → anonimizar); SLA **15 dias úteis** na página pública; runbook direitos do titular. RIPD/DPO permanecem trilho jurídico-operacional. |
 | Retificação WORM | C.3 | Em produção (técnico) | Migração `0035_diagnostico_retificacao_append_only.sql`; `POST/GET /diagnosticos/{id}/retificacao(|es)`; cadeia append-only sem `UPDATE` do diagnóstico original. |
 | OpenAPI versionado | A2c | Em CI | `docs/api/openapi.generated.json` versionado; `tests/unit/presentation/test_openapi_generated_contract.py`; CI falha em drift do contrato gerado. |
 | Go-live 45min | A2c/C3 | Pronto para execução | `make go-live`; A2c valida drift OpenAPI; C3 smoke `GET /public/institucional` e `GET /diagnosticos/metodologia` após `/health`. |
