@@ -103,7 +103,6 @@ export type DiagnosticoDetalheApi = {
 };
 
 const M12_NUM_ITENS = 10;
-const M12_LIKERT_PADRAO = 3;
 
 function normalizarM12DoApi(
   raw: DiagnosticoDetalheApi["checklist_m12_autoconf"],
@@ -114,6 +113,24 @@ function normalizarM12DoApi(
     if (typeof x === "boolean") out.push(x ? 5 : 1);
     else if (typeof x === "number" && Number.isInteger(x) && x >= 1 && x <= 5) out.push(x);
     else return null;
+  }
+  return out;
+}
+
+/** Estado local antes de qualquer escolha do utilizador — sem Likert por defeito. */
+function m12EstadoInicialVazio(): (number | null)[] {
+  return Array.from({ length: M12_NUM_ITENS }, () => null);
+}
+
+/** Só persiste na API quando os 10 controlos têm inteiro 1–5. */
+function m12ValoresSeCompleto(vals: (number | null)[]): number[] | null {
+  if (!Array.isArray(vals) || vals.length !== M12_NUM_ITENS) return null;
+  const out: number[] = [];
+  for (const x of vals) {
+    if (x === null || typeof x !== "number" || !Number.isInteger(x) || x < 1 || x > 5) {
+      return null;
+    }
+    out.push(x);
   }
   return out;
 }
@@ -264,9 +281,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const [comentarioModalDraft, setComentarioModalDraft] = useState("");
   const [acaoEditModalQk, setAcaoEditModalQk] = useState<string | null>(null);
   const [acaoEditModalDraft, setAcaoEditModalDraft] = useState("");
-  const [m12Likert, setM12Likert] = useState<number[]>([]);
+  const [m12Likert, setM12Likert] = useState<(number | null)[]>([]);
   const [m12ModalIndex, setM12ModalIndex] = useState<number | null>(null);
-  const [m12ModalDraft, setM12ModalDraft] = useState<number>(M12_LIKERT_PADRAO);
+  const [m12ModalDraft, setM12ModalDraft] = useState<number | null>(null);
   const [m12Saving, setM12Saving] = useState(false);
   const [m12Msg, setM12Msg] = useState<string | null>(null);
 
@@ -339,7 +356,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   useEffect(() => {
     if (!frenteAbnt10 || frenteAbnt10.acoes.length !== M12_NUM_ITENS) return;
     const parsed = normalizarM12DoApi(data?.checklist_m12_autoconf ?? null);
-    setM12Likert(parsed ?? Array.from({ length: M12_NUM_ITENS }, () => M12_LIKERT_PADRAO));
+    setM12Likert(parsed ? [...parsed] : m12EstadoInicialVazio());
     setM12Msg(null);
   }, [data?.checklist_m12_autoconf, data?.id, frenteAbnt10]);
 
@@ -579,7 +596,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             versaoOtimistaRef.current = json.versao_otimista;
           }
           const sync = normalizarM12DoApi(json.checklist_m12_autoconf);
-          setM12Likert(sync ?? proximo);
+          setM12Likert(sync ? [...sync] : [...proximo]);
           setData(json);
           setM12Msg("Autoconf M12 gravada.");
           return true;
@@ -602,14 +619,29 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     [data?.status, id, refetchDetalhe],
   );
 
-  const confirmarM12Modal = useCallback(async () => {
+  const gravarM12NaApi = useCallback(async () => {
+    const payload = m12ValoresSeCompleto(m12Likert);
+    if (!payload) {
+      setM12Msg("Assine os 10 controlos (nível 1 a 5 em cada um) antes de gravar na API.");
+      return;
+    }
+    await salvarM12LikertCompleto(payload);
+  }, [m12Likert, salvarM12LikertCompleto]);
+
+  const confirmarM12Modal = useCallback(() => {
     const idx = m12ModalIndex;
-    if (idx === null || idx < 0 || idx >= M12_NUM_ITENS) return;
-    const base = m12Likert.length === M12_NUM_ITENS ? [...m12Likert] : Array(M12_NUM_ITENS).fill(M12_LIKERT_PADRAO);
-    base[idx] = m12ModalDraft;
-    const ok = await salvarM12LikertCompleto(base);
-    if (ok) setM12ModalIndex(null);
-  }, [m12ModalIndex, m12ModalDraft, m12Likert, salvarM12LikertCompleto]);
+    if (idx === null || idx < 0 || idx >= M12_NUM_ITENS || m12ModalDraft === null) return;
+    setM12Likert((prev) => {
+      const base =
+        prev.length === M12_NUM_ITENS ? [...prev] : m12EstadoInicialVazio();
+      base[idx] = m12ModalDraft;
+      return base;
+    });
+    setM12ModalIndex(null);
+  }, [m12ModalIndex, m12ModalDraft]);
+
+  const m12ProgressoAssinalados = m12Likert.filter((x) => x !== null).length;
+  const m12CompletoParaApi = m12ValoresSeCompleto(m12Likert) !== null;
 
   const barGapColors = ["#b91c1c", "#ea580c", "#ca8a04", "#65a30d", "#16a34a"];
 
@@ -870,12 +902,36 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <CardHeader>
             <CardTitle>Autoconferência ABNT — 10 controles (M12)</CardTitle>
             <p className="text-sm font-normal text-muted-foreground">
-              Escala Likert 1 (mínimo) a 5 (máximo) por controlo — espelho do checklist do relatório PDF. Use{" "}
-              <strong className="font-medium text-foreground">Alterar</strong> e{" "}
-              <strong className="font-medium text-foreground">Salvar</strong> na janela. Persistência com{" "}
-              <code className="text-xs">If-Match</code> / <code className="text-xs">versao_otimista</code> (ABNT NBR
-              17301:2026, LC 214/2025).
+              Escala Likert 1 (mínimo) a 5 (máximo) por controlo — espelho do checklist do relatório PDF.{" "}
+              <strong className="font-medium text-foreground">Alterar</strong> aplica o nível apenas neste controlo
+              (sem valores por defeito). Depois de <strong className="font-medium text-foreground">10/10 assinalados</strong>, use{" "}
+              <strong className="font-medium text-foreground">Gravar autoconf na API</strong> (
+              <code className="text-xs">If-Match</code> / <code className="text-xs">versao_otimista</code>) — ABNT NBR
+              17301:2026; LC 214/2025.
             </p>
+            {data.status === "finalizado" ? (
+              <p
+                className="text-sm leading-snug border rounded-md p-3 mt-3 bg-muted/25 text-muted-foreground"
+                role="note"
+              >
+                <strong className="text-foreground">Independente do assistente:</strong> estas notas não são copiadas
+                do questionário («Inexistente», «Incipiente», etc.). Cada controlo tem de ser escolhido aqui.
+              </p>
+            ) : null}
+            {data.status === "finalizado" ? (
+              <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <p className="text-sm font-medium text-foreground tabular-nums">
+                  Progresso: {m12ProgressoAssinalados}/{M12_NUM_ITENS} controlos assinalados
+                </p>
+                <Button
+                  type="button"
+                  disabled={m12Saving || data.status !== "finalizado" || !m12CompletoParaApi}
+                  onClick={() => void gravarM12NaApi()}
+                >
+                  {m12Saving ? "Gravando…" : "Gravar autoconf na API"}
+                </Button>
+              </div>
+            ) : null}
             {m12Msg ? (
               <p className="text-sm text-muted-foreground mt-2" role="status">
                 {m12Msg}
@@ -884,7 +940,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           </CardHeader>
           <CardContent className="space-y-3">
             {frenteAbnt10.acoes.map((a, i) => {
-              const valor = m12Likert[i] ?? M12_LIKERT_PADRAO;
+              const valor = m12Likert[i] ?? null;
               return (
                 <div
                   key={a.descricao + String(i)}
@@ -893,7 +949,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                   <p className="text-sm leading-snug flex-1 min-w-0">{a.descricao}</p>
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <Badge variant="secondary" className="text-xs font-normal max-w-[14rem] sm:max-w-xs text-left">
-                      {valor} — {rotuloLikertM12(valor)}
+                      {valor === null || valor === undefined
+                        ? "Não assinalado — use Alterar"
+                        : `${valor} — ${rotuloLikertM12(valor)}`}
                     </Badge>
                     <Button
                       type="button"
@@ -903,7 +961,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                       disabled={m12Saving || data.status !== "finalizado"}
                       onClick={() => {
                         setM12ModalIndex(i);
-                        setM12ModalDraft(valor);
+                        setM12ModalDraft(valor ?? null);
                       }}
                     >
                       <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -1300,15 +1358,19 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       <Dialog
         open={m12ModalIndex !== null}
         onOpenChange={(open) => {
-          if (!open) setM12ModalIndex(null);
+          if (!open) {
+            setM12ModalIndex(null);
+            setM12ModalDraft(null);
+          }
         }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Controlo M12 — escala Likert</DialogTitle>
             <DialogDescription>
-              Grau declarado para este controlo: 1 = não implementado, 5 = implementado e monitorado. A gravação
-              envia os 10 valores (If-Match).
+              Escolha obrigatória: 1 = não implementado, 5 = implementado e monitorado. «Aplicar» atualiza só este
+              controlo no ecrã; a persistência na base faz-se com «Gravar autoconf na API» quando os 10 estiverem
+              assinalados.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2" role="radiogroup" aria-label="Escala Likert 1 a 5">
@@ -1333,15 +1395,22 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             ))}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setM12ModalIndex(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setM12ModalIndex(null);
+                setM12ModalDraft(null);
+              }}
+            >
               Cancelar
             </Button>
             <Button
               type="button"
-              disabled={m12Saving || data.status !== "finalizado"}
-              onClick={() => void confirmarM12Modal()}
+              disabled={m12ModalDraft === null || data.status !== "finalizado"}
+              onClick={() => confirmarM12Modal()}
             >
-              {m12Saving ? "Gravando…" : "Salvar"}
+              Aplicar ao controlo
             </Button>
           </DialogFooter>
         </DialogContent>

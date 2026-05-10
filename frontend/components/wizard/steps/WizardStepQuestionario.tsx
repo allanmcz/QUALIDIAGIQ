@@ -155,7 +155,8 @@ export function WizardStepQuestionario({
           </div>
           {tipoEhEscalaLikert15(perguntas[indicePerguntaAtual].tipo) && (
             <p className="text-sm text-muted-foreground leading-snug">
-              Escala Likert (1 a 5): 1 = menor aderência, 5 = maior aderência à prática perguntada.
+              Escala Likert (1 a 5): 1 = menor aderência, 5 = maior aderência à prática perguntada. É obrigatório
+              escolher um nível — não há valor por defeito; não é possível avançar sem marcar uma opção.
             </p>
           )}
           {tipoEhNumericaWizard(perguntas[indicePerguntaAtual].tipo) && (
