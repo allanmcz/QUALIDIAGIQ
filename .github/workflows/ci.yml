@@ -15,6 +15,9 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -70,6 +73,20 @@ jobs:
           mkdir -p dist
           cyclonedx-py environment -o dist/sbom-cyclonedx.json --pyproject pyproject.toml -of JSON
 
+      - uses: sigstore/cosign-installer@v3.8.0
+
+      - name: Assinar SBOM com Cosign (keyless — OIDC GitHub)
+        id: cosign_sbom
+        continue-on-error: true
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign-blob --yes \
+            --output-signature=dist/sbom-cyclonedx.json.sig \
+            --output-certificate=dist/sbom-cyclonedx.json.cert.pem \
+            --bundle=dist/sbom-cyclonedx.json.bundle \
+            dist/sbom-cyclonedx.json
+
       - name: Artefacto SBOM CycloneDX
         if: always()
         uses: actions/upload-artifact@v4
@@ -77,6 +94,18 @@ jobs:
         with:
           name: sbom-cyclonedx-json
           path: dist/sbom-cyclonedx.json
+          retention-days: 30
+
+      - name: Artefacto assinaturas Cosign (SBOM)
+        if: ${{ hashFiles('dist/sbom-cyclonedx.json.sig') != '' }}
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: sbom-cyclonedx-cosign
+          path: |
+            dist/sbom-cyclonedx.json.sig
+            dist/sbom-cyclonedx.json.cert.pem
+            dist/sbom-cyclonedx.json.bundle
           retention-days: 30
 
       - name: Schema MVP strict (Postgres — 0015 + CNAE)
@@ -249,6 +278,26 @@ jobs:
         env:
           CI: true
         run: npm run test:e2e
+
+  frontend-lighthouse:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Build produção (sem service worker — CI=true)
+        env:
+          CI: true
+        run: npm run build
+      - name: Lighthouse CI (home — a11y/SEO/best-practices)
+        run: npm run lighthouse
 
   frontend-e2e-integrado:
     runs-on: ubuntu-latest

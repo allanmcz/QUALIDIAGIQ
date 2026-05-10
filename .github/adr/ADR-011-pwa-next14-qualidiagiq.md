@@ -43,8 +43,8 @@ Registrar resultado no PR ou em `docs/operacao/ROADMAP_HANDOFF_PROGRESSO_SYNC.md
 
 - [x] Manifest + metadata + documentação (`frontend/README.md`, este ADR)  
 - [ ] Branch `feat/qdi-front-pwa-onda1` — **opcional** até iniciar B2 (SW)  
-- [ ] **B2:** dependência PWA alinhada ao Next 14 + alterações `next.config.mjs` + exclusões de cache  
-- [ ] Testes manuais: login → dashboard → wizard feliz (com e sem SW)
+- [x] **B2 (2026-05-10):** `@ducanh2912/next-pwa` + `next.config.mjs` + exclusões API/`api-backend` + `/offline` · SW **desactivado** quando `CI=true` (Actions / Playwright)  
+- [ ] Testes manuais: login → dashboard → wizard feliz **com** SW (build local sem `CI=true`)
 
 ## Referências
 

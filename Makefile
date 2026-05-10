@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -140,3 +140,6 @@ uv-lock-check: ## Falha CI-local se uv.lock estiver desactualizado face ao pypro
 k6-smoke: ## Smoke k6 em GET /health (BASE_URL opcional; requer binário k6)
 	@command -v k6 >/dev/null 2>&1 || { echo "❌ k6 não encontrado — brew install k6"; exit 1; }
 	k6 run loadtest/k6_diagnostico_smoke.js
+
+lighthouse-ci: ## Lighthouse CI na página inicial (alinhado ao GitHub Actions; PWA off em CI)
+	cd frontend && CI=true npm run build && npm run lighthouse

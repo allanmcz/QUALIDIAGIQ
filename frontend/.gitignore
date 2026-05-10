@@ -9,10 +9,17 @@
 # testing
 /coverage
 /test-results/
+/.lighthouseci/
 
 # next.js
 /.next/
 /out/
+
+# PWA / Workbox — artefactos gerados em `npm run build` (ADR-011 B2)
+/public/sw.js
+/public/workbox-*.js
+/public/worker-*.js
+/public/fallback-*.js
 
 # production
 /build

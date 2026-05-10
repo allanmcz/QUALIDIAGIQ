@@ -1,3 +1,5 @@
+import withPWAInit from "@ducanh2912/next-pwa";
+
 /**
  * Origem da API para CSP `connect-src` em produção (evita «Failed to fetch» quando
  * `NEXT_PUBLIC_API_URL` é http(s) absoluto e não same-origin).
@@ -80,6 +82,8 @@ const nextConfig = {
             `connect-src ${connectSrcCspParts().join(" ")}`,
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
+            "worker-src 'self'",
+            "manifest-src 'self'",
             "frame-ancestors 'self'",
           ].join("; "),
         },
@@ -89,4 +93,40 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+/**
+ * PWA B2 (Workbox) — ADR-011: sem SW em `CI=true` (Playwright/build Actions) para evitar flakiness;
+ * builds locais `npm run build && npm start` geram `sw.js` com exclusões de API.
+ */
+const withPWA = withPWAInit({
+  dest: "public",
+  disable:
+    process.env.NODE_ENV === "development" || process.env.CI === "true",
+  register: true,
+  extendDefaultRuntimeCaching: true,
+  fallbacks: {
+    document: "/offline",
+  },
+  workboxOptions: {
+    navigateFallbackDenylist: [
+      /^\/api\//,
+      /^\/api-backend(\/|$)/,
+      /^\/_next\/image/,
+    ],
+    runtimeCaching: [
+      {
+        urlPattern: ({ url }) => {
+          const p = url.pathname;
+          return (
+            p.startsWith("/api-backend") ||
+            p.startsWith("/api/") ||
+            (p.startsWith("/_next/data/") && p.includes("api-backend"))
+          );
+        },
+        handler: "NetworkOnly",
+        method: "GET",
+      },
+    ],
+  },
+});
+
+export default withPWA(nextConfig);
