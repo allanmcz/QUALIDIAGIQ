@@ -7,7 +7,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
+from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter, _extrair_texto_resposta
+
+
+def test_extrair_texto_resposta_ignora_blocos_nao_text() -> None:
+    """Ramo em que o bloco não é ``type == \"text\"`` (blocos ferramenta / imagem)."""
+    msg = SimpleNamespace(
+        content=[
+            SimpleNamespace(type="tool_use", name="noop"),
+            SimpleNamespace(type="text", text="  só isto  "),
+        ]
+    )
+    assert _extrair_texto_resposta(msg) == "só isto"
 
 
 @pytest.mark.asyncio

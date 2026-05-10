@@ -6,15 +6,40 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from src.application.services.cnpj_consulta_service import ConsultaCnpjMaterializada
 from src.presentation.api.dependencies import get_consultar_cnpj_use_case, get_current_user_tenant
 from src.presentation.api.main import app
+from src.presentation.api.routers.cnpj_router import consultar_cnpj
+from src.presentation.api.schemas import ConsultarCnpjRequest
 from tests.conftest import cabecalho_auth_bearer
 
 client = TestClient(app)
 CNPJ_OK = "33014556000196"
+
+
+@pytest.mark.asyncio
+async def test_consultar_cnpj_idempotency_none_normaliza_vazio() -> None:
+    """Chamada direta com ``None`` cobre ``(idempotency_key or \"\")`` (sem header FastAPI)."""
+    req = MagicMock()
+    req.state = MagicMock(spec=["trace_id"], trace_id=None)
+    body = ConsultarCnpjRequest.model_validate(
+        {"cnpj": CNPJ_OK, "force_refresh": False, "aplicar_no_diagnostico_id": None}
+    )
+    mock_uc = MagicMock()
+    with pytest.raises(HTTPException) as exc:
+        await consultar_cnpj(
+            req,
+            body,
+            (uuid4(), uuid4(), "gratuito"),
+            mock_uc,
+            None,  # type: ignore[arg-type]
+        )
+    assert exc.value.status_code == 400
+    mock_uc.executar_e_materializar.assert_not_called()
 
 
 def test_consultar_cnpj_rejeita_idempotency_vazio() -> None:

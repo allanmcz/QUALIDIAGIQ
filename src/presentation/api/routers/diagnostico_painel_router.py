@@ -135,9 +135,8 @@ async def atualizar_quadro_implantacao_anotacoes(
 
     blob: dict[str, dict[str, Any]] = {}
     for k, v in payload.quadro_implantacao_anotacoes.items():
+        # ``QuadroImplantacaoAnotacaoItemSchema`` já promove ``comentario`` legado para ``comentarios``.
         coms = list(v.comentarios)
-        if not coms and v.comentario.strip():
-            coms = [v.comentario.strip()]
         blob[k] = {
             "prazo_meta": v.prazo_meta,
             "comentarios": coms,

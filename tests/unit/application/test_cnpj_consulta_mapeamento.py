@@ -146,6 +146,15 @@ class TestSugestaoDesdePayloadReceita:
         p = {**self._base(), **payload_extra}
         assert sugestao_desde_payload_receita(p)["regime"] == regime_esperado
 
+    def test_regime_lista_sem_padrao_conhecido_usa_flags_opcao(self) -> None:
+        """Sem MEI/SIMPLES/PRESUMIDO/REAL na lista, avalia ``opcao_pelo_*`` (ramo após ``REAL``)."""
+        p = {
+            **self._base(),
+            "regime_tributario": [{"ano": 2025, "forma_de_tributacao": "OUTRO REGIME"}],
+            "opcao_pelo_simples": True,
+        }
+        assert sugestao_desde_payload_receita(p)["regime"] == "simples_nacional"
+
     def test_inferencia_setor_macro_cnae_fora_faixas_conhecidas_servicos(self) -> None:
         """Prefixo CNAE que não cai em agro/indústria/consumo/comércio ⇒ ``servicos``."""
         p = {**self._base(), "cnae_fiscal": "4812300"}

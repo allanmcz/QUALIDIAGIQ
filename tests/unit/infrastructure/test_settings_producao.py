@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import SecretStr
 
 from src.infrastructure.config.settings import Settings, get_settings
 
@@ -63,6 +64,15 @@ def test_producao_config_valida(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings()
     assert s.supabase_url.startswith("https://")
     assert len(s.jwt_secret_key.get_secret_value()) >= 32
+
+
+def test_producao_segunda_barreira_jwt_curto_defensivo(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cobre validação redundante após enfraquecimento manual do segredo (defesa em profundidade)."""
+    _base_producao(monkeypatch)
+    s = Settings()
+    s.jwt_secret_key = SecretStr("x" * 31)
+    with pytest.raises(ValueError, match="32 caracteres em producao"):
+        Settings._producao_segredos_obrigatorios(s)
 
 
 def test_development_jwt_curto_normaliza_para_segredo_local(

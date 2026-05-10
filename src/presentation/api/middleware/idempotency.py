@@ -132,7 +132,14 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         body = b""
         iterator = getattr(response, "body_iterator", None)
         if iterator is not None:
-            async for chunk in cast(Any, iterator):  # noqa: TC006
+            # Loop explícito (equivalente ao ``async for``) — evita ramo parcial de branch-coverage
+            # em CPython 3.14 + geradores/iteradores heterogéneos (Starlette, mocks).
+            ait = cast(Any, iterator).__aiter__()  # noqa: TC006 — iterador runtime heterogéneo
+            while True:
+                try:
+                    chunk = await cast(Any, ait).__anext__()  # noqa: TC006
+                except StopAsyncIteration:
+                    break
                 body += chunk
         else:
             raw = getattr(response, "body", None)

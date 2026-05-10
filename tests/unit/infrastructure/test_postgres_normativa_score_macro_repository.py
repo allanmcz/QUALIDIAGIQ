@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import psycopg2.errors
 import pytest
 
+from src.domain.value_objects.score import Dimensao
 from src.infrastructure.repositories.postgres_normativa_score_macro_repository import (
     PostgresNormativaScoreMacroRepository,
 )
@@ -39,6 +40,22 @@ class TestPostgresNormativaScoreMacroRepository:
         repo = PostgresNormativaScoreMacroRepository("postgresql://x")
         with pytest.raises(RuntimeError, match="normativa_score_macro_dimensao"):
             repo.obter_pesos_macro_validos_na_data(date(2026, 1, 1))
+        conn.close.assert_called_once()
+
+    @patch(
+        "src.infrastructure.repositories.postgres_normativa_score_macro_repository.psycopg2.connect",
+    )
+    def test_obter_pesos_macro_retorna_mapa(self, mock_connect: MagicMock) -> None:
+        conn = MagicMock()
+        cur = MagicMock()
+        cur.fetchall.return_value = [("fiscal", 1.5)]
+        conn.cursor.return_value.__enter__.return_value = cur
+        conn.cursor.return_value.__exit__.return_value = None
+        mock_connect.return_value = conn
+
+        repo = PostgresNormativaScoreMacroRepository("postgresql://x")
+        out = repo.obter_pesos_macro_validos_na_data(date(2026, 1, 1))
+        assert out[Dimensao.FISCAL] == 1.5
         conn.close.assert_called_once()
 
     @patch(

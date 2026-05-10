@@ -186,6 +186,42 @@ def test_plano_efetivo_para_criacao_regras_perfil() -> None:
     assert _plano_efetivo_para_criacao(payload, "avancado") == "avancado"
 
 
+def test_plano_efetivo_para_criacao_valor_desconhecido_normaliza_gratuito() -> None:
+    """``plano`` fora do binómio aceite ⇒ normalizado antes do ``return`` final."""
+    payload = IniciarDiagnosticoRequest.model_validate(
+        {
+            "empresa": {
+                "cnpj": "",
+                "razao_social": "Empresa",
+                "porte": "micro",
+                "regime": "simples_nacional",
+                "cnae_principal": "1234567",
+                "uf": "SP",
+                "setor_macro": "comercio",
+            },
+            "respondente": {"email": "resp@x.com", "nome": "Resp"},
+            "respostas": [{"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 1}],
+            "aceite_termos_privacidade": True,
+            "plano": "enterprise_inventado",
+        }
+    )
+    assert _plano_efetivo_para_criacao(payload, "avancado") == "gratuito"
+
+
+def test_conclusao_publica_row_sem_score_dict_cai_no_fallback_locale() -> None:
+    """``score_completo`` ausente ou não-dict — não entra no ``try`` de ``ScoreCompleto``."""
+    row = {
+        "id": str(uuid4()),
+        "status": "finalizado",
+        "empresa_razao_social": "Z",
+        "locale_relatorio": None,
+    }
+    out = _conclusao_publica_row_para_schema(row)
+    assert out.score_geral is None
+    assert out.scores_por_dimensao == []
+    assert out.locale_relatorio == "pt-BR"
+
+
 @pytest.mark.asyncio
 async def test_executar_criar_diagnostico_core_pergunta_nao_encontrada_e_value_error() -> None:
     payload = IniciarDiagnosticoRequest.model_validate(

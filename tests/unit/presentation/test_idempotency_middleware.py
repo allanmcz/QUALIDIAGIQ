@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from starlette.applications import Starlette
 from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
+from starlette.responses import StreamingResponse
 
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
@@ -521,6 +522,123 @@ async def test_dispatch_body_iterator_sem_chunks_corpo_vazio() -> None:
     req = Request(scope, receive)
     resp = await mw.dispatch(req, call_next)
     assert resp.body == b""
+
+
+@pytest.mark.asyncio
+async def test_dispatch_resposta_4xx_nao_grava_cache_idempotencia() -> None:
+    """Fora de 2xx o middleware não persiste corpo (salto para ``return out`` após o ``if``)."""
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"99999999-9999-9999-9999-999999999999"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class Resposta400:
+        status_code = 400
+        media_type = "application/json"
+        body = b'{"detail":"validacao"}'
+        headers = MutableHeaders({"content-type": "application/json"})
+
+    async def call_next(_: Request) -> Resposta400:
+        return Resposta400()
+
+    async def receive() -> dict[str, object]:
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    assert len(cache) == 0
+    resp = await mw.dispatch(req, call_next)
+    assert resp.status_code == 400
+    assert resp.body == b'{"detail":"validacao"}'
+    assert len(cache) == 0
+
+
+class _AsyncIterParaSemYield:
+    """Iterador assíncrono que termina antes do primeiro chunk (não é ``async_generator``)."""
+
+    def __aiter__(self) -> _AsyncIterParaSemYield:
+        return self
+
+    async def __anext__(self) -> bytes:
+        raise StopAsyncIteration
+
+
+@pytest.mark.asyncio
+async def test_dispatch_body_iterator_class_stop_async_imediato() -> None:
+    """Cobre saída imediata do ``async for`` via ``__anext__`` → ``StopAsyncIteration``."""
+
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    class RespostaIteradorManual:
+        status_code = 200
+        media_type = "application/json"
+        headers = MutableHeaders({"content-type": "application/json"})
+
+        def __init__(self) -> None:
+            self.body_iterator = _AsyncIterParaSemYield()
+
+    async def call_next(_: Request) -> RespostaIteradorManual:
+        return RespostaIteradorManual()
+
+    async def receive() -> dict[str, object]:
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.status_code == 200
+    assert resp.body == b""
+
+
+@pytest.mark.asyncio
+async def test_dispatch_streaming_response_starlette_async_iterator() -> None:
+    """Paridade com ``StreamingResponse`` real (``body_iterator`` típico do Starlette)."""
+
+    inner = _starlette_app_sem_engine_postgres()
+    cache: TTLCache[str, CorpoCacheadoIdempotencia] = TTLCache(maxsize=64, ttl=120)
+    mw = IdempotencyMiddleware(inner, cache)
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    auth = cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid)["Authorization"].encode()
+    headers = [
+        (b"authorization", auth),
+        (b"idempotency-key", b"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+    ]
+    scope = _scope_post_diagnosticos(inner, headers)
+
+    async def call_next(_: Request) -> StreamingResponse:
+        async def um_chunk() -> object:
+            yield b'{"stream":true}'
+
+        return StreamingResponse(
+            um_chunk(),
+            status_code=200,
+            media_type="application/json",
+            headers={"content-type": "application/json"},
+        )
+
+    async def receive() -> dict[str, object]:
+        return {"type": "http.disconnect"}
+
+    req = Request(scope, receive)
+    resp = await mw.dispatch(req, call_next)
+    assert resp.status_code == 200
+    assert resp.body == b'{"stream":true}'
 
 
 @pytest.mark.asyncio
