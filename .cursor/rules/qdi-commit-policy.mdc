@@ -1,0 +1,12 @@
+---
+description: Política de commits Git — agentes não commitam sem Allan (DEV_09052026_V2)
+alwaysApply: true
+---
+
+# QDI — Política de commit (agentes / Cursor)
+
+Decisão consolidada **DEV_09052026_V2** (Cursor #11): o agente **não** executa `git commit` nem `git push` por conta própria.
+
+- Pode criar ou editar ficheiros, sugerir mensagem Conventional Commits PT-BR e rodar `make test` / `make lint`.
+- **Quem faz commit e push** é o Allan (ou humano designado), após revisão do diff.
+- Alinhado a `.claude/CLAUDE.md` §10 (push/rebase) e extensão explícita a `git commit`.

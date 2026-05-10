@@ -143,6 +143,7 @@ Se Allan pedir algo dessa lista, **lembre o escopo e proponha redirecionamento**
 
 - `Read`, `Edit`, `Write`, `Bash`, `Grep`, `Glob`
 - **NUNCA** `git push` ou `git rebase` sem confirmação explícita
+- **NUNCA** `git commit` sem confirmação explícita do Allan — o agente prepara diff/arquivos; quem commita é o controlador (decisão DEV_09052026_V2 · Cursor #11)
 - Sempre rodar testes antes de declarar tarefa concluída
 
 ---
