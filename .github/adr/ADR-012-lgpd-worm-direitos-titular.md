@@ -74,6 +74,7 @@ Analogia de negócio: **NF-e + Carta de Correção Eletrônica (CC-e)** — o or
 | WORM CNAE (domínio referência) | `0013_cnae_referencia.sql` — `fn_worm_30_dias`, triggers em tabelas CNAE |
 | Solicitações titular LGPD | `0028` — `lgpd_titular_solicitacao` (tramitação) |
 | Log anonimização | `0029` — `lgpd_anonimizacao_log` + políticas WORM associadas |
+| Retificações append-only | `0035` — `diagnostico_retificacao` (INSERT/SELECT, RLS; sem UPDATE) |
 
 Comando de varredura:
 
@@ -121,12 +122,12 @@ flowchart LR
   B -->|diagnóstico finalizado| E[Anonimização ou resposta fundamentada]
 ```
 
-> **Nota (2026-05):** endpoints **implementados** para tramitação operacional sob **`/privacidade/solicitacoes`** (Bearer + `Idempotency-Key` no POST — migração `0028`, testes em `tests/integration/test_privacidade_api.py`). Execução de anonimização **deferida**: **`/privacidade/diagnosticos/{id}/anonimizar-respondente`** (migração `0029`, testes dedicados). Os diagramas com URI `/privacidade/solicitar-*` são **referência conceitual**; o modelo atual é **solicitação tipada** até evolução completa de **export portável JSON + PDF/A-3** (§4).
+> **Nota (2026-05):** endpoints **implementados** para tramitação operacional sob **`/privacidade/solicitacoes`** (Bearer + `Idempotency-Key` no POST — migração `0028`, testes em `tests/integration/test_privacidade_api.py`). Execução de anonimização **deferida**: **`/privacidade/diagnosticos/{id}/anonimizar-respondente`** (migração `0029`, testes dedicados). **Export portável** (§4): **`GET /privacidade/diagnosticos/{id}/export-portabilidade`** com JSON Schema `qdi-diagnostico-export-v1` e opção **PDF com anexo JSON** (`formato=pacote_pdf`). Os diagramas com URI `/privacidade/solicitar-*` permanecem **referência conceitual** para fluxos genéricos art. 18.
 
 ## Próximos passos (engenharia)
 
-- [ ] Publicar **JSON Schema** versionado (`qdi-diagnostico-v1`) + pipeline de **export** portável (JSON + PDF/A-3 embebido) alinhado ao §4.
-- [ ] Modelo **retificação** append-only (`tipo: RETIFICACAO`, cadeia de hashes) — §5.
+- [x] Publicar **JSON Schema** versionado (`docs/schemas/qdi-diagnostico-export-v1.schema.json`) + pipeline de **export** portável (**JSON** + **PDF com anexo JSON** via ReportLab + pikepdf — pacote verificável) — §4; API **`GET /privacidade/diagnosticos/{id}/export-portabilidade`** (`formato=json` \| `pacote_pdf`).
+- [x] Modelo **retificação** append-only (`tipo: RETIFICACAO`, cadeia de hashes) — §5; migração **`0035_diagnostico_retificacao_append_only.sql`**, **`POST/GET /diagnosticos/{id}/retificacao(|es)`**.
 - [x] Tramitação **`/privacidade/solicitacoes`** (POST/GET/PATCH).
 - [x] Execução anonimização respondente + **`lgpd_anonimizacao_log`** — migração `0029` + rotas documentadas.
 - [x] Suite integração — `tests/integration/test_privacidade_api.py`, `tests/integration/test_lgpd_anonimizacao_executor_postgres.py`.

@@ -74,6 +74,10 @@ docs/*
 !docs/operacao/
 !docs/operacao/**
 
+# JSON Schema versionado (export portabilidade LGPD — ADR-012 §4)
+!docs/schemas/
+!docs/schemas/**
+
 # Jurídico — status MVP + parecer (exceção — versionados)
 !docs/legal/
 !docs/legal/**

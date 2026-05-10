@@ -211,3 +211,47 @@ export async function postRegistrarSolicitacaoLgpd(body: {
     throw e;
   }
 }
+
+/** Formato do pacote ADR-012 §4 — alinhado a `FormatoExportPortabilidade` na API. */
+export type FormatoExportPortabilidade = "json" | "pacote_pdf";
+
+/**
+ * Descarrega pacote de portabilidade (LGPD art. 18, V) após solicitação tipo **portabilidade** **deferida**.
+ * GET — não usa Idempotency-Key. Devolve `Blob` (JSON ou PDF conforme `formato`).
+ */
+export async function fetchExportPortabilidadeDiagnostico(params: {
+  diagnosticoId: string;
+  solicitacaoId: string;
+  formato?: FormatoExportPortabilidade;
+}): Promise<Blob> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error("Sessão necessária.");
+  }
+  const sp = new URLSearchParams();
+  sp.set("solicitacao_id", params.solicitacaoId);
+  sp.set("formato", params.formato ?? "json");
+  const url = `${baseUrl()}/privacidade/diagnosticos/${params.diagnosticoId}/export-portabilidade?${sp.toString()}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      if (encerrarSessaoPainelSe401(res.status)) {
+        throw new Error("Sessão expirada — a abrir o login.");
+      }
+      const err = await res.json().catch(() => ({}));
+      const detail = (err as { detail?: string }).detail ?? res.statusText;
+      throw new Error(typeof detail === "string" ? detail : `Erro ${res.status}`);
+    }
+    return res.blob();
+  } catch (e) {
+    if (isLikelyNetworkFetchFailure(e)) {
+      const tecnico = e instanceof Error ? e.message : String(e);
+      throw new Error(`${mensagemConectividadeApiParaUsuario(baseUrl())} Detalhe: ${tecnico}`);
+    }
+    throw e;
+  }
+}

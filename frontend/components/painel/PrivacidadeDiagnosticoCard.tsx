@@ -6,9 +6,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { downloadBlob } from "@/lib/browser_download";
 import {
+  fetchExportPortabilidadeDiagnostico,
   fetchSolicitacoesLgpd,
   postAnonimizarRespondenteLgpd,
+  type FormatoExportPortabilidade,
   type SolicitacaoTitularLgpd,
 } from "@/lib/api/privacidade_lgpd";
 
@@ -43,6 +46,8 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
   const [erro, setErro] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [executandoId, setExecutandoId] = useState<string | null>(null);
+  /** `${solicitacaoId}-${formato}` enquanto descarrega export portabilidade */
+  const [exportandoChave, setExportandoChave] = useState<string | null>(null);
 
   const filtradas = useMemo(
     () =>
@@ -72,6 +77,30 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
 
   const podeExecutarAnonimizacao =
     diagnosticoStatus === "finalizado";
+
+  const exportarPortabilidade = async (solicitacaoId: string, formato: FormatoExportPortabilidade) => {
+    const chave = `${solicitacaoId}-${formato}`;
+    setExportandoChave(chave);
+    setErro(null);
+    setMensagem(null);
+    try {
+      const blob = await fetchExportPortabilidadeDiagnostico({
+        diagnosticoId,
+        solicitacaoId,
+        formato,
+      });
+      const nome =
+        formato === "pacote_pdf"
+          ? `qdi-portabilidade-${diagnosticoId}.pdf`
+          : "qdi-diagnostico-export-v1.json";
+      downloadBlob(blob, nome);
+      setMensagem(`Pacote ${formato === "pacote_pdf" ? "PDF" : "JSON"} descarregado.`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha no export de portabilidade.");
+    } finally {
+      setExportandoChave(null);
+    }
+  };
 
   const executarAnonimizacao = async (solicitacaoId: string) => {
     setExecutandoId(solicitacaoId);
@@ -121,11 +150,11 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
       <CardHeader>
         <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
         <CardDescription>
-          Pedidos do titular vinculados a este ID. Com solicitação de{" "}
-          <strong className="font-medium text-foreground">anonimização</strong>{" "}
-          <strong className="font-medium text-foreground">deferida</strong>, pode executar a troca
-          técnica dos dados do respondente (trilha WORM + registo em{" "}
-          <code className="text-xs">lgpd_anonimizacao_log</code>).
+          Pedidos do titular vinculados a este ID.{" "}
+          <strong className="font-medium text-foreground">Portabilidade deferida</strong>: descarregar JSON ou PDF com
+          anexo JSON (LGPD art. 18, V).{" "}
+          <strong className="font-medium text-foreground">Anonimização deferida</strong>: executar troca técnica do
+          respondente (trilha WORM + <code className="text-xs">lgpd_anonimizacao_log</code>).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -141,6 +170,8 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
               s.tipo === "anonimizacao" &&
               s.status === "deferida" &&
               podeExecutarAnonimizacao;
+            const podeExportPort =
+              s.tipo === "portabilidade" && s.status === "deferida" && podeExecutarAnonimizacao;
             return (
               <li
                 key={s.id}
@@ -157,6 +188,32 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
                   <p className="text-xs text-muted-foreground font-mono break-all">ID: {s.id}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  {podeExportPort ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={exportandoChave !== null}
+                        onClick={() => void exportarPortabilidade(s.id, "json")}
+                      >
+                        {exportandoChave === `${s.id}-json` ? "JSON…" : "Export JSON"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={exportandoChave !== null}
+                        onClick={() => void exportarPortabilidade(s.id, "pacote_pdf")}
+                      >
+                        {exportandoChave === `${s.id}-pacote_pdf` ? "PDF…" : "Export PDF"}
+                      </Button>
+                    </>
+                  ) : s.tipo === "portabilidade" && s.status === "deferida" && !podeExecutarAnonimizacao ? (
+                    <p className="text-xs text-amber-700 max-w-xs">
+                      Export de portabilidade só com diagnóstico finalizado e hash de evidência.
+                    </p>
+                  ) : null}
                   {podeBotao ? (
                     <Button
                       type="button"

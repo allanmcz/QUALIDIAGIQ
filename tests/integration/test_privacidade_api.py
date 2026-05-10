@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -23,8 +24,12 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,
 )
+from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
+    ResultadoExportPortabilidadeDiagnostico,
+)
 from src.presentation.api.dependencies import (
     get_executar_anonimizacao_respondente_lgpd_use_case,
+    get_gerar_export_portabilidade_diagnostico_use_case,
     get_lgpd_titular_solicitacao_port,
 )
 from src.presentation.api.main import app
@@ -407,3 +412,58 @@ async def test_post_anonimizar_respondente_400_se_nao_deferida(
     )
     assert resp.status_code == 400
     assert executor.calls == []
+
+
+@pytest.mark.asyncio
+async def test_get_export_portabilidade_json_200(async_client):
+    """GET export JSON — contrato HTTP com use case mockado (integração ASGI)."""
+    mock_uc = MagicMock()
+    payload_json = b'{"schema_id":"qdi-diagnostico-export-v1"}'
+    mock_uc.execute = AsyncMock(
+        return_value=ResultadoExportPortabilidadeDiagnostico(
+            payload={"schema_id": "qdi-diagnostico-export-v1"},
+            json_utf8=payload_json,
+            pdf_bytes=None,
+        )
+    )
+    app.dependency_overrides[get_gerar_export_portabilidade_diagnostico_use_case] = lambda: mock_uc
+    try:
+        tenant_id = uuid4()
+        usuario_id = uuid4()
+        diagnostico_id = uuid4()
+        solicitacao_id = uuid4()
+        headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+        r = await async_client.get(
+            f"/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade",
+            params={"solicitacao_id": str(solicitacao_id), "formato": "json"},
+            headers=headers,
+        )
+        assert r.status_code == 200
+        assert "application/json" in (r.headers.get("content-type") or "")
+        assert r.content == payload_json
+        mock_uc.execute.assert_awaited_once()
+    finally:
+        app.dependency_overrides.pop(get_gerar_export_portabilidade_diagnostico_use_case, None)
+
+
+@pytest.mark.asyncio
+async def test_get_export_portabilidade_400_valor_negocio(async_client):
+    """Erro de negócio do use case → 400 (ex.: solicitação não deferida)."""
+    mock_uc = MagicMock()
+    mock_uc.execute = AsyncMock(side_effect=ValueError("Solicitação deve estar deferida"))
+    app.dependency_overrides[get_gerar_export_portabilidade_diagnostico_use_case] = lambda: mock_uc
+    try:
+        tenant_id = uuid4()
+        usuario_id = uuid4()
+        diagnostico_id = uuid4()
+        solicitacao_id = uuid4()
+        headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+        r = await async_client.get(
+            f"/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade",
+            params={"solicitacao_id": str(solicitacao_id)},
+            headers=headers,
+        )
+        assert r.status_code == 400
+        assert "deferida" in str(r.json().get("detail", ""))
+    finally:
+        app.dependency_overrides.pop(get_gerar_export_portabilidade_diagnostico_use_case, None)

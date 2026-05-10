@@ -1279,7 +1279,9 @@ async def test_post_vincular_conta_sem_email_admin_403(
 
     with patch.object(dss.deps, "get_settings", return_value=S()):
         with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=""):
+            with patch.object(
+                dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=""
+            ):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/vincular-conta",
                     json={"resgate_token": "u" * 32},
@@ -1320,7 +1322,9 @@ async def test_post_vincular_conta_payload_inconsistente_500(
 
     with patch.object(dss.deps, "get_settings", return_value=S()):
         with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=em):
+            with patch.object(
+                dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=em
+            ):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/vincular-conta",
                     json={"resgate_token": "v" * 32},

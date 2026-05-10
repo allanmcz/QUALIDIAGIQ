@@ -17,6 +17,7 @@ from supabase import Client, create_client
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.diagnostico_mutacao_audit_port import DiagnosticoMutacaoAuditPort
+from src.application.ports.diagnostico_retificacao_port import DiagnosticoRetificacaoPort
 from src.application.ports.lead_diagnostico_vinculo_port import (
     LeadDiagnosticoVinculoPort,
     NopLeadDiagnosticoVinculoAdapter,
@@ -36,8 +37,14 @@ from src.application.use_cases.consultar_cnpj import ConsultarCnpjUseCase
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,
 )
+from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
+    GerarExportPortabilidadeDiagnostico,
+)
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
+)
+from src.application.use_cases.listar_retificacoes_diagnostico import (
+    ListarRetificacoesDiagnostico,
 )
 from src.application.use_cases.listar_solicitacao_titular_lgpd import (
     ListarSolicitacaoTitularLgpd,
@@ -47,6 +54,9 @@ from src.application.use_cases.plano_painel_subtarefa import (
     CriarSubtarefaPlanoDiagnostico,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
+from src.application.use_cases.registrar_retificacao_diagnostico import (
+    RegistrarRetificacaoDiagnostico,
+)
 from src.application.use_cases.registrar_solicitacao_titular_lgpd import (
     RegistrarSolicitacaoTitularLgpd,
 )
@@ -78,6 +88,9 @@ from src.infrastructure.adapters.noop_diagnostico_mutacao_audit_adapter import (
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.postgres_diagnostico_mutacao_audit_adapter import (
     PostgresDiagnosticoMutacaoAuditAdapter,
+)
+from src.infrastructure.adapters.postgres_diagnostico_retificacao_adapter import (
+    PostgresDiagnosticoRetificacaoAdapter,
 )
 from src.infrastructure.adapters.postgres_lgpd_anonimizacao_executor_adapter import (
     PostgresLgpdAnonimizacaoExecutorAdapter,
@@ -412,6 +425,57 @@ def get_executar_anonimizacao_respondente_lgpd_use_case(
 ) -> ExecutarAnonimizacaoRespondenteLgpd:
     """Fluxo técnico pós-deferimento (solicitação tipo anonimizacao)."""
     return ExecutarAnonimizacaoRespondenteLgpd(port_solicitacoes=port, executor=executor)
+
+
+def get_diagnostico_retificacao_port() -> DiagnosticoRetificacaoPort:
+    """Append-only de retificações — mesmo DSN síncrono dos fluxos LGPD."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Retificações indisponíveis sem DATABASE_URL síncrono.",
+        )
+    return PostgresDiagnosticoRetificacaoAdapter(dsn_sync=dsn)
+
+
+def get_gerar_export_portabilidade_diagnostico_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    lgpd: Annotated[LgpdTitularSolicitacaoPort, Depends(get_lgpd_titular_solicitacao_port)],
+) -> GerarExportPortabilidadeDiagnostico:
+    """Export JSON (+ PDF com anexo) após solicitação LGPD deferida."""
+    from src.infrastructure.exportacao.validador_export_diagnostico_v1 import (
+        validar_payload_export_diagnostico_v1,
+    )
+    from src.infrastructure.pdf.portabilidade_pdf_anexo import (
+        gerar_pdf_portabilidade_com_json_embebido,
+    )
+
+    return GerarExportPortabilidadeDiagnostico(
+        diagnostico_repository=repo,
+        solicitacoes=lgpd,
+        validar_payload_export_v1=validar_payload_export_diagnostico_v1,
+        gerar_pdf_com_anexo_json=lambda jb, did, tid: gerar_pdf_portabilidade_com_json_embebido(
+            json_bytes=jb,
+            diagnostico_id=did,
+            tenant_id=tid,
+        ),
+    )
+
+
+def get_registrar_retificacao_diagnostico_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    ret: Annotated[DiagnosticoRetificacaoPort, Depends(get_diagnostico_retificacao_port)],
+) -> RegistrarRetificacaoDiagnostico:
+    """Regista retificação na cadeia WORM (sem alterar diagnóstico original)."""
+    return RegistrarRetificacaoDiagnostico(diagnostico_repository=repo, retificacao=ret)
+
+
+def get_listar_retificacoes_diagnostico_use_case(
+    ret: Annotated[DiagnosticoRetificacaoPort, Depends(get_diagnostico_retificacao_port)],
+) -> ListarRetificacoesDiagnostico:
+    """Lista retificações do diagnóstico (mais recentes primeiro)."""
+    return ListarRetificacoesDiagnostico(retificacao=ret)
 
 
 def get_vincular_diagnosticos_lead_self_service_use_case(

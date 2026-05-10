@@ -11,6 +11,7 @@ from typing import Annotated
 from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime)
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi.responses import Response
 
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
@@ -25,6 +26,10 @@ from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ComandoExecutarAnonimizacaoRespondenteLgpd,
     ExecutarAnonimizacaoRespondenteLgpd,
 )
+from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
+    ComandoGerarExportPortabilidadeDiagnostico,
+    GerarExportPortabilidadeDiagnostico,
+)
 from src.application.use_cases.listar_solicitacao_titular_lgpd import (
     ComandoListarSolicitacaoTitularLgpd,
     ListarSolicitacaoTitularLgpd,
@@ -37,6 +42,7 @@ from src.presentation.api.dependencies import (
     get_atualizar_status_solicitacao_titular_lgpd_use_case,
     get_current_user_tenant,
     get_executar_anonimizacao_respondente_lgpd_use_case,
+    get_gerar_export_portabilidade_diagnostico_use_case,
     get_listar_solicitacao_titular_lgpd_use_case,
     get_registrar_solicitacao_titular_lgpd_use_case,
 )
@@ -44,6 +50,7 @@ from src.presentation.api.schemas import (
     AnonimizarRespondenteLgpdHttpRequest,
     AnonimizarRespondenteLgpdHttpResponse,
     AtualizarStatusSolicitacaoTitularLgpdRequest,
+    FormatoExportPortabilidade,
     RegistrarSolicitacaoTitularLgpdRequest,
     SolicitacaoTitularLgpdResponse,
 )
@@ -236,4 +243,65 @@ async def anonimizar_respondente_lgpd(
     return AnonimizarRespondenteLgpdHttpResponse(
         diagnostico_id=diagnostico_id,
         solicitacao_id=payload.solicitacao_id,
+    )
+
+
+@router.get(
+    "/diagnosticos/{diagnostico_id}/export-portabilidade",
+    summary="Exportar pacote de portabilidade (JSON ou PDF com JSON embebido)",
+    description=(
+        "Exige solicitação LGPD tipo **portabilidade** com status **deferida** referente ao mesmo "
+        "`diagnostico_id`. Formato **pacote_pdf**: PDF humano com anexo "
+        "`qdi-diagnostico-export-v1.json` (ADR-012 §4)."
+    ),
+    response_class=Response,
+)
+async def export_portabilidade_diagnostico(
+    diagnostico_id: UUID,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        GerarExportPortabilidadeDiagnostico,
+        Depends(get_gerar_export_portabilidade_diagnostico_use_case),
+    ],
+    solicitacao_id: Annotated[
+        UUID,
+        Query(description="UUID da solicitação LGPD (tipo portabilidade, status deferida)."),
+    ],
+    formato: Annotated[
+        FormatoExportPortabilidade,
+        Query(description="json (default) ou pacote_pdf (PDF com anexo JSON)."),
+    ] = FormatoExportPortabilidade.json,
+) -> Response:
+    """Gera JSON validado por schema ou PDF com anexo (machine-readable embutido)."""
+    _, tenant_id, _ = current
+    try:
+        resultado = await use_case.execute(
+            ComandoGerarExportPortabilidadeDiagnostico(
+                tenant_id=tenant_id,
+                diagnostico_id=diagnostico_id,
+                solicitacao_id=solicitacao_id,
+                gerar_pdf_anexo=(formato == FormatoExportPortabilidade.pacote_pdf),
+            )
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    if formato == FormatoExportPortabilidade.pacote_pdf:
+        if resultado.pdf_bytes is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Falha ao gerar PDF de portabilidade.",
+            )
+        nome = f"qdi-portabilidade-{diagnostico_id}.pdf"
+        return Response(
+            content=resultado.pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{nome}"'},
+        )
+
+    nome_j = "qdi-diagnostico-export-v1.json"
+    return Response(
+        content=resultado.json_utf8,
+        media_type="application/json; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{nome_j}"'},
     )

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qualidiagiq.tributiq.dev/schemas/qdi-diagnostico-export-v1.schema.json",
+  "title": "QDI Diagnóstico — export portável v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "exportado_em",
+    "diagnostico_id",
+    "tenant_id",
+    "status"
+  ],
+  "properties": {
+    "schema_id": {
+      "type": "string",
+      "const": "qdi-diagnostico-export-v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.\\d+\\.\\d+$"
+    },
+    "exportado_em": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Instante UTC ISO 8601 da geração do pacote"
+    },
+    "diagnostico_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "status": { "type": "string", "minLength": 1 },
+    "hash_evidencia_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "empresa": { "type": "object" },
+    "respondente": { "type": "object" },
+    "score_completo": { "type": ["object", "null"] },
+    "score_geral": { "type": ["number", "null"] },
+    "relatorio_pdf_url": { "type": ["string", "null"] },
+    "locale_relatorio": { "type": "string" },
+    "aceite_termos_privacidade_em": { "type": ["string", "null"] },
+    "finalizado_em": { "type": ["string", "null"] },
+    "criado_em": { "type": ["string", "null"] }
+  }
+}

@@ -36,4 +36,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0032_pgcron_cleanup_idempotency.sql
 \i /docker-entrypoint-initdb.d/migrations/0033_force_rls_tabelas_criticas.sql
 \i /docker-entrypoint-initdb.d/migrations/0034_revoke_delete_append_only.sql
+\i /docker-entrypoint-initdb.d/migrations/0035_diagnostico_retificacao_append_only.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

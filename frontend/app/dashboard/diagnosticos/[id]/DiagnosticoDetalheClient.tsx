@@ -19,6 +19,7 @@ import {
 import { CalendarPlus, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { PrivacidadeDiagnosticoCard } from "@/components/painel/PrivacidadeDiagnosticoCard";
+import { RetificacaoDiagnosticoCard } from "@/components/painel/RetificacaoDiagnosticoCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -681,6 +682,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       </div>
 
       <PrivacidadeDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
+
+      <RetificacaoDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
 
       {radarData && radarData.length > 0 && (
         <Card className="mb-10">

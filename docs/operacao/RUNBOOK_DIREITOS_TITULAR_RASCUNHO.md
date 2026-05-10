@@ -21,9 +21,9 @@
 
 ## 3. O que é exportável (portabilidade / acesso)
 
-- Snapshot estruturado do diagnóstico (**JSON**) — campos definidos após legal.  
-- **PDF** já gerado, se existir URL ou blob seguro.  
-- **Não** incluir dados de outros titulares nem tenants.
+- **JSON** versionado (`schema_id`: `qdi-diagnostico-export-v1`) — ver `docs/schemas/qdi-diagnostico-export-v1.schema.json`.  
+- **PDF** de portabilidade com anexo embutido `qdi-diagnostico-export-v1.json` (pacote único — ADR-012 §4).  
+- **Não** incluir dados de outros titulares nem tenants; export só após solicitação tipo **portabilidade** **deferida** e diagnóstico **finalizado** com hash de evidência.
 
 ## 4. O que é imutável por WORM e como anonimizar em vez de apagar
 
@@ -47,15 +47,19 @@
 
 ## 7. API técnica (MVP de enfileiramento — sessão painel)
 
-Requer **Bearer JWT** do tenant e header **`Idempotency-Key`** no `POST`. Detalhes de OpenAPI: tag **Privacidade (LGPD)** no `/docs`.
+Requer **Bearer JWT** do tenant. **`Idempotency-Key`** obrigatória nos `POST` indicados. Detalhes: OpenAPI tag **Privacidade (LGPD)** e **Diagnósticos** no `/docs`.
 
 | Método | Caminho | Notas |
 |--------|---------|--------|
-| `POST` | `/privacidade/solicitacoes` | Cria pedido (tipo, canal, texto); idempotência por chave |
+| `POST` | `/privacidade/solicitacoes` | Cria pedido (tipo, canal, texto); **Idempotency-Key** |
 | `GET` | `/privacidade/solicitacoes` | Lista; query opcional `?status=` |
 | `PATCH` | `/privacidade/solicitacoes/{id}/status` | Atualiza estado operacional da solicitação |
+| `POST` | `/privacidade/diagnosticos/{id}/anonimizar-respondente` | Execução técnica após anonimização **deferida** |
+| `GET` | `/privacidade/diagnosticos/{id}/export-portabilidade` | Query `solicitacao_id` + `formato=json` ou `pacote_pdf` |
+| `GET` | `/diagnosticos/{id}/retificacoes` | Cadeia append-only (sem UPDATE no diagnóstico original) |
+| `POST` | `/diagnosticos/{id}/retificacao` | Nova retificação; **Idempotency-Key** obrigatória |
 
-**Testes de contrato:** `tests/integration/test_privacidade_api.py` (CI via `make test`).
+**Testes de contrato:** `tests/integration/test_privacidade_api.py`, `tests/integration/test_diagnostico_retificacao_api.py` (CI via `make test`). **E2E painel (mock API):** `frontend/e2e/dashboard-privacidade-export.spec.ts` (`npm run test:e2e` no diretório `frontend/`).
 
 ---
 

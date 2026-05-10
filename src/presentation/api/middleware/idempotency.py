@@ -40,8 +40,12 @@ def _exige_idempotencia(request: Request) -> bool:
     """Somente criação de diagnóstico (POST). Login e demais rotas ficam de fora."""
     if request.method.upper() != "POST":
         return False
-    path = request.url.path
-    return path in (
+    raw = request.url.path
+    path_norm = raw.rstrip("/") or "/"
+    # Retificação append-only (ADR-012 §5) — mesma chave = replay previsível.
+    if path_norm.endswith("/retificacao") and path_norm.startswith("/diagnosticos/"):
+        return True
+    return raw in (
         "/diagnosticos",
         "/diagnosticos/",
         "/diagnosticos/self-service",
@@ -62,7 +66,7 @@ def _chave_composta(request: Request, idempotency_key: str) -> str:
 
 
 class IdempotencyMiddleware(BaseHTTPMiddleware):
-    """Exige Idempotency-Key em POST /diagnosticos/ e replica respostas 2xx cacheadas."""
+    """Exige Idempotency-Key nos POST da lista branca (diagnosticos*, CNPJ, retificação) e replica 2xx cacheadas."""
 
     def __init__(self, app: ASGIApp, cache: TTLCache[str, CorpoCacheadoIdempotencia]) -> None:
         super().__init__(app)

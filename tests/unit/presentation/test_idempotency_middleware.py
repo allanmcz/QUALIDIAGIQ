@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -294,6 +295,16 @@ def test_post_diagnostico_replay_via_postgres_engine_curto_circuito() -> None:
 def test_get_health_nao_exige_idempotency_key() -> None:
     r = client.get("/health")
     assert r.status_code == 200
+
+
+def test_post_retificacao_diagnostico_exige_idempotency_key() -> None:
+    """ADR-012 §5 — POST append-only entra na lista do middleware (replay previsível)."""
+    from src.presentation.api.middleware.idempotency import _exige_idempotencia
+
+    base = "/diagnosticos/550e8400-e29b-41d4-a716-446655440000/retificacao"
+    for suf in ("", "/"):
+        req = SimpleNamespace(method="POST", url=SimpleNamespace(path=f"{base}{suf}"))
+        assert _exige_idempotencia(req) is True
 
 
 def test_post_diagnostico_chama_idempotency_put_quando_engine_postgres() -> None:

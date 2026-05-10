@@ -9,6 +9,7 @@ Responsabilidade:
 
 import re
 from datetime import date, datetime
+from enum import StrEnum
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
@@ -888,3 +889,33 @@ class ConsultarCnpjResponse(BaseModel):
     expira_qualificacao_em: datetime
     expira_situacao_em: datetime
     aplicado_em_diagnostico_em_andamento: bool = False
+
+
+class FormatoExportPortabilidade(StrEnum):
+    """Formato do pacote de export (ADR-012 §4)."""
+
+    json = "json"
+    pacote_pdf = "pacote_pdf"
+
+
+class RegistrarRetificacaoDiagnosticoRequest(BaseModel):
+    """POST retificação append-only (cadeia NF-e/CC-e — ADR-012 §5)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    motivo_retificacao: str = Field(..., min_length=10, max_length=8000)
+    payload_retificacao: dict[str, Any] = Field(default_factory=dict)
+
+
+class DiagnosticoRetificacaoHttpResponse(BaseModel):
+    """Linha de retificação persistida."""
+
+    id: UUID
+    tenant_id: UUID
+    diagnostico_original_id: UUID
+    hash_diagnostico_original_sha256: str
+    motivo_retificacao: str
+    payload_retificacao: dict[str, Any]
+    hash_retificacao_sha256: str
+    actor_user_id: UUID | None
+    criado_em: datetime

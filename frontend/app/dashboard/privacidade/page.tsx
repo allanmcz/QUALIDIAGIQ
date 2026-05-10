@@ -15,11 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { downloadBlob } from "@/lib/browser_download";
 import {
+  fetchExportPortabilidadeDiagnostico,
   fetchSolicitacoesLgpd,
   patchStatusSolicitacaoLgpd,
   postAnonimizarRespondenteLgpd,
   postRegistrarSolicitacaoLgpd,
+  type FormatoExportPortabilidade,
   type SolicitacaoTitularLgpd,
 } from "@/lib/api/privacidade_lgpd";
 
@@ -56,6 +59,7 @@ export default function DashboardPrivacidadePage() {
   const [regEmail, setRegEmail] = useState("");
   const [regDiag, setRegDiag] = useState("");
   const [regSalvando, setRegSalvando] = useState(false);
+  const [exportandoChave, setExportandoChave] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
     setCarregando(true);
@@ -114,6 +118,34 @@ export default function DashboardPrivacidadePage() {
     }
   };
 
+  const exportarPortabilidade = async (
+    diagnosticoId: string,
+    solicitacaoId: string,
+    formato: FormatoExportPortabilidade,
+  ) => {
+    const chave = `${solicitacaoId}-${formato}`;
+    setExportandoChave(chave);
+    setErro(null);
+    setMsgGlobal(null);
+    try {
+      const blob = await fetchExportPortabilidadeDiagnostico({
+        diagnosticoId,
+        solicitacaoId,
+        formato,
+      });
+      const nome =
+        formato === "pacote_pdf"
+          ? `qdi-portabilidade-${diagnosticoId}.pdf`
+          : "qdi-diagnostico-export-v1.json";
+      downloadBlob(blob, nome);
+      setMsgGlobal(`Export ${formato === "pacote_pdf" ? "PDF" : "JSON"} descarregado.`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha no export.");
+    } finally {
+      setExportandoChave(null);
+    }
+  };
+
   const registrarDemo = async () => {
     const email = regEmail.trim();
     if (!email) {
@@ -151,8 +183,10 @@ export default function DashboardPrivacidadePage() {
             Solicitações do titular (art. 18) no seu tenant. Para demonstração: registe um pedido,
             altere o status para <strong className="font-medium text-foreground">deferida</strong>
             {", "}
-            e execute a anonimização do respondente quando o diagnóstico estiver{" "}
-            <strong className="font-medium text-foreground">finalizado</strong>.
+            execute a anonimização ou descarregue o pacote de{" "}
+            <strong className="font-medium text-foreground">portabilidade</strong> (JSON / PDF) quando o pedido
+            estiver <strong className="font-medium text-foreground">deferida</strong> e o diagnóstico{" "}
+            <strong className="font-medium text-foreground">finalizado</strong> com evidência.
           </p>
         </div>
         <Button variant="outline" asChild>
@@ -284,6 +318,10 @@ export default function DashboardPrivacidadePage() {
                       row.tipo === "anonimizacao" &&
                       row.status === "deferida" &&
                       row.diagnostico_id != null;
+                    const podeExportPort =
+                      row.tipo === "portabilidade" &&
+                      row.status === "deferida" &&
+                      row.diagnostico_id != null;
                     return (
                       <tr key={row.id} className="border-b border-muted last:border-0 align-top">
                         <td className="p-3">
@@ -336,24 +374,60 @@ export default function DashboardPrivacidadePage() {
                         </td>
                         <td className="p-3 break-all">{row.solicitante_email}</td>
                         <td className="p-3">
-                          {podeExecutar ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={execId === row.id}
-                              onClick={() =>
-                                void executarAnon(row.diagnostico_id as string, row.id)
-                              }
-                            >
-                              {execId === row.id ? "…" : "Executar anonimização"}
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">
-                              {row.tipo === "anonimizacao" && row.status === "deferida"
-                                ? "Defina diagnóstico"
-                                : "—"}
-                            </span>
-                          )}
+                          <div className="flex flex-col gap-2 items-start">
+                            {podeExportPort ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={exportandoChave !== null}
+                                  onClick={() =>
+                                    void exportarPortabilidade(
+                                      row.diagnostico_id as string,
+                                      row.id,
+                                      "json",
+                                    )
+                                  }
+                                >
+                                  {exportandoChave === `${row.id}-json` ? "…" : "JSON"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={exportandoChave !== null}
+                                  onClick={() =>
+                                    void exportarPortabilidade(
+                                      row.diagnostico_id as string,
+                                      row.id,
+                                      "pacote_pdf",
+                                    )
+                                  }
+                                >
+                                  {exportandoChave === `${row.id}-pacote_pdf` ? "…" : "PDF"}
+                                </Button>
+                              </div>
+                            ) : null}
+                            {podeExecutar ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={execId === row.id}
+                                onClick={() =>
+                                  void executarAnon(row.diagnostico_id as string, row.id)
+                                }
+                              >
+                                {execId === row.id ? "…" : "Anonimizar"}
+                              </Button>
+                            ) : !podeExportPort ? (
+                              <span className="text-muted-foreground text-xs">
+                                {row.tipo === "anonimizacao" && row.status === "deferida"
+                                  ? "Defina diagnóstico"
+                                  : "—"}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );
