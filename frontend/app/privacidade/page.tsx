@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getDpoPublicContact, getPoliticaPublicMeta } from "@/lib/legal/dpoPublic";
+import { LGPD_PRAZO_RESPOSTA_ART18_DIAS_UTEIS } from "@/lib/legal/lgpdOperacao";
 
 export const metadata = {
   title: "Política de Privacidade | QualiDiagIQ",
@@ -73,6 +74,22 @@ export default function PrivacidadePage() {
           enquadramento com o WORM/auditoria e responde no prazo interno definido pela operação — alinhado ao runbook{" "}
           <span className="font-mono text-xs">RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md</span> e aos endpoints autenticados{" "}
           <span className="font-mono text-xs">POST/GET/PATCH /privacidade/solicitacoes</span> na API.
+        </p>
+      </section>
+
+      <section
+        id="sla-art-18"
+        className="scroll-mt-24 rounded-md border bg-muted/30 px-4 py-3 text-sm leading-relaxed"
+        aria-labelledby="sla-art-18-heading"
+      >
+        <h2 id="sla-art-18-heading" className="text-base font-semibold tracking-tight">
+          Prazo de resposta aos pedidos do titular (art. 18 LGPD)
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          Para pedidos de confirmação, acesso, correção e demais direitos exercidos pelo canal do DPO, o
+          controlador compromete-se com prazo de resposta de{" "}
+          <strong>{LGPD_PRAZO_RESPOSTA_ART18_DIAS_UTEIS} dias úteis</strong>, em linha com o art. 19, II da Lei
+          13.709/2018, salvo fundamentação de extensão ou complexidade adicional registada na solicitação.
         </p>
       </section>
 
