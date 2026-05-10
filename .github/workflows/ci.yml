@@ -48,7 +48,7 @@ jobs:
             psql "$QDI_POSTGRES_TEST_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -156,7 +156,7 @@ jobs:
             psql "$QDI_POSTGRES_TEST_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -249,7 +249,7 @@ jobs:
             psql "$QDI_POSTGRES_TEST_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
