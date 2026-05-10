@@ -44,10 +44,16 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY src/ ./src/
 
+RUN groupadd --system --gid 10001 qdiapp \
+    && useradd --system --uid 10001 --gid qdiapp --home-dir /app --shell /usr/sbin/nologin qdiapp \
+    && chown -R qdiapp:qdiapp /app
+
+USER qdiapp
+
 EXPOSE 8000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()" || exit 1
+# Healthcheck (imagem slim já inclui Python; httpx instalado com o pacote)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://127.0.0.1:8000/health', timeout=3).raise_for_status()" || exit 1
 
 CMD ["uvicorn", "src.presentation.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
