@@ -142,6 +142,7 @@ class TestInserirAdminPostgres:
             )
         assert out == novo
         bind = mock_cursor.execute.call_args[0][1]
+        assert isinstance(bind[3], str)
         assert bind[4] == "gratuito"
 
     def test_nome_somente_espacos_grava_none(self) -> None:
@@ -166,6 +167,7 @@ class TestInserirAdminPostgres:
             )
         bind = mock_cursor.execute.call_args[0][1]
         assert bind[2] is None
+        assert isinstance(bind[3], str)
 
 
 class TestBuscarAdminPostgres:
@@ -231,7 +233,7 @@ class TestBuscarAdminPostgres:
 
         assert out == "admin@teste.com"
         bind = mock_cursor.execute.call_args[0][1]
-        assert bind == (admin_id, tenant_id)
+        assert bind == (str(admin_id), str(tenant_id))
         mock_conn.close.assert_called_once()
 
     def test_buscar_email_por_id_tenant_sem_linha_ou_email_retorna_none(self) -> None:

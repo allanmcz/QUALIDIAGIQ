@@ -30,6 +30,18 @@ make test
 # → DB:  postgres://postgres:postgres@localhost:60322/postgres
 ```
 
+### Cadastro na plataforma — erro «`perfil_conta`» / PostgreSQL
+
+Se `POST /auth/cadastro` devolver **503** com menção a **`admins`** / **`perfil_conta`**:
+
+1. O volume **`qdi-db-data`** pode ter sido criado **antes** da migração **`0021`** — o `init.sql` só corre na **primeira** subida do Postgres.
+2. Com **`make dev`** no ar, execute **`make migrate`** (aplica os `.sql` em `src/infrastructure/db/migrations/` ao serviço `db`).
+3. Confirme no SQL: `\d admins` deve listar a coluna **`perfil_conta`**.
+4. Ver **`docker logs qdi-api`** para a excepção exacta (a mensagem HTTP ao cliente é a mesma em dev e em produção).
+5. Se `\d admins` já lista **`perfil_conta`** e o **503** continua, o problema não é migração — leia o stack trace nos logs (ex.: binding SQL / `UUID`).
+
+*(Destrutivo: `docker compose down -v` remove o volume e recria o schema desde `init.sql` — perde dados locais.)*
+
 ### Hooks Git (opcional, recomendado)
 
 Após clonar, para ativar `pre-commit` (audit de segredos + gitleaks quando instalado):

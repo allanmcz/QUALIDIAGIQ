@@ -76,13 +76,15 @@ def inserir_admin_postgres(
     conn = psycopg2.connect(dsn_sync)
     try:
         with conn.cursor() as cur:
+            # psycopg2 não adapta `uuid.UUID` em placeholders (%s) sem register_adapter —
+            # enviar texto + cast no SQL evita ProgrammingError em cadastro/login.
             cur.execute(
                 """
                 INSERT INTO admins (email, hashed_password, nome, tenant_id, perfil_conta)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s::uuid, %s)
                 RETURNING id
                 """,
-                (norm_email, hashed_password, nome_limpo, tenant_id, perfil),
+                (norm_email, hashed_password, nome_limpo, str(tenant_id), perfil),
             )
             row = cur.fetchone()
         conn.commit()
@@ -120,10 +122,10 @@ def buscar_email_admin_por_id_e_tenant_postgres(
                 """
                 SELECT lower(trim(email)) AS email
                 FROM admins
-                WHERE id = %s AND tenant_id = %s
+                WHERE id = %s::uuid AND tenant_id = %s::uuid
                 LIMIT 1
                 """,
-                (admin_id, tenant_id),
+                (str(admin_id), str(tenant_id)),
             )
             row = cur.fetchone()
             if not row:

@@ -115,12 +115,15 @@ async def cadastro_consultor_b2b(body: CadastroConsultorB2BRequest) -> LoginResp
         raise
     except deps.psycopg2.Error as e:
         deps.logger.exception("cadastro_postgres_erro", erro=str(e))
+        # Mensagem única para todos os ambientes (contrato HTTP igual ao de produção).
+        # Diagnóstico operacional: README («Cadastro na plataforma») + logs da API.
+        detail = (
+            "Cadastro indisponível: não foi possível gravar no PostgreSQL. "
+            "Confira DATABASE_URL e migrações (`admins`, coluna `perfil_conta`)."
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Cadastro indisponível: não foi possível gravar no PostgreSQL. "
-                "Confira DATABASE_URL e migrações (`admins`, coluna `perfil_conta`)."
-            ),
+            detail=detail,
         ) from e
     except deps.jwt.PyJWTError as e:
         deps.logger.exception("cadastro_jwt_emit_erro", erro=str(e))

@@ -6,6 +6,7 @@ import os
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import psycopg2.errors
 import pytest
 from fastapi.testclient import TestClient
 
@@ -22,7 +23,7 @@ def _limpar_settings() -> None:
     get_settings.cache_clear()
 
 
-def _settings_com_dsn() -> MagicMock:
+def _settings_com_dsn(*, app_env: str | None = None) -> MagicMock:
     m = MagicMock()
     m.cadastro_consultor_b2b_habilitado = True
     m.sync_database_url = "postgresql://postgres:postgres@127.0.0.1:60322/postgres"
@@ -32,6 +33,7 @@ def _settings_com_dsn() -> MagicMock:
     m.jwt_secret_key.get_secret_value.return_value = os.environ.get(
         "JWT_SECRET_KEY", "test-secret-key-for-pytest-only-32chars!!"
     )
+    m.app_env = app_env if app_env is not None else "development"
     return m
 
 
@@ -94,6 +96,52 @@ class TestAuthCadastroEndpoint:
                 json={"nome": "A", "email": "existente@teste.com", "password": "12345678"},
             )
         assert r.status_code == 409
+
+    @pytest.mark.parametrize(
+        ("side_effect_buscar", "side_effect_inserir"),
+        [
+            (None, psycopg2.errors.UndefinedColumn("column perfil_conta does not exist")),
+            (psycopg2.OperationalError("connection refused"), None),
+        ],
+    )
+    def test_cadastro_503_psycopg2_mensagem_padrao_igual_producao(
+        self,
+        side_effect_buscar: object | None,
+        side_effect_inserir: object | None,
+    ) -> None:
+        """Erros psycopg2 não acrescentam texto por APP_ENV — mesmo detalhe HTTP que em produção."""
+        esperado = (
+            "Cadastro indisponível: não foi possível gravar no PostgreSQL. "
+            "Confira DATABASE_URL e migrações (`admins`, coluna `perfil_conta`)."
+        )
+        if side_effect_buscar is not None:
+            buscar_kw: dict[str, object] = {"side_effect": side_effect_buscar}
+        else:
+            buscar_kw = {"return_value": None}
+        if side_effect_inserir is not None:
+            inserir_kw: dict[str, object] = {"side_effect": side_effect_inserir}
+        else:
+            inserir_kw = {"return_value": uuid4()}
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.deps.get_settings",
+                return_value=_settings_com_dsn(app_env="development"),
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
+                **buscar_kw,
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
+                **inserir_kw,
+            ),
+        ):
+            r = client.post(
+                "/auth/cadastro",
+                json={"nome": "Pg", "email": "pg_err@teste.com", "password": "12345678"},
+            )
+        assert r.status_code == 503
+        assert r.json().get("detail") == esperado
 
     def test_cadastro_400_valueerror_inserir_sem_mensagem_duplicado(self) -> None:
         """ValueError de inserir sem palavra-chave de duplicidade → 400."""
