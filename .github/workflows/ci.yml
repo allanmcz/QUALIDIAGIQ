@@ -69,6 +69,9 @@ jobs:
       - name: Ruff (lint)
         run: ruff check src/ tests/ scripts/
 
+      - name: Black (formato — apenas verificação)
+        run: black --check src/ tests/ scripts/
+
       - name: Instalar ripgrep (audit-secrets)
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
 
@@ -84,10 +87,11 @@ jobs:
       - name: Auditoria catálogo MVP (G1 — invariantes JSON)
         run: PYTHONPATH=. python scripts/auditoria_catalogo_perguntas_mvp.py
 
-      - name: Cobertura mínima domain (≥85%)
+      # Alinhado a ``make test-domain`` (branches + fail_under 100 só em src/domain).
+      - name: Cobertura domain (statements + branches, 100%)
         run: |
-          PYTHONPATH=. coverage run --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q
-          coverage report --include='src/domain/*' --fail-under=85 --show-missing
+          PYTHONPATH=. coverage run --branch --source=src/domain -m pytest -o addopts= -p no:cov tests/unit/domain -q
+          coverage report --include='src/domain/*' --fail-under=100 --show-missing
 
   go-live-readiness:
     runs-on: ubuntu-latest

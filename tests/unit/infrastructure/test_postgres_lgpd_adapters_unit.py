@@ -437,7 +437,9 @@ class TestPostgresLgpdAnonimizacaoExecutorSync:
             q = query.replace("\n", " ")
             if "SELECT status" in q and "FROM diagnosticos" in q:
                 cur.fetchone.return_value = {"status": "finalizado"}
-            elif ("UPDATE diagnosticos" in q and "respondente_email" in q) or "UPDATE lgpd_titular_solicitacao" in q:
+            elif (
+                "UPDATE diagnosticos" in q and "respondente_email" in q
+            ) or "UPDATE lgpd_titular_solicitacao" in q:
                 cur.rowcount = 1
 
         cur.execute.side_effect = execute_side_effect
