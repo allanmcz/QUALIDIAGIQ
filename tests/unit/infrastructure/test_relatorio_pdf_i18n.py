@@ -50,6 +50,13 @@ def test_obter_textos_pdf_default_pt_br_quando_locale_desconhecida() -> None:
     assert txt["h1_report_title"] == "Relatório de Diagnóstico Tributário"
 
 
+def test_disclaimer_pt_en_reforca_nao_e_parecer_juridico() -> None:
+    pt = obter_textos_pdf("pt-BR")
+    en = obter_textos_pdf("en")
+    assert "parecer jurídico consultivo" in pt["disclaimer_body"].lower()
+    assert "binding legal advice" in en["disclaimer_body"].lower()
+
+
 def test_nivel_score_labels_en_e_pt_br() -> None:
     labels_en = nivel_score_labels("en")
     labels_pt = nivel_score_labels("pt-BR")

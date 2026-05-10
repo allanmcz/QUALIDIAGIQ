@@ -111,7 +111,8 @@ _STR_PT_BR: dict[str, str] = {
         "Este relatório foi gerado automaticamente pelo motor QualiDiagIQ com base nas respostas fornecidas. "
         "Os resultados são estimativa de maturidade e conformidade metodológica, com âncoras normativas de referência "
         "(<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>, <strong>ABNT NBR 17301:2026</strong>). "
-        "Não substitui auditoria independente, parecer jurídico vinculante nem trabalho contábil fiscal formal; "
+        "<strong>Não constitui parecer jurídico consultivo nem opinião fiscal vinculante.</strong> "
+        "Não substitui auditoria independente, parecer jurídico formal nem trabalho contábil fiscal; "
         "consulte um profissional habilitado."
     ),
     "footer_brand": "<strong>QualiDiagIQ</strong> — ecossistema <strong>Tributiq</strong>.",
@@ -197,7 +198,9 @@ _STR_EN: dict[str, str] = {
     "disclaimer_body": (
         "This report was generated automatically by QualiDiagIQ from the answers provided. Results are indicative "
         "of methodological maturity with reference anchors (<strong>EC 132/2023</strong>, <strong>LC 214/2025</strong>, "
-        "<strong>ABNT NBR 17301:2026</strong>). It does not replace independent audit, binding legal opinion, or "
+        "<strong>ABNT NBR 17301:2026</strong>). "
+        "<strong>It is not binding legal advice nor a formal tax opinion.</strong> "
+        "It does not replace independent audit, formal legal opinion, or "
         "formal tax accounting work; consult a qualified professional."
     ),
     "footer_brand": "<strong>QualiDiagIQ</strong> — <strong>Tributiq</strong> ecosystem.",
