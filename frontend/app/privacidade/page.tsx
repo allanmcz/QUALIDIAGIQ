@@ -25,7 +25,7 @@ export default function PrivacidadePage() {
             <strong>Versão {politicaMeta.versao}</strong> · vigência <strong>{politicaMeta.vigenciaIso}</strong>.
           </>
         ) : null}{" "}
-        Canal do encarregado (DPO) na secção abaixo{dpo ? "" : " — defina `NEXT_PUBLIC_LGPD_DPO_EMAIL` no deploy"}.
+        Canal do encarregado (DPO) na seção abaixo{dpo ? "" : " — defina `NEXT_PUBLIC_LGPD_DPO_EMAIL` no deploy"}.
       </p>
       <section
         id="dpo"
@@ -42,7 +42,7 @@ export default function PrivacidadePage() {
                 <span className="text-foreground">{dpo.nomeExibicao}</span> —{" "}
               </>
             ) : null}
-            contacto para exercício de direitos do titular e questões de tratamento de dados:{" "}
+            contato para exercício de direitos do titular e questões de tratamento de dados:{" "}
             <a className="font-medium text-primary underline" href={`mailto:${dpo.email}`}>
               {dpo.email}
             </a>
@@ -52,7 +52,7 @@ export default function PrivacidadePage() {
           <p className="mt-2 text-muted-foreground">
             O endereço público do encarregado será exibido aqui quando{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">NEXT_PUBLIC_LGPD_DPO_EMAIL</code> estiver
-            definido no ambiente do site (ex.: build de produção). Até lá, utilize o contacto institucional do
+            definido no ambiente do site (ex.: build de produção). Até lá, utilize o contato institucional do
             controlador (Tributiq) indicado na página de suporte ou no contrato comercial.
           </p>
         )}
@@ -67,8 +67,8 @@ export default function PrivacidadePage() {
           Telefone do respondente — retenção e titularidade
         </h2>
         <p className="mt-2 text-muted-foreground">
-          O telefone opcional mantém-se associado ao registo do diagnóstico no mesmo período de retenção daquele
-          registo. Pedidos dos titulares (acesso, correção, anonimização, eliminação nos limites legais) tramitam pelo
+          O telefone opcional mantém-se associado ao registro do diagnóstico no mesmo período de retenção daquele
+          registro. Pedidos dos titulares (acesso, correção, anonimização, eliminação nos limites legais) tramitam pelo
           canal do DPO; em caso de pedido fundamentado sobre este dado, o controlador registra a solicitação, avalia o
           enquadramento com o WORM/auditoria e responde no prazo interno definido pela operação — alinhado ao runbook{" "}
           <span className="font-mono text-xs">RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md</span> e aos endpoints autenticados{" "}
@@ -107,26 +107,32 @@ export default function PrivacidadePage() {
           medidas de segurança (LGPD art. 7º e 11º).
         </li>
         <li>
-          <strong>Retenção:</strong> pelo tempo necessário ao relatório e obrigações legais; política de
-          backup conforme infraestrutura Supabase/PostgreSQL do projeto.
+          <strong>Fluxos de gravação:</strong> o diagnóstico pode ser concluído sem conta na plataforma por
+          confirmação de e-mail self-service, ou gravado/vinculado em uma sessão com conta na plataforma. Em ambos os
+          casos, os pedidos LGPD seguem pelo canal do DPO.
+        </li>
+        <li>
+          <strong>Retenção:</strong> diagnóstico finalizado e logs de auditoria multi-tenant por referência operacional
+          de 5 anos; dados pessoais identificáveis até cancelamento + 6 meses, observados os limites legais, o RIPD e a
+          política de anonimização quando o registro técnico precisar ser preservado.
         </li>
         <li>
           <strong>Direitos do titular:</strong> confirmação, acesso, correção, anonimização, eliminação
           e portabilidade, nos limites da lei —{" "}
           {dpo ? (
             <>
-              contacto do DPO:{" "}
+              contato do DPO:{" "}
               <a className="text-primary underline font-medium" href={`mailto:${dpo.email}`}>
                 {dpo.email}
               </a>{" "}
               (ver também{" "}
               <a className="text-primary underline font-medium" href="#dpo">
-                secção DPO
+                seção DPO
               </a>
               ).
             </>
           ) : (
-            <>canal do DPO acima, quando configurado, ou contacto institucional do controlador.</>
+            <>canal do DPO acima, quando configurado, ou contato institucional do controlador.</>
           )}
         </li>
       </ul>
