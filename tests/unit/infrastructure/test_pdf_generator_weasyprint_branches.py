@@ -46,7 +46,12 @@ async def test_render_timeout_lanca_runtime_error() -> None:
     gen.jinja_env.get_template = MagicMock(return_value=tpl)
     diag, score = _diag_e_score()
 
-    async def fake_wait_for(_aw: object, *, timeout: float) -> object:
+    async def fake_wait_for(aw: object, *, timeout: float) -> object:
+        # ``wait_for`` recebe o awaitable de ``to_thread``; se não for aguardado, o Python 3.14
+        # emite RuntimeWarning. Fechamos a corrotina sem executar o render pesado.
+        _ = timeout
+        if asyncio.iscoroutine(aw):
+            aw.close()
         raise TimeoutError
 
     with (

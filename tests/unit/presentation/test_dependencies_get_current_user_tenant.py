@@ -66,7 +66,8 @@ async def test_perfil_conta_desconhecido_normaliza_gratuito() -> None:
 
 @pytest.mark.asyncio
 async def test_scheme_basic_rejeita_401() -> None:
-    tok = jwt.encode({}, "ignored", algorithm="HS256")  # corpo irrelevante sem Bearer
+    # Chave ≥32 bytes evita InsecureKeyLengthWarning do PyJWT; o teste é só o esquema Basic.
+    tok = jwt.encode({}, "k" * 32, algorithm="HS256")
     creds = HTTPAuthorizationCredentials(scheme="Basic", credentials=tok)
     with pytest.raises(HTTPException) as ei:
         await get_current_user_tenant(creds)
