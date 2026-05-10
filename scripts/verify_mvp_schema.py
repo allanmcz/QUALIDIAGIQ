@@ -113,6 +113,16 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     if vp != 1:
         erros.append("Coluna public.diagnosticos.versao_plano ausente (migração 0027).")
 
+    ip_origem = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'respondente_ip_origem'
+    """)
+    if ip_origem != 1:
+        erros.append("Coluna public.diagnosticos.respondente_ip_origem ausente (migração 0036).")
+
     plano_tbl = await conn.fetchval("""
         SELECT 1
         FROM information_schema.tables

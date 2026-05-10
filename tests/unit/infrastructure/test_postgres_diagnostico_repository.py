@@ -68,6 +68,7 @@ def _row_minima(did, tid) -> dict:
         "respondente_nome": "Nome",
         "respondente_cargo": None,
         "respondente_telefone": None,
+        "respondente_ip_origem": None,
         "empresa_cnpj": "12345678000195",
         "empresa_razao_social": "Empresa",
         "empresa_porte": "micro",

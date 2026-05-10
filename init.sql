@@ -37,4 +37,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0033_force_rls_tabelas_criticas.sql
 \i /docker-entrypoint-initdb.d/migrations/0034_revoke_delete_append_only.sql
 \i /docker-entrypoint-initdb.d/migrations/0035_diagnostico_retificacao_append_only.sql
+\i /docker-entrypoint-initdb.d/migrations/0036_respondente_ip_origem_lgpd.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

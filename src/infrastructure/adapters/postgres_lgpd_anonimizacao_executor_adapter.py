@@ -24,6 +24,7 @@ _CAMPOS_JSON: dict[str, bool] = {
     "respondente_nome": True,
     "respondente_cargo": True,
     "respondente_telefone": True,
+    "respondente_ip_origem": True,
 }
 
 
@@ -82,7 +83,8 @@ def _aplicar_sync(
                 SET respondente_email = %s,
                     respondente_nome = %s,
                     respondente_cargo = NULL,
-                    respondente_telefone = NULL
+                    respondente_telefone = NULL,
+                    respondente_ip_origem = NULL
                 WHERE id = %s
                   AND tenant_id = %s
                 """,
