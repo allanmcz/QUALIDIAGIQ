@@ -88,7 +88,7 @@ verify-schema-mvp-strict: ## Como verify-schema-mvp + CNAE 0013/0014 + normativa
 	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
 	QDI_VERIFY_SCHEMA_STRICT_CNAE=1 $(VENV)/bin/python scripts/verify_mvp_schema.py
 
-openapi-export: ## Gera docs/api/openapi.generated.json a partir do schema FastAPI (gitignored)
+openapi-export: ## Gera docs/api/openapi.generated.json a partir do schema FastAPI (versionado no Git)
 	PYTHONPATH=. $(VENV)/bin/python scripts/export_openapi_json.py
 
 clean: ## Limpa arquivos gerados

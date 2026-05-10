@@ -376,4 +376,7 @@ jobs:
         working-directory: frontend
         run: |
           npx playwright install --with-deps chromium
-          npx playwright test e2e/dashboard-list-integrado.spec.ts e2e/a11y-critical.spec.ts
+          npx playwright test \
+            e2e/dashboard-list-integrado.spec.ts \
+            e2e/dashboard-privacidade-export.spec.ts \
+            e2e/a11y-critical.spec.ts

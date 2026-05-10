@@ -1,0 +1,4365 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "QualiDiagIQ API",
+    "description": "\n        Motor de Diagnóstico Tributário Automatizado para a Reforma do Consumo.\n        \n        Parte do ecossistema Tributiq. Fornece análise de maturidade e conformidade\n        com base na EC 132/2023, LC 214/2025 e ABNT NBR 17301:2026.\n        ",
+    "contact": {
+      "name": "Equipe Tributiq",
+      "email": "contato@tributiq.com.br"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Infra"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/institucional": {
+      "get": {
+        "tags": [
+          "Institucional"
+        ],
+        "summary": "Dados institucionais públicos (DPO / referências LGPD)",
+        "description": "Sem autenticação. Expõe `LGPD_DPO_EMAIL` e referência numérica de retenção (`LGPD_RETENTION_DAYS`) carregadas na API para paridade com o site (`NEXT_PUBLIC_LGPD_DPO_EMAIL`). O texto jurídico prevalece sobre estes valores em caso de divergência.",
+        "operationId": "obter_institucional_publico_public_institucional_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitucionalPublicResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/metodologia": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Metodologia e pesos macro do score geral",
+        "description": "Endpoint **público** (sem JWT). Expõe `pesos_macro_dimensao_score_geral` usados na agregação do score 0-100 e texto metodológico. Detalhamento por pergunta: **GET /diagnosticos/manifesto-pesos**.",
+        "operationId": "obter_metodologia_diagnosticos_metodologia_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetodologiaResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/manifesto-pesos": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Manifesto público de pesos por pergunta",
+        "description": "Catálogo completo com peso e dimensão por código de pergunta; inclui `versao_catalogo` e `pesos_macro_dimensao` aplicados ao score geral. **Público**, sem JWT — auditable (LC 214/2025, ABNT NBR 17301:2026).",
+        "operationId": "obter_manifesto_pesos_diagnosticos_manifesto_pesos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestoPesosResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/questionario": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Obter Questionario Adaptativo",
+        "description": "Lista perguntas aplicáveis ao perfil declarado (motor adaptativo).\n\nEndpoint **público** (sem JWT): catálogo filtrado não expõe dados de tenant.\nPOST `/diagnosticos/` continua exigindo Bearer + Idempotency-Key.\n\nLC 214/2025 — transparência e previsibilidade na coleta de informações do contribuinte.",
+        "operationId": "obter_questionario_adaptativo_diagnosticos_questionario_get",
+        "parameters": [
+          {
+            "name": "razao_social",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "title": "Razao Social"
+            }
+          },
+          {
+            "name": "porte",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PorteEmpresa"
+            }
+          },
+          {
+            "name": "regime",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RegimeTributario"
+            }
+          },
+          {
+            "name": "cnae_principal",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 7,
+              "maxLength": 7,
+              "title": "Cnae Principal"
+            }
+          },
+          {
+            "name": "uf",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "title": "Uf"
+            }
+          },
+          {
+            "name": "setor_macro",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SetorMacro"
+            }
+          },
+          {
+            "name": "faixa_faturamento",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FaixaFaturamentoDeclarada"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opcional — faixa de faturamento bruto anual autodeclarada (slug canónico do catálogo).",
+              "title": "Faixa Faturamento"
+            },
+            "description": "Opcional — faixa de faturamento bruto anual autodeclarada (slug canónico do catálogo)."
+          },
+          {
+            "name": "cnpj",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 14,
+              "description": "CNPJ 14 dígitos ou omitido/vazio se não informado.",
+              "default": "",
+              "title": "Cnpj"
+            },
+            "description": "CNPJ 14 dígitos ou omitido/vazio se não informado."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionarioDisponivelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/checklist-m12-autoconf": {
+      "patch": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Atualizar autoconf ABNT M12",
+        "description": "Persiste os 10 valores Likert (1-5) da autoconferência (ABNT NBR 17301). Exige diagnóstico **finalizado** e header **If-Match** com `versao_otimista` atual.",
+        "operationId": "atualizar_checklist_m12_autoconf_diagnosticos__diagnostico_id__checklist_m12_autoconf_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchChecklistM12AutoconfRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/quadro-implantacao-anotacoes": {
+      "patch": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Atualizar anotações do quadro de implantação",
+        "description": "Mescla no mapa persistido as chaves enviadas (meta de prazo ISO, comentários e, opcionalmente, ``descricao_personalizada`` que substitui o texto canônico da ação no painel). Chaves não enviadas permanecem inalteradas; por chave, campos ausentes no PATCH preservam valores já gravados. Chave: ``f{índice_frente}_a{índice_ação}`` (legado) ou **UUID** ``plano_acao_id``. Campo legado ``comentario`` (único) ainda é aceito. Exige diagnóstico **finalizado** e **If-Match**.",
+        "operationId": "atualizar_quadro_implantacao_anotacoes_diagnosticos__diagnostico_id__quadro_implantacao_anotacoes_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchQuadroImplantacaoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/plano-acoes/{plano_acao_id}/subtarefas": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Criar subtarefa do plano materializado",
+        "description": "Associa uma subtarefa a uma ação do plano (UUID ``plano_acao_id`` devolvido no GET). **Idempotency-Key** obrigatório (middleware de idempotência dos POST em ``/diagnosticos/``).",
+        "operationId": "criar_subtarefa_plano_diagnostico_diagnosticos__diagnostico_id__plano_acoes__plano_acao_id__subtarefas_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "plano_acao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plano Acao Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarSubtarefaPlanoDiagnosticoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/plano-subtarefas/{subtarefa_id}": {
+      "patch": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Atualizar subtarefa do plano materializado",
+        "description": "Atualização parcial (título, status, prazo ISO, comentários, ordem).",
+        "operationId": "atualizar_subtarefa_plano_diagnostico_diagnosticos__diagnostico_id__plano_subtarefas__subtarefa_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "subtarefa_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Subtarefa Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchSubtarefaPlanoDiagnosticoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}": {
+      "patch": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Atualizar Relatorio Pdf",
+        "description": "Atualiza apenas `relatorio_pdf_url` em diagnóstico **finalizado**.\n\nExige `If-Match` com a `versao_otimista` retornada no GET (lock otimista).",
+        "operationId": "atualizar_relatorio_pdf_diagnosticos__diagnostico_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchRelatorioPdfRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Obter Diagnostico",
+        "description": "Busca um diagnóstico pelo ID, garantindo o isolamento do tenant.",
+        "operationId": "obter_diagnostico_diagnosticos__diagnostico_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/self-service": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Criar diagnóstico (e-mail verificado por OTP)",
+        "description": "Fluxo: POST /auth/verificar-email/solicitar → POST /auth/self-service/token → este endpoint.\n\n**Bearer:** JWT self-service (claim `scope=self_service_diagnostico`).\n**Corpo:** mesmo contrato de POST /diagnosticos/. O e-mail do respondente deve coincidir com o OTP.\n**Idempotency-Key:** obrigatório.",
+        "operationId": "criar_diagnostico_self_service_diagnosticos_self_service_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarDiagnosticoRequest"
+              },
+              "examples": {
+                "micro_comercio_um_item": {
+                  "summary": "Micro comércio — uma resposta escala",
+                  "description": "Headers obrigatorios: Authorization Bearer (JWT valido do login) e Idempotency-Key (UUID v4). Resposta HTTP 201 com score e consultoria derivada.",
+                  "value": {
+                    "empresa": {
+                      "cnpj": "12345678000195",
+                      "razao_social": "Empresa Exemplo LTDA",
+                      "porte": "micro",
+                      "regime": "simples_nacional",
+                      "cnae_principal": "1234567",
+                      "uf": "SP",
+                      "setor_macro": "comercio"
+                    },
+                    "respondente": {
+                      "email": "fiscal@empresa.com.br",
+                      "nome": "Fulano da Silva",
+                      "telefone": "11999998888"
+                    },
+                    "respostas": [
+                      {
+                        "pergunta_id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
+                        "valor": 4
+                      }
+                    ],
+                    "plano": "gratuito",
+                    "locale_relatorio": "pt-BR",
+                    "aceite_termos_privacidade": true
+                  }
+                },
+                "servicos_medio_presumido": {
+                  "summary": "Serviços — médio porte, Lucro Presumido",
+                  "description": "Mesmo requisito de cadastro PJ: CNPJ válido (14 dígitos) + razão social e perfil fiscal.",
+                  "value": {
+                    "empresa": {
+                      "cnpj": "11222333000181",
+                      "razao_social": "Empresa Anônima Exemplo LTDA",
+                      "porte": "medio",
+                      "regime": "lucro_presumido",
+                      "cnae_principal": "6201501",
+                      "uf": "SP",
+                      "setor_macro": "servicos"
+                    },
+                    "respondente": {
+                      "email": "contador@escritorio.com.br",
+                      "nome": "Maria Souza"
+                    },
+                    "respostas": [
+                      {
+                        "pergunta_id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
+                        "valor": 3
+                      }
+                    ],
+                    "plano": "gratuito",
+                    "locale_relatorio": "pt-BR",
+                    "aceite_termos_privacidade": true
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/diagnosticos/rascunho-self-service": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Gravar rascunho do diagnóstico na base (antes do OTP)",
+        "description": "Persiste o mesmo corpo de **POST /diagnosticos/self-service** na tabela de rascunhos e envia OTP. O cliente deve guardar apenas o **resgate_token** (fragmento de URL ou memória de curto prazo) — não usar o payload completo em sessionStorage como etapa final. **Idempotency-Key** obrigatório (middleware).",
+        "operationId": "criar_rascunho_diagnostico_self_service_diagnosticos_rascunho_self_service_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarDiagnosticoRequest"
+              },
+              "examples": {
+                "micro_comercio_um_item": {
+                  "summary": "Micro comércio — uma resposta escala",
+                  "description": "Headers obrigatorios: Authorization Bearer (JWT valido do login) e Idempotency-Key (UUID v4). Resposta HTTP 201 com score e consultoria derivada.",
+                  "value": {
+                    "empresa": {
+                      "cnpj": "12345678000195",
+                      "razao_social": "Empresa Exemplo LTDA",
+                      "porte": "micro",
+                      "regime": "simples_nacional",
+                      "cnae_principal": "1234567",
+                      "uf": "SP",
+                      "setor_macro": "comercio"
+                    },
+                    "respondente": {
+                      "email": "fiscal@empresa.com.br",
+                      "nome": "Fulano da Silva",
+                      "telefone": "11999998888"
+                    },
+                    "respostas": [
+                      {
+                        "pergunta_id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
+                        "valor": 4
+                      }
+                    ],
+                    "plano": "gratuito",
+                    "locale_relatorio": "pt-BR",
+                    "aceite_termos_privacidade": true
+                  }
+                },
+                "servicos_medio_presumido": {
+                  "summary": "Serviços — médio porte, Lucro Presumido",
+                  "description": "Mesmo requisito de cadastro PJ: CNPJ válido (14 dígitos) + razão social e perfil fiscal.",
+                  "value": {
+                    "empresa": {
+                      "cnpj": "11222333000181",
+                      "razao_social": "Empresa Anônima Exemplo LTDA",
+                      "porte": "medio",
+                      "regime": "lucro_presumido",
+                      "cnae_principal": "6201501",
+                      "uf": "SP",
+                      "setor_macro": "servicos"
+                    },
+                    "respondente": {
+                      "email": "contador@escritorio.com.br",
+                      "nome": "Maria Souza"
+                    },
+                    "respostas": [
+                      {
+                        "pergunta_id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
+                        "valor": 3
+                      }
+                    ],
+                    "plano": "gratuito",
+                    "locale_relatorio": "pt-BR",
+                    "aceite_termos_privacidade": true
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RascunhoDiagnosticoSelfServiceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/rascunho-self-service/resumo": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Resumo do rascunho (token opaco)",
+        "description": "Metadados mínimos para a página de confirmação. **Header obrigatório:** `X-Rascunho-Token` com o valor devolvido por POST /diagnosticos/rascunho-self-service.",
+        "operationId": "resumo_rascunho_diagnostico_self_service_diagnosticos_rascunho_self_service_resumo_get",
+        "parameters": [
+          {
+            "name": "X-Rascunho-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Rascunho-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoRascunhoResumoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/rascunho-self-service/concluir": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Concluir rascunho com OTP (grava diagnóstico final)",
+        "description": "Valida o código enviado por e-mail, materializa **POST /diagnosticos/self-service** a partir do JSON guardado no rascunho e marca o rascunho como consumido. **Idempotency-Key** obrigatório.",
+        "operationId": "concluir_rascunho_diagnostico_self_service_diagnosticos_rascunho_self_service_concluir_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConcluirRascunhoDiagnosticoSelfServiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/rascunho-self-service/vincular-conta": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Materializar rascunho no tenant da conta (JWT)",
+        "description": "Exige **Bearer** da conta na plataforma. O e-mail do respondente no rascunho deve ser **igual** ao e-mail do admin (LGPD / prova de posse). **Idempotency-Key** obrigatório.",
+        "operationId": "vincular_rascunho_conta_plataforma_diagnosticos_rascunho_self_service_vincular_conta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VincularRascunhoContaPlataformaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/diagnosticos/self-service/conclusao-visualizacao": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Visualização pública do diagnóstico concluído (self-service)",
+        "description": "Endpoint **público** (sem JWT). Exige ``diagnostico_id`` e ``leitura_token`` devolvidos por **POST /diagnosticos/rascunho-self-service/concluir** (token persistido em PostgreSQL, TTL ~7 dias). Não expõe checklist/PDF — apenas snapshot executivo alinhado à página de conclusão.",
+        "operationId": "obter_conclusao_self_service_publica_diagnosticos_self_service_conclusao_visualizacao_get",
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID do diagnóstico gravado no tenant self-service.",
+              "title": "Diagnostico Id"
+            },
+            "description": "UUID do diagnóstico gravado no tenant self-service."
+          },
+          {
+            "name": "leitura_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "description": "Token opaco devolvido no campo `leitura_token` da resposta de concluir.",
+              "title": "Leitura Token"
+            },
+            "description": "Token opaco devolvido no campo `leitura_token` da resposta de concluir."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoConclusaoSelfServicePublicoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/vincular-leads-self-service": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Vincular diagnósticos gratuitos (self-service) ao tenant da conta na plataforma",
+        "description": "Reatribui ao tenant do JWT as linhas em `diagnosticos` gravadas no tenant self-service (fluxo OTP), com `respondente_email` igual ao e-mail do consultor em `admins` e plano gratuito. Resolve o caso em que o lead concluiu o assistente antes de iniciar sessão no painel. **Idempotency-Key** obrigatório (mesmo middleware dos outros POST sob `/diagnosticos/`).",
+        "operationId": "vincular_leads_self_service_diagnosticos_vincular_leads_self_service_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VincularLeadsSelfServiceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/diagnosticos/": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Listar Diagnosticos",
+        "description": "Lista diagnósticos do tenant atual (ordenacao: mais recentes primeiro na camada repo/DB).",
+        "operationId": "listar_diagnosticos_diagnosticos__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiagnosticoResumoSchema"
+                  },
+                  "title": "Response Listar Diagnosticos Diagnosticos  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Criar diagnóstico",
+        "description": "Calcula o score e persiste o diagnóstico no tenant do JWT.\n\n**Headers obrigatórios:** `Authorization: Bearer <JWT>` (claim `tenant_id`) e `Idempotency-Key` (UUID v4 recomendado). Reexecução com a mesma chave devolve a mesma resposta 2xx em cache (middleware de idempotência).\n\n**Corpo:** incluir `aceite_termos_privacidade: true` (LGPD); o servidor persiste `aceite_termos_privacidade_em` (UTC) na linha do diagnóstico.",
+        "operationId": "criar_diagnostico_diagnosticos__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarDiagnosticoRequest"
+              },
+              "examples": {
+                "micro_comercio_um_item": {
+                  "summary": "Micro comércio — uma resposta escala",
+                  "description": "Headers obrigatorios: Authorization Bearer (JWT valido do login) e Idempotency-Key (UUID v4). Resposta HTTP 201 com score e consultoria derivada.",
+                  "value": {
+                    "empresa": {
+                      "cnpj": "12345678000195",
+                      "razao_social": "Empresa Exemplo LTDA",
+                      "porte": "micro",
+                      "regime": "simples_nacional",
+                      "cnae_principal": "1234567",
+                      "uf": "SP",
+                      "setor_macro": "comercio"
+                    },
+                    "respondente": {
+                      "email": "fiscal@empresa.com.br",
+                      "nome": "Fulano da Silva",
+                      "telefone": "11999998888"
+                    },
+                    "respostas": [
+                      {
+                        "pergunta_id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
+                        "valor": 4
+                      }
+                    ],
+                    "plano": "gratuito",
+                    "locale_relatorio": "pt-BR",
+                    "aceite_termos_privacidade": true
+                  }
+                },
+                "servicos_medio_presumido": {
+                  "summary": "Serviços — médio porte, Lucro Presumido",
+                  "description": "Mesmo requisito de cadastro PJ: CNPJ válido (14 dígitos) + razão social e perfil fiscal.",
+                  "value": {
+                    "empresa": {
+                      "cnpj": "11222333000181",
+                      "razao_social": "Empresa Anônima Exemplo LTDA",
+                      "porte": "medio",
+                      "regime": "lucro_presumido",
+                      "cnae_principal": "6201501",
+                      "uf": "SP",
+                      "setor_macro": "servicos"
+                    },
+                    "respondente": {
+                      "email": "contador@escritorio.com.br",
+                      "nome": "Maria Souza"
+                    },
+                    "respostas": [
+                      {
+                        "pergunta_id": "df52b20e-dab8-5ce5-a89d-4fb235016cbe",
+                        "valor": 3
+                      }
+                    ],
+                    "plano": "gratuito",
+                    "locale_relatorio": "pt-BR",
+                    "aceite_termos_privacidade": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/retificacoes": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Listar retificações do diagnóstico",
+        "description": "Cadeia temporal append-only (ADR-012 §5). Sem UPDATE ao diagnóstico original; cada retificação referencia o hash WORM do original.",
+        "operationId": "listar_retificacoes_diagnostico_diagnosticos__diagnostico_id__retificacoes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiagnosticoRetificacaoHttpResponse"
+                  },
+                  "title": "Response Listar Retificacoes Diagnostico Diagnosticos  Diagnostico Id  Retificacoes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/retificacao": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Registar retificação (append-only)",
+        "description": "Exige diagnóstico **finalizado** com **hash de evidência**. Persistência apenas INSERT (cadeia de hashes). **Header:** `Idempotency-Key` (replay previsível via middleware).",
+        "operationId": "registrar_retificacao_diagnostico_diagnosticos__diagnostico_id__retificacao_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarRetificacaoDiagnosticoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoRetificacaoHttpResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Conta na plataforma"
+        ],
+        "summary": "Login",
+        "description": "Login contra a tabela `admins`; token inclui tenant para RLS futuro.",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/cadastro": {
+      "post": {
+        "tags": [
+          "Conta na plataforma"
+        ],
+        "summary": "Cadastrar conta na plataforma (nome, e-mail, senha)",
+        "description": "Cria registro em `admins` com tenant dedicado e `perfil_conta` gratuito; devolve o mesmo contrato de `POST /auth/login` (JWT). Requer PostgreSQL acessível como em login (`DATABASE_URL`) ou Supabase configurado. Desabilite em produção com `QDI_CADASTRO_CONSULTOR_B2B_HABILITADO=false`.",
+        "operationId": "cadastro_consultor_b2b_auth_cadastro_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CadastroConsultorB2BRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/self-service/token": {
+      "post": {
+        "tags": [
+          "Conta na plataforma"
+        ],
+        "summary": "OTP → JWT self-service (gravar diagnóstico)",
+        "description": "Consumir o código enviado por POST /auth/verificar-email/solicitar e receber um Bearer JWT válido para POST /diagnosticos/self-service (Idempotency-Key obrigatório). O e-mail do diagnóstico deve ser o mesmo verificado.",
+        "operationId": "emitir_token_self_service_auth_self_service_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServiceTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfServiceTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verificar-email/solicitar": {
+      "post": {
+        "tags": [
+          "Conta na plataforma"
+        ],
+        "summary": "Solicitar código por e-mail",
+        "description": "Envia OTP numérico para o endereço informado (SMTP configurável). Rate limit por e-mail entre reenvios. MVP: armazenamento em memória no processo da API.",
+        "operationId": "solicitar_verificacao_email_auth_verificar_email_solicitar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitarVerificacaoEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitarVerificacaoEmailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verificar-email/confirmar": {
+      "post": {
+        "tags": [
+          "Conta na plataforma"
+        ],
+        "summary": "Confirmar código do e-mail",
+        "operationId": "confirmar_verificacao_email_auth_verificar_email_confirmar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarVerificacaoEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmarVerificacaoEmailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/maintenance/cleanup-idempotency": {
+      "post": {
+        "tags": [
+          "Manutenção"
+        ],
+        "summary": "Limpar respostas idempotentes expiradas",
+        "description": "Executa `SELECT * FROM qdi_cleanup_idempotency()` no Postgres. Máximo **1 chamada a cada 5 minutos** por `tenant_id` do JWT. Exige perfil **admin** ou **avançado**.",
+        "operationId": "cleanup_idempotency_admin_maintenance_cleanup_idempotency_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupIdempotencyResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/normativa/validar-ancora": {
+      "post": {
+        "tags": [
+          "Lexiq / guardrails"
+        ],
+        "summary": "Validar âncora normativa (heurística MVP)",
+        "description": "Checagem heurística de padrões (LC, EC, NT, ABNT) no texto. **Não** substitui Lexiq/RAG com citação versionada. Sem autenticação. Resposta sempre 200 com campo `valido` booleano e opcional `motivo_rejeicao` quando inválido.",
+        "operationId": "validar_ancora_normativa_normativa_validar_ancora_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidarAncoraNormativaRequest"
+              },
+              "examples": {
+                "com_lc214": {
+                  "summary": "Texto com LC 214/2025",
+                  "value": {
+                    "texto": "Conforme LC 214/2025 art. 5º e EC 132/2023, o plano deve ser documentado."
+                  }
+                },
+                "sem_ancora": {
+                  "summary": "Texto sem âncora reconhecida",
+                  "value": {
+                    "texto": "Melhore a governanca tributaria da empresa sem citar norma."
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidarAncoraNormativaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/referencia/cnae/subclasses": {
+      "get": {
+        "tags": [
+          "Referência CNAE"
+        ],
+        "summary": "Buscar subclasses CNAE (autocomplete)",
+        "description": "Consulta somente leitura em `qdi.cnae_subclasse` (CONCLA/IBGE). Não exige autenticação. Exige `DATABASE_URL` no backend. Base: Resolução CONCLA nº 02/2023.",
+        "operationId": "buscar_subclasses_cnae_referencia_cnae_subclasses_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 120,
+              "description": "Prefixo numérico ou trecho da descrição.",
+              "title": "Q"
+            },
+            "description": "Prefixo numérico ou trecho da descrição."
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Máximo de linhas (default 20).",
+              "default": 20,
+              "title": "Limite"
+            },
+            "description": "Máximo de linhas (default 20)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CnaeBuscaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/referencia/cnpj/consulta_cnpj": {
+      "post": {
+        "tags": [
+          "Referência CNPJ"
+        ],
+        "summary": "Consultar CNPJ (BrasilAPI + fallback Minha Receita)",
+        "description": "Materializa snapshot em ``cnpj_consultas`` com TTL separados por volatilidade (env). Cache válido reutiliza payload sem chamar rede salvo quando ``force_refresh=false``. Fallback Minha Receita só após falha/timeout da BrasilAPI — não em HTTP 404.\n\n**Headers:** ``Authorization`` JWT + ``Idempotency-Key``.\n\n**Opcional:** ``aplicar_no_diagnostico_id`` mergeia em diagnóstico ``em_andamento`` apenas.",
+        "operationId": "consultar_cnpj_referencia_cnpj_consulta_cnpj_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsultarCnpjRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsultarCnpjResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacidade/solicitacoes": {
+      "post": {
+        "tags": [
+          "Privacidade LGPD"
+        ],
+        "summary": "Registrar solicitação LGPD do titular",
+        "description": "Abre solicitação operacional do art. 18 (acesso, correção, anonimização, eliminação, portabilidade, oposição) no tenant do JWT. Requer header Idempotency-Key.",
+        "operationId": "registrar_solicitacao_lgpd_privacidade_solicitacoes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarSolicitacaoTitularLgpdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitacaoTitularLgpdResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Privacidade LGPD"
+        ],
+        "summary": "Listar solicitações LGPD do tenant",
+        "description": "Lista solicitações do tenant autenticado, com filtro opcional por status.",
+        "operationId": "listar_solicitacoes_lgpd_privacidade_solicitacoes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SolicitacaoTitularLgpdResponse"
+                  },
+                  "title": "Response Listar Solicitacoes Lgpd Privacidade Solicitacoes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacidade/solicitacoes/{solicitacao_id}/status": {
+      "patch": {
+        "tags": [
+          "Privacidade LGPD"
+        ],
+        "summary": "Atualizar status de solicitação LGPD",
+        "description": "Atualiza status operacional (backoffice) da solicitação no tenant autenticado.",
+        "operationId": "atualizar_status_solicitacao_lgpd_privacidade_solicitacoes__solicitacao_id__status_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "solicitacao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Solicitacao Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarStatusSolicitacaoTitularLgpdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitacaoTitularLgpdResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacidade/diagnosticos/{diagnostico_id}/anonimizar-respondente": {
+      "post": {
+        "tags": [
+          "Privacidade LGPD"
+        ],
+        "summary": "Executar anonimização de PII do respondente",
+        "description": "Exige solicitação LGPD ``anonimizacao`` com status ``deferida`` ligada ao mesmo ``diagnostico_id``. Regista ``lgpd_anonimizacao_log`` e aplica padrão autorizado pelo WORM (email sentinel, nome marcador, remoção de cargo/telefone).",
+        "operationId": "anonimizar_respondente_lgpd_privacidade_diagnosticos__diagnostico_id__anonimizar_respondente_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnonimizarRespondenteLgpdHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonimizarRespondenteLgpdHttpResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade": {
+      "get": {
+        "tags": [
+          "Privacidade LGPD"
+        ],
+        "summary": "Exportar pacote de portabilidade (JSON ou PDF com JSON embebido)",
+        "description": "Exige solicitação LGPD tipo **portabilidade** com status **deferida** referente ao mesmo `diagnostico_id`. Formato **pacote_pdf**: PDF humano com anexo `qdi-diagnostico-export-v1.json` (ADR-012 §4).",
+        "operationId": "export_portabilidade_diagnostico_privacidade_diagnosticos__diagnostico_id__export_portabilidade_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "solicitacao_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID da solicitação LGPD (tipo portabilidade, status deferida).",
+              "title": "Solicitacao Id"
+            },
+            "description": "UUID da solicitação LGPD (tipo portabilidade, status deferida)."
+          },
+          {
+            "name": "formato",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/FormatoExportPortabilidade",
+              "description": "json (default) ou pacote_pdf (PDF com anexo JSON).",
+              "default": "json"
+            },
+            "description": "json (default) ou pacote_pdf (PDF com anexo JSON)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mock-storage/{tenant_id}/{nome_arquivo}": {
+      "get": {
+        "tags": [
+          "Infra — PDF mock (dev)"
+        ],
+        "summary": "Baixar Pdf Mock Storage",
+        "description": "Devolve o PDF colocado em cache quando o upload ao bucket falhou.\n\nNão substitui Storage real em produção.",
+        "operationId": "baixar_pdf_mock_storage_mock_storage__tenant_id___nome_arquivo__get",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "name": "nome_arquivo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Nome Arquivo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnonimizarRespondenteLgpdHttpRequest": {
+        "properties": {
+          "solicitacao_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Solicitacao Id",
+            "description": "Identificador da linha em lgpd_titular_solicitacao (tipo anonimizacao, status deferida)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "solicitacao_id"
+        ],
+        "title": "AnonimizarRespondenteLgpdHttpRequest",
+        "description": "POST /privacidade/diagnosticos/{id}/anonimizar-respondente — exige solicitação ``deferida``."
+      },
+      "AnonimizarRespondenteLgpdHttpResponse": {
+        "properties": {
+          "diagnostico_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Diagnostico Id"
+          },
+          "solicitacao_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Solicitacao Id"
+          },
+          "status_solicitacao": {
+            "type": "string",
+            "title": "Status Solicitacao",
+            "default": "concluida"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem",
+            "default": "Anonimização dos campos do respondente aplicada; registo em lgpd_anonimizacao_log (email sentinel + nome marcador + remoção de cargo/telefone)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "diagnostico_id",
+          "solicitacao_id"
+        ],
+        "title": "AnonimizarRespondenteLgpdHttpResponse",
+        "description": "Confirmação após transação (log + UPDATE diagnóstico + conclusão da solicitação)."
+      },
+      "AtualizarStatusSolicitacaoTitularLgpdRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "maxLength": 24,
+            "minLength": 4,
+            "title": "Status",
+            "description": "recebida, em_analise, deferida, indeferida ou concluida."
+          },
+          "observacao_interna": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacao Interna"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AtualizarStatusSolicitacaoTitularLgpdRequest",
+        "description": "PATCH operacional de status da solicitação."
+      },
+      "CadastroConsultorB2BRequest": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Nome",
+            "description": "Nome exibido no painel."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 8,
+            "title": "Password",
+            "description": "Senha com pelo menos 8 caracteres (bcrypt no servidor)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "nome",
+          "email",
+          "password"
+        ],
+        "title": "CadastroConsultorB2BRequest",
+        "description": "Cadastro mínimo para acesso ao painel (conta na plataforma)."
+      },
+      "CleanupIdempotencyResponse": {
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Deleted Count",
+            "description": "Linhas removidas de idempotency_responses."
+          },
+          "executed_at": {
+            "type": "string",
+            "title": "Executed At",
+            "description": "Instante de execução (ISO 8601)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_count",
+          "executed_at"
+        ],
+        "title": "CleanupIdempotencyResponse",
+        "description": "Resultado da rotina de limpeza."
+      },
+      "CnaeBuscaResponse": {
+        "properties": {
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/CnaeSubclasseItemSchema"
+            },
+            "type": "array",
+            "title": "Itens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "itens"
+        ],
+        "title": "CnaeBuscaResponse",
+        "description": "Resposta paginada leve do GET `/referencia/cnae/subclasses`."
+      },
+      "CnaeSubclasseItemSchema": {
+        "properties": {
+          "subclasse_id": {
+            "type": "string",
+            "maxLength": 7,
+            "minLength": 7,
+            "pattern": "^\\d{7}$",
+            "title": "Subclasse Id"
+          },
+          "descricao": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Descricao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subclasse_id",
+          "descricao"
+        ],
+        "title": "CnaeSubclasseItemSchema",
+        "description": "Uma subclass CNAE 2.3 (7 dígitos) para autocomplete."
+      },
+      "CnpjCanonicoResponse": {
+        "properties": {
+          "cnpj": {
+            "type": "string",
+            "title": "Cnpj"
+          },
+          "razao_social": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razao Social"
+          },
+          "nome_fantasia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome Fantasia"
+          },
+          "cnae_principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnae Principal"
+          },
+          "uf": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uf"
+          },
+          "situacao_cadastral": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Situacao Cadastral"
+          },
+          "porte": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Porte"
+          },
+          "regime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regime"
+          },
+          "setor_macro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Setor Macro"
+          },
+          "municipio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipio"
+          },
+          "logradouro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logradouro"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cnpj"
+        ],
+        "title": "CnpjCanonicoResponse",
+        "description": "Recorte canónico persistido em ``cnpj_consultas.payload_canonico`` (volatilidades TTL)."
+      },
+      "ConcluirRascunhoDiagnosticoSelfServiceRequest": {
+        "properties": {
+          "resgate_token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 16,
+            "title": "Resgate Token"
+          },
+          "codigo": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 4,
+            "title": "Codigo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resgate_token",
+          "codigo"
+        ],
+        "title": "ConcluirRascunhoDiagnosticoSelfServiceRequest",
+        "description": "OTP + token de resgate do rascunho persistido na BD."
+      },
+      "ConfirmarVerificacaoEmailRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "codigo": {
+            "type": "string",
+            "maxLength": 8,
+            "minLength": 4,
+            "title": "Codigo",
+            "description": "Código recebido por e-mail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "codigo"
+        ],
+        "title": "ConfirmarVerificacaoEmailRequest"
+      },
+      "ConfirmarVerificacaoEmailResponse": {
+        "properties": {
+          "verificado": {
+            "type": "boolean",
+            "title": "Verificado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verificado"
+        ],
+        "title": "ConfirmarVerificacaoEmailResponse"
+      },
+      "ConsultarCnpjRequest": {
+        "properties": {
+          "cnpj": {
+            "type": "string",
+            "maxLength": 18,
+            "minLength": 14,
+            "title": "Cnpj",
+            "description": "CNPJ com ou sem máscara — armazenado e consultado com 14 dígitos."
+          },
+          "force_refresh": {
+            "type": "boolean",
+            "title": "Force Refresh",
+            "description": "Ignora cache TTL e força nova chamada às fontes públicas.",
+            "default": false
+          },
+          "aplicar_no_diagnostico_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aplicar No Diagnostico Id",
+            "description": "Se informado: merge nos campos empresa_* apenas quando o diagnóstico está ``em_andamento`` (WORM bloqueia alteração pós-finalização)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cnpj"
+        ],
+        "title": "ConsultarCnpjRequest",
+        "description": "Corpo POST `/referencia/cnpj/consulta_cnpj` — exige JWT com ``tenant_id``."
+      },
+      "ConsultarCnpjResponse": {
+        "properties": {
+          "consulta_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Consulta Id"
+          },
+          "cnpj": {
+            "type": "string",
+            "title": "Cnpj"
+          },
+          "fonte": {
+            "type": "string",
+            "title": "Fonte",
+            "description": "``brasil_api`` ou ``minha_receita``."
+          },
+          "canonico": {
+            "$ref": "#/components/schemas/CnpjCanonicoResponse"
+          },
+          "expira_cadastral_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Cadastral Em"
+          },
+          "expira_qualificacao_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Qualificacao Em"
+          },
+          "expira_situacao_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Situacao Em"
+          },
+          "aplicado_em_diagnostico_em_andamento": {
+            "type": "boolean",
+            "title": "Aplicado Em Diagnostico Em Andamento",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "consulta_id",
+          "cnpj",
+          "fonte",
+          "canonico",
+          "expira_cadastral_em",
+          "expira_qualificacao_em",
+          "expira_situacao_em"
+        ],
+        "title": "ConsultarCnpjResponse",
+        "description": "Resposta à consulta materializada (idempotente por ``Idempotency-Key`` + tenant)."
+      },
+      "CriarSubtarefaPlanoDiagnosticoRequest": {
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Titulo"
+          },
+          "ordem": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Ordem",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "titulo"
+        ],
+        "title": "CriarSubtarefaPlanoDiagnosticoRequest",
+        "description": "Corpo do POST de subtarefa (plano materializado)."
+      },
+      "DiagnosticoConclusaoPublicaDimensaoSchema": {
+        "properties": {
+          "dimensao": {
+            "type": "string",
+            "title": "Dimensao"
+          },
+          "valor": {
+            "type": "number",
+            "title": "Valor"
+          },
+          "peso_total_aplicado": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peso Total Aplicado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimensao",
+          "valor"
+        ],
+        "title": "DiagnosticoConclusaoPublicaDimensaoSchema",
+        "description": "Uma dimensão no breakdown público pós-conclusão self-service."
+      },
+      "DiagnosticoConclusaoSelfServicePublicoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "empresa_razao_social": {
+            "type": "string",
+            "title": "Empresa Razao Social"
+          },
+          "locale_relatorio": {
+            "type": "string",
+            "title": "Locale Relatorio",
+            "default": "pt-BR"
+          },
+          "score_geral": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Geral"
+          },
+          "scores_por_dimensao": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticoConclusaoPublicaDimensaoSchema"
+            },
+            "type": "array",
+            "title": "Scores Por Dimensao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "empresa_razao_social"
+        ],
+        "title": "DiagnosticoConclusaoSelfServicePublicoResponse",
+        "description": "Snapshot mínimo para a página pública de conclusão (sem JWT).\n\nDados lidos de ``diagnosticos`` após validação do token de leitura na tabela dedicada."
+      },
+      "DiagnosticoRascunhoResumoResponse": {
+        "properties": {
+          "empresa_razao_social": {
+            "type": "string",
+            "title": "Empresa Razao Social"
+          },
+          "email_mascarado": {
+            "type": "string",
+            "title": "Email Mascarado"
+          },
+          "respondente_email": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Respondente Email",
+            "description": "E-mail normalizado gravado no rascunho (mesmo usado em POST)."
+          },
+          "expira_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "empresa_razao_social",
+          "email_mascarado",
+          "respondente_email",
+          "expira_em"
+        ],
+        "title": "DiagnosticoRascunhoResumoResponse",
+        "description": "Metadados para a página de OTP.\n\nO portador do ``X-Rascunho-Token`` já provou posse do fluxo; incluímos o e-mail em claro para\nreenvio de código (paridade com /auth/verificar-email/solicitar)."
+      },
+      "DiagnosticoResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "plano": {
+            "type": "string",
+            "title": "Plano"
+          },
+          "empresa_razao_social": {
+            "type": "string",
+            "title": "Empresa Razao Social"
+          },
+          "empresa_faixa_faturamento": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Empresa Faixa Faturamento",
+            "description": "Faixa de faturamento autodeclarada no POST (slug canónico), se informada."
+          },
+          "locale_relatorio": {
+            "type": "string",
+            "title": "Locale Relatorio",
+            "description": "Idioma usado na geração do PDF (persistido com o diagnóstico).",
+            "default": "pt-BR"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreCompletoSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "relatorio_pdf_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relatorio Pdf Url"
+          },
+          "recomendacao_ia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recomendacao Ia"
+          },
+          "checklist": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
+          "matriz_impacto": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matriz Impacto"
+          },
+          "cronograma": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cronograma"
+          },
+          "checklist_m12_autoconf": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist M12 Autoconf"
+          },
+          "quadro_implantacao_anotacoes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quadro Implantacao Anotacoes",
+            "description": "Mapa f{i}_a{j} -> {prazo_meta, comentarios[]} (legado comentario migrado na leitura)."
+          },
+          "aceite_termos_privacidade_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aceite Termos Privacidade Em"
+          },
+          "hash_evidencia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash Evidencia"
+          },
+          "versao_otimista": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versao Otimista"
+          },
+          "versao_plano": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao Plano",
+            "description": "Versão do snapshot do plano de ação materializado (checklist/matriz/cronograma).",
+            "default": 1
+          },
+          "leitura_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leitura Token",
+            "description": "Presente só em POST /diagnosticos/rascunho-self-service/concluir: token opaco para GET /diagnosticos/self-service/conclusao-visualizacao (leitura pública limitada no tempo)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "plano",
+          "empresa_razao_social"
+        ],
+        "title": "DiagnosticoResponse"
+      },
+      "DiagnosticoResumoSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "empresa_razao_social": {
+            "type": "string",
+            "title": "Empresa Razao Social"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "plano": {
+            "type": "string",
+            "title": "Plano"
+          },
+          "score_geral": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Geral"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "finalizado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalizado Em"
+          },
+          "relatorio_pdf_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relatorio Pdf Url",
+            "description": "URL do PDF quando gerado e anexado ao diagnóstico."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "empresa_razao_social",
+          "status",
+          "plano",
+          "criado_em"
+        ],
+        "title": "DiagnosticoResumoSchema",
+        "description": "Item resumido para listagem do tenant (P7 — painel)."
+      },
+      "DiagnosticoRetificacaoHttpResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "diagnostico_original_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Diagnostico Original Id"
+          },
+          "hash_diagnostico_original_sha256": {
+            "type": "string",
+            "title": "Hash Diagnostico Original Sha256"
+          },
+          "motivo_retificacao": {
+            "type": "string",
+            "title": "Motivo Retificacao"
+          },
+          "payload_retificacao": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload Retificacao"
+          },
+          "hash_retificacao_sha256": {
+            "type": "string",
+            "title": "Hash Retificacao Sha256"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "diagnostico_original_id",
+          "hash_diagnostico_original_sha256",
+          "motivo_retificacao",
+          "payload_retificacao",
+          "hash_retificacao_sha256",
+          "actor_user_id",
+          "criado_em"
+        ],
+        "title": "DiagnosticoRetificacaoHttpResponse",
+        "description": "Linha de retificação persistida."
+      },
+      "EmpresaSchema": {
+        "properties": {
+          "cnpj": {
+            "type": "string",
+            "maxLength": 18,
+            "title": "Cnpj",
+            "description": "CNPJ: opcional. Vazio = sem cadastro PJ no diagnóstico. Se informado: 14 dígitos ou máscara (00.000.000/0000-00), DV RFB válido; armazenado sem máscara. Regra de produto — ver `.cursor/rules/qdi-cnpj-opcional.mdc`.",
+            "default": ""
+          },
+          "razao_social": {
+            "type": "string",
+            "title": "Razao Social"
+          },
+          "porte": {
+            "$ref": "#/components/schemas/PorteEmpresa"
+          },
+          "regime": {
+            "$ref": "#/components/schemas/RegimeTributario"
+          },
+          "cnae_principal": {
+            "type": "string",
+            "maxLength": 7,
+            "minLength": 7,
+            "title": "Cnae Principal",
+            "description": "CNAE principal com 7 dígitos"
+          },
+          "uf": {
+            "type": "string",
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Uf",
+            "description": "Sigla da UF com 2 letras"
+          },
+          "setor_macro": {
+            "$ref": "#/components/schemas/SetorMacro"
+          },
+          "faixa_faturamento": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FaixaFaturamentoDeclarada"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opcional — faixa de faturamento bruto anual autodeclarada (R$), para segmentação; omitir ou null se o respondente não informar."
+          }
+        },
+        "type": "object",
+        "required": [
+          "razao_social",
+          "porte",
+          "regime",
+          "cnae_principal",
+          "uf",
+          "setor_macro"
+        ],
+        "title": "EmpresaSchema"
+      },
+      "FaixaFaturamentoDeclarada": {
+        "type": "string",
+        "enum": [
+          "ate_360_mil",
+          "entre_360_mil_e_4_8_mi",
+          "entre_4_8_mi_e_10_mi",
+          "entre_10_mi_e_60_mi",
+          "entre_60_mi_e_100_mi",
+          "entre_100_mi_e_500_mi",
+          "acima_500_mi"
+        ],
+        "title": "FaixaFaturamentoDeclarada",
+        "description": "Faixa de faturamento bruto anual **autodeclarada** (opcional).\n\nValores em R$ para segmentação / benchmark; não substitui escrituração nem auditoria.\nMarcos alinhados a faixas usuais de enquadramento (ex.: limites do Simples Nacional, LC 123/2006).\n\nDocumentação produto/convenção MVP: docs/operacao/FAIXA_FATURAMENTO_AUTODECLARADA.md."
+      },
+      "FormatoExportPortabilidade": {
+        "type": "string",
+        "enum": [
+          "json",
+          "pacote_pdf"
+        ],
+        "title": "FormatoExportPortabilidade",
+        "description": "Formato do pacote de export (ADR-012 §4)."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IniciarDiagnosticoRequest": {
+        "properties": {
+          "empresa": {
+            "$ref": "#/components/schemas/EmpresaSchema"
+          },
+          "respondente": {
+            "$ref": "#/components/schemas/RespondenteSchema"
+          },
+          "respostas": {
+            "items": {
+              "$ref": "#/components/schemas/RespostaRequestSchema"
+            },
+            "type": "array",
+            "title": "Respostas"
+          },
+          "plano": {
+            "type": "string",
+            "title": "Plano",
+            "default": "gratuito"
+          },
+          "locale_relatorio": {
+            "type": "string",
+            "enum": [
+              "pt-BR",
+              "en"
+            ],
+            "title": "Locale Relatorio",
+            "description": "Idioma do relatório PDF (WeasyPrint): pt-BR completo; en — labels em inglês (conteúdo gerado dinamicamente pode permanecer em PT até tradução total).",
+            "default": "pt-BR"
+          },
+          "aceite_termos_privacidade": {
+            "type": "boolean",
+            "title": "Aceite Termos Privacidade",
+            "description": "Ciência explícita dos termos de uso e desta política de privacidade (LGPD Lei 13.709/2018)."
+          },
+          "force_refresh_cnpj": {
+            "type": "boolean",
+            "title": "Force Refresh Cnpj",
+            "description": "Se verdadeiro e ``empresa.cnpj`` preenchido: nova consulta às fontes públicas ignorando TTL antes de fechar evidência WORM; merge com histórico em ``diagnostico_empresa_campo_historico``.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "empresa",
+          "respondente",
+          "respostas",
+          "aceite_termos_privacidade"
+        ],
+        "title": "IniciarDiagnosticoRequest"
+      },
+      "InstitucionalPublicResponse": {
+        "properties": {
+          "lgpd_dpo_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lgpd Dpo Email",
+            "description": "E-mail do encarregado (LGPD) definido na API; espelhar no front com NEXT_PUBLIC_LGPD_DPO_EMAIL."
+          },
+          "lgpd_retencao_referencia_dias": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Lgpd Retencao Referencia Dias",
+            "description": "Valor operacional de LGPD_RETENTION_DAYS na API (referência para políticas internas; a Política de Privacidade publicada prevalece)."
+          },
+          "privacidade_solicitacoes_path": {
+            "type": "string",
+            "title": "Privacidade Solicitacoes Path",
+            "description": "Caminho relativo dos endpoints autenticados de solicitação LGPD do titular (migração 0028, Bearer + Idempotency-Key no POST).",
+            "default": "/privacidade/solicitacoes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lgpd_retencao_referencia_dias"
+        ],
+        "title": "InstitucionalPublicResponse",
+        "description": "Conteúdo de GET /public/institucional — canal DPO e referências LGPD configuradas na API.",
+        "example": {
+          "lgpd_dpo_email": "dpo@tributiq.com.br",
+          "lgpd_retencao_referencia_dias": 180,
+          "privacidade_solicitacoes_path": "/privacidade/solicitacoes"
+        }
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type"
+          },
+          "nome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nome"
+          },
+          "perfil_conta": {
+            "type": "string",
+            "title": "Perfil Conta",
+            "default": "gratuito"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type",
+          "nome"
+        ],
+        "title": "LoginResponse"
+      },
+      "ManifestoPesoPerguntaSchema": {
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "title": "Codigo",
+            "description": "Código canônico da pergunta (ex.: Q-EST-001)."
+          },
+          "dimensao": {
+            "type": "string",
+            "title": "Dimensao",
+            "description": "Dimensão ABNT / score (fiscal, estrategica, tecnologica, etc.)."
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo",
+            "description": "Tipo de resposta (ternaria, binaria, escala_1_5, ...)."
+          },
+          "peso": {
+            "type": "number",
+            "title": "Peso",
+            "description": "Peso no cálculo dentro da dimensão."
+          },
+          "base_legal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Legal",
+            "description": "Referência normativa associada à pergunta (LC 214/2025, NT, EC 132/2023, ...)."
+          },
+          "pilar_abnt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pilar Abnt",
+            "description": "Pilar/tema ABNT NBR 17301:2026 opcional (catálogo versionado)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "codigo",
+          "dimensao",
+          "tipo",
+          "peso"
+        ],
+        "title": "ManifestoPesoPerguntaSchema",
+        "description": "Um item do catálogo com peso explícito (transparência M03)."
+      },
+      "ManifestoPesosResponse": {
+        "properties": {
+          "versao_manifesto": {
+            "type": "string",
+            "title": "Versao Manifesto",
+            "default": "2026-04-30"
+          },
+          "versao_catalogo": {
+            "type": "string",
+            "title": "Versao Catalogo"
+          },
+          "formula_score_geral": {
+            "type": "string",
+            "title": "Formula Score Geral",
+            "default": "Em cada dimensão (Fiscal, Estratégica, Contábil, Financeira, Operacional, Tecnológica e Compliance ABNT NBR 17301), calculamos uma média ponderada das respostas aplicáveis ao seu perfil, usando o peso de cada pergunta do catálogo. O score geral (0 a 100) é a média ponderada desses resultados dimensionais, segundo os pesos macro publicados nesta página — critério único e auditável para todos os diagnósticos na mesma versão do produto."
+          },
+          "nota_calibracao_m02": {
+            "type": "string",
+            "title": "Nota Calibracao M02",
+            "default": "As faixas de maturidade e os pesos são definidos de forma determinística e documentada, garantindo repetibilidade entre execuções. Evoluções por segmento ou porte podem ser incorporadas em versões futuras do manifesto, sempre com identificação de versão — sua organização sabe exatamente qual critério fundamentou o relatório recebido."
+          },
+          "pesos_macro_dimensao": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Pesos Macro Dimensao"
+          },
+          "perguntas": {
+            "items": {
+              "$ref": "#/components/schemas/ManifestoPesoPerguntaSchema"
+            },
+            "type": "array",
+            "title": "Perguntas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "versao_catalogo",
+          "pesos_macro_dimensao",
+          "perguntas"
+        ],
+        "title": "ManifestoPesosResponse",
+        "description": "Manifesto público — pesos por pergunta + pesos macro do score geral.\n\nLC 214/2025 art. 5º — previsibilidade; ABNT NBR 17301:2026 — transparência metodológica.",
+        "example": {
+          "formula_score_geral": "Em cada dimensão, média ponderada das respostas; score geral: agregação ponderada.",
+          "nota_calibracao_m02": "Pesos e faixas determinísticos; versão do manifesto identifica o critério aplicado.",
+          "perguntas": [
+            {
+              "base_legal": "EC 132/2023; LC 214/2025",
+              "codigo": "Q-EST-001",
+              "dimensao": "estrategica",
+              "peso": 7.5,
+              "tipo": "ternaria"
+            }
+          ],
+          "pesos_macro_dimensao": {
+            "fiscal": 1.5,
+            "tecnologica": 1.3
+          },
+          "versao_catalogo": "v1-doc-05-full-37",
+          "versao_manifesto": "2026-04-30"
+        }
+      },
+      "MetodologiaResponse": {
+        "properties": {
+          "versao_normativa": {
+            "type": "string",
+            "title": "Versao Normativa",
+            "description": "Referência de norma-guia usada na camada de compliance (ex.: ABNT NBR 17301:2026)."
+          },
+          "pesos_macro_dimensao_score_geral": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Pesos Macro Dimensao Score Geral",
+            "description": "Pesos que agregam as médias por dimensão no score geral 0-100 (ver domain)."
+          },
+          "nota_metodologica": {
+            "type": "string",
+            "title": "Nota Metodologica",
+            "description": "Texto explicando a relação entre pesos macro e pesos do catálogo por pergunta."
+          },
+          "recomendacoes_gaps_criticos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recomendacoes Gaps Criticos",
+            "description": "Alertas heurísticos para leitura executiva (não vinculam obrigação legal)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "versao_normativa",
+          "pesos_macro_dimensao_score_geral",
+          "nota_metodologica"
+        ],
+        "title": "MetodologiaResponse",
+        "description": "Conteúdo de GET /diagnosticos/metodologia — alinhamento do motor com transparência (M03).\n\nPúblico, sem JWT. Complementa o manifesto de pesos.",
+        "example": {
+          "nota_metodologica": "Índice 0 a 100 por dimensões; agregação com pesos macro; catálogo público de perguntas.",
+          "pesos_macro_dimensao_score_geral": {
+            "estrategica": 1.0,
+            "fiscal": 1.5,
+            "tecnologica": 1.3
+          },
+          "recomendacoes_gaps_criticos": [
+            "Dimensão fiscal baixa: revisar cadastros e cenários CBS/IBS com apoio especializado."
+          ],
+          "versao_normativa": "ABNT NBR 17301:2026"
+        }
+      },
+      "PatchChecklistM12AutoconfRequest": {
+        "properties": {
+          "checklist_m12_autoconf": {
+            "items": {
+              "type": "integer",
+              "maximum": 5.0,
+              "minimum": 1.0,
+              "description": "Escala Likert 1 (minimo) a 5 (maximo)."
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 10,
+            "title": "Checklist M12 Autoconf",
+            "description": "Exatamente 10 inteiros 1-5 - mesma ordem das ações da frente ABNT no relatório."
+          }
+        },
+        "type": "object",
+        "required": [
+          "checklist_m12_autoconf"
+        ],
+        "title": "PatchChecklistM12AutoconfRequest",
+        "description": "Corpo do PATCH M12 - espelho dos 10 controles ABNT (Likert 1-5 por item).\n\nExige `If-Match` com `versao_otimista` atual (mesmo contrato do PATCH de relatório)."
+      },
+      "PatchQuadroImplantacaoRequest": {
+        "properties": {
+          "quadro_implantacao_anotacoes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/QuadroImplantacaoAnotacaoItemSchema"
+            },
+            "type": "object",
+            "title": "Quadro Implantacao Anotacoes",
+            "description": "Mapa de anotações: chave legada f{i}_a{j} ou UUID ``plano_acao_id`` da ação materializada."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PatchQuadroImplantacaoRequest",
+        "description": "Corpo do PATCH do quadro de implantação — exige ``If-Match`` com ``versao_otimista``."
+      },
+      "PatchRelatorioPdfRequest": {
+        "properties": {
+          "relatorio_pdf_url": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Relatorio Pdf Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relatorio_pdf_url"
+        ],
+        "title": "PatchRelatorioPdfRequest",
+        "description": "Corpo do PATCH que só altera a URL do relatório (lock otimista via If-Match)."
+      },
+      "PatchSubtarefaPlanoDiagnosticoRequest": {
+        "properties": {
+          "titulo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titulo"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "prazo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prazo"
+          },
+          "comentarios": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentarios"
+          },
+          "ordem": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordem"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PatchSubtarefaPlanoDiagnosticoRequest",
+        "description": "Corpo do PATCH de subtarefa — todos os campos opcionais (parcial)."
+      },
+      "PorteEmpresa": {
+        "type": "string",
+        "enum": [
+          "micro",
+          "pequeno",
+          "medio",
+          "grande"
+        ],
+        "title": "PorteEmpresa",
+        "description": "Faixas de porte alinhadas com a segmentação da PwC Brasil\n(estudo \"Tributos no Centro: Caminhos para a Reinvenção\", nov/2025)."
+      },
+      "QuadroImplantacaoAnotacaoItemSchema": {
+        "properties": {
+          "comentario": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Comentario",
+            "description": "Legado: um único texto; use ``comentarios`` para várias notas.",
+            "default": ""
+          },
+          "comentarios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Comentarios",
+            "description": "Lista de comentários (follow-ups) por ação; no máximo 30 itens."
+          },
+          "prazo_meta": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Prazo Meta",
+            "description": "Meta de prazo ISO YYYY-MM-DD ou vazio.",
+            "default": ""
+          },
+          "descricao_personalizada": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Descricao Personalizada",
+            "description": "Substitui a descrição canônica da ação no quadro (texto exibido ao consultor). Vazio = manter texto sugerido pelo motor.",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "QuadroImplantacaoAnotacaoItemSchema",
+        "description": "Uma anotação por ação sugerida no quadro (chave f{i}_a{j} no mapa pai)."
+      },
+      "QuestionarioDisponivelResponse": {
+        "properties": {
+          "versao_catalogo": {
+            "type": "string",
+            "title": "Versao Catalogo"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "perguntas": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionarioPerguntaItemSchema"
+            },
+            "type": "array",
+            "title": "Perguntas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "versao_catalogo",
+          "total",
+          "perguntas"
+        ],
+        "title": "QuestionarioDisponivelResponse",
+        "description": "Resposta do GET /diagnosticos/questionario."
+      },
+      "QuestionarioPerguntaItemSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "codigo": {
+            "type": "string",
+            "title": "Codigo"
+          },
+          "texto": {
+            "type": "string",
+            "title": "Texto"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "peso": {
+            "type": "number",
+            "title": "Peso"
+          },
+          "dimensao": {
+            "type": "string",
+            "title": "Dimensao"
+          },
+          "base_legal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Legal"
+          },
+          "multipla_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multipla Total"
+          },
+          "opcoes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opcoes"
+          },
+          "rotulos_escala": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotulos Escala",
+            "description": "Somente escala_1_5: exatamente 5 rótulos para valores 1 a 5 (catálogo); se omitido, o cliente aplica rótulos padrão de maturidade."
+          },
+          "pilar_abnt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pilar Abnt",
+            "description": "Referência opcional ao pilar/tema ABNT NBR 17301:2026 vinculado à pergunta."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "codigo",
+          "texto",
+          "tipo",
+          "peso",
+          "dimensao"
+        ],
+        "title": "QuestionarioPerguntaItemSchema",
+        "description": "Item do catálogo filtrado pelo perfil (motor adaptativo)."
+      },
+      "RascunhoDiagnosticoSelfServiceResponse": {
+        "properties": {
+          "resgate_token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 16,
+            "title": "Resgate Token"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "expira_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expira Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resgate_token",
+          "mensagem",
+          "expira_em"
+        ],
+        "title": "RascunhoDiagnosticoSelfServiceResponse",
+        "description": "Resposta ao gravar rascunho no servidor (token opaco devolvido uma vez)."
+      },
+      "RegimeTributario": {
+        "type": "string",
+        "enum": [
+          "simples_nacional",
+          "lucro_presumido",
+          "lucro_real",
+          "mei"
+        ],
+        "title": "RegimeTributario",
+        "description": "Regime tributário declarado pela empresa-cliente."
+      },
+      "RegistrarRetificacaoDiagnosticoRequest": {
+        "properties": {
+          "motivo_retificacao": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 10,
+            "title": "Motivo Retificacao"
+          },
+          "payload_retificacao": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload Retificacao"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "motivo_retificacao"
+        ],
+        "title": "RegistrarRetificacaoDiagnosticoRequest",
+        "description": "POST retificação append-only (cadeia NF-e/CC-e — ADR-012 §5)."
+      },
+      "RegistrarSolicitacaoTitularLgpdRequest": {
+        "properties": {
+          "diagnostico_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostico Id",
+            "description": "Opcional: vínculo com um diagnóstico específico no tenant."
+          },
+          "tipo": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 3,
+            "title": "Tipo",
+            "description": "acesso, correcao, anonimizacao, eliminacao, portabilidade ou oposicao."
+          },
+          "canal": {
+            "type": "string",
+            "maxLength": 24,
+            "minLength": 4,
+            "title": "Canal",
+            "description": "plataforma, self_service ou dpo_email.",
+            "default": "plataforma"
+          },
+          "solicitante_email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 5,
+            "title": "Solicitante Email"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "description": "Metadados da solicitação (texto livre/estrutura simples)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tipo",
+          "solicitante_email"
+        ],
+        "title": "RegistrarSolicitacaoTitularLgpdRequest",
+        "description": "Corpo do POST /privacidade/solicitacoes (art. 18)."
+      },
+      "RespondenteSchema": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Nome",
+            "description": "Nome do respondente que vincula o diagnóstico ao contato (obrigatório)."
+          },
+          "cargo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cargo"
+          },
+          "telefone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 15
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telefone",
+            "description": "Telefone opcional, apenas dígitos: DDD + número (10 ou 11 dígitos), sem DDI (+55). M09 lead na plataforma; LGPD por finalidade."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "nome"
+        ],
+        "title": "RespondenteSchema",
+        "description": "Respondente do diagnóstico — e-mail e nome obrigatórios (vínculo LGPD / rastreio)."
+      },
+      "RespostaRequestSchema": {
+        "properties": {
+          "pergunta_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pergunta Id"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Valor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pergunta_id",
+          "valor"
+        ],
+        "title": "RespostaRequestSchema"
+      },
+      "ScoreCompletoSchema": {
+        "properties": {
+          "score_geral": {
+            "$ref": "#/components/schemas/ScoreDimensaoSchema"
+          },
+          "score_por_dimensao": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ScoreDimensaoSchema"
+            },
+            "type": "object",
+            "title": "Score Por Dimensao"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score_geral",
+          "score_por_dimensao"
+        ],
+        "title": "ScoreCompletoSchema"
+      },
+      "ScoreDimensaoSchema": {
+        "properties": {
+          "valor": {
+            "type": "number",
+            "title": "Valor"
+          },
+          "peso_total_aplicado": {
+            "type": "number",
+            "title": "Peso Total Aplicado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valor",
+          "peso_total_aplicado"
+        ],
+        "title": "ScoreDimensaoSchema"
+      },
+      "SelfServiceTokenRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "codigo": {
+            "type": "string",
+            "maxLength": 8,
+            "minLength": 4,
+            "title": "Codigo",
+            "description": "Código numérico recebido por e-mail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "codigo"
+        ],
+        "title": "SelfServiceTokenRequest",
+        "description": "Troca OTP por JWT para POST /diagnosticos/self-service."
+      },
+      "SelfServiceTokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_in"
+        ],
+        "title": "SelfServiceTokenResponse"
+      },
+      "SetorMacro": {
+        "type": "string",
+        "enum": [
+          "comercio",
+          "industria",
+          "servicos",
+          "agro",
+          "consumo"
+        ],
+        "title": "SetorMacro",
+        "description": "Setores macroeconômicos com flags de alta sensibilidade à Reforma."
+      },
+      "SolicitacaoTitularLgpdResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "diagnostico_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostico Id"
+          },
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "canal": {
+            "type": "string",
+            "title": "Canal"
+          },
+          "solicitante_email": {
+            "type": "string",
+            "title": "Solicitante Email"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "observacao_interna": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observacao Interna"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Criado Em"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Atualizado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "diagnostico_id",
+          "tipo",
+          "status",
+          "canal",
+          "solicitante_email",
+          "payload",
+          "observacao_interna",
+          "actor_user_id",
+          "criado_em",
+          "atualizado_em"
+        ],
+        "title": "SolicitacaoTitularLgpdResponse",
+        "description": "Resposta HTTP da solicitação LGPD registrada."
+      },
+      "SolicitarVerificacaoEmailRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "SolicitarVerificacaoEmailRequest",
+        "description": "Wizard passo 1 — confirmação de posse do inbox (LGPD)."
+      },
+      "SolicitarVerificacaoEmailResponse": {
+        "properties": {
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mensagem"
+        ],
+        "title": "SolicitarVerificacaoEmailResponse"
+      },
+      "ValidarAncoraNormativaRequest": {
+        "properties": {
+          "texto": {
+            "type": "string",
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Texto"
+          }
+        },
+        "type": "object",
+        "required": [
+          "texto"
+        ],
+        "title": "ValidarAncoraNormativaRequest",
+        "description": "Texto livre para heurística MVP (plano ANALISE §E1).\n\nAviso: validação léxica simples (`LC`, `NT`, referências tipo EC/ABNT) — não garante suficiência\njurídica nem acoplamento Lexiq oficial (base RAG Tributiq)."
+      },
+      "ValidarAncoraNormativaResponse": {
+        "properties": {
+          "valido": {
+            "type": "boolean",
+            "title": "Valido",
+            "description": "True se o texto contém padrão de âncora normativa MVP."
+          },
+          "motivo_rejeicao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo Rejeicao",
+            "description": "Preenchido quando valido=false (mensagem para UX / wizard)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "valido"
+        ],
+        "title": "ValidarAncoraNormativaResponse",
+        "description": "Saída heurística — apenas indica reconhecimento de padrões esperados pela API.\n\nNão usar como evidência jurídico-contábil autônoma (ABNT NBR 17301:2026: decisão segue ciclo corporativo formal).",
+        "example": {
+          "valido": true
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VincularLeadsSelfServiceResponse": {
+        "properties": {
+          "total_vinculados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Vinculados",
+            "description": "Quantidade de diagnósticos reatribuídos ao tenant da conta na plataforma."
+          },
+          "diagnostico_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Diagnostico Ids",
+            "description": "Identificadores atualizados (ordem não garantida)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_vinculados"
+        ],
+        "title": "VincularLeadsSelfServiceResponse",
+        "description": "Resposta de POST /diagnosticos/vincular-leads-self-service (reatribuição de tenant)."
+      },
+      "VincularRascunhoContaPlataformaRequest": {
+        "properties": {
+          "resgate_token": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 16,
+            "title": "Resgate Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resgate_token"
+        ],
+        "title": "VincularRascunhoContaPlataformaRequest",
+        "description": "Associa rascunho self-service ao tenant do JWT (e-mail do respondente = e-mail do admin)."
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Diagnósticos",
+      "description": "Criação, consulta e geração de relatórios de diagnósticos tributários (ABNT NBR 17301)."
+    },
+    {
+      "name": "Infra",
+      "description": "Endpoints de infraestrutura e healthchecks."
+    },
+    {
+      "name": "Lexiq / guardrails",
+      "description": "Protótipo (heurístico) de checagem de âncoras normativas na redação — não é RAG Lexiq completo nem parecer jurídico consultivo (LC 214/2025 — boa fé informacional). Ver ADR UX no repositório .github quando integrar baseline Lexiq oficial."
+    },
+    {
+      "name": "Referência CNAE",
+      "description": "Consulta somente leitura CNAE 2.3 (schema qdi, CONCLA/IBGE). Público; exige DATABASE_URL no backend. Rate limit por IP (middleware público)."
+    },
+    {
+      "name": "Referência CNPJ",
+      "description": "Consulta cadastral CNPJ com cache TTL triplo (env), BrasilAPI e fallback Minha Receita. Autenticado (JWT); Idempotency-Key obrigatória."
+    },
+    {
+      "name": "Privacidade LGPD",
+      "description": "Solicitações operacionais de direitos do titular (Lei 13.709/2018 art. 18) no tenant autenticado."
+    }
+  ]
+}

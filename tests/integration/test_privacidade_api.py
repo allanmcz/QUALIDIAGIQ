@@ -447,6 +447,44 @@ async def test_get_export_portabilidade_json_200(async_client):
 
 
 @pytest.mark.asyncio
+async def test_get_export_portabilidade_pacote_pdf_200(async_client):
+    """GET export pacote_pdf — PDF binário e comando com gerar_pdf_anexo=True."""
+    mock_uc = MagicMock()
+    pdf_stub = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
+    mock_uc.execute = AsyncMock(
+        return_value=ResultadoExportPortabilidadeDiagnostico(
+            payload={},
+            json_utf8=b"{}",
+            pdf_bytes=pdf_stub,
+        )
+    )
+    app.dependency_overrides[get_gerar_export_portabilidade_diagnostico_use_case] = lambda: mock_uc
+    try:
+        tenant_id = uuid4()
+        usuario_id = uuid4()
+        diagnostico_id = uuid4()
+        solicitacao_id = uuid4()
+        headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+        r = await async_client.get(
+            f"/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade",
+            params={"solicitacao_id": str(solicitacao_id), "formato": "pacote_pdf"},
+            headers=headers,
+        )
+        assert r.status_code == 200
+        assert r.headers.get("content-type") == "application/pdf"
+        assert r.content.startswith(b"%PDF")
+        assert r.content == pdf_stub
+        mock_uc.execute.assert_awaited_once()
+        comando = mock_uc.execute.await_args.args[0]
+        assert comando.gerar_pdf_anexo is True
+        assert comando.diagnostico_id == diagnostico_id
+        assert comando.solicitacao_id == solicitacao_id
+        assert comando.tenant_id == tenant_id
+    finally:
+        app.dependency_overrides.pop(get_gerar_export_portabilidade_diagnostico_use_case, None)
+
+
+@pytest.mark.asyncio
 async def test_get_export_portabilidade_400_valor_negocio(async_client):
     """Erro de negócio do use case → 400 (ex.: solicitação não deferida)."""
     mock_uc = MagicMock()
