@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main, master, "release/**"]
 
+# Novos pushes no mesmo PR/ref cancelam execuções antigas (economiza minutos na fila).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -82,7 +87,18 @@ jobs:
         run: mypy src/
 
       - name: Pytest (unit + integration)
-        run: PYTHONPATH=. pytest
+        run: PYTHONPATH=. pytest --cov-report=xml:coverage.xml
+
+      - name: Artefacto cobertura backend (XML + HTML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-backend
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 14
 
       - name: Auditoria catálogo MVP (G1 — invariantes JSON)
         run: PYTHONPATH=. python scripts/auditoria_catalogo_perguntas_mvp.py

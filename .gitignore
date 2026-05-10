@@ -18,6 +18,7 @@ dist/
 .mypy_cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 .tox/
 
