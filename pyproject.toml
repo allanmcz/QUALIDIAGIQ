@@ -120,13 +120,6 @@ omit = [
     "*/migrations/*",
     "*/__init__.py",
     "*/scripts/*",
-    # Adapter só para Playwright/CI integrado — coberto por e2e, não por pirâmide unitária.
-    "*/ci_playwright_diagnostico_repository.py",
-    # ``supabase_diagnostico_repository``: mocks em ``test_supabase_diagnostico_repository_residual.py``.
-    # Trilhas LGPD (SQL repetitivo sem domínio); smoke em integração quando ``DATABASE_URL`` presente.
-    "*/postgres_lgpd_titular_solicitacao_adapter.py",
-    "*/postgres_lgpd_anonimizacao_executor_adapter.py",
-    # Lead vinculo Postgres + Storage Supabase: testes dedicados em ``tests/unit/infrastructure/``.
 ]
 
 [tool.coverage.report]

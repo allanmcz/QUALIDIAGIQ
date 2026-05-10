@@ -81,3 +81,28 @@ class TestCiPlaywrightVincularLeadsSelfService:
             email_admin_normalizado="x@y.com",
         )
         assert ids == []
+
+    @pytest.mark.asyncio
+    async def test_vincular_ignora_tenant_self_service_diferente(self) -> None:
+        repo = CiPlaywrightDiagnosticoRepository()
+        did = uuid4()
+        await repo.salvar(_diag_lead(did, "match@y.com"))
+        outro_tenant = uuid4()
+        ids = repo.vincular_leads_self_service_em_memoria(
+            tenant_self_service=outro_tenant,
+            tenant_destino=_TENANT_B2B,
+            email_admin_normalizado="match@y.com",
+        )
+        assert ids == []
+
+    @pytest.mark.asyncio
+    async def test_vincular_ignora_email_diferente(self) -> None:
+        repo = CiPlaywrightDiagnosticoRepository()
+        did = uuid4()
+        await repo.salvar(_diag_lead(did, "um@y.com"))
+        ids = repo.vincular_leads_self_service_em_memoria(
+            tenant_self_service=_TENANT_SS,
+            tenant_destino=_TENANT_B2B,
+            email_admin_normalizado="outro@y.com",
+        )
+        assert ids == []
