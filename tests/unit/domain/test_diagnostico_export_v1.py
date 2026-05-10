@@ -66,6 +66,32 @@ class TestMontarPayloadExportV1:
         assert payload["hash_evidencia_sha256"] == diag.hash_evidencia
         assert payload["bloqueios_export"]["apenas_finalizado_com_evidencia"] is True
 
+    def test_respondente_ip_origem_no_export(
+        self, _empresa: EmpresaInfo, _respondente: Respondente
+    ) -> None:
+        resp = Respondente(
+            email=_respondente.email,
+            nome=_respondente.nome,
+            ip_origem="203.0.113.10",
+        )
+        diag = Diagnostico(
+            tenant_id=uuid.UUID("22222222-3333-4444-5555-666666666666"),
+            empresa=_empresa,
+            respondente=resp,
+            id=uuid.UUID("77777777-8888-9999-aaaa-bbbbbbbbbbbb"),
+        )
+        sc = ScoreCompleto(
+            score_geral=ScoreNumerico(valor=70.0, peso_total_aplicado=10.0),
+            score_por_dimensao={
+                Dimensao.FISCAL: ScoreNumerico(valor=70.0, peso_total_aplicado=10.0),
+            },
+        )
+        diag.finalizar_e_registrar_evidencia(sc)
+        payload = montar_payload_export_v1(
+            diag, exportado_em=datetime(2026, 5, 9, 10, 0, 0, tzinfo=UTC)
+        )
+        assert payload["respondente"]["ip_origem"] == "203.0.113.10"
+
     def test_score_completo_snapshot_ausente_serializa_null(
         self, _empresa: EmpresaInfo, _respondente: Respondente
     ) -> None:

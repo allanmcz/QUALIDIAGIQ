@@ -43,6 +43,7 @@ def montar_payload_export_v1(
         "nome": resp.nome,
         "cargo": resp.cargo,
         "telefone": resp.telefone,
+        "ip_origem": resp.ip_origem,
     }
     score_blob: dict[str, Any] | None = None
     if diagnostico.score_completo_snapshot is not None:

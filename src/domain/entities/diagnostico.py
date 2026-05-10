@@ -133,6 +133,8 @@ class Respondente:
     telefone: str | None = (
         None  # M09 — lead na plataforma opcional (persistência quando coluna existir)
     )
+    #: Melhor esforço na camada HTTP (LGPD — removido na anonimização padronizada).
+    ip_origem: str | None = None
 
 
 @dataclass
