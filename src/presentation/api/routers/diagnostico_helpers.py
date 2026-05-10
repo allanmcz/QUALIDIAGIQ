@@ -17,7 +17,7 @@ from typing import Any, cast
 from uuid import UUID
 
 import structlog
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
 
 from src.application.ports.email_service import EmailServicePort
 from src.application.services.consultoria_service import ConsultoriaService
@@ -45,6 +45,23 @@ from src.presentation.api.schemas import (
 logger = structlog.get_logger(__name__)
 
 _VALIDADE_OTP_MINUTOS = 10
+
+
+def extrair_ip_cliente_http(request: Request) -> str | None:
+    """
+    Melhor esforço do IP observado na camada ASGI (proxies: primeiro hop de X-Forwarded-For).
+
+    Trunca a 45 caracteres (IPv6 textual). Não substitui política de confiança no reverse proxy.
+    """
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        primeiro = xff.split(",")[0].strip()
+        if primeiro:
+            return primeiro[:45]
+    client = request.client
+    if client and client.host:
+        return client.host[:45]
+    return None
 
 
 def _payload_json_como_dict(value: object) -> dict[str, Any] | None:
@@ -312,6 +329,7 @@ async def _executar_criar_diagnostico_core(
     perfil_limite: str | None,
     repo: DiagnosticoRepository,
     trace_id: str | None = None,
+    respondente_ip_origem: str | None = None,
 ) -> DiagnosticoResponse:
     """Núcleo compartilhado entre POST com conta na plataforma e POST self-service (JWT após OTP)."""
     empresa_domain = EmpresaInfo(
@@ -330,6 +348,7 @@ async def _executar_criar_diagnostico_core(
         nome=payload.respondente.nome,
         cargo=payload.respondente.cargo,
         telefone=payload.respondente.telefone,
+        ip_origem=respondente_ip_origem,
     )
 
     banco = get_banco_perguntas_cached()

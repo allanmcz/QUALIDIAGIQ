@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -33,6 +33,7 @@ from src.presentation.api.routers.diagnostico_helpers import (
     _plano_efetivo_para_criacao,
     _quadro_implantacao_para_http,
     _score_completo_para_http,
+    extrair_ip_cliente_http,
 )
 from src.presentation.api.schemas import IniciarDiagnosticoRequest
 
@@ -206,6 +207,29 @@ def test_plano_efetivo_para_criacao_valor_desconhecido_normaliza_gratuito() -> N
         }
     )
     assert _plano_efetivo_para_criacao(payload, "avancado") == "gratuito"
+
+
+def test_extrair_ip_cliente_http_x_forwarded_for_e_truncagem() -> None:
+    req = MagicMock()
+    req.headers.get.return_value = "203.0.113.9, 10.0.0.1"
+    assert extrair_ip_cliente_http(req) == "203.0.113.9"
+    long_hop = "x" * 50
+    req.headers.get.return_value = long_hop
+    assert len(extrair_ip_cliente_http(req) or "") == 45
+
+
+def test_extrair_ip_cliente_http_xff_primeiro_vazio_cai_no_socket() -> None:
+    req = MagicMock()
+    req.headers.get.return_value = " , 10.0.0.2"
+    req.client = SimpleNamespace(host="192.0.2.1")
+    assert extrair_ip_cliente_http(req) == "192.0.2.1"
+
+
+def test_extrair_ip_cliente_http_sem_headers_nem_client() -> None:
+    req = MagicMock()
+    req.headers.get.return_value = None
+    req.client = None
+    assert extrair_ip_cliente_http(req) is None
 
 
 def test_conclusao_publica_row_sem_score_dict_cai_no_fallback_locale() -> None:

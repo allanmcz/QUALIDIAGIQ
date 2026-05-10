@@ -109,6 +109,7 @@ async def vincular_rascunho_conta_plataforma(
         perfil_limite=perfil_conta,
         repo=repo,
         trace_id=trace_id,
+        respondente_ip_origem=diagnostico_helpers.extrair_ip_cliente_http(request),
     )
     try:
         await deps.asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row["id"])))

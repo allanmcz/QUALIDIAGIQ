@@ -226,6 +226,7 @@ async def concluir_rascunho_diagnostico_self_service(
         perfil_limite=None,
         repo=repo,
         trace_id=trace_id,
+        respondente_ip_origem=diagnostico_helpers.extrair_ip_cliente_http(request),
     )
     try:
         await deps.asyncio.to_thread(marcar_rascunho_consumido_sync, dsn, UUID(str(row2["id"])))

@@ -106,6 +106,7 @@ async def criar_diagnostico(
         perfil_limite=perfil_conta,
         repo=repo,
         trace_id=trace_id,
+        respondente_ip_origem=diagnostico_helpers.extrair_ip_cliente_http(request),
     )
 
 
