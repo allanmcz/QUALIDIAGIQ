@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     StatusSolicitacaoTitular,
@@ -16,6 +17,12 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
 from src.infrastructure.adapters.postgres_lgpd_anonimizacao_executor_adapter import (
     PostgresLgpdAnonimizacaoExecutorAdapter,
     _aplicar_sync,
+)
+from src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter import (
+    PostgresLgpdEliminacaoExecutorAdapter,
+)
+from src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter import (
+    _aplicar_sync as _aplicar_eliminacao_sync,
 )
 from src.infrastructure.adapters.postgres_lgpd_titular_solicitacao_adapter import (
     PostgresLgpdTitularSolicitacaoAdapter,
@@ -559,6 +566,205 @@ class TestPostgresLgpdAnonimizacaoExecutorAdapterAsync:
             ) as aplicar_mock,
         ):
             await adapter.aplicar_anonimizacao_respondente(
+                tenant_id=uuid4(),
+                diagnostico_id=uuid4(),
+                solicitacao_id=uuid4(),
+                actor_user_id=uuid4(),
+            )
+        tt.assert_called_once()
+        aplicar_mock.assert_called_once()
+
+
+class TestPostgresLgpdEliminacaoExecutorSync:
+    """Caminhos de ``_aplicar_eliminacao_sync`` (DELETE + UPDATE solicitação)."""
+
+    def test_eliminacao_diagnostico_inexistente(self) -> None:
+        cur = MagicMock()
+        cur.fetchone.return_value = None
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+                return_value=conn,
+            ),
+            pytest.raises(ValueError, match="não encontrado"),
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+
+    def test_eliminacao_rejeita_finalizado_worm(self) -> None:
+        cur = MagicMock()
+        cur.fetchone.return_value = {"status": "finalizado"}
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+                return_value=conn,
+            ),
+            pytest.raises(EliminacaoDiagnosticoFinalizadoWormError, match="anonimização"),
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+
+    def test_eliminacao_rejeita_status_desconhecido(self) -> None:
+        cur = MagicMock()
+        cur.fetchone.return_value = {"status": "inventado"}
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+                return_value=conn,
+            ),
+            pytest.raises(ValueError, match="Eliminação física não suportada"),
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+
+    def test_eliminacao_sucesso(self) -> None:
+        cur = MagicMock()
+
+        def execute_side_effect(query: str, params: object | None = None) -> None:
+            q = query.replace("\n", " ")
+            if "SELECT status" in q and "FROM diagnosticos" in q:
+                cur.fetchone.return_value = {"status": "em_andamento"}
+            elif "DELETE FROM diagnosticos" in q or "UPDATE lgpd_titular_solicitacao" in q:
+                cur.rowcount = 1
+
+        cur.execute.side_effect = execute_side_effect
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with patch(
+            "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+            return_value=conn,
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+        conn.commit.assert_called_once()
+
+    def test_eliminacao_runtime_rowcount_delete(self) -> None:
+        cur = MagicMock()
+
+        def execute_side_effect(query: str, params: object | None = None) -> None:
+            q = query.replace("\n", " ")
+            if "SELECT status" in q and "FROM diagnosticos" in q:
+                cur.fetchone.return_value = {"status": "cancelado"}
+            elif "DELETE FROM diagnosticos" in q:
+                cur.rowcount = 0
+
+        cur.execute.side_effect = execute_side_effect
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+                return_value=conn,
+            ),
+            pytest.raises(RuntimeError, match="rowcount"),
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+        conn.rollback.assert_called_once()
+
+    def test_eliminacao_value_error_rowcount_solicitacao(self) -> None:
+        cur = MagicMock()
+
+        def execute_side_effect(query: str, params: object | None = None) -> None:
+            q = query.replace("\n", " ")
+            if "SELECT status" in q and "FROM diagnosticos" in q:
+                cur.fetchone.return_value = {"status": "expirado"}
+            elif "DELETE FROM diagnosticos" in q:
+                cur.rowcount = 1
+            elif "UPDATE lgpd_titular_solicitacao" in q:
+                cur.rowcount = 0
+
+        cur.execute.side_effect = execute_side_effect
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+                return_value=conn,
+            ),
+            pytest.raises(ValueError, match="deferida"),
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+        conn.rollback.assert_called_once()
+
+    def test_eliminacao_rollback_em_erro_generica(self) -> None:
+        cur = MagicMock()
+        cur.execute.side_effect = RuntimeError("db")
+        conn = _conn_com_cursor(cur)
+        tid, did, sid, actor = uuid4(), uuid4(), uuid4(), uuid4()
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.psycopg2.connect",
+                return_value=conn,
+            ),
+            pytest.raises(RuntimeError, match="db"),
+        ):
+            _aplicar_eliminacao_sync(
+                "postgresql://x",
+                tenant_id=tid,
+                diagnostico_id=did,
+                solicitacao_id=sid,
+                actor_user_id=actor,
+            )
+        conn.rollback.assert_called_once()
+
+
+@pytest.mark.asyncio
+class TestPostgresLgpdEliminacaoExecutorAdapterAsync:
+    async def test_adapter_delega_to_thread(self) -> None:
+        adapter = PostgresLgpdEliminacaoExecutorAdapter("postgresql://elim")
+
+        async def run_imediato(fn: object, /, *args: object, **kwargs: object) -> object:
+            return fn(*args, **kwargs)
+
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter.asyncio.to_thread",
+                side_effect=run_imediato,
+            ) as tt,
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter._aplicar_sync",
+                return_value=None,
+            ) as aplicar_mock,
+        ):
+            await adapter.aplicar_eliminacao_diagnostico(
                 tenant_id=uuid4(),
                 diagnostico_id=uuid4(),
                 solicitacao_id=uuid4(),

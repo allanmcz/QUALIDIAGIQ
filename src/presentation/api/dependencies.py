@@ -23,6 +23,7 @@ from src.application.ports.lead_diagnostico_vinculo_port import (
     NopLeadDiagnosticoVinculoAdapter,
 )
 from src.application.ports.lgpd_anonimizacao_executor_port import LgpdAnonimizacaoExecutorPort
+from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
 from src.application.services.cnpj_consulta_service import CnpjConsultaService, CnpjTtlSegundos
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
@@ -36,6 +37,9 @@ from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCa
 from src.application.use_cases.consultar_cnpj import ConsultarCnpjUseCase
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,
+)
+from src.application.use_cases.executar_eliminacao_diagnostico_lgpd import (
+    ExecutarEliminacaoDiagnosticoLgpd,
 )
 from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
     GerarExportPortabilidadeDiagnostico,
@@ -94,6 +98,9 @@ from src.infrastructure.adapters.postgres_diagnostico_retificacao_adapter import
 )
 from src.infrastructure.adapters.postgres_lgpd_anonimizacao_executor_adapter import (
     PostgresLgpdAnonimizacaoExecutorAdapter,
+)
+from src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter import (
+    PostgresLgpdEliminacaoExecutorAdapter,
 )
 from src.infrastructure.adapters.postgres_lgpd_titular_solicitacao_adapter import (
     PostgresLgpdTitularSolicitacaoAdapter,
@@ -425,6 +432,32 @@ def get_executar_anonimizacao_respondente_lgpd_use_case(
 ) -> ExecutarAnonimizacaoRespondenteLgpd:
     """Fluxo técnico pós-deferimento (solicitação tipo anonimizacao)."""
     return ExecutarAnonimizacaoRespondenteLgpd(port_solicitacoes=port, executor=executor)
+
+
+def get_lgpd_eliminacao_executor_port() -> LgpdEliminacaoExecutorPort:
+    """Executor físico da eliminação pré-WORM — exige Postgres (mesmo DSN das solicitações)."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Execução de eliminação LGPD indisponível sem DATABASE_URL síncrono.",
+        )
+    return PostgresLgpdEliminacaoExecutorAdapter(dsn_sync=dsn)
+
+
+def get_executar_eliminacao_diagnostico_lgpd_use_case(
+    port: Annotated[
+        LgpdTitularSolicitacaoPort,
+        Depends(get_lgpd_titular_solicitacao_port),
+    ],
+    executor: Annotated[
+        LgpdEliminacaoExecutorPort,
+        Depends(get_lgpd_eliminacao_executor_port),
+    ],
+) -> ExecutarEliminacaoDiagnosticoLgpd:
+    """Fluxo técnico pós-deferimento (solicitação tipo eliminacao)."""
+    return ExecutarEliminacaoDiagnosticoLgpd(port_solicitacoes=port, executor=executor)
 
 
 def get_diagnostico_retificacao_port() -> DiagnosticoRetificacaoPort:

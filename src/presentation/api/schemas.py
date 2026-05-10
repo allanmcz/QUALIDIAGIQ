@@ -472,6 +472,29 @@ class AnonimizarRespondenteLgpdHttpResponse(BaseModel):
     )
 
 
+class EliminarDiagnosticoLgpdHttpRequest(BaseModel):
+    """POST /privacidade/diagnosticos/{id}/eliminar-diagnostico — exige solicitação ``deferida``."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    solicitacao_id: UUID = Field(
+        ...,
+        description="Identificador da linha em lgpd_titular_solicitacao (tipo eliminacao, status deferida).",
+    )
+
+
+class EliminarDiagnosticoLgpdHttpResponse(BaseModel):
+    """Confirmação após DELETE do diagnóstico (pré-finalização) e conclusão da solicitação."""
+
+    diagnostico_id: UUID
+    solicitacao_id: UUID
+    status_solicitacao: str = "concluida"
+    mensagem: str = (
+        "Diagnóstico eliminado fisicamente (estados em_andamento, cancelado ou expirado); "
+        "solicitação LGPD concluída."
+    )
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 

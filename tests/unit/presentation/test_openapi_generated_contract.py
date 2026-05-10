@@ -20,6 +20,7 @@ _REQUIRED_PATHS_METHODS: dict[str, frozenset[str]] = {
     "/privacidade/solicitacoes": frozenset({"get", "post"}),
     "/privacidade/solicitacoes/{solicitacao_id}/status": frozenset({"patch"}),
     "/privacidade/diagnosticos/{diagnostico_id}/anonimizar-respondente": frozenset({"post"}),
+    "/privacidade/diagnosticos/{diagnostico_id}/eliminar-diagnostico": frozenset({"post"}),
     "/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade": frozenset({"get"}),
     "/diagnosticos/{diagnostico_id}/retificacoes": frozenset({"get"}),
     "/diagnosticos/{diagnostico_id}/retificacao": frozenset({"post"}),
@@ -30,9 +31,9 @@ class TestOpenapiGeneratedContract:
     """Leitura estática do JSON OpenAPI exportado pelo FastAPI."""
 
     def test_arquivo_presente(self) -> None:
-        assert _OPENAPI_PATH.is_file(), (
-            f"Falta {_OPENAPI_PATH.relative_to(_ROOT)} — execute make openapi-export e faça commit."
-        )
+        assert (
+            _OPENAPI_PATH.is_file()
+        ), f"Falta {_OPENAPI_PATH.relative_to(_ROOT)} — execute make openapi-export e faça commit."
 
     def test_openapi_paths_adicionados_com_metodos(self) -> None:
         raw = json.loads(_OPENAPI_PATH.read_text(encoding="utf-8"))
@@ -42,7 +43,9 @@ class TestOpenapiGeneratedContract:
         paths = raw.get("paths")
         assert isinstance(paths, dict), "paths deve ser um object"
 
-        http_verbs = frozenset({"get", "post", "put", "patch", "delete", "options", "head", "trace"})
+        http_verbs = frozenset(
+            {"get", "post", "put", "patch", "delete", "options", "head", "trace"}
+        )
         for path, expected_methods in _REQUIRED_PATHS_METHODS.items():
             assert path in paths, f"path ausente no contrato: {path}"
             entry = paths[path]

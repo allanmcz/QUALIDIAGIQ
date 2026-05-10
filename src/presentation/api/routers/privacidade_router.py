@@ -13,6 +13,7 @@ from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import Response
 
+from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     StatusSolicitacaoTitular,
@@ -25,6 +26,10 @@ from src.application.use_cases.atualizar_status_solicitacao_titular_lgpd import 
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ComandoExecutarAnonimizacaoRespondenteLgpd,
     ExecutarAnonimizacaoRespondenteLgpd,
+)
+from src.application.use_cases.executar_eliminacao_diagnostico_lgpd import (
+    ComandoExecutarEliminacaoDiagnosticoLgpd,
+    ExecutarEliminacaoDiagnosticoLgpd,
 )
 from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
     ComandoGerarExportPortabilidadeDiagnostico,
@@ -42,6 +47,7 @@ from src.presentation.api.dependencies import (
     get_atualizar_status_solicitacao_titular_lgpd_use_case,
     get_current_user_tenant,
     get_executar_anonimizacao_respondente_lgpd_use_case,
+    get_executar_eliminacao_diagnostico_lgpd_use_case,
     get_gerar_export_portabilidade_diagnostico_use_case,
     get_listar_solicitacao_titular_lgpd_use_case,
     get_registrar_solicitacao_titular_lgpd_use_case,
@@ -50,6 +56,8 @@ from src.presentation.api.schemas import (
     AnonimizarRespondenteLgpdHttpRequest,
     AnonimizarRespondenteLgpdHttpResponse,
     AtualizarStatusSolicitacaoTitularLgpdRequest,
+    EliminarDiagnosticoLgpdHttpRequest,
+    EliminarDiagnosticoLgpdHttpResponse,
     FormatoExportPortabilidade,
     RegistrarSolicitacaoTitularLgpdRequest,
     SolicitacaoTitularLgpdResponse,
@@ -241,6 +249,46 @@ async def anonimizar_respondente_lgpd(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     return AnonimizarRespondenteLgpdHttpResponse(
+        diagnostico_id=diagnostico_id,
+        solicitacao_id=payload.solicitacao_id,
+    )
+
+
+@router.post(
+    "/diagnosticos/{diagnostico_id}/eliminar-diagnostico",
+    response_model=EliminarDiagnosticoLgpdHttpResponse,
+    summary="Eliminar diagnóstico fisicamente (LGPD — pré-finalização)",
+    description=(
+        "Exige solicitação LGPD ``eliminacao`` com status ``deferida`` ligada ao mesmo "
+        "``diagnostico_id``. Remove a linha apenas se o diagnóstico **não** estiver "
+        "``finalizado`` (WORM). Se ``finalizado``, responde **422** orientando anonimização."
+    ),
+)
+async def eliminar_diagnostico_lgpd(
+    diagnostico_id: UUID,
+    payload: EliminarDiagnosticoLgpdHttpRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        ExecutarEliminacaoDiagnosticoLgpd,
+        Depends(get_executar_eliminacao_diagnostico_lgpd_use_case),
+    ],
+) -> EliminarDiagnosticoLgpdHttpResponse:
+    """DELETE físico do agregado quando ainda não há evidência finalizada (decisão J4 DEV_09052026_V2)."""
+    user_id, tenant_id, _ = current
+    try:
+        await use_case.execute(
+            ComandoExecutarEliminacaoDiagnosticoLgpd(
+                tenant_id=tenant_id,
+                actor_user_id=user_id,
+                diagnostico_id=diagnostico_id,
+                solicitacao_id=payload.solicitacao_id,
+            )
+        )
+    except EliminacaoDiagnosticoFinalizadoWormError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return EliminarDiagnosticoLgpdHttpResponse(
         diagnostico_id=diagnostico_id,
         solicitacao_id=payload.solicitacao_id,
     )

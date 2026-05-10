@@ -11,3 +11,12 @@ class DiagnosticoNaoEncontradoError(Exception):
 
 class ConflitoVersaoOtimistaError(Exception):
     """Header If-Match (versão otimista) não coincide com o estado persistido."""
+
+
+class EliminacaoDiagnosticoFinalizadoWormError(Exception):
+    """
+    Pedido de eliminação física sobre diagnóstico já finalizado (evidência WORM).
+
+    Operação correta: anonimização controlada (LGPD art. 18, IV) via fluxo dedicado.
+    Alinhado a ADR-012 e workshop J4 (DEV_09052026_V2).
+    """

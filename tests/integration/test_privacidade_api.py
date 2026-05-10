@@ -11,9 +11,11 @@ from uuid import UUID, uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError
 from src.application.ports.lgpd_anonimizacao_executor_port import (
     LgpdAnonimizacaoExecutorPort,
 )
+from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     LgpdTitularSolicitacaoPort,
@@ -24,16 +26,42 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,
 )
+from src.application.use_cases.executar_eliminacao_diagnostico_lgpd import (
+    ExecutarEliminacaoDiagnosticoLgpd,
+)
 from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
     ResultadoExportPortabilidadeDiagnostico,
 )
 from src.presentation.api.dependencies import (
     get_executar_anonimizacao_respondente_lgpd_use_case,
+    get_executar_eliminacao_diagnostico_lgpd_use_case,
     get_gerar_export_portabilidade_diagnostico_use_case,
     get_lgpd_titular_solicitacao_port,
 )
 from src.presentation.api.main import app
 from tests.conftest import cabecalho_auth_bearer
+
+
+class RecordingEliminacaoExecutor(LgpdEliminacaoExecutorPort):
+    """Executor fake para asserts HTTP sem Postgres."""
+
+    def __init__(self, *, raise_worm: bool = False) -> None:
+        self.calls: list[tuple[UUID, UUID, UUID, UUID]] = []
+        self.raise_worm = raise_worm
+
+    async def aplicar_eliminacao_diagnostico(
+        self,
+        *,
+        tenant_id: UUID,
+        diagnostico_id: UUID,
+        solicitacao_id: UUID,
+        actor_user_id: UUID,
+    ) -> None:
+        if self.raise_worm:
+            raise EliminacaoDiagnosticoFinalizadoWormError(
+                "Diagnóstico finalizado: use anonimização."
+            )
+        self.calls.append((tenant_id, diagnostico_id, solicitacao_id, actor_user_id))
 
 
 class RecordingAnonimizacaoExecutor(LgpdAnonimizacaoExecutorPort):
@@ -146,6 +174,21 @@ def privacidade_anonimizar_overrides() -> tuple[FakeLgpdPort, RecordingAnonimiza
     app.dependency_overrides[get_lgpd_titular_solicitacao_port] = lambda: fake_port
     app.dependency_overrides[get_executar_anonimizacao_respondente_lgpd_use_case] = (
         lambda: ExecutarAnonimizacaoRespondenteLgpd(
+            port_solicitacoes=fake_port,
+            executor=executor,
+        )
+    )
+    yield fake_port, executor
+    app.dependency_overrides = {}
+
+
+@pytest.fixture
+def privacidade_eliminacao_overrides() -> tuple[FakeLgpdPort, RecordingEliminacaoExecutor]:
+    fake_port = FakeLgpdPort()
+    executor = RecordingEliminacaoExecutor()
+    app.dependency_overrides[get_lgpd_titular_solicitacao_port] = lambda: fake_port
+    app.dependency_overrides[get_executar_eliminacao_diagnostico_lgpd_use_case] = (
+        lambda: ExecutarEliminacaoDiagnosticoLgpd(
             port_solicitacoes=fake_port,
             executor=executor,
         )
@@ -328,6 +371,30 @@ async def test_patch_privacidade_400_status_invalido(
     assert response.status_code == 400
 
 
+def _deferida_eliminacao(
+    *,
+    tenant_id: UUID,
+    usuario_id: UUID,
+    solicitacao_id: UUID,
+    diagnostico_id: UUID,
+) -> SolicitacaoTitular:
+    now = datetime.now(UTC)
+    return SolicitacaoTitular(
+        id=solicitacao_id,
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        tipo=TipoSolicitacaoTitular.ELIMINACAO,
+        status=StatusSolicitacaoTitular.DEFERIDA,
+        canal=CanalSolicitacaoTitular.PLATAFORMA,
+        solicitante_email="titular@example.com",
+        payload={},
+        observacao_interna=None,
+        actor_user_id=usuario_id,
+        criado_em=now,
+        atualizado_em=now,
+    )
+
+
 def _deferida_anonimizacao(
     *,
     tenant_id: UUID,
@@ -412,6 +479,104 @@ async def test_post_anonimizar_respondente_400_se_nao_deferida(
     )
     assert resp.status_code == 400
     assert executor.calls == []
+
+
+@pytest.mark.asyncio
+async def test_post_eliminar_diagnostico_chama_executor(
+    async_client,
+    privacidade_eliminacao_overrides: tuple[FakeLgpdPort, RecordingEliminacaoExecutor],
+):
+    fake_port, executor = privacidade_eliminacao_overrides
+    tenant_id = uuid4()
+    usuario_id = uuid4()
+    solicitacao_id = uuid4()
+    diagnostico_id = uuid4()
+    fake_port.rows.append(
+        _deferida_eliminacao(
+            tenant_id=tenant_id,
+            usuario_id=usuario_id,
+            solicitacao_id=solicitacao_id,
+            diagnostico_id=diagnostico_id,
+        )
+    )
+    headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+    resp = await async_client.post(
+        f"/privacidade/diagnosticos/{diagnostico_id}/eliminar-diagnostico",
+        json={"solicitacao_id": str(solicitacao_id)},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["diagnostico_id"] == str(diagnostico_id)
+    assert body["solicitacao_id"] == str(solicitacao_id)
+    assert executor.calls == [(tenant_id, diagnostico_id, solicitacao_id, usuario_id)]
+
+
+@pytest.mark.asyncio
+async def test_post_eliminar_diagnostico_400_quando_tipo_nao_eliminacao(
+    async_client,
+    privacidade_eliminacao_overrides: tuple[FakeLgpdPort, RecordingEliminacaoExecutor],
+):
+    """Fluxo técnico de eliminação exige solicitação tipo eliminacao (não anonimizacao)."""
+    fake_port, executor = privacidade_eliminacao_overrides
+    tenant_id = uuid4()
+    usuario_id = uuid4()
+    solicitacao_id = uuid4()
+    diagnostico_id = uuid4()
+    fake_port.rows.append(
+        _deferida_anonimizacao(
+            tenant_id=tenant_id,
+            usuario_id=usuario_id,
+            solicitacao_id=solicitacao_id,
+            diagnostico_id=diagnostico_id,
+        )
+    )
+    headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+    resp = await async_client.post(
+        f"/privacidade/diagnosticos/{diagnostico_id}/eliminar-diagnostico",
+        json={"solicitacao_id": str(solicitacao_id)},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "eliminação" in str(resp.json().get("detail", "")).lower()
+    assert executor.calls == []
+
+
+@pytest.mark.asyncio
+async def test_post_eliminar_diagnostico_422_quando_worm_finalizado(async_client):
+    """Simula adapter Postgres quando diagnóstico já está finalizado — HTTP 422."""
+    fake_port = FakeLgpdPort()
+    executor = RecordingEliminacaoExecutor(raise_worm=True)
+    app.dependency_overrides[get_lgpd_titular_solicitacao_port] = lambda: fake_port
+    app.dependency_overrides[get_executar_eliminacao_diagnostico_lgpd_use_case] = (
+        lambda: ExecutarEliminacaoDiagnosticoLgpd(
+            port_solicitacoes=fake_port,
+            executor=executor,
+        )
+    )
+    try:
+        tenant_id = uuid4()
+        usuario_id = uuid4()
+        solicitacao_id = uuid4()
+        diagnostico_id = uuid4()
+        fake_port.rows.append(
+            _deferida_eliminacao(
+                tenant_id=tenant_id,
+                usuario_id=usuario_id,
+                solicitacao_id=solicitacao_id,
+                diagnostico_id=diagnostico_id,
+            )
+        )
+        headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+        resp = await async_client.post(
+            f"/privacidade/diagnosticos/{diagnostico_id}/eliminar-diagnostico",
+            json={"solicitacao_id": str(solicitacao_id)},
+            headers=headers,
+        )
+        assert resp.status_code == 422
+        assert "anonimização" in str(resp.json().get("detail", "")).lower()
+    finally:
+        app.dependency_overrides = {}
 
 
 @pytest.mark.asyncio

@@ -26,6 +26,9 @@ from src.application.use_cases.consultar_cnpj import ConsultarCnpjUseCase
 from src.application.use_cases.executar_anonimizacao_respondente_lgpd import (
     ExecutarAnonimizacaoRespondenteLgpd,
 )
+from src.application.use_cases.executar_eliminacao_diagnostico_lgpd import (
+    ExecutarEliminacaoDiagnosticoLgpd,
+)
 from src.application.use_cases.plano_painel_subtarefa import (
     AtualizarSubtarefaPlanoDiagnostico,
     CriarSubtarefaPlanoDiagnostico,
@@ -106,6 +109,8 @@ def test_get_lgpd_executor_com_dsn(monkeypatch) -> None:
     try:
         ex = deps.get_lgpd_anonimizacao_executor_port()
         assert type(ex).__name__ == "PostgresLgpdAnonimizacaoExecutorAdapter"
+        ex2 = deps.get_lgpd_eliminacao_executor_port()
+        assert type(ex2).__name__ == "PostgresLgpdEliminacaoExecutorAdapter"
     finally:
         monkeypatch.delenv("DATABASE_URL", raising=False)
         get_settings.cache_clear()
@@ -178,6 +183,13 @@ def test_get_executar_anonimizacao_factory() -> None:
     assert isinstance(uc, ExecutarAnonimizacaoRespondenteLgpd)
 
 
+def test_get_executar_eliminacao_factory() -> None:
+    solicit = MagicMock()
+    exe = MagicMock()
+    uc = deps.get_executar_eliminacao_diagnostico_lgpd_use_case(solicit, exe)
+    assert isinstance(uc, ExecutarEliminacaoDiagnosticoLgpd)
+
+
 def test_get_pdf_storage_email_factories(monkeypatch) -> None:
     gen = deps.get_pdf_generator()
     assert isinstance(gen, WeasyPrintPdfGenerator)
@@ -232,6 +244,9 @@ def test_get_lgpd_anonimizacao_executor_sem_dsn_503(monkeypatch: pytest.MonkeyPa
         with pytest.raises(HTTPException) as ei:
             deps.get_lgpd_anonimizacao_executor_port()
         assert ei.value.status_code == 503
+        with pytest.raises(HTTPException) as ei2:
+            deps.get_lgpd_eliminacao_executor_port()
+        assert ei2.value.status_code == 503
     finally:
         get_settings.cache_clear()
 

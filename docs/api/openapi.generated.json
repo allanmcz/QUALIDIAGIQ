@@ -2025,6 +2025,65 @@
         }
       }
     },
+    "/privacidade/diagnosticos/{diagnostico_id}/eliminar-diagnostico": {
+      "post": {
+        "tags": [
+          "Privacidade LGPD"
+        ],
+        "summary": "Eliminar diagnóstico fisicamente (LGPD — pré-finalização)",
+        "description": "Exige solicitação LGPD ``eliminacao`` com status ``deferida`` ligada ao mesmo ``diagnostico_id``. Remove a linha apenas se o diagnóstico **não** estiver ``finalizado`` (WORM). Se ``finalizado``, responde **422** orientando anonimização.",
+        "operationId": "eliminar_diagnostico_lgpd_privacidade_diagnosticos__diagnostico_id__eliminar_diagnostico_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EliminarDiagnosticoLgpdHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EliminarDiagnosticoLgpdHttpResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade": {
       "get": {
         "tags": [
@@ -3070,6 +3129,54 @@
         ],
         "title": "DiagnosticoRetificacaoHttpResponse",
         "description": "Linha de retificação persistida."
+      },
+      "EliminarDiagnosticoLgpdHttpRequest": {
+        "properties": {
+          "solicitacao_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Solicitacao Id",
+            "description": "Identificador da linha em lgpd_titular_solicitacao (tipo eliminacao, status deferida)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "solicitacao_id"
+        ],
+        "title": "EliminarDiagnosticoLgpdHttpRequest",
+        "description": "POST /privacidade/diagnosticos/{id}/eliminar-diagnostico — exige solicitação ``deferida``."
+      },
+      "EliminarDiagnosticoLgpdHttpResponse": {
+        "properties": {
+          "diagnostico_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Diagnostico Id"
+          },
+          "solicitacao_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Solicitacao Id"
+          },
+          "status_solicitacao": {
+            "type": "string",
+            "title": "Status Solicitacao",
+            "default": "concluida"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem",
+            "default": "Diagnóstico eliminado fisicamente (estados em_andamento, cancelado ou expirado); solicitação LGPD concluída."
+          }
+        },
+        "type": "object",
+        "required": [
+          "diagnostico_id",
+          "solicitacao_id"
+        ],
+        "title": "EliminarDiagnosticoLgpdHttpResponse",
+        "description": "Confirmação após DELETE do diagnóstico (pré-finalização) e conclusão da solicitação."
       },
       "EmpresaSchema": {
         "properties": {
