@@ -157,6 +157,14 @@ jobs:
       - name: Pytest (unit + integration)
         run: PYTHONPATH=. pytest --cov-report=xml:coverage.xml
 
+      - name: OpenAPI versionado sem drift (make openapi-export)
+        run: |
+          PYTHONPATH=. python scripts/export_openapi_json.py
+          git diff --exit-code docs/api/openapi.generated.json || (
+            echo "::error::docs/api/openapi.generated.json desatualizado — execute make openapi-export e faça commit"
+            exit 1
+          )
+
       - name: Artefacto cobertura backend (XML + HTML)
         if: always()
         uses: actions/upload-artifact@v4

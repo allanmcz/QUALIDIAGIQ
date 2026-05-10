@@ -35,7 +35,7 @@
 | [PLANO_HANDOFF_JANELA_23H_LGPD_PWA.md](./PLANO_HANDOFF_JANELA_23H_LGPD_PWA.md) | Fatias acionáveis **LGPD técnico + PWA** numa janela curta; liga a ADR-011 e ADR-012. |
 | [ROADMAP_HANDOFF_PROGRESSO_SYNC.md](./ROADMAP_HANDOFF_PROGRESSO_SYNC.md) | Espelho versionável do painel do roadmap em `_DEVELOPER/` (Git). |
 | [RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md](./RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md) | Runbook art. 18 (processo DPO) + rotas `/privacidade/solicitacoes` e testes `test_privacidade_api`. |
-| [OPENAPI_DIFF_INSTRUCOES.md](./OPENAPI_DIFF_INSTRUCOES.md) | Como gerar diff OpenAPI opcional (R2). |
+| [OPENAPI_DIFF_INSTRUCOES.md](./OPENAPI_DIFF_INSTRUCOES.md) | Contrato **`docs/api/openapi.generated.json`** (`make openapi-export`), diff opcional contra `/openapi.json`; CI bloqueia drift. |
 
 ## PDF e homologação
 

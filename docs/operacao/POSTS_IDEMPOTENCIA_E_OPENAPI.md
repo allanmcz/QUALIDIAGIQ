@@ -27,6 +27,8 @@ Paths POST atualmente na lista fixa:
 
 Rotas POST que exigem idempotência devem documentar **`Idempotency-Key`** na **description** e/ou parâmetro **Header** no router (ex.: `diagnostico_core_router`, `cnpj_router`, fluxos self-service).
 
+Snapshot versionado do schema completo: **`docs/api/openapi.generated.json`** — gerar com **`make openapi-export`**; o CI compara com o código para evitar drift.
+
 ## Testes de regressão
 
 - `tests/unit/presentation/test_idempotency_middleware.py` — ausência de chave, replay, tenants distintos, inclusão de `/diagnosticos/{uuid}/retificacao`.

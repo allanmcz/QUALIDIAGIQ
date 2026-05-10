@@ -485,6 +485,35 @@ async def test_get_export_portabilidade_pacote_pdf_200(async_client):
 
 
 @pytest.mark.asyncio
+async def test_get_export_portabilidade_pacote_pdf_500_sem_pdf(async_client):
+    """pacote_pdf sem pdf_bytes no resultado → 500 (contrato router)."""
+    mock_uc = MagicMock()
+    mock_uc.execute = AsyncMock(
+        return_value=ResultadoExportPortabilidadeDiagnostico(
+            payload={},
+            json_utf8=b"{}",
+            pdf_bytes=None,
+        )
+    )
+    app.dependency_overrides[get_gerar_export_portabilidade_diagnostico_use_case] = lambda: mock_uc
+    try:
+        tenant_id = uuid4()
+        usuario_id = uuid4()
+        diagnostico_id = uuid4()
+        solicitacao_id = uuid4()
+        headers = cabecalho_auth_bearer(usuario_id=usuario_id, tenant_id=tenant_id)
+        r = await async_client.get(
+            f"/privacidade/diagnosticos/{diagnostico_id}/export-portabilidade",
+            params={"solicitacao_id": str(solicitacao_id), "formato": "pacote_pdf"},
+            headers=headers,
+        )
+        assert r.status_code == 500
+        assert "PDF" in str(r.json().get("detail", ""))
+    finally:
+        app.dependency_overrides.pop(get_gerar_export_portabilidade_diagnostico_use_case, None)
+
+
+@pytest.mark.asyncio
 async def test_get_export_portabilidade_400_valor_negocio(async_client):
     """Erro de negócio do use case → 400 (ex.: solicitação não deferida)."""
     mock_uc = MagicMock()
