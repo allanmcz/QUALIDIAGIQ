@@ -5,7 +5,8 @@
 \i /docker-entrypoint-initdb.d/migrations/0002_schema_core.sql
 \i /docker-entrypoint-initdb.d/migrations/0003_rls_policies.sql
 \i /docker-entrypoint-initdb.d/migrations/0004_seed_dev_admin.sql
-\i /docker-entrypoint-initdb.d/migrations/0005_worm_evidencia_audit.sql
+\i /docker-entrypoint-initdb.d/migrations/0005a_ci_playwright_admin.sql
+\i /docker-entrypoint-initdb.d/migrations/0005b_worm_evidencia_audit.sql
 \i /docker-entrypoint-initdb.d/migrations/0006_worm_column_granular.sql
 \i /docker-entrypoint-initdb.d/migrations/0007_idempotency_responses.sql
 \i /docker-entrypoint-initdb.d/migrations/0008_idempotency_comentarios_operacao.sql
@@ -31,4 +32,8 @@
 \i /docker-entrypoint-initdb.d/migrations/0028_lgpd_titular_solicitacao.sql
 \i /docker-entrypoint-initdb.d/migrations/0029_lgpd_anonimizacao_log_worm.sql
 \i /docker-entrypoint-initdb.d/migrations/0030_cnpj_consulta_cache.sql
+\i /docker-entrypoint-initdb.d/migrations/0031_admins_email_lower_trim_idx.sql
+\i /docker-entrypoint-initdb.d/migrations/0032_pgcron_cleanup_idempotency.sql
+\i /docker-entrypoint-initdb.d/migrations/0033_force_rls_tabelas_criticas.sql
+\i /docker-entrypoint-initdb.d/migrations/0034_revoke_delete_append_only.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

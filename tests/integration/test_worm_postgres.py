@@ -37,7 +37,7 @@ async def pg_conn():
 @pytest.mark.postgres
 async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
     """UPDATE de score após finalizado deve falhar; URL do PDF + versão pode progredir."""
-    # Garante função granular (0006) mesmo em volumes Docker criados só com 0005.
+    # Garante função granular (0006) mesmo em volumes Docker criados só com 0005b (WORM).
     mig_0006 = (
         Path(__file__).resolve().parents[2]
         / "src/infrastructure/db/migrations/0006_worm_column_granular.sql"

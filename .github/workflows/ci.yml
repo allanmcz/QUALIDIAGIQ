@@ -74,6 +74,23 @@ jobs:
       - name: Ruff (lint)
         run: ruff check src/ tests/ scripts/
 
+      - name: Bandit (análise estática segurança Python)
+        run: bandit -r src -ll -ii -x tests/
+
+      - name: Semgrep (regras CI — código Python)
+        continue-on-error: true
+        run: |
+          pip install "semgrep>=1.45.0"
+          semgrep scan --config p/ci --error src/
+
+      - name: Trivy (filesystem — dependências e código)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: src
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+
       - name: Black (formato — apenas verificação)
         run: black --check src/ tests/ scripts/
 

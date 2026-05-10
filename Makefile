@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min
 
 PYTHON := python3.12
 VENV := .venv
@@ -14,6 +14,12 @@ install: ## Cria .venv e instala dependências
 	$(PIP) install -e ".[dev]"
 	@echo ""
 	@echo "✅ Ambiente Python pronto. Ative com: source $(VENV)/bin/activate"
+
+install-hooks: ## Configura Git para usar .githooks/ (pre-commit + commit-msg)
+	git config core.hooksPath .githooks
+	chmod +x .githooks/commit-msg .githooks/pre-commit 2>/dev/null || true
+	@command -v gitleaks >/dev/null 2>&1 || echo "⚠️  gitleaks não encontrado — brew install gitleaks (opcional, recomendado)."
+	@echo "✅ Hooks Git apontando para .githooks/"
 
 dev: ## Sobe ambiente de dev (db + api + web); --build alinha deps do pyproject na imagem da API
 	docker compose up -d --build --remove-orphans

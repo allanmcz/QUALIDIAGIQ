@@ -113,7 +113,7 @@ def create_access_token(
         expires_delta if expires_delta is not None else timedelta(minutes=15)
     )
     perfil = perfil_conta.strip().lower()
-    if perfil not in ("gratuito", "avancado"):
+    if perfil not in ("gratuito", "avancado", "admin"):
         perfil = "gratuito"
     payload: dict[str, Any] = {
         "sub": str(subject_user_id),
@@ -248,7 +248,7 @@ async def login(request: LoginRequest) -> LoginResponse:
 
         perfil_raw = user.get("perfil_conta") or "gratuito"
         perfil_login = str(perfil_raw).strip().lower()
-        if perfil_login not in ("gratuito", "avancado"):
+        if perfil_login not in ("gratuito", "avancado", "admin"):
             perfil_login = "gratuito"
 
         access_token = create_access_token(

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+if [[ -f scripts/audit_secrets.sh ]]; then
+  bash scripts/audit_secrets.sh
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  echo "[pre-commit] gitleaks protect --staged..."
+  gitleaks protect --staged --redact --config .gitleaks.toml --exit-code 1
+else
+  echo "[pre-commit] AVISO: gitleaks não instalado — brew install gitleaks (macOS) ou release upstream."
+fi

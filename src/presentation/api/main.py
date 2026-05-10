@@ -207,6 +207,7 @@ def create_app() -> FastAPI:
 
     # Registrar os Routers do Domínio
     from src.presentation.api.routers import (
+        admin_maintenance_router,
         auth_router,
         cnae_router,
         cnpj_router,
@@ -223,6 +224,7 @@ def create_app() -> FastAPI:
     app.include_router(diagnostico_self_service_router.router)
     app.include_router(diagnostico_core_router.router)
     app.include_router(auth_router.router)
+    app.include_router(admin_maintenance_router.router)
     app.include_router(normativa_router.router)
     app.include_router(cnae_router.router)
     app.include_router(cnpj_router.router)

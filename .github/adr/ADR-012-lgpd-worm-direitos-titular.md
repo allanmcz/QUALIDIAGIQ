@@ -28,7 +28,7 @@ O QDI persiste diagnósticos com **imutabilidade pós-finalização** (WORM) em 
 
 | Artefacto | Ficheiros / notas |
 |-----------|-------------------|
-| WORM em `diagnosticos` | `0005_worm_evidencia_audit.sql` — trigger `tr_diagnosticos_worm_update`; hash + score JSONB |
+| WORM em `diagnosticos` | `0005b_worm_evidencia_audit.sql` — trigger `tr_diagnosticos_worm_update`; hash + score JSONB |
 | WORM granular | `0006_worm_column_granular.sql`, `0012_aceite_lgpd_e_worm.sql`, `0016_locale_relatorio_pdf.sql`, `0017_empresa_faixa_faturamento_opcional.sql`, `0025_worm_permite_reatribuir_tenant_vinculo_lead.sql` — excepção controlada `tenant_id` para vínculo lead |
 | Aceite LGPD persistido | `0012_aceite_lgpd_e_worm.sql` |
 | Auditoria mutações | `0026_diagnostico_mutacao_audit.sql` — tabela `diagnostico_mutacao_audit`, append-only, RLS |

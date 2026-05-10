@@ -30,6 +30,17 @@ make test
 # → DB:  postgres://postgres:postgres@localhost:60322/postgres
 ```
 
+### Hooks Git (opcional, recomendado)
+
+Após clonar, para ativar `pre-commit` (audit de segredos + gitleaks quando instalado):
+
+```bash
+make install-hooks
+# macOS: brew install gitleaks
+```
+
+Ver também [`docs/operacao/RUNBOOK_SEGREDO_VAZADO.md`](docs/operacao/RUNBOOK_SEGREDO_VAZADO.md) e [`docs/operacao/GITHUB_SECRET_SCANNING.md`](docs/operacao/GITHUB_SECRET_SCANNING.md).
+
 ### Ollama local (recomendações IA no diagnóstico)
 
 1. Instale o [Ollama](https://ollama.com) no Mac e deixe o serviço rodando (porta **11434**).

@@ -1,5 +1,12 @@
 # Changelog — marcos MVP QDI
 
+## 2026-05-10 — Plano DEV_09052026 (S-01 + parcela S-02 DB/DevSecOps)
+
+- Migrações `0005a_ci_playwright_admin.sql` / `0005b_worm_evidencia_audit.sql` (ordem lexical explícita); ADR-013.
+- Migrações **0032** (`qdi_cleanup_idempotency`, pg_cron opcional), **0033** (FORCE RLS em tabelas críticas), **0034** (REVOKE DELETE append-only); ADR-014.
+- `POST /admin/maintenance/cleanup-idempotency` (JWT admin/avançado, rate-limit 5 min); runbooks pg_cron e segredo vazado; gitleaks + `make install-hooks`.
+- CI: Bandit, Semgrep, Trivy (fs); `init.sql` alinhado às migrações até 0034.
+
 ## 2026-05-07 — API pública institucional
 
 - `GET /public/institucional` (DPO + retenção referência); `LGPD_*` em settings; teste de shape em `test_openapi_public_endpoints_shapes.py`.

@@ -1,0 +1,13 @@
+# Configuração gitleaks — QualiDiagIQ (defesa em profundidade além do CI).
+title = "QDI gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Paths e literais conhecidos como não-secretos"
+paths = [
+  '''\.gitleaks\.toml$''',
+  '''\.gitleaksignore$''',
+  '''audit_secrets\.sh$''',
+]

@@ -185,7 +185,7 @@ async def get_current_user_tenant(
     Valida Bearer JWT e retorna (user_id, tenant_id, perfil_conta).
 
     Claims esperadas: `sub` = UUID do admin, `tenant_id` = UUID do tenant,
-    `perfil_conta` opcional (`gratuito` | `avancado`; tokens antigos assumem gratuito).
+    `perfil_conta` opcional (`gratuito` | `avancado` | `admin`; tokens antigos assumem gratuito).
     """
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
@@ -209,7 +209,7 @@ async def get_current_user_tenant(
             )
         perfil_raw = payload.get("perfil_conta") or "gratuito"
         perfil = str(perfil_raw).strip().lower()
-        if perfil not in ("gratuito", "avancado"):
+        if perfil not in ("gratuito", "avancado", "admin"):
             perfil = "gratuito"
         return UUID(str(sub)), UUID(str(tid)), perfil
     except HTTPException:
@@ -220,6 +220,24 @@ async def get_current_user_tenant(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado",
         ) from e
+
+
+async def require_perfil_manutencao_plataforma(
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+) -> tuple[UUID, UUID, str]:
+    """
+    Operações de manutenção (limpeza idempotência, etc.).
+
+    Aceita perfil **admin** (operador plataforma) ou **avancado** (compatível com contas
+    privilegiadas até perfil dedicado estar generalizado).
+    """
+    _uid, _tid, perfil = current
+    if perfil not in ("admin", "avancado"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operação restrita a perfil de manutenção (admin ou avançado).",
+        )
+    return current
 
 
 SELF_SERVICE_DIAGNOSTICO_SCOPE = "self_service_diagnostico"
