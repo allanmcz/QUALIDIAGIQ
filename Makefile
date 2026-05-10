@@ -78,6 +78,8 @@ qa-backend: ## Gate backend: ruff + mypy + pytest (equiv. Seção 5.1 do PLANO_C
 	PYTHONPATH=. $(VENV)/bin/pytest
 
 mvp-gate: ## Subconjunto checklist MVP: smoke API + schema 0012 + RLS dois tenants (precisa Postgres)
+	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
+	export DATABASE_URL="$${DATABASE_URL:-$$QDI_POSTGRES_TEST_URL}"; \
 	PYTHONPATH=. $(VENV)/bin/pytest tests/integration/test_smoke_mvp_fechado_api.py tests/integration/test_mvp_gate_postgres.py -q --no-cov
 
 verify-schema-mvp: ## Verifica 0012/M11 + RLS no Postgres (DATABASE_URL ou QDI_POSTGRES_TEST_URL; default local :60322)
