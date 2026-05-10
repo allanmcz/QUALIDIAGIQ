@@ -1,9 +1,11 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke
 
 PYTHON := python3.12
 VENV := .venv
 PIP := $(VENV)/bin/pip
+# Prefer `uv` no PATH; fallback ao binário instalado no venv (`pip install uv`).
+UV := $(shell command -v uv 2>/dev/null || echo $(VENV)/bin/uv)
 
 help: ## Mostra esta ajuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -12,6 +14,7 @@ install: ## Cria .venv e instala dependências
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install --upgrade pip
 	$(PIP) install -e ".[dev]"
+	@$(PIP) install uv >/dev/null 2>&1 || true
 	@echo ""
 	@echo "✅ Ambiente Python pronto. Ative com: source $(VENV)/bin/activate"
 
@@ -124,3 +127,16 @@ go-live: ## Executa pré-voo técnico do checklist de go-live (~45min)
 
 go-live-45min: ## Alias para go-live (compatibilidade)
 	@bash scripts/go_live_45min.sh
+
+uv-lock: ## Regenera uv.lock a partir do pyproject.toml (resolve deps; commit o ficheiro)
+	@test -x "$(UV)" || { echo "❌ uv não encontrado. Rode: make install (instala uv no venv) ou: brew install uv"; exit 1; }
+	$(UV) lock
+
+uv-lock-check: ## Falha CI-local se uv.lock estiver desactualizado face ao pyproject
+	@test -f uv.lock || { echo "❌ uv.lock ausente — rode: make uv-lock"; exit 1; }
+	@test -x "$(UV)" || { echo "❌ uv não encontrado. Rode: make install ou: brew install uv"; exit 1; }
+	$(UV) lock --check
+
+k6-smoke: ## Smoke k6 em GET /health (BASE_URL opcional; requer binário k6)
+	@command -v k6 >/dev/null 2>&1 || { echo "❌ k6 não encontrado — brew install k6"; exit 1; }
+	k6 run loadtest/k6_diagnostico_smoke.js

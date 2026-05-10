@@ -80,7 +80,7 @@ async def test_post_rascunho_sem_dsn_503(rascunho_async_client: AsyncClient) -> 
         sync_database_url = None
         self_service_tenant_id = uuid4()
 
-    with patch.object(dss, "get_settings", return_value=S()):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
         r = await rascunho_async_client.post(
             "/diagnosticos/rascunho-self-service",
             json=PAYLOAD_MIN,
@@ -101,8 +101,8 @@ async def test_post_rascunho_201(rascunho_async_client: AsyncClient) -> None:
             return ("resgate-token-fixo", datetime.now(UTC))
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.post(
                 "/diagnosticos/rascunho-self-service",
                 json=PAYLOAD_MIN,
@@ -124,8 +124,8 @@ async def test_get_resumo_404(rascunho_async_client: AsyncClient) -> None:
             return None
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "invalido"},
@@ -153,8 +153,8 @@ async def test_get_resumo_200(rascunho_async_client: AsyncClient) -> None:
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "qualquer"},
@@ -187,8 +187,8 @@ async def test_get_resumo_empresa_nao_dict_usa_fallback_razao(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "t" * 24},
@@ -221,8 +221,8 @@ async def test_get_resumo_payload_json_como_string_200(rascunho_async_client: As
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "t" * 24},
@@ -252,8 +252,8 @@ async def test_get_resumo_sem_expira_em_404(rascunho_async_client: AsyncClient) 
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "u" * 24},
@@ -304,9 +304,9 @@ async def test_post_concluir_rascunho_201(rascunho_async_client: AsyncClient) ->
     orig_core = dh._executar_criar_diagnostico_core
     dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dss, "get_settings", return_value=S()):
-            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-                with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
+            with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=True):
                     r = await rascunho_async_client.post(
                         "/diagnosticos/rascunho-self-service/concluir",
                         json={
@@ -335,8 +335,8 @@ async def test_get_conclusao_visualizacao_404(rascunho_async_client: AsyncClient
             return None
         raise AssertionError(n)
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/self-service/conclusao-visualizacao",
                 params={
@@ -376,8 +376,8 @@ async def test_get_conclusao_visualizacao_200(rascunho_async_client: AsyncClient
             return drow
         raise AssertionError(n)
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/self-service/conclusao-visualizacao",
                 params={
@@ -433,9 +433,9 @@ async def test_post_concluir_marcar_falha_503(rascunho_async_client: AsyncClient
     orig_core = dh._executar_criar_diagnostico_core
     dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dss, "get_settings", return_value=S()):
-            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-                with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
+            with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=True):
                     r = await rascunho_async_client.post(
                         "/diagnosticos/rascunho-self-service/concluir",
                         json={"resgate_token": "v" * 32, "codigo": "654321"},
@@ -467,8 +467,8 @@ async def test_post_concluir_codigo_com_letras_400(rascunho_async_client: AsyncC
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.post(
                 "/diagnosticos/rascunho-self-service/concluir",
                 json={"resgate_token": "w" * 32, "codigo": "12ab45"},
@@ -526,10 +526,10 @@ async def test_post_vincular_rascunho_conta_201(rascunho_async_client: AsyncClie
     orig_core = dh._executar_criar_diagnostico_core
     dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dss, "get_settings", return_value=S()):
-            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
+            with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
                 with patch.object(
-                    dss,
+                    dss.deps,
                     "buscar_email_admin_por_id_e_tenant_postgres",
                     return_value=em,
                 ):
@@ -549,7 +549,7 @@ async def test_get_resumo_rascunho_503_sem_dsn_async(rascunho_async_client: Asyn
     class S:
         sync_database_url = None
 
-    with patch.object(dss, "get_settings", return_value=S()):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
         r = await rascunho_async_client.get(
             "/diagnosticos/rascunho-self-service/resumo",
             headers={"X-Rascunho-Token": "x" * 8},
@@ -601,7 +601,7 @@ def test_post_vincular_leads_sem_dsn_503() -> None:
     )
     mock_uc = AsyncMock()
 
-    with patch.object(dss, "get_settings", return_value=S()):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
         app.dependency_overrides[get_vincular_diagnosticos_lead_self_service_use_case] = (
             lambda: mock_uc
         )
@@ -628,8 +628,8 @@ def test_post_vincular_leads_email_admin_vazio_403() -> None:
     mock_uc = AsyncMock()
 
     with (
-        patch.object(dss, "get_settings", return_value=S()),
-        patch.object(dss, "buscar_email_admin_por_id_e_tenant_postgres", return_value=None),
+        patch.object(dss.deps, "get_settings", return_value=S()),
+        patch.object(dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=None),
     ):
         app.dependency_overrides[get_vincular_diagnosticos_lead_self_service_use_case] = (
             lambda: mock_uc
@@ -663,9 +663,9 @@ def test_post_vincular_leads_sucesso_200() -> None:
     mock_uc.execute.return_value = [id1, id2]
 
     with (
-        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(dss.deps, "get_settings", return_value=S()),
         patch.object(
-            dss,
+            dss.deps,
             "buscar_email_admin_por_id_e_tenant_postgres",
             return_value="admin@ok.br",
         ),
@@ -710,9 +710,9 @@ def test_post_vincular_leads_value_error_do_use_case_400() -> None:
     mock_uc.execute.side_effect = ValueError("tenant inválido")
 
     with (
-        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(dss.deps, "get_settings", return_value=S()),
         patch.object(
-            dss,
+            dss.deps,
             "buscar_email_admin_por_id_e_tenant_postgres",
             return_value="admin@empresa.br",
         ),
@@ -744,9 +744,9 @@ def test_post_vincular_leads_psycopg2_no_execute_503() -> None:
     mock_uc.execute.side_effect = psycopg2.IntegrityError("simulated")
 
     with (
-        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(dss.deps, "get_settings", return_value=S()),
         patch.object(
-            dss,
+            dss.deps,
             "buscar_email_admin_por_id_e_tenant_postgres",
             return_value="lead@tst.io",
         ),
@@ -771,7 +771,7 @@ async def test_post_concluir_sem_dsn_503_async(rascunho_async_client: AsyncClien
         sync_database_url = None
         self_service_tenant_id = uuid4()
 
-    with patch.object(dss, "get_settings", return_value=S()):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
         r = await rascunho_async_client.post(
             "/diagnosticos/rascunho-self-service/concluir",
             json={"resgate_token": "t" * 32, "codigo": "123456"},
@@ -786,7 +786,7 @@ async def test_get_conclusao_visualizacao_sem_dsn_503(rascunho_async_client: Asy
         sync_database_url = None
         self_service_tenant_id = uuid4()
 
-    with patch.object(dss, "get_settings", return_value=S()):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
         r = await rascunho_async_client.get(
             "/diagnosticos/self-service/conclusao-visualizacao",
             params={
@@ -816,8 +816,8 @@ async def test_get_resumo_payload_invalido_500_via_helper(
 
     try:
         dh._payload_json_como_dict = _ret_none
-        with patch.object(dss, "get_settings", return_value=S()):
-            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
+            with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
                 r = await rascunho_async_client.get(
                     "/diagnosticos/rascunho-self-service/resumo",
                     headers={"X-Rascunho-Token": "z" * 24},
@@ -845,7 +845,7 @@ def test_post_vincular_conta_sem_dsn_503() -> None:
     app.dependency_overrides[get_diagnostico_repository] = lambda: AsyncMock()
     app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: AsyncMock()
     try:
-        with patch.object(dss, "get_settings", return_value=S()):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
             r = TestClient(app).post(
                 "/diagnosticos/rascunho-self-service/vincular-conta",
                 json={"resgate_token": "r" * 32},
@@ -870,8 +870,8 @@ async def test_post_rascunho_insert_psycopg2_503(
     async def fake_to_thread_raise_fn(_fn: object, /, *_a: object, **_k: object) -> None:
         raise psycopg2.InterfaceError("falha de insert")
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread_raise_fn):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread_raise_fn):
             r = await rascunho_async_client.post(
                 "/diagnosticos/rascunho-self-service",
                 json=PAYLOAD_MIN,
@@ -900,8 +900,8 @@ async def test_get_resumo_expira_em_naive_timezone_utc(
             }
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.get(
                 "/diagnosticos/rascunho-self-service/resumo",
                 headers={"X-Rascunho-Token": "naive" + "x" * 20},
@@ -932,9 +932,9 @@ async def test_post_concluir_otp_invalido_400_sem_core(
             return row_ok
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=False):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=False):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/concluir",
                     json={
@@ -957,9 +957,9 @@ def test_post_vincular_leads_buscar_email_psycopg2_503() -> None:
     mock_uc = AsyncMock()
 
     with (
-        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(dss.deps, "get_settings", return_value=S()),
         patch.object(
-            dss,
+            dss.deps,
             "buscar_email_admin_por_id_e_tenant_postgres",
             side_effect=psycopg2.InterfaceError("read only"),
         ),
@@ -991,8 +991,8 @@ async def test_post_concluir_primeira_busca_sem_rascunho_400(
             return None
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             r = await rascunho_async_client.post(
                 "/diagnosticos/rascunho-self-service/concluir",
                 json={"resgate_token": "n" * 32, "codigo": "123456"},
@@ -1028,9 +1028,9 @@ async def test_post_concluir_segunda_busca_sem_rascunho_apos_otp_400(
             return row_ok if chamadas["n"] == 1 else None
         raise AssertionError(n)
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=True):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/concluir",
                     json={"resgate_token": "o" * 32, "codigo": "111111"},
@@ -1062,9 +1062,9 @@ async def test_post_concluir_payload_json_inconsistente_500(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=True):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/concluir",
                     json={"resgate_token": "p" * 32, "codigo": "222222"},
@@ -1099,9 +1099,9 @@ async def test_post_concluir_email_respondente_diferente_rascunho_403(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=True):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/concluir",
                     json={"resgate_token": "q" * 32, "codigo": "333333"},
@@ -1155,9 +1155,9 @@ async def test_post_concluir_inserir_leitura_publica_falha_503(
     orig_core = dh._executar_criar_diagnostico_core
     dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dss, "get_settings", return_value=S()):
-            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-                with patch.object(dss.codigo_store, "validar_e_consumir", return_value=True):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
+            with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+                with patch.object(dss.deps.codigo_store, "validar_e_consumir", return_value=True):
                     r = await rascunho_async_client.post(
                         "/diagnosticos/rascunho-self-service/concluir",
                         json={"resgate_token": "r" * 32, "codigo": "444444"},
@@ -1189,10 +1189,10 @@ async def test_post_vincular_conta_sem_rascunho_400(
             return None
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             with patch.object(
-                dss,
+                dss.deps,
                 "buscar_email_admin_por_id_e_tenant_postgres",
                 return_value="admin@test.io",
             ):
@@ -1233,10 +1233,10 @@ async def test_post_vincular_conta_lookup_admin_psycopg_503(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             with patch.object(
-                dss,
+                dss.deps,
                 "buscar_email_admin_por_id_e_tenant_postgres",
                 side_effect=psycopg2.DatabaseError("lookup falhou"),
             ):
@@ -1277,9 +1277,9 @@ async def test_post_vincular_conta_sem_email_admin_403(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss, "buscar_email_admin_por_id_e_tenant_postgres", return_value=""):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=""):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/vincular-conta",
                     json={"resgate_token": "u" * 32},
@@ -1318,9 +1318,9 @@ async def test_post_vincular_conta_payload_inconsistente_500(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
-            with patch.object(dss, "buscar_email_admin_por_id_e_tenant_postgres", return_value=em):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(dss.deps, "buscar_email_admin_por_id_e_tenant_postgres", return_value=em):
                 r = await rascunho_async_client.post(
                     "/diagnosticos/rascunho-self-service/vincular-conta",
                     json={"resgate_token": "v" * 32},
@@ -1358,10 +1358,10 @@ async def test_post_vincular_conta_email_admin_diferente_respondente_403(
             return row
         raise AssertionError(getattr(fn, "__name__", fn))
 
-    with patch.object(dss, "get_settings", return_value=S()):
-        with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
             with patch.object(
-                dss,
+                dss.deps,
                 "buscar_email_admin_por_id_e_tenant_postgres",
                 return_value="consultor_alien@test.io",
             ):
@@ -1423,10 +1423,10 @@ async def test_post_vincular_conta_marcar_consumido_falha_503(
     orig_core = dh._executar_criar_diagnostico_core
     dh._executar_criar_diagnostico_core = fake_core
     try:
-        with patch.object(dss, "get_settings", return_value=S()):
-            with patch.object(dss.asyncio, "to_thread", side_effect=fake_to_thread):
+        with patch.object(dss.deps, "get_settings", return_value=S()):
+            with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
                 with patch.object(
-                    dss,
+                    dss.deps,
                     "buscar_email_admin_por_id_e_tenant_postgres",
                     return_value=em,
                 ):
@@ -1455,9 +1455,9 @@ def test_post_vincular_leads_execucao_use_case_psycopg_503() -> None:
     mock_uc.execute.side_effect = psycopg2.OperationalError("update falhou")
 
     with (
-        patch.object(dss, "get_settings", return_value=S()),
+        patch.object(dss.deps, "get_settings", return_value=S()),
         patch.object(
-            dss,
+            dss.deps,
             "buscar_email_admin_por_id_e_tenant_postgres",
             return_value="ok@tst.io",
         ),

@@ -40,6 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Lockfile Python alinhado (uv.lock)
+        run: uv lock --check
+
       - name: Migrar Postgres (ordem lexical migrations)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
