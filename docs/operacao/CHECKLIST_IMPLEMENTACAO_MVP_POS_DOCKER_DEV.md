@@ -33,8 +33,8 @@
 
 **Stack:**
 
-- [ ] `make dev` (ou pelo menos `docker compose up -d db`)
-- [ ] Postgres no host típico: `127.0.0.1:60322`
+- [x] `make dev` (ou pelo menos `docker compose up -d db`)
+- [x] Postgres no host típico: `127.0.0.1:60322`
 
 **Comandos (variáveis — `Makefile` exporta default local se omitidas):**
 
@@ -48,9 +48,9 @@ make verify-schema-mvp-strict
 
 **Aceite:**
 
-- [ ] `make mvp-gate` verde com Postgres do Docker local
-- [ ] `make verify-schema-mvp-strict` OK com a mesma URL
-- [ ] Log datado anexado em `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` ou artefacto equivalente (sem secrets na evidência)
+- [x] `make mvp-gate` verde com Postgres do Docker local
+- [x] `make verify-schema-mvp-strict` OK com a mesma URL
+- [x] Log datado anexado em `docs/operacao/PDF_HOMOLOGACAO_CHECKLIST_B1.md` ou artefacto equivalente (sem secrets na evidência) — *evidência em [`CHECKLIST_T1_1_MVP_GATE_DOCKER.md`](./CHECKLIST_T1_1_MVP_GATE_DOCKER.md) §Passo 5 (2026-05-10, `328b13e`).*
 - [ ] Opcional pré-go-live público: repetir gate contra **Supabase gerido** e arquivar segunda evidência (G3)
 
 **Referência env:** `.env.example` — secção testes / gates (`QDI_POSTGRES_TEST_URL`).
