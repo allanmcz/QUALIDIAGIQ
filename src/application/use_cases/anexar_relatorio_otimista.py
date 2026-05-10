@@ -60,8 +60,8 @@ class AnexarRelatorioOtimista:
 
         try:
             diagnostico.anexar_relatorio(comando.relatorio_pdf_url)
-        except DiagnosticoNaoFinalizavelError as e:
-            raise ValueError(str(e)) from e
+        except DiagnosticoNaoFinalizavelError:
+            raise
 
         atualizado = await self._repo.atualizar_relatorio_pdf_com_versao(
             comando.diagnostico_id,

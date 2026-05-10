@@ -15,6 +15,7 @@ from src.application.use_cases.atualizar_checklist_m12_autoconf import (
 )
 from src.domain.entities.diagnostico import (
     Diagnostico,
+    DiagnosticoNaoFinalizavelError,
     EmpresaInfo,
     PorteEmpresa,
     RegimeTributario,
@@ -141,7 +142,7 @@ async def test_execute_rejeita_em_andamento():
         checklist_m12_autoconf=[1] * 10,
         versao_esperada=1,
     )
-    with pytest.raises(ValueError, match=r"finalizado"):
+    with pytest.raises(DiagnosticoNaoFinalizavelError, match=r"finalizado"):
         await uc.execute(cmd)
     audit.registrar.assert_not_called()
 

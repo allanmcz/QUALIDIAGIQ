@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
 from src.domain.entities.diagnostico import (
     Diagnostico,
+    DiagnosticoNaoFinalizavelError,
     EmpresaInfo,
     PorteEmpresa,
     RegimeTributario,
@@ -637,6 +638,33 @@ def test_patch_relatorio_pdf_use_case_value_error_400():
     assert "relatório" in response.json()["detail"]
 
 
+def test_patch_relatorio_pdf_diagnostico_nao_finalizavel_409():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = DiagnosticoNaoFinalizavelError(
+        "Operação permitida apenas após diagnóstico finalizado."
+    )
+
+    app.dependency_overrides[get_anexar_relatorio_otimista_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}",
+        json={"relatorio_pdf_url": "https://x/y.pdf"},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 409
+    assert "finalizado" in response.json()["detail"]
+
+
 def test_patch_relatorio_pdf_diagnostico_nao_encontrado_404():
     uid = uuid.uuid4()
     tid = uuid.uuid4()
@@ -685,6 +713,33 @@ def test_patch_checklist_m12_use_case_value_error_400():
 
     assert response.status_code == 400
     assert "inválido" in response.json()["detail"]
+
+
+def test_patch_checklist_m12_diagnostico_nao_finalizavel_409():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = DiagnosticoNaoFinalizavelError(
+        "Checklist M12 só pode ser alterado após finalização."
+    )
+
+    app.dependency_overrides[get_atualizar_checklist_m12_autoconf_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.patch(
+        f"/diagnosticos/{did}/checklist-m12-autoconf",
+        json={"checklist_m12_autoconf": [3] * 10},
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": '"1"',
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 409
+    assert "finaliza" in response.json()["detail"]
 
 
 def test_patch_checklist_m12_diagnostico_nao_encontrado_404():
@@ -741,6 +796,41 @@ def test_patch_quadro_implantacao_conflito_412():
     app.dependency_overrides.clear()
 
     assert response.status_code == 412
+
+
+def test_patch_quadro_implantacao_diagnostico_nao_finalizavel_409():
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_uc.execute.side_effect = DiagnosticoNaoFinalizavelError(
+        "Quadro só pode ser alterado após finalização."
+    )
+
+    app.dependency_overrides[get_atualizar_quadro_implantacao_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.patch(
+        f"/diagnosticos/{uuid.uuid4()}/quadro-implantacao-anotacoes",
+        json={
+            "quadro_implantacao_anotacoes": {
+                "f0_a0": {
+                    "comentario": "",
+                    "comentarios": ["x"],
+                    "prazo_meta": "",
+                    "descricao_personalizada": "",
+                },
+            },
+        },
+        headers={
+            **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+            "If-Match": "1",
+        },
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 409
+    assert "finaliza" in response.json()["detail"]
 
 
 def test_patch_quadro_implantacao_diagnostico_nao_encontrado_404_quadro():

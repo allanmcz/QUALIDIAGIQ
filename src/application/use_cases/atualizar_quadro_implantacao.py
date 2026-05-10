@@ -74,8 +74,8 @@ class AtualizarQuadroImplantacao:
 
         try:
             diagnostico.definir_quadro_implantacao_anotacoes(mesclado)
-        except DiagnosticoNaoFinalizavelError as e:
-            raise ValueError(str(e)) from e
+        except DiagnosticoNaoFinalizavelError:
+            raise
 
         atualizado = await self._repo.atualizar_quadro_implantacao_com_versao(
             comando.diagnostico_id,

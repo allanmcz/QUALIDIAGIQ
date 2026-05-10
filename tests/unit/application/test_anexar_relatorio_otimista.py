@@ -16,6 +16,7 @@ from src.application.use_cases.anexar_relatorio_otimista import (
 )
 from src.domain.entities.diagnostico import (
     Diagnostico,
+    DiagnosticoNaoFinalizavelError,
     EmpresaInfo,
     PorteEmpresa,
     RegimeTributario,
@@ -89,7 +90,7 @@ async def test_rejeita_nao_finalizado() -> None:
         relatorio_pdf_url="https://exemplo/p.pdf",
         versao_esperada=1,
     )
-    with pytest.raises(ValueError, match="finalizado"):
+    with pytest.raises(DiagnosticoNaoFinalizavelError, match="finalizado"):
         await uc.execute(cmd)
 
 

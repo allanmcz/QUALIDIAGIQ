@@ -11,10 +11,12 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine
 
+from src.domain.entities.diagnostico import DiagnosticoNaoFinalizavelError
 from src.infrastructure.config.logging import configurar_logging
 from src.infrastructure.config.settings import Settings, get_settings
 from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
@@ -23,6 +25,8 @@ from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 from src.presentation.api.routers import diagnostico_router
 
 if TYPE_CHECKING:
+    from starlette.requests import Request
+
     from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
 
 
@@ -181,6 +185,20 @@ def create_app() -> FastAPI:
     app.add_middleware(IdempotencyMiddleware, cache=idempotency_cache)
     app.add_middleware(TraceContextMiddleware)
     app.add_middleware(PublicRateLimitMiddleware)
+
+    @app.exception_handler(DiagnosticoNaoFinalizavelError)
+    async def diagnostico_nao_finalizavel_handler(
+        _request: Request, exc: DiagnosticoNaoFinalizavelError
+    ) -> JSONResponse:
+        """
+        Conflito de estado do agregado (ex.: PATCH em diagnóstico não finalizado).
+
+        HTTP 409 — semântica adequada a «recurso existe mas transição ilegal» (vs 400 genérico).
+        """
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exc)},
+        )
 
     # Healthcheck simples
     @app.get("/health", tags=["Infra"])

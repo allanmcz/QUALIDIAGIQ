@@ -16,6 +16,7 @@ from src.application.use_cases.atualizar_quadro_implantacao import (
 )
 from src.domain.entities.diagnostico import (
     Diagnostico,
+    DiagnosticoNaoFinalizavelError,
     EmpresaInfo,
     PlanoDiagnostico,
     PorteEmpresa,
@@ -192,7 +193,7 @@ class TestAtualizarQuadroImplantacao:
             quadro_implantacao_anotacoes={"f0_a0": {"comentarios": ["x"], "prazo_meta": ""}},
             versao_esperada=1,
         )
-        with pytest.raises(ValueError, match="finalizado"):
+        with pytest.raises(DiagnosticoNaoFinalizavelError, match="finalizado"):
             await uc.execute(cmd)
 
     async def test_merge_quando_item_existente_nao_eh_dict_trata_como_vazio(self) -> None:

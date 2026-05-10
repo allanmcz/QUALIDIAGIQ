@@ -60,8 +60,8 @@ class AtualizarChecklistM12Autoconf:
 
         try:
             diagnostico.definir_checklist_m12_autoconf(comando.checklist_m12_autoconf)
-        except DiagnosticoNaoFinalizavelError as e:
-            raise ValueError(str(e)) from e
+        except DiagnosticoNaoFinalizavelError:
+            raise
 
         atualizado = await self._repo.atualizar_checklist_m12_com_versao(
             comando.diagnostico_id,
