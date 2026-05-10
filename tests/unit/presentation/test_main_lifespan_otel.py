@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.infrastructure.config.settings import get_settings
-from src.presentation.api.main import _parse_otlp_headers, lifespan
+from src.presentation.api.main import _derive_otlp_metrics_endpoint, _parse_otlp_headers, lifespan
 
 
 @pytest.fixture
@@ -113,6 +113,7 @@ def test_instrumenar_otel_com_otlp_endpoint(
         ),
     ):
         from src.presentation.api.main import _instrumentar_otel
+        from src.presentation.api.middleware.otel_http_metrics import OtelHttpMetricsMiddleware
 
         dummy_app = MagicMock()
         _instrumentar_otel(dummy_app, fake_settings)
@@ -121,6 +122,8 @@ def test_instrumenar_otel_com_otlp_endpoint(
     mock_provider.add_span_processor.assert_called_once()
     processor_cls.assert_called_once()
     mock_set.assert_called_once_with(mock_provider)
+    middlewares = [c.args[0] for c in dummy_app.add_middleware.call_args_list]
+    assert OtelHttpMetricsMiddleware in middlewares
 
 
 def test_create_app_chama_otel_quando_flag(
@@ -136,6 +139,23 @@ def test_create_app_chama_otel_quando_flag(
 
         create_app()
         mock_otel.assert_called_once()
+
+
+def test_derive_otlp_metrics_endpoint_substitui_traces_por_metrics() -> None:
+    assert (
+        _derive_otlp_metrics_endpoint("http://collector:4318/v1/traces")
+        == "http://collector:4318/v1/metrics"
+    )
+
+
+def test_derive_otlp_metrics_endpoint_base_sem_suffix_adiciona_metrics() -> None:
+    assert (
+        _derive_otlp_metrics_endpoint("http://collector:4318") == "http://collector:4318/v1/metrics"
+    )
+
+
+def test_derive_otlp_metrics_endpoint_vazio_retorna_none() -> None:
+    assert _derive_otlp_metrics_endpoint("") is None
 
 
 def test_parse_otlp_headers_vazio_retorna_none() -> None:

@@ -11,6 +11,7 @@ import {
   ADMIN_TOKEN_STORAGE_KEY,
 } from "@/lib/api/config"
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events"
+import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie"
 
 export default function DashboardLayout({
   children,
@@ -23,8 +24,10 @@ export default function DashboardLayout({
   useEffect(() => {
     const token = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)
     if (!token) {
+      setPainelSessionCookiePresent(false)
       router.push("/login")
     } else {
+      setPainelSessionCookiePresent(true)
       setNome(localStorage.getItem(ADMIN_NOME_STORAGE_KEY) || "Admin")
     }
   }, [router])
@@ -81,6 +84,7 @@ export default function DashboardLayout({
                   localStorage.removeItem(ADMIN_NOME_STORAGE_KEY)
                   localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY)
                   localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY)
+                  setPainelSessionCookiePresent(false)
                   window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))
                   router.push("/login")
                 }}

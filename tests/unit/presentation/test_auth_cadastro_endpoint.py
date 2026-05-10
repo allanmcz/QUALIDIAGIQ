@@ -42,15 +42,15 @@ class TestAuthCadastroEndpoint:
         uid = uuid4()
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 return_value=uid,
             ),
         ):
@@ -71,7 +71,7 @@ class TestAuthCadastroEndpoint:
     def test_cadastro_403_quando_desabilitado(self) -> None:
         m = _settings_com_dsn()
         m.cadastro_consultor_b2b_habilitado = False
-        with patch("src.presentation.api.routers.auth_router.get_settings", return_value=m):
+        with patch("src.presentation.api.routers.auth_router.deps.get_settings", return_value=m):
             r = client.post(
                 "/auth/cadastro",
                 json={"nome": "A", "email": "b@c.com", "password": "12345678"},
@@ -81,11 +81,11 @@ class TestAuthCadastroEndpoint:
     def test_cadastro_409_email_existente(self) -> None:
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value={"id": "x"},
             ),
         ):
@@ -100,15 +100,15 @@ class TestAuthCadastroEndpoint:
 
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 side_effect=ValueError("regra de negócio genérica"),
             ),
         ):
@@ -122,15 +122,15 @@ class TestAuthCadastroEndpoint:
     def test_cadastro_409_valueerror_duplicado_explicito_na_mensagem(self) -> None:
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 side_effect=ValueError("registro já cadastrado na base"),
             ),
         ):
@@ -149,15 +149,15 @@ class TestAuthCadastroEndpoint:
 
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 side_effect=RuntimeError("falha de persistência inesperada"),
             ),
         ):
@@ -174,19 +174,19 @@ class TestAuthCadastroEndpoint:
         uid = uuid4()
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 return_value=uid,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.create_access_token",
+                "src.presentation.api.routers.auth_router.jwt_tokens.create_access_token",
                 side_effect=jwt.InvalidAudienceError("falha de teste"),
             ),
         ):
@@ -206,19 +206,19 @@ class TestAuthCadastroEndpoint:
 
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_settings_com_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 return_value=uuid4(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.create_access_token",
+                "src.presentation.api.routers.auth_router.jwt_tokens.create_access_token",
                 side_effect=RuntimeError("duplicate unique key value violates"),
             ),
         ):

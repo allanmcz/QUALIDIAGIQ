@@ -43,6 +43,17 @@ def _parse_otlp_headers(raw: str | None) -> dict[str, str] | None:
     return out or None
 
 
+def _derive_otlp_metrics_endpoint(trace_endpoint: str) -> str | None:
+    """Deriva URL OTLP/HTTP de métricas a partir do endpoint de traces (mesmo host/collector)."""
+    raw = trace_endpoint.strip()
+    if not raw:
+        return None
+    if "/v1/traces" in raw:
+        return raw.replace("/v1/traces", "/v1/metrics")
+    base = raw.rstrip("/")
+    return f"{base}/v1/metrics"
+
+
 def _instrumentar_otel(app: FastAPI, settings: Settings) -> None:
     """
     OpenTelemetry — console em dev ou OTLP/HTTP quando `OTEL_EXPORTER_OTLP_ENDPOINT` está definido.
@@ -72,6 +83,25 @@ def _instrumentar_otel(app: FastAPI, settings: Settings) -> None:
 
     trace.set_tracer_provider(provider)
     FastAPIInstrumentor.instrument_app(app)
+
+    metrics_url = _derive_otlp_metrics_endpoint(endpoint)
+    if metrics_url:
+        from opentelemetry import metrics as otel_metrics
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+        from src.presentation.api.middleware.otel_http_metrics import OtelHttpMetricsMiddleware
+
+        metric_exporter = OTLPMetricExporter(
+            endpoint=metrics_url,
+            headers=_parse_otlp_headers(settings.otel_exporter_otlp_headers),
+        )
+        reader = PeriodicExportingMetricReader(metric_exporter)
+        meter_provider = MeterProvider(metric_readers=[reader], resource=resource)
+        otel_metrics.set_meter_provider(meter_provider)
+        meter = otel_metrics.get_meter(settings.otel_service_name)
+        app.add_middleware(OtelHttpMetricsMiddleware, meter=meter)
 
 
 @asynccontextmanager

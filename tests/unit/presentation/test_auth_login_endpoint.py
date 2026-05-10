@@ -65,9 +65,11 @@ class TestAuthLoginPostgres:
         user, pwd = _usuario_valido_bcryp()
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -84,9 +86,11 @@ class TestAuthLoginPostgres:
     def test_login_400_usuario_inexistente(self) -> None:
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
         ):
@@ -100,9 +104,11 @@ class TestAuthLoginPostgres:
         user, _ = _usuario_valido_bcryp(password="certa")
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -117,9 +123,11 @@ class TestAuthLoginPostgres:
         user["hashed_password"] = None
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -136,9 +144,11 @@ class TestAuthLoginPostgres:
         user["hashed_password"] = "$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -154,9 +164,11 @@ class TestAuthLoginPostgres:
         user["tenant_id"] = None
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -171,9 +183,11 @@ class TestAuthLoginPostgres:
         user["tenant_id"] = "nao-e-uuid"
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -187,9 +201,11 @@ class TestAuthLoginPostgres:
         user, pwd = _usuario_valido_bcryp(perfil_conta="  PLANINHO_FANTASMA ")
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -204,9 +220,11 @@ class TestAuthLoginPostgres:
         user, pwd = _usuario_valido_bcryp(perfil_conta="avancado")
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
         ):
@@ -220,9 +238,11 @@ class TestAuthLoginPostgres:
     def test_login_503_postgres_indisponivel(self) -> None:
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 side_effect=psycopg2.OperationalError("db down"),
             ),
         ):
@@ -251,9 +271,11 @@ class TestAuthLoginPostgres:
         )
 
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.get_supabase_client",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.get_supabase_client",
                 return_value=mock_client,
             ),
         ):
@@ -281,9 +303,11 @@ class TestAuthLoginPostgres:
         )
 
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.get_supabase_client",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.get_supabase_client",
                 return_value=mock_client,
             ),
         ):
@@ -297,13 +321,16 @@ class TestAuthLoginPostgres:
         user, pwd = _usuario_valido_bcryp()
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.jwt.encode", side_effect=Exception("x")
+                "src.presentation.api.routers.auth_router.deps.jwt.encode",
+                side_effect=Exception("x"),
             ),
         ):
             r = TestClient(app).post(
@@ -318,13 +345,15 @@ class TestAuthLoginPostgres:
         user, pwd = _usuario_valido_bcryp()
         settings = _jwt_settings()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=user,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.create_access_token",
+                "src.presentation.api.routers.auth_router.jwt_tokens.create_access_token",
                 side_effect=jwt.DecodeError("erro sintético de emissão"),
             ),
         ):

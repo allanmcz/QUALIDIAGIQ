@@ -29,7 +29,28 @@ async def test_ollama_adapter_timeout_usa_segundos_do_construtor() -> None:
         out = await adapter.gerar_recomendacao("ctx", "base")
 
     assert "indisponibilidade" in out.lower()
-    mock_post.assert_called_once()
+    assert mock_post.call_count == 3  # retry exponencial (tenacity) em timeout transitório
+
+
+@pytest.mark.asyncio
+async def test_ollama_adapter_http_4xx_nao_repete_tentativas() -> None:
+    """Respostas 4xx não são retentadas (ramo ``status_code < 500`` em ``_transiente_httpx``)."""
+    adapter = OllamaLlmAdapter(timeout_seconds=5.0)
+    req = MagicMock()
+    resp = MagicMock()
+    resp.status_code = 404
+    err = httpx.HTTPStatusError("não encontrado", request=req, response=resp)
+    mock_post = AsyncMock(side_effect=err)
+    mock_client = MagicMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.post = mock_post
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        out = await adapter.gerar_recomendacao("ctx", "base")
+
+    assert "indisponibilidade" in out.lower() or "erro" in out.lower()
+    assert mock_post.call_count == 1
 
 
 @pytest.mark.asyncio

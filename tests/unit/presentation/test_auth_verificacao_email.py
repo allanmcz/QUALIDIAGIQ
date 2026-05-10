@@ -95,7 +95,7 @@ def test_confirmar_codigo_contem_letras_400(client_smtp_ok: TestClient):
 
 def test_solicitar_codigo_429_rate_limit(client_smtp_ok: TestClient):
     with patch(
-        "src.presentation.api.routers.auth_router.codigo_store.pode_reenviar",
+        "src.presentation.api.routers.auth_router.deps.codigo_store.pode_reenviar",
         return_value=False,
     ):
         res = client_smtp_ok.post(
@@ -123,10 +123,10 @@ def test_solicitar_codigo_em_development_regista_log_diagnostico():
     try:
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=dev_settings,
             ),
-            patch("src.presentation.api.routers.auth_router.logger") as log_mock,
+            patch("src.presentation.api.routers.auth_router.deps.logger") as log_mock,
         ):
             client = TestClient(app)
             res = client.post(
@@ -150,10 +150,10 @@ def test_solicitar_codigo_em_production_nao_regista_log_diagnostico():
     try:
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=prod_settings,
             ),
-            patch("src.presentation.api.routers.auth_router.logger") as log_mock,
+            patch("src.presentation.api.routers.auth_router.deps.logger") as log_mock,
         ):
             client = TestClient(app)
             res = client.post(

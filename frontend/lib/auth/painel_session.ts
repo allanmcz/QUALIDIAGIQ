@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/config";
 
 import { QDI_AUTH_CHANGED_EVENT } from "./auth_events";
+import { setPainelSessionCookiePresent } from "./session_cookie";
 
 /** Remove JWT e metadados do painel e notifica ouvintes (ex.: cabeçalho público). */
 export function clearPainelSessionLocal(): void {
@@ -22,6 +23,7 @@ export function clearPainelSessionLocal(): void {
   window.localStorage.removeItem(ADMIN_NOME_STORAGE_KEY);
   window.localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
   window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
+  setPainelSessionCookiePresent(false);
   window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
 }
 

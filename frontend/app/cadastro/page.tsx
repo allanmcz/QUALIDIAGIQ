@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/config";
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
 import { mensagemErroHttp } from "@/lib/api/http_errors";
+import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie";
 import { destinoSeguroAposLogin } from "@/lib/auth/safe_redirect_after_login";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,7 @@ function CadastroPageContent() {
           : "gratuito";
       localStorage.setItem(ADMIN_PERFIL_CONTA_STORAGE_KEY, perfil);
       window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
+      setPainelSessionCookiePresent(true);
 
       const destino = destinoSeguroAposLogin(searchParams.get("redirect"));
       router.push(destino);

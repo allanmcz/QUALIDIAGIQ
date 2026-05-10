@@ -40,11 +40,11 @@ class TestCadastroConsultorBranchSupabase:
 
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_jwt_settings_sem_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.get_supabase_client",
+                "src.presentation.api.routers.auth_router.deps.get_supabase_client",
                 return_value=mock_client,
             ),
         ):
@@ -71,11 +71,11 @@ class TestCadastroConsultorBranchSupabase:
 
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_jwt_settings_sem_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.get_supabase_client",
+                "src.presentation.api.routers.auth_router.deps.get_supabase_client",
                 return_value=mock_client,
             ),
         ):
@@ -96,11 +96,11 @@ class TestCadastroConsultorBranchSupabase:
 
         with (
             patch(
-                "src.presentation.api.routers.auth_router.get_settings",
+                "src.presentation.api.routers.auth_router.deps.get_settings",
                 return_value=_jwt_settings_sem_dsn(),
             ),
             patch(
-                "src.presentation.api.routers.auth_router.get_supabase_client",
+                "src.presentation.api.routers.auth_router.deps.get_supabase_client",
                 return_value=mock_client,
             ),
         ):
@@ -127,13 +127,15 @@ class TestCadastroConsultorBranchSupabase:
 
         get_settings.cache_clear()
         with (
-            patch("src.presentation.api.routers.auth_router.get_settings", return_value=settings),
             patch(
-                "src.presentation.api.routers.auth_router.buscar_admin_por_email_postgres",
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
                 return_value=None,
             ),
             patch(
-                "src.presentation.api.routers.auth_router.inserir_admin_postgres",
+                "src.presentation.api.routers.auth_router.deps.inserir_admin_postgres",
                 side_effect=psycopg2.OperationalError("simulated"),
             ),
         ):

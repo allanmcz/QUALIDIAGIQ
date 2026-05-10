@@ -1,5 +1,10 @@
+from __future__ import annotations
+
+from typing import cast
+
 import httpx
 import structlog
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
@@ -7,6 +12,15 @@ from src.application.services.lexiq_guardrail import filtrar_resposta_recomendac
 from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
 
 logger = structlog.get_logger(__name__)
+
+
+def _transiente_httpx(exc: BaseException) -> bool:
+    """Erros rede/5xx merecem nova tentativa (S-03 — resiliência ao Ollama)."""
+    if isinstance(exc, httpx.RequestError):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code >= 500
+    return False
 
 
 class OllamaLlmAdapter(LlmServicePort):
@@ -31,21 +45,32 @@ class OllamaLlmAdapter(LlmServicePort):
         self._normativa_port = base_normativa_port
         self._rag_threshold = float(rag_similarity_threshold)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.5, min=0.5, max=8),
+        retry=retry_if_exception(_transiente_httpx),
+        reraise=True,
+    )
+    async def _post_generate_json(
+        self, client: httpx.AsyncClient, prompt: str
+    ) -> dict[str, object]:
+        response = await client.post(
+            f"{self.ollama_url}/api/generate",
+            json={
+                "model": self.model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.2},
+            },
+        )
+        response.raise_for_status()
+        return cast("dict[str, object]", response.json())
+
     async def gerar_recomendacao(self, contexto_empresa: str, base_normativa: str) -> str:
         prompt = montar_prompt_recomendacao(contexto_empresa, base_normativa)
         try:
             async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
-                response = await client.post(
-                    f"{self.ollama_url}/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "stream": False,
-                        "options": {"temperature": 0.2},
-                    },
-                )
-                response.raise_for_status()
-                data: dict[str, object] = response.json()
+                data = await self._post_generate_json(client, prompt)
                 texto = data.get("response", "Recomendação não gerada pelo modelo.")
                 out = str(texto).strip()
                 return await filtrar_resposta_recomendacao_llm(
@@ -53,9 +78,9 @@ class OllamaLlmAdapter(LlmServicePort):
                     base_normativa_port=self._normativa_port,
                     rag_threshold=self._rag_threshold,
                 )
-        except httpx.RequestError as exc:
+        except httpx.HTTPError as exc:
             logger.warning(
-                "ollama_request_error",
+                "ollama_http_error",
                 erro=str(exc),
                 url_host=self.ollama_url,
             )

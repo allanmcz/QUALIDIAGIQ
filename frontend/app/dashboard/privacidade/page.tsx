@@ -182,7 +182,10 @@ export default function DashboardPrivacidadePage() {
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="lgpd-tipo">Tipo</Label>
-            <Select value={regTipo} onValueChange={setRegTipo}>
+            <Select
+              value={regTipo}
+              onValueChange={(v: string | null) => setRegTipo(v ?? "")}
+            >
               <SelectTrigger id="lgpd-tipo">
                 <SelectValue />
               </SelectTrigger>
@@ -236,7 +239,9 @@ export default function DashboardPrivacidadePage() {
             </Label>
             <Select
               value={filtroStatus || "__todos__"}
-              onValueChange={(v) => setFiltroStatus(v === "__todos__" ? "" : v)}
+              onValueChange={(v: string | null) =>
+                setFiltroStatus(v == null || v === "__todos__" ? "" : v)
+              }
             >
               <SelectTrigger id="filtro-st" className="w-[200px]">
                 <SelectValue placeholder="Todos" />
@@ -288,8 +293,11 @@ export default function DashboardPrivacidadePage() {
                           <div className="flex flex-col gap-2 min-w-[180px]">
                             <Select
                               value={pendente}
-                              onValueChange={(v) =>
-                                setPendentesPatch((prev) => ({ ...prev, [row.id]: v }))
+                              onValueChange={(v: string | null) =>
+                                setPendentesPatch((prev) => ({
+                                  ...prev,
+                                  [row.id]: v ?? "",
+                                }))
                               }
                             >
                               <SelectTrigger className="h-9">

@@ -57,6 +57,20 @@ jobs:
       - name: Instalar pacote em modo editável + dev-deps
         run: pip install -e ".[dev]"
 
+      - name: SBOM CycloneDX (Python — artefacto)
+        run: |
+          mkdir -p dist
+          cyclonedx-py environment -o dist/sbom-cyclonedx.json --pyproject pyproject.toml -of JSON
+
+      - name: Artefacto SBOM CycloneDX
+        if: always()
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: sbom-cyclonedx-json
+          path: dist/sbom-cyclonedx.json
+          retention-days: 30
+
       - name: Schema MVP strict (Postgres — 0015 + CNAE)
         if: ${{ env.POSTGRES_CI_URL != '' }}
         env:

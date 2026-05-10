@@ -18,7 +18,7 @@ def test_create_access_token_perfil_desconhecido_vira_gratuito_no_payload() -> N
     m.jwt_algorithm = "HS256"
     uid = uuid4()
     tid = uuid4()
-    with patch("src.presentation.api.routers.auth_router.get_settings", return_value=m):
+    with patch("src.presentation.api.routers.auth_router.deps.get_settings", return_value=m):
         token = create_access_token(
             subject_user_id=uid,
             tenant_id=tid,

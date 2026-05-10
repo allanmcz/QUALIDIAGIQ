@@ -91,7 +91,9 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str | None = Field(
         default=None,
         validation_alias=AliasChoices("OTEL_EXPORTER_OTLP_ENDPOINT"),
-        description="URL do collector OTLP/HTTP (ex.: https://otel.example.com:4318/v1/traces).",
+        description=(
+            "URL OTLP/HTTP de traces (ex.: …/v1/traces). Métricas derivam automaticamente para …/v1/metrics."
+        ),
     )
     otel_exporter_otlp_headers: str | None = Field(
         default=None,
