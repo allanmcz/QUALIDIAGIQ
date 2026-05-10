@@ -17,6 +17,9 @@ QDI_GO_LIVE_RUN_E2E=1 QDI_GO_LIVE_RUN_TYPECHECK=1 make go-live
 
 # API de produção e sem acesso DB local (pula verify-schema)
 QDI_API_BASE_URL="https://api.seudominio.com" QDI_GO_LIVE_SKIP_SCHEMA=1 make go-live
+
+# Ambiente sem git ou snapshot só de runtime (pula diff OpenAPI — já coberto no CI)
+QDI_GO_LIVE_SKIP_OPENAPI_DRIFT=1 make go-live
 ```
 
 ---
@@ -79,6 +82,9 @@ Se algo falhar: **parar** antes de misturar versão nova de API com schema antig
 |---|--------|----------|
 | C1 | Schema strict (se Postgres acessível da máquina de ops) | `make verify-schema-mvp-strict` com `QDI_POSTGRES_TEST_URL` / URL de serviço — ver `RUNBOOK_DEPLOY_ROLLBACK.md` |
 | C2 | Health API | `GET /health` → `200`; `X-Trace-Id` presente (`SMOKE_MVP_FECHADO.md` item 1) |
+| C3 | Endpoints públicos | `GET /public/institucional` e `GET /diagnosticos/metodologia` → `200` em `QDI_API_BASE_URL` (automático em `scripts/go_live_45min.sh` após C2) |
+
+**Pré-voo A2c (automático):** regeneração `openapi.generated.json` + `git diff --exit-code` — alinhado ao job CI backend; usar `QDI_GO_LIVE_SKIP_OPENAPI_DRIFT=1` só se necessário.
 
 ---
 

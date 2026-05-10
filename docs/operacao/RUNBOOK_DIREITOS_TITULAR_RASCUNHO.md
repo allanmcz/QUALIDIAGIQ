@@ -59,7 +59,7 @@ Requer **Bearer JWT** do tenant. **`Idempotency-Key`** obrigatória nos `POST` i
 | `GET` | `/diagnosticos/{id}/retificacoes` | Cadeia append-only (sem UPDATE no diagnóstico original) |
 | `POST` | `/diagnosticos/{id}/retificacao` | Nova retificação; **Idempotency-Key** obrigatória |
 
-**Testes de contrato:** `tests/integration/test_privacidade_api.py`, `tests/integration/test_diagnostico_retificacao_api.py` (CI via `make test`). **E2E painel (mock API):** `frontend/e2e/dashboard-privacidade-export.spec.ts` (`npm run test:e2e` no diretório `frontend/`).
+**Testes de contrato:** `tests/integration/test_privacidade_api.py`, `tests/integration/test_diagnostico_retificacao_api.py` (CI via `make test`). **OpenAPI:** paths mínimos LGPD + retificações em `tests/unit/presentation/test_openapi_generated_contract.py`. **E2E painel (mock API):** `frontend/e2e/dashboard-privacidade-export.spec.ts` (`npm run test:e2e` no diretório `frontend/`).
 
 ---
 

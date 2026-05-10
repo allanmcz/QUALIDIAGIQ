@@ -10,6 +10,7 @@ API_URL="${QDI_API_BASE_URL:-http://127.0.0.1:60000}"
 RUN_E2E="${QDI_GO_LIVE_RUN_E2E:-0}"
 RUN_TYPECHECK="${QDI_GO_LIVE_RUN_TYPECHECK:-0}"
 SKIP_SCHEMA="${QDI_GO_LIVE_SKIP_SCHEMA:-0}"
+SKIP_OPENAPI_DRIFT="${QDI_GO_LIVE_SKIP_OPENAPI_DRIFT:-0}"
 TRACE_ID="${QDI_TRACE_ID:-go-live-45min-$(date +%Y%m%d%H%M%S)}"
 
 require_cmd() {
@@ -38,6 +39,7 @@ API_URL: $API_URL
 RUN_E2E: $RUN_E2E (1 = roda playwright)
 RUN_TYPECHECK: $RUN_TYPECHECK (1 = roda mypy)
 SKIP_SCHEMA: $SKIP_SCHEMA (1 = pula verify-schema-mvp-strict)
+SKIP_OPENAPI_DRIFT: $SKIP_OPENAPI_DRIFT (1 = pula git diff do openapi.generated.json)
 TRACE_ID: $TRACE_ID
 EOF
 }
@@ -52,6 +54,18 @@ main() {
   run_step "A1 - Commit de release" git log -1 --oneline
   run_step "A2 - Backend lint" make lint
   run_step "A2 - Backend test" make test
+
+  if [[ "$SKIP_OPENAPI_DRIFT" != "1" ]]; then
+    run_step "A2c - OpenAPI versionado sem drift (git diff)" env ROOT_DIR="$ROOT_DIR" bash -c '
+      set -euo pipefail
+      cd "$ROOT_DIR"
+      if [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then PY="$ROOT_DIR/.venv/bin/python"; else PY=python3; fi
+      PYTHONPATH="$ROOT_DIR" "$PY" scripts/export_openapi_json.py
+      git diff --exit-code docs/api/openapi.generated.json
+    '
+  else
+    log "A2c - OpenAPI drift pulado (QDI_GO_LIVE_SKIP_OPENAPI_DRIFT=1)."
+  fi
 
   if [[ "$RUN_TYPECHECK" == "1" ]]; then
     run_step "A2 - Backend type-check" make type-check
@@ -83,6 +97,15 @@ main() {
     echo "❌ /health não retornou HTTP 200 em $API_URL"
     exit 1
   fi
+
+  log "C3 - Smoke endpoints públicos (institucional + metodologia)"
+  for ep in "/public/institucional" "/diagnosticos/metodologia"; do
+    code="$(curl -sS -o /dev/null -w "%{http_code}" -H "X-Trace-Id: $TRACE_ID" "$API_URL$ep")"
+    if [[ "$code" != "200" ]]; then
+      echo "❌ GET $ep → HTTP $code (esperado 200) em $API_URL"
+      exit 1
+    fi
+  done
 
   cat <<'EOF'
 

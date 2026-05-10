@@ -133,6 +133,8 @@ flowchart LR
 - [x] Suite integração — `tests/integration/test_privacidade_api.py`, `tests/integration/test_lgpd_anonimizacao_executor_postgres.py`.
 - [x] Runbook — `docs/operacao/RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md`
 
+**Contrato OpenAPI (pós-ADR):** paths LGPD + retificação incluídos em `docs/api/openapi.generated.json`; regressão em `tests/unit/presentation/test_openapi_generated_contract.py`; `make go-live` executa smoke `GET /public/institucional` e `GET /diagnosticos/metodologia` após `/health`.
+
 ## Referências legais e normativas
 
 - Lei **13.709/2018** (LGPD) — arts. **5º**, **7º**, **8º**, **12**, **18**, **37**, **38**, **46**.  

@@ -29,6 +29,8 @@ Rotas POST que exigem idempotência devem documentar **`Idempotency-Key`** na **
 
 Snapshot versionado do schema completo: **`docs/api/openapi.generated.json`** — gerar com **`make openapi-export`**; o CI compara com o código para evitar drift.
 
+Teste estático de paths críticos: **`tests/unit/presentation/test_openapi_generated_contract.py`** (executado em `make test`).
+
 ## Testes de regressão
 
 - `tests/unit/presentation/test_idempotency_middleware.py` — ausência de chave, replay, tenants distintos, inclusão de `/diagnosticos/{uuid}/retificacao`.

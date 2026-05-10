@@ -10,6 +10,7 @@ Com Postgres acessível (`QDI_POSTGRES_TEST_URL` ou Docker na porta padrão):
 
 - `make mvp-gate` — smoke API (`tests/integration/test_smoke_mvp_fechado_api.py`) + schema **0012** + RLS dois tenants (`tests/integration/test_mvp_gate_postgres.py`).
 - `tests/integration/test_privacidade_api.py` — contrato HTTP LGPD (incluído em `make test`); execução isolada pode falhar o gate global de cobertura.
+- `tests/unit/presentation/test_openapi_generated_contract.py` — paths mínimos no `docs/api/openapi.generated.json` (LGPD + retificações + públicos); incluído em `make test`.
 - `make verify-schema-mvp` — só leitura no Postgres alvo (`DATABASE_URL` ou `QDI_POSTGRES_TEST_URL`; default Compose `127.0.0.1:60322`). Em Supabase, equivalente: `docs/operacao/SQL_VERIFICACAO_SCHEMA_MVP.sql`.
 - O job **GitHub Actions** já roda o pytest completo após aplicar todas as migrações no Postgres de serviço.
 
