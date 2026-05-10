@@ -122,15 +122,11 @@ omit = [
     "*/scripts/*",
     # Adapter só para Playwright/CI integrado — coberto por e2e, não por pirâmide unitária.
     "*/ci_playwright_diagnostico_repository.py",
-    # PostgREST/Supabase: I/O síncrono via cliente oficial; trajetória Postgres na API está coberta por
-    # testes unitários com ``PostgresDiagnosticoRepository``. Excluir apenas do relatório agregado.
-    "*/supabase_diagnostico_repository.py",
+    # ``supabase_diagnostico_repository``: mocks em ``test_supabase_diagnostico_repository_residual.py``.
     # Trilhas LGPD (SQL repetitivo sem domínio); smoke em integração quando ``DATABASE_URL`` presente.
     "*/postgres_lgpd_titular_solicitacao_adapter.py",
     "*/postgres_lgpd_anonimizacao_executor_adapter.py",
-    # Cliente SMTP/Storage externos — cobertos por mocks dedicados nos ports; omitir duplicação trivial.
-    "*/storage_supabase.py",
-    "*/postgres_lead_diagnostico_vinculo.py",
+    # Lead vinculo Postgres + Storage Supabase: testes dedicados em ``tests/unit/infrastructure/``.
 ]
 
 [tool.coverage.report]
