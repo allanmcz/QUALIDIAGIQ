@@ -104,7 +104,7 @@ jobs:
       # Repositório público: upload costuma funcionar sem token (ver documentação Codecov).
       - name: Codecov (upload coverage.xml)
         if: ${{ always() && hashFiles('coverage.xml') != '' }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
