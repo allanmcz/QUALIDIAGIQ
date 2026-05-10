@@ -39,6 +39,16 @@ Definir **dois prazos sobrepostos** no **RIPD** (relatório de impacto — trata
 
 > Engenharia implementa **políticas de retenção / rotinas** após fecho escrito no RIPD e env vars ou tabela de configuração versionada — sem inventar prazo em código sem este ADR + política publicada.
 
+### Retenção (baseline operacional — espelho DEV_09052026_V2)
+
+Baseline espelhado do backlog/plano de execução DEV_09052026_V2 para orientar operação e RIPD, sem substituir validação do controlador/DPO:
+
+- **Diagnóstico finalizado (hash + conteúdo técnico):** 5 anos, usando CTN arts. 173 e 174 como referência fiscal-auditável para prescrição/decadência e LGPD art. 7º, II quando houver obrigação legal/regulatória aplicável.
+- **Dados pessoais pós-cancelamento:** até cancelamento + 6 meses, como prazo operacional indicativo para segurança, reversão de erro e trilha mínima, alinhado à revogação de consentimento da LGPD art. 8º e aos direitos do titular da LGPD art. 18.
+- **Logs de auditoria multi-tenant:** 5 anos, como baseline de comprovação de medidas de segurança e rastreabilidade (LGPD arts. 37 e 46), sem expor segredos ou dados pessoais além do mínimo necessário.
+
+Estes valores devem ser confirmados no workshop J4 e refletidos no RIPD v0.1 antes de virarem rotina automática de eliminação/anonimização em produção.
+
 ### 4. Portabilidade — formato mínimo fechado
 
 - **JSON estruturado** (máquina-a-máquina — LGPD, art. 18, V), com **JSON Schema versionado** no repositório (ex.: `docs/schemas/qdi-diagnostico-v1.json`).
