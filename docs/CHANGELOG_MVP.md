@@ -7,6 +7,7 @@ Versões internas podem usar data `YYYY-MM-DD` até adoção de semver de produt
 
 ## [Unreleased]
 
+- **LGPD técnico ADR-012 (2026-05-10):** export portável do diagnóstico (`GET /privacidade/diagnosticos/{id}/export-portabilidade`, JSON Schema `qdi-diagnostico-export-v1` em `docs/schemas/`); pacote **PDF** com anexo JSON; trilha **retificações** append-only (`0035`, `POST/GET /diagnosticos/{id}/retificacao(|es)`, `Idempotency-Key` no POST); painel **Privacidade LGPD** com botões JSON/PDF e detalhe do diagnóstico com card de retificação; E2E Playwright com API mockada.
 - **Jurídico (2026-05-07):** parecer formal arquivado em `docs/legal/` (`PARECER JURÍDICO - QualiDiagIQ_7242.pdf`); `STATUS_JURIDICO_MVP.md` atualizado; **aprovação produto** da minuta `/termos` e `/privacidade` registada; pasta `docs/legal/` versionada (`.gitignore`); checklist Allan — parecer + aprovação produto.
 - **DPO (2026-05-07):** secção pública `#dpo` em `/privacidade`, helper `frontend/lib/legal/dpoPublic.ts`, env `NEXT_PUBLIC_LGPD_DPO_*`, link no rodapé, `docker-compose` serviço `web` com e-mail de exemplo.
 - **API institucional + LGPD settings (2026-05-07):** `GET /public/institucional`; `lgpd_dpo_email` e `lgpd_retention_days` em `Settings`; rate limit em `/public/institucional`; termos com cláusulas do parecer (CDC/dados declarados); `/privacidade#retencao-telefone`; ADR-012 e README alinhados; checklist retenção telefone.
