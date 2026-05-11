@@ -174,3 +174,5 @@ cd frontend && npm run test:e2e
 | Commit | `79b1c4a4229344724c10b1f417f7e47efc1f0e2e` |
 
 Comandos executados na validação: `make lint`, `make format`, `make test`, `make type-check`; no `frontend/`: `npm run test:unit`, `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npx playwright test e2e/empresa-painel-expand.spec.ts`.
+
+**Pós-handoff (2026-05-10, commit `3eb0932`):** job `frontend-e2e` no CI passou a executar `npm run test:unit`; E2E `empresa-painel-expand` cobre também o atalho «LGPD deste diagnóstico» (mock não intercepta `/dashboard/diagnosticos/…` para não quebrar o RSC do Next).
