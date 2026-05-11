@@ -1,6 +1,6 @@
 # Operação — documentação QDI
 
-Índice dos artefactos em `docs/operacao/` (runbooks, gates MVP, decisões de produto). **Handoff imediato (última sessão):** [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md). **Planos legados `_DEVELOPER/`:** `INDICE_PLANOS_HANDOFF.md` / `HANDOFF_PLANO_MVP_FECHADO.md` (pastas internas podem estar ignoradas pelo Git).
+Índice dos artefactos em `docs/operacao/` (runbooks, gates MVP, decisões de produto). **Handoff imediato (última sessão):** [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md). **Execução noturna / agente (painel empresa + dívidas P1–P5):** [`HANDOFF_EXECUCAO_MADRUGADA_PAINEL_EMPRESA.md`](./HANDOFF_EXECUCAO_MADRUGADA_PAINEL_EMPRESA.md). **Planos legados `_DEVELOPER/`:** `INDICE_PLANOS_HANDOFF.md` / `HANDOFF_PLANO_MVP_FECHADO.md` (pastas internas podem estar ignoradas pelo Git).
 
 ## Confirmações produto e gates
 
@@ -33,6 +33,7 @@
 
 | Documento | Uso |
 |-----------|-----|
+| [HANDOFF_EXECUCAO_MADRUGADA_PAINEL_EMPRESA.md](./HANDOFF_EXECUCAO_MADRUGADA_PAINEL_EMPRESA.md) | Plano **100% handoff**: refactor ficha + testes + E2E + UX prefetch + âncora LGPD (ordem P1–P5, comandos, gate merge). |
 | [PLANO_HANDOFF_JANELA_23H_LGPD_PWA.md](./PLANO_HANDOFF_JANELA_23H_LGPD_PWA.md) | Fatias acionáveis **LGPD técnico + PWA** numa janela curta; liga a ADR-011 e ADR-012. |
 | [ROADMAP_HANDOFF_PROGRESSO_SYNC.md](./ROADMAP_HANDOFF_PROGRESSO_SYNC.md) | Espelho versionável do painel do roadmap em `_DEVELOPER/` (Git). |
 | [RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md](./RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md) | Runbook art. 18 (processo DPO) + rotas `/privacidade/solicitacoes` e testes `test_privacidade_api`. |

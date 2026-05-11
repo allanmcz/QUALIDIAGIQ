@@ -262,6 +262,9 @@ export default function EmpresaDiagnosticoExpandedPanel({
             <Link href={`${fichaCompletaHref}#diag-retificacoes`}>Retificações (este diagnóstico)</Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
+            <Link href={`${fichaCompletaHref}#diag-privacidade-lgpd`}>LGPD deste diagnóstico</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link href={fichaCompletaHref}>Ficha completa do diagnóstico</Link>
           </Button>
         </div>

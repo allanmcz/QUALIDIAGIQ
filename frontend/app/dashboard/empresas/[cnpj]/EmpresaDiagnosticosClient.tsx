@@ -199,6 +199,18 @@ export default function EmpresaDiagnosticosClient({
           </p>
         )}
 
+        {!semSessao &&
+          !carregando &&
+          diagnosticos !== null &&
+          daEmpresa.length > 0 &&
+          Object.keys(detalhesPorId).length < daEmpresa.length &&
+          !prefetchErro && (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              A consolidar ranking global… ({Object.keys(detalhesPorId).length}/{daEmpresa.length} diagnósticos com
+              detalhe carregado)
+            </p>
+          )}
+
         {!semSessao && carregando && (
           <p className="text-muted-foreground text-sm" aria-live="polite">
             A carregar diagnósticos desta empresa…

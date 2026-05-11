@@ -41,6 +41,22 @@ import {
 } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { clearPendingDiagnosticoFromStorage } from "@/lib/wizard/pending_diagnostico";
 import { clearWizardDraft } from "@/lib/wizard/wizard_draft";
+import {
+  M12_NUM_ITENS,
+  m12EstadoInicialVazio,
+  m12ValoresSeCompleto,
+  normalizarM12DoApi,
+  rotuloLikertM12,
+} from "@/lib/painel/m12_autoconf_utils";
+import {
+  BAR_GAP_COLORS,
+  corHeat,
+  radarRowsFromScore,
+  rankingGapsFromScore,
+} from "@/lib/painel/diagnostico_scores";
+import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
+
+export type { DiagnosticoDetalheApi, QuadroItemPersistidoApi } from "@/types/diagnostico_detalhe";
 
 type AcaoChecklist = {
   descricao: string;
@@ -62,96 +78,6 @@ type AcaoChecklist = {
   }>;
 };
 type FrenteChecklist = { nome: string; acoes: AcaoChecklist[] };
-
-type MatrizLinha = {
-  departamento: string;
-  impacto_resumo: string;
-  criticidade: string;
-  base_legal?: string | null;
-};
-
-type CronogramaFase = {
-  fase: string;
-  foco: string;
-  referencia_normativa: string;
-};
-
-/** Item persistido no JSONB (lista nova + campo único legado). */
-export type QuadroItemPersistidoApi = {
-  comentario?: string;
-  comentarios?: string[];
-  prazo_meta?: string;
-  /** Substitui a descrição canônica da ação no cartão do quadro (texto editável pelo consultor). */
-  descricao_personalizada?: string;
-};
-
-export type DiagnosticoDetalheApi = {
-  id: string;
-  empresa_razao_social: string;
-  empresa_cnpj?: string;
-  criado_em?: string | null;
-  finalizado_em?: string | null;
-  plano: string;
-  status: string;
-  relatorio_pdf_url: string | null;
-  checklist: FrenteChecklist[] | null;
-  matriz_impacto: MatrizLinha[] | null;
-  cronograma: CronogramaFase[] | null;
-  /** Likert 1–5 por controle M12 (API); booleanos legados são normalizados na leitura. */
-  checklist_m12_autoconf: (number | boolean)[] | null;
-  /** Chave canónica f{i}_a{j} — meta de prazo (ISO) e vários comentários por ação sugerida. */
-  quadro_implantacao_anotacoes?: Record<string, QuadroItemPersistidoApi> | null;
-  versao_otimista: number | null;
-  versao_plano?: number;
-  score: {
-    score_geral: { valor: number };
-    score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;
-  } | null;
-};
-
-const M12_NUM_ITENS = 10;
-
-function normalizarM12DoApi(
-  raw: DiagnosticoDetalheApi["checklist_m12_autoconf"],
-): number[] | null {
-  if (!Array.isArray(raw) || raw.length !== M12_NUM_ITENS) return null;
-  const out: number[] = [];
-  for (const x of raw) {
-    if (typeof x === "boolean") out.push(x ? 5 : 1);
-    else if (typeof x === "number" && Number.isInteger(x) && x >= 1 && x <= 5) out.push(x);
-    else return null;
-  }
-  return out;
-}
-
-/** Estado local antes de qualquer escolha do utilizador — sem Likert por defeito. */
-function m12EstadoInicialVazio(): (number | null)[] {
-  return Array.from({ length: M12_NUM_ITENS }, () => null);
-}
-
-/** Só persiste na API quando os 10 controles têm inteiro 1–5. */
-function m12ValoresSeCompleto(vals: (number | null)[]): number[] | null {
-  if (!Array.isArray(vals) || vals.length !== M12_NUM_ITENS) return null;
-  const out: number[] = [];
-  for (const x of vals) {
-    if (x === null || typeof x !== "number" || !Number.isInteger(x) || x < 1 || x > 5) {
-      return null;
-    }
-    out.push(x);
-  }
-  return out;
-}
-
-function rotuloLikertM12(v: number): string {
-  const m: Record<number, string> = {
-    1: "Não implementado",
-    2: "Inicial / informal",
-    3: "Parcial",
-    4: "Implementado (lacunas menores)",
-    5: "Implementado e monitorado",
-  };
-  return m[v] ?? "—";
-}
 
 /** Estado local do quadro por ação (edição + espelho do persistido até PATCH). */
 export type QuadroEdicaoAcao = {
@@ -266,13 +192,6 @@ function mockDiagnostico(id: string): DiagnosticoDetalheApi {
   };
 }
 
-function corHeat(valor: number): string {
-  if (valor < 40) return "bg-red-500/85";
-  if (valor < 60) return "bg-amber-500/80";
-  if (valor < 75) return "bg-yellow-400/80";
-  return "bg-emerald-500/75";
-}
-
 export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const router = useRouter();
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(null);
@@ -335,23 +254,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     };
   }, [id]);
 
-  const radarData = useMemo(() => {
-    if (!data?.score?.score_por_dimensao) return null;
-    return Object.entries(data.score.score_por_dimensao).map(([dim, s]) => ({
-      dimensao: dim.replace(/_/g, " "),
-      valor: s.valor,
-    }));
-  }, [data]);
+  const radarData = useMemo(() => radarRowsFromScore(data?.score ?? null), [data?.score]);
 
-  const rankingGaps = useMemo(() => {
-    if (!data?.score?.score_por_dimensao) return [];
-    return Object.entries(data.score.score_por_dimensao)
-      .map(([dim, s]) => ({
-        dimensao: dim.replace(/_/g, " "),
-        valor: s.valor,
-      }))
-      .sort((a, b) => a.valor - b.valor);
-  }, [data]);
+  const rankingGaps = useMemo(() => rankingGapsFromScore(data?.score ?? null), [data?.score]);
 
   /** M12 — frente checklist ABNT 10 itens (mesmo texto retornado pela API). */
   const frenteAbnt10 = useMemo(() => {
@@ -650,8 +555,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const m12ProgressoAssinalados = m12Likert.filter((x) => x !== null).length;
   const m12CompletoParaApi = m12ValoresSeCompleto(m12Likert) !== null;
 
-  const barGapColors = ["#b91c1c", "#ea580c", "#ca8a04", "#65a30d", "#16a34a"];
-
   /** Plano avançado: novo fluxo no assistente sem herdar rascunho local nem pendência de gravação. */
   const irRefazerDiagnostico = useCallback(() => {
     clearWizardDraft();
@@ -834,7 +737,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                   />
                   <Bar dataKey="valor" radius={[0, 4, 4, 0]}>
                     {rankingGaps.map((_, i) => (
-                      <Cell key={i} fill={barGapColors[Math.min(i, barGapColors.length - 1)]} />
+                      <Cell key={i} fill={BAR_GAP_COLORS[Math.min(i, BAR_GAP_COLORS.length - 1)]} />
                     ))}
                   </Bar>
                 </BarChart>

@@ -119,7 +119,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
 
   if (carregando && filtradas.length === 0 && !erro) {
     return (
-      <Card className="mb-10">
+      <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
           <CardDescription>A carregar solicitações…</CardDescription>
@@ -130,7 +130,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
 
   if (filtradas.length === 0 && !erro) {
     return (
-      <Card className="mb-10">
+      <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
           <CardDescription>
@@ -146,7 +146,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
   }
 
   return (
-    <Card className="mb-10">
+    <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
       <CardHeader>
         <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
         <CardDescription>
