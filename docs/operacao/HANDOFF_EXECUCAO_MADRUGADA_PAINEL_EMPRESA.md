@@ -171,6 +171,6 @@ cd frontend && npm run test:e2e
 |-------|-------|
 | Data | 2026-05-10 |
 | Executor | Cursor Agent (handoff P1–P5) |
-| Commit | `PLACEHOLDER_SHA` |
+| Commit | `79b1c4a4229344724c10b1f417f7e47efc1f0e2e` |
 
 Comandos executados na validação: `make lint`, `make format`, `make test`, `make type-check`; no `frontend/`: `npm run test:unit`, `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npx playwright test e2e/empresa-painel-expand.spec.ts`.
