@@ -2,10 +2,14 @@
  * Mensagens de erro HTTP quando o corpo pode ser JSON (FastAPI), texto simples ou HTML (proxy/502).
  */
 
-/** Erros típicos do `fetch` no browser quando não há resposta HTTP (CORS, DNS, API caída, TLS). */
+/** Erros típicos do `fetch` no browser quando não há resposta HTTP utilizável (DNS, TCP, TLS, bloqueio). */
 export function isLikelyNetworkFetchFailure(error: unknown): boolean {
   const msg = error instanceof Error ? error.message : String(error);
-  return /failed to fetch|networkerror|load failed|network request failed/i.test(msg);
+  const nome = error instanceof Error ? error.name : "";
+  return (
+    /failed to fetch|networkerror|load failed|network request failed/i.test(msg) ||
+    nome === "AbortError"
+  );
 }
 
 /**
@@ -16,26 +20,37 @@ export function isLikelyNetworkFetchFailure(error: unknown): boolean {
 export function mensagemConectividadeApiParaUsuario(baseUrl: string): string {
   const base = baseUrl.replace(/\/$/, "");
   const ehProxySameOrigin = base === "/api-backend" || base.startsWith("/api-backend");
+  /** URL absoluta para teste `curl` quando o cliente aponta direto à FastAPI. */
+  const healthAbsoluto =
+    base.startsWith("http://") || base.startsWith("https://") ? `${base}/health` : "http://127.0.0.1:60000/health";
 
   if (ehProxySameOrigin) {
     return (
       `Não houve resposta ao proxy «${base}» (Next → FastAPI). ` +
-      `(1) API no ar: \`docker compose ps\` e GET \`/health\` na porta publicada (ex.: \`http://127.0.0.1:60000/health\`). ` +
-      `(2) **API_PROXY_TARGET** no **processo** que corre o Next (proxy em \`app/api-backend/[[...slug]]/route.ts\`): ` +
-      `no host com \`npm run dev\`, ex. \`API_PROXY_TARGET=http://127.0.0.1:60000\` em \`.env.local\`; ` +
-      `no serviço \`web\` do Compose use \`http://api:8000\`. **Reinicie o Next** após mudar o env. ` +
-      `(3) \`NEXT_PUBLIC_API_URL=/api-backend\` no cliente. ` +
-      `(4) Firewall/VPN. (5) DevTools → Rede: inspecione o pedido a «/api-backend». ` +
-      `Nota: com proxy same-origin, CORS entre browser e API **não** aplica — o bloqueio costuma ser proxy/API a baixo.`
+      `Isto significa que o **browser não recebeu uma resposta HTTP completa** para esse URL ` +
+      `(não confundir com 401/403/502 com corpo JSON — aí o problema já vem da API ou do proxy com texto legível). ` +
+      `**Causas frequentes:** (A) processo Next ou API em baixo / porta errada; ` +
+      `(B) pedido interrompido (mudança de página, **AbortError**, extensão); ` +
+      `(C) falha de rede até ao próprio Next. ` +
+      `**Mitigação já no código:** o proxy segue redirecionamentos da FastAPI **no servidor**, para não expor ao browser ` +
+      `URLs com hostname interno (\`http://api:8000/...\`), que costumam aparecer como «Failed to fetch». ` +
+      `**Checklist:** (1) API no ar: \`docker compose ps\` (\`api\` healthy) e \`curl -sS ${healthAbsoluto}\`. ` +
+      `(2) **API_PROXY_TARGET** no processo Next: host \`npm run dev\` → \`.env.local\` com \`API_PROXY_TARGET=http://127.0.0.1:60000\`; ` +
+      `Compose \`web\` → \`http://api:8000\`; reiniciar Next após mudar env. ` +
+      `(3) \`NEXT_PUBLIC_API_URL=/api-backend\`. ` +
+      `(4) \`docker logs qdi-web\` (procurar \`qdi_api_proxy_upstream_falhou\`) e \`docker logs qdi-api\`. ` +
+      `(5) DevTools → Rede: linha do pedido — se existir **código HTTP**, copie o corpo; se aparecer **(failed)** ou **NS_ERROR**, é rede/TLS/host.`
     );
   }
 
   return (
-    `Não houve resposta da API em «${baseUrl}». Verifique: (1) serviço da API no ar ` +
-    `(\`docker compose ps\`, GET \`/health\`); (2) URL acessível **no browser** — no Compose use ` +
-    `NEXT_PUBLIC_API_URL=/api-backend (não use http://api:8000 no .env do Next); ` +
-    `(3) CORS: o URL do front (origem) deve constar em CORS_ALLOWED_ORIGINS na API; ` +
-    `(4) firewall/VPN.`
+    `Não houve resposta da API em «${baseUrl}». ` +
+    `**Não depende de firewall:** em dev costuma ser **API parada**, **porta não escuta**, **HTTPS no front** a chamar **HTTP** na API (browser bloqueia conteúdo misto), ou **CORS**. ` +
+    `Verifique: (1) no terminal \`curl -sS ${healthAbsoluto}\` — se falhar, suba o stack (\`make dev\`) e espere \`healthy\`; ` +
+    `(2) URL no browser — no Compose prefira \`NEXT_PUBLIC_API_URL=/api-backend\` (não use \`http://api:8000\` no cliente); ` +
+    `(3) **CORS**: origem do Next (ex. \`http://127.0.0.1:60001\`) em \`CORS_ALLOWED_ORIGINS\` na API; ` +
+    `(4) abra o front em **http** em dev se a API for **http** (evite https://localhost com API em http://127…); ` +
+    `(5) firewall/VPN se aplicável.`
   );
 }
 

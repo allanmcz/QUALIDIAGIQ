@@ -77,9 +77,16 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         return row
 
     async def listar_por_tenant(
-        self, tenant_id: UUID, limit: int = 100, offset: int = 0
+        self,
+        tenant_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        empresa_cnpj: str | None = None,
     ) -> list[Diagnostico]:
         items = [d for d in self._rows.values() if d.tenant_id == tenant_id]
+        if empresa_cnpj:
+            items = [d for d in items if d.empresa.cnpj == empresa_cnpj]
         items.sort(key=lambda d: d.criado_em, reverse=True)
         return items[offset : offset + limit]
 

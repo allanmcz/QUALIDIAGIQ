@@ -51,9 +51,19 @@ class DiagnosticoRepository(ABC):
 
     @abstractmethod
     async def listar_por_tenant(
-        self, tenant_id: UUID, limit: int = 100, offset: int = 0
+        self,
+        tenant_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        empresa_cnpj: str | None = None,
     ) -> list[Diagnostico]:
-        """Lista diagnósticos de um tenant, paginado."""
+        """
+        Lista diagnósticos de um tenant, paginado.
+
+        Args:
+            empresa_cnpj: Se informado, apenas linhas com esse CNPJ normalizado (14 dígitos).
+        """
         ...
 
     @abstractmethod

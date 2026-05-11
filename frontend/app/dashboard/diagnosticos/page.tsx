@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { getAccessToken } from "@/lib/api/config";
 import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
+import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostico_urls";
 
 /** Lista do tenant + atalhos (novo diagnóstico, importar OTP) — rota canónica após login. */
 export default function PainelDiagnosticosPage() {
@@ -175,22 +176,47 @@ export default function PainelDiagnosticosPage() {
                 { day: "2-digit", month: "2-digit", year: "numeric" },
               );
 
+              const detailHref = `/dashboard/diagnosticos/${diag.id}`;
+              const cnpj14 =
+                diag.empresa_cnpj && diag.empresa_cnpj.replace(/\D/g, "").length === 14
+                  ? diag.empresa_cnpj.replace(/\D/g, "")
+                  : null;
+
               return (
-                <Link key={diag.id} href={`/dashboard/diagnosticos/${diag.id}`}>
-                  <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start gap-2">
-                        <CardTitle className="text-lg leading-snug">{diag.empresa_razao_social}</CardTitle>
-                        <Badge variant={diag.plano === "avancado" ? "default" : "secondary"}>
-                          {diag.plano}
-                        </Badge>
-                      </div>
-                      <CardDescription>
-                        {diag.status === "finalizado" ? "Finalizado" : diag.status.replace("_", " ")} ·{" "}
-                        {quando}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                <Card
+                  key={diag.id}
+                  className="h-full flex flex-col border-border/80 hover:border-primary/40 transition-colors shadow-sm"
+                >
+                  <CardHeader className="pb-2 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <Link href={detailHref} className="min-w-0 group">
+                        <CardTitle className="text-lg leading-snug group-hover:text-primary transition-colors">
+                          {diag.empresa_razao_social}
+                        </CardTitle>
+                      </Link>
+                      <Badge variant={diag.plano === "avancado" ? "default" : "secondary"}>{diag.plano}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {cnpj14
+                        ? `CNPJ ${cnpj14.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}`
+                        : "CNPJ não informado"}
+                    </p>
+                    {cnpj14 ? (
+                      <Link
+                        href={buildEmpresaDiagnosticosHref(cnpj14, diag.empresa_razao_social)}
+                        className="text-xs font-medium text-primary hover:underline inline-block w-fit"
+                      >
+                        Ver grelha por empresa (todos os ciclos)
+                      </Link>
+                    ) : null}
+                    <CardDescription>
+                      <Link href={detailHref} className="hover:underline">
+                        {diag.status === "finalizado" ? "Finalizado" : diag.status.replace("_", " ")} · {quando}
+                      </Link>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1">
+                    <Link href={detailHref} className="block">
                       <div className="flex flex-col gap-1 mt-2">
                         <span className="text-sm font-medium text-muted-foreground">Score geral</span>
                         {pct != null ? (
@@ -214,9 +240,9 @@ export default function PainelDiagnosticosPage() {
                           <span className="text-muted-foreground text-sm">Aguardando finalização</span>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </Link>
+                  </CardContent>
+                </Card>
               );
             })}
         </div>

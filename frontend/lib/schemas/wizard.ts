@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ADMIN_TOKEN_STORAGE_KEY } from "@/lib/api/config";
+
 // Utils
 /** DV alinhado ao domínio Python (`cnpj_brasil`) — pesos oficiais RFB. */
 function validaCNPJ(cnpj: string): boolean {
@@ -64,8 +66,8 @@ function zSelectPerfilEmpresa(valoresPermitidos: readonly string[]) {
 
 export const EmpresaSchema = z.object({
   /**
-   * CNPJ opcional: vazio = sem vínculo PJ; se preenchido, 14 dígitos + DV (alinhado à API/domain).
-   * Regra de produto versionada em `.cursor/rules/qdi-cnpj-opcional.mdc` — não exigir de novo sem ADR.
+   * Self-service sem sessão: opcional. Com JWT da conta na plataforma (`admin_token`), o envio exige
+   * CNPJ válido — ver `DiagnosticoPayloadSchema` (`superRefine`) e ADR-013.
    */
   cnpj: z
     .string()
@@ -115,7 +117,12 @@ const LOCALES_RELATORIO_PDF = ["pt-BR", "en"] as const;
 
 const PLANOS_DIAGNOSTICO = ["gratuito", "avancado"] as const;
 
-export const DiagnosticoPayloadSchema = z.object({
+/**
+ * Objeto base do assistente — validação de campos sem a regra contextual de sessão (ADR-013).
+ * Usar para ler `localStorage` / pendente legado: com JWT presente, o envio ao painel continua a ser
+ * validado por `DiagnosticoPayloadSchema` (superRefine) ou pela API (`EmpresaPainelSchema`).
+ */
+const DiagnosticoPayloadObjectSchema = z.object({
   empresa: EmpresaSchema,
   respondente: RespondenteSchema,
   respostas: z.array(RespostaSchema).min(1, "Responda ao questionário carregado"),
@@ -133,6 +140,32 @@ export const DiagnosticoPayloadSchema = z.object({
    */
   force_refresh_cnpj: z.boolean().default(false),
 });
+
+export const DiagnosticoPayloadArmazenadoSchema = DiagnosticoPayloadObjectSchema;
+export type DiagnosticoPayloadArmazenado = z.infer<typeof DiagnosticoPayloadArmazenadoSchema>;
+
+export const DiagnosticoPayloadSchema = DiagnosticoPayloadObjectSchema.superRefine((data, ctx) => {
+    if (typeof window === "undefined") return;
+    const jwt = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)?.trim();
+    if (!jwt) return;
+    const bruto = String(data.empresa?.cnpj ?? "").replace(/\D/g, "");
+    if (bruto.length !== 14) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Com sessão na plataforma, o CNPJ é obrigatório (14 dígitos, DV válido) para histórico por empresa no painel. Sem sessão, pode concluir só com e-mail (OTP) sem CNPJ.",
+        path: ["empresa", "cnpj"],
+      });
+      return;
+    }
+    if (!validaCNPJ(bruto)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "CNPJ inválido (dígitos verificadores da RFB).",
+        path: ["empresa", "cnpj"],
+      });
+    }
+  });
 
 export type DiagnosticoPayload = z.infer<typeof DiagnosticoPayloadSchema>;
 /** Valores do formulário wizard (entrada Zod — alinha `react-hook-form` + `zodResolver`). */

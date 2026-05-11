@@ -29,6 +29,7 @@ import {
   clearPendingDiagnosticoFromStorage,
   hasPendingDiagnosticoInBrowser,
   loadPendingDiagnosticoFromStorage,
+  parsePendingDiagnosticoFromStorage,
 } from "@/lib/wizard/pending_diagnostico";
 import {
   clearRascunhoResgateToken,
@@ -71,6 +72,8 @@ export function useWizardState() {
   const painelPerguntasRef = useRef<HTMLDivElement>(null);
   /** Evita gravar rascunho durante hidratação inicial (restore). */
   const skipPersistRef = useRef(false);
+  /** Query `empresa_cnpj` / `empresa_razao_social` — aplicar pré-preenchimento uma vez por ciclo de overlay. */
+  const wizardQueryEmpresaPrefillAppliedRef = useRef(false);
   /** Após ler/restaurar cache local (localStorage) — só então passamos a persistir alterações. */
   const [draftHydrated, setDraftHydrated] = useState(false);
   /** Há rascunho e/ou diagnóstico pendente — pergunta continuar vs reiniciar antes de hidratar. */
@@ -124,8 +127,17 @@ export function useWizardState() {
       };
     }
 
-    const payload = loadPendingDiagnosticoFromStorage();
-    if (!payload) return;
+    const pendingResult = parsePendingDiagnosticoFromStorage();
+    if (!pendingResult.ok) {
+      if (pendingResult.reason !== "missing") {
+        setApiError(
+          "Os dados do diagnóstico guardados neste navegador estão inválidos ou desactualizados. " +
+            "Volte ao assistente (/wizard), complete o passo 1 e envie novamente — ou limpe o cache do diagnóstico no diálogo de retomada.",
+        );
+      }
+      return;
+    }
+    const payload = pendingResult.data;
     let cancelled = false;
     void (async () => {
       try {
@@ -417,6 +429,7 @@ export function useWizardState() {
     setApiError(null);
     setCacheResumePrompt(null);
     skipPersistRef.current = false;
+    wizardQueryEmpresaPrefillAppliedRef.current = false;
     setDraftHydrated(true);
     aplicarRespondenteDaConta();
   }, [reset, aplicarRespondenteDaConta]);
@@ -465,6 +478,30 @@ export function useWizardState() {
     if (!draftHydrated) return;
     aplicarRespondenteDaConta();
   }, [draftHydrated, aplicarRespondenteDaConta]);
+
+  /** Painel — `/wizard?empresa_cnpj=&empresa_razao_social=` preenche passo 1 se campos ainda vazios (ADR-013). */
+  useEffect(() => {
+    if (!draftHydrated || cacheResumePrompt !== null) return;
+    if (wizardQueryEmpresaPrefillAppliedRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const sp = new URLSearchParams(window.location.search);
+    const cnpjQ = sp.get("empresa_cnpj")?.replace(/\D/g, "") ?? "";
+    const razaoQ = sp.get("empresa_razao_social")?.trim() ?? "";
+    if (cnpjQ.length !== 14 && razaoQ.length < 3) return;
+
+    wizardQueryEmpresaPrefillAppliedRef.current = true;
+
+    const curCnpj = (getValues("empresa.cnpj") ?? "").replace(/\D/g, "");
+    const curRazao = (getValues("empresa.razao_social") ?? "").trim();
+
+    if (cnpjQ.length === 14 && curCnpj === "") {
+      setValue("empresa.cnpj", cnpjQ, { shouldDirty: false, shouldValidate: false });
+    }
+    if (razaoQ.length >= 3 && curRazao === "") {
+      setValue("empresa.razao_social", razaoQ, { shouldDirty: false, shouldValidate: false });
+    }
+  }, [draftHydrated, cacheResumePrompt, getValues, setValue]);
 
   /** Persiste rascunho com debounce — mesma origem que «Voltar ao diagnóstico» na política de privacidade. */
   useEffect(() => {

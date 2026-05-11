@@ -81,6 +81,7 @@ export default function DiagnosticoConfirmarGravacaoPage() {
   const [resgateToken, setResgateToken] = useState<string | null>(null);
   const [resumo, setResumo] = useState<{
     empresa_razao_social: string;
+    empresa_cnpj: string;
     email_mascarado: string;
     respondente_email: string;
     expira_em: string;
@@ -312,6 +313,18 @@ export default function DiagnosticoConfirmarGravacaoPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-3">
+          {resumo.empresa_cnpj.length !== 14 ? (
+            <div
+              className="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground leading-relaxed"
+              role="status"
+            >
+              <strong className="font-medium text-foreground">Vincular ao painel após o login:</strong> é necessário um{" "}
+              <strong className="font-medium text-foreground">CNPJ válido (14 dígitos)</strong> no rascunho (ADR-013).
+              Sem CNPJ, use <strong className="font-medium text-foreground">«Revisar no assistente»</strong>, preencha o
+              passo 1 e grave o rascunho outra vez antes de entrar na plataforma — ou conclua só com o código por e-mail
+              (OTP), sem vincular ao tenant do consultor neste momento.
+            </div>
+          ) : null}
           <Button
             type="button"
             size="lg"

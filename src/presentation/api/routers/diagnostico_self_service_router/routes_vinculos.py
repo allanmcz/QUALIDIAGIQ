@@ -6,6 +6,8 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.encoders import jsonable_encoder
+from pydantic import ValidationError
 
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.application.use_cases.vincular_diagnosticos_lead_self_service import (
@@ -30,7 +32,7 @@ from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
     DiagnosticoConclusaoSelfServicePublicoResponse,
     DiagnosticoResponse,
-    IniciarDiagnosticoRequest,
+    IniciarDiagnosticoPainelRequest,
     VincularLeadsSelfServiceResponse,
     VincularRascunhoContaPlataformaRequest,
 )
@@ -47,7 +49,9 @@ router = APIRouter()
     summary="Materializar rascunho no tenant da conta (JWT)",
     description=(
         "Exige **Bearer** da conta na plataforma. O e-mail do respondente no rascunho deve ser **igual** "
-        "ao e-mail do admin (LGPD / prova de posse). **Idempotency-Key** obrigatório."
+        "ao e-mail do admin (LGPD / prova de posse). **Idempotency-Key** obrigatório.\n\n"
+        "**CNPJ:** o payload do rascunho deve incluir CNPJ válido — ao vincular à conta o diagnóstico "
+        "passa a exigir identificação PJ para histórico por empresa no tenant (ADR-013)."
     ),
 )
 async def vincular_rascunho_conta_plataforma(
@@ -93,7 +97,13 @@ async def vincular_rascunho_conta_plataforma(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Formato de rascunho inconsistente.",
         )
-    payload = IniciarDiagnosticoRequest.model_validate(pj)
+    try:
+        payload = IniciarDiagnosticoPainelRequest.model_validate(pj)
+    except ValidationError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=jsonable_encoder(ve.errors(include_url=False)),
+        ) from ve
     email_resp = deps.codigo_store.normalizar_email(str(payload.respondente.email))
     if email_resp != email_admin_norm:
         raise HTTPException(

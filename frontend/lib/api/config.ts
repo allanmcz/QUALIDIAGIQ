@@ -3,8 +3,8 @@
  *
  * Usar em links e texto — é determinístico no SSR (sem `window`).
  *
- * - Compose web: `NEXT_PUBLIC_API_URL=/api-backend` (produção/BFF) ou deixe o cliente em dev falar
- *   direto com `http://127.0.0.1:60000` (ver `getApiUrlForFetch`).
+ * - Compose web: `NEXT_PUBLIC_API_URL=/api-backend` (proxy same-origin; ver `getApiUrlForFetch`).
+ * - Dev sem env: cliente pode usar direto `http://127.0.0.1:60000` (CORS na API necessário).
  * - Sem env, fora das portas de dev com proxy: `http://127.0.0.1:60000` — **não** use `localhost` no macOS
  *   (pode resolver IPv6 `::1` e a porta mapeada pelo Docker falhar com `net::ERR_CONNECTION_REFUSED`).
  */
@@ -24,10 +24,12 @@ const API_HOST_DEV_PADRAO = "http://127.0.0.1:60000";
 /**
  * Base para chamadas `fetch` no cliente.
  *
- * Em **`NODE_ENV=development`** no browser, com front em `localhost|127.0.0.1` numa porta de dev
- * acima e `NEXT_PUBLIC_API_URL` ausente, vazio ou `/api-backend`, usa **API direta** em `127.0.0.1:60000`.
- * Evita «Failed to fetch» no painel quando o proxy same-origin (`/api-backend`) falha; a FastAPI já
- * expõe CORS em dev (`CORS_ALLOWED_ORIGINS`) com `Authorization`, `Idempotency-Key`, `X-Rascunho-Token`.
+ * Se `NEXT_PUBLIC_API_URL=/api-backend`, o browser **deve** usar esse valor — pedidos same-origin ao Next,
+ * que encaminha para a FastAPI (`API_PROXY_TARGET`). Não substituir por `127.0.0.1:60000` no cliente: origens
+ * diferentes (ex. `:60001` → `:60000`) exigem CORS e frequentemente aparecem como «Failed to fetch».
+ *
+ * Com env **ausente ou vazio** em dev local (portas típicas), mantém-se chamada **direta** à API na porta
+ * publicada do Compose — útil sem proxy; nesse caso `CORS_ALLOWED_ORIGINS` na API tem de incluir a origem do front.
  *
  * Em `next start` / produção mantém-se `NEXT_PUBLIC_API_URL` (ex.: `/api-backend` ou URL absoluta).
  */
@@ -39,10 +41,8 @@ export function getApiUrlForFetch(): string {
     const p = port || (window.location.protocol === "https:" ? "443" : "80");
     const frontDevLocal =
       (hostname === "localhost" || hostname === "127.0.0.1") && PORTAS_DEV_FRONT.has(p);
-    if (
-      frontDevLocal &&
-      (!fromEnv || fromEnv === "" || fromEnv === "/api-backend")
-    ) {
+    /** Só força API direta quando **não** há URL pública definida (nunca quando é `/api-backend`). */
+    if (frontDevLocal && (!fromEnv || fromEnv === "")) {
       return API_HOST_DEV_PADRAO;
     }
   }

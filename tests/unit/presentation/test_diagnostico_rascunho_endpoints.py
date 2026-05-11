@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
@@ -162,7 +163,43 @@ async def test_get_resumo_200(rascunho_async_client: AsyncClient) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["empresa_razao_social"] == "Empresa Resumo SA"
+    assert body.get("empresa_cnpj") == ""
     assert body["respondente_email"] == "lead@example.com"
+
+
+@pytest.mark.asyncio
+async def test_get_resumo_normaliza_cnpj_do_payload(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    class S:
+        sync_database_url = "postgresql://x"
+
+    exp = datetime.now(UTC) + timedelta(hours=6)
+    row = {
+        "id": str(uuid4()),
+        "tenant_id": str(uuid4()),
+        "email_norm": "pj@example.com",
+        "payload_json": {
+            "empresa": {"razao_social": "Com CNPJ SA", "cnpj": "12.345.678/0001-95"},
+            "respondente": {"email": "pj@example.com"},
+        },
+        "expira_em": exp,
+        "consumido_em": None,
+    }
+
+    async def fake_to_thread(fn: object, /, *args: object, **kwargs: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            r = await rascunho_async_client.get(
+                "/diagnosticos/rascunho-self-service/resumo",
+                headers={"X-Rascunho-Token": "tok-normaliza-cnpj"},
+            )
+    assert r.status_code == 200
+    assert r.json()["empresa_cnpj"] == "12345678000195"
 
 
 @pytest.mark.asyncio
@@ -194,7 +231,9 @@ async def test_get_resumo_empresa_nao_dict_usa_fallback_razao(
                 headers={"X-Rascunho-Token": "t" * 24},
             )
     assert r.status_code == 200
-    assert r.json()["empresa_razao_social"] == "(sem razão social)"
+    body = r.json()
+    assert body["empresa_razao_social"] == "(sem razão social)"
+    assert body.get("empresa_cnpj") == ""
 
 
 @pytest.mark.asyncio
@@ -1331,6 +1370,58 @@ async def test_post_vincular_conta_payload_inconsistente_500(
                     headers=headers,
                 )
     assert r.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_post_vincular_conta_payload_sem_cnpj_painel_422(
+    rascunho_async_client: AsyncClient,
+) -> None:
+    """Rascunho sem CNPJ válido falha na validação painel (ADR-013)."""
+
+    class S:
+        sync_database_url = "postgresql://x"
+
+    uid = uuid4()
+    tid = uuid4()
+    rid = str(uuid4())
+    payload_sem_cnpj = copy.deepcopy(PAYLOAD_MIN)
+    payload_sem_cnpj["empresa"]["cnpj"] = ""
+    em = codigo_store.normalizar_email(payload_sem_cnpj["respondente"]["email"])
+    row = {
+        "id": rid,
+        "tenant_id": str(uuid4()),
+        "email_norm": em,
+        "payload_json": payload_sem_cnpj,
+        "expira_em": datetime.now(UTC) + timedelta(hours=1),
+        "consumido_em": None,
+    }
+    headers = cabecalho_post_diagnostico(
+        usuario_id=uid,
+        tenant_id=tid,
+        idempotency_key="t8u9v0w1-x2y3-456h-abcd-d4567890123e",
+    )
+
+    async def fake_to_thread(fn: object, /, *_a: object, **_k: object) -> object:
+        if getattr(fn, "__name__", "") == "buscar_rascunho_ativo_por_token_sync":
+            return row
+        raise AssertionError(getattr(fn, "__name__", fn))
+
+    with patch.object(dss.deps, "get_settings", return_value=S()):
+        with patch.object(dss.deps.asyncio, "to_thread", side_effect=fake_to_thread):
+            with patch.object(
+                dss.deps,
+                "buscar_email_admin_por_id_e_tenant_postgres",
+                return_value=payload_sem_cnpj["respondente"]["email"],
+            ):
+                r = await rascunho_async_client.post(
+                    "/diagnosticos/rascunho-self-service/vincular-conta",
+                    json={"resgate_token": "x" * 32},
+                    headers=headers,
+                )
+    assert r.status_code == 422
+    detail = r.json().get("detail")
+    assert isinstance(detail, list)
+    assert any("CNPJ" in str(item).upper() or "cnpj" in str(item).lower() for item in detail)
 
 
 @pytest.mark.asyncio

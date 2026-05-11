@@ -205,6 +205,7 @@ def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
     return DiagnosticoResumoSchema(
         id=diagnostico.id,
         empresa_razao_social=diagnostico.empresa.razao_social,
+        empresa_cnpj=diagnostico.empresa.cnpj,
         status=diagnostico.status.value,
         plano=diagnostico.plano.value,
         score_geral=diagnostico.score_geral,
@@ -246,6 +247,9 @@ async def _montar_diagnostico_response(
         status=diagnostico.status.value,
         plano=diagnostico.plano.value,
         empresa_razao_social=diagnostico.empresa.razao_social,
+        empresa_cnpj=diagnostico.empresa.cnpj,
+        criado_em=diagnostico.criado_em,
+        finalizado_em=diagnostico.finalizado_em,
         empresa_faixa_faturamento=(
             diagnostico.empresa.faixa_faturamento.value
             if diagnostico.empresa.faixa_faturamento is not None

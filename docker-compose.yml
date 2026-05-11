@@ -88,6 +88,20 @@ services:
       - qdi-mock-pdf-spool:/tmp/qdi-mock-pdf
     networks:
       - qdi-network
+    # Mesma estratégia do Dockerfile (python:slim sem curl): httpx já é dependência do pacote.
+    # Evita race: `web` só sobe quando /health responde (uvicorn a ouvir).
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import httpx; httpx.get('http://127.0.0.1:8000/health', timeout=3).raise_for_status()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
     command: ["uvicorn", "src.presentation.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   web:
@@ -96,7 +110,7 @@ services:
     restart: unless-stopped
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     working_dir: /app
     ports:
       - "60001:3010"

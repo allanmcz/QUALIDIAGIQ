@@ -375,19 +375,36 @@ def _buscar_sync(dsn: str, diagnostico_id: UUID, tenant_id: UUID) -> Diagnostico
         conn.close()
 
 
-def _listar_sync(dsn: str, tenant_id: UUID, limit: int, offset: int) -> list[Diagnostico]:
+def _listar_sync(
+    dsn: str,
+    tenant_id: UUID,
+    limit: int,
+    offset: int,
+    empresa_cnpj: str | None = None,
+) -> list[Diagnostico]:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT * FROM diagnosticos
-                WHERE tenant_id = %s
-                ORDER BY criado_em DESC
-                LIMIT %s OFFSET %s
-                """,
-                (str(tenant_id), limit, offset),
-            )
+            if empresa_cnpj:
+                cur.execute(
+                    """
+                    SELECT * FROM diagnosticos
+                    WHERE tenant_id = %s AND empresa_cnpj = %s
+                    ORDER BY criado_em DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (str(tenant_id), empresa_cnpj, limit, offset),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT * FROM diagnosticos
+                    WHERE tenant_id = %s
+                    ORDER BY criado_em DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (str(tenant_id), limit, offset),
+                )
             rows = cur.fetchall()
         return [_row_dict_para_entity(cast("dict[str, Any]", dict(r))) for r in rows]
     finally:
@@ -582,9 +599,16 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
         return await asyncio.to_thread(_buscar_sync, self._dsn, diagnostico_id, tenant_id)
 
     async def listar_por_tenant(
-        self, tenant_id: UUID, limit: int = 100, offset: int = 0
+        self,
+        tenant_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        empresa_cnpj: str | None = None,
     ) -> list[Diagnostico]:
-        return await asyncio.to_thread(_listar_sync, self._dsn, tenant_id, limit, offset)
+        return await asyncio.to_thread(
+            _listar_sync, self._dsn, tenant_id, limit, offset, empresa_cnpj
+        )
 
     async def atualizar_relatorio_pdf_com_versao(
         self,

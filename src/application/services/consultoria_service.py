@@ -126,7 +126,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     Dimensao.OPERACIONAL: [
         (
             "Documentar procedimento operacional padronizado (POP) ponta a ponta "
-            "(pedido → faturamento → logística → devolução) com pontos de controlo fiscal, metas de "
+            "(pedido → faturamento → logística → devolução) com pontos de controle fiscal, metas de "
             "prazo e qualidade acordadas e evidências — lacuna «{rotulo}» (score {score_fmt}/100).",
             "Operações / Qualidade",
             "30 dias",
@@ -174,7 +174,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     ],
     Dimensao.COMPLIANCE_ABNT: [
         (
-            "Executar análise formal de lacunas face aos controlos da ABNT NBR 17301:2026 (caps. 5 a 9) "
+            "Executar análise formal de lacunas face aos controles da ABNT NBR 17301:2026 (caps. 5 a 9) "
             "e registrar achados priorizados em matriz causa e impacto — lacuna «{rotulo}» "
             "(score {score_fmt}/100).",
             "Conformidade / Auditoria interna",

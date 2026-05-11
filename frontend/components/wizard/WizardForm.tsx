@@ -93,7 +93,9 @@ export function WizardForm() {
               </CardTitle>
               <CardDescription className={cn(w.step === 3 && "text-xs md:text-sm leading-snug")}>
                 {w.step === 1 &&
-                  "Cadastro da empresa: CNPJ é opcional (se informado, validamos DV e vinculamos à PJ). Razão social é obrigatória. Cada diagnóstico gera um registro próprio (histórico e quadro por ID). Responder ao assistente não exige sessão. Para gravar na nuvem **sem** conta na plataforma: confirme o **e-mail** com o código enviado (OTP) — o resultado fica ligado a esse e-mail; depois de **cadastrar ou entrar**, pode vincular esses registos à sua empresa. Com **sessão já iniciada** na plataforma, a gravação é direta. LGPD: consentimento abaixo."}
+                  (w.hasToken
+                    ? "Cadastro da empresa: com sessão na plataforma o CNPJ é obrigatório (histórico por PJ no tenant). Razão social é obrigatória. Cada diagnóstico gera um registro próprio (quadro por ID). A gravação é direta no tenant do JWT. LGPD: consentimento abaixo."
+                    : "Cadastro da empresa: sem sessão, CNPJ opcional neste passo (se informado, validamos DV). Razão social é obrigatória. Para gravar na nuvem sem conta: OTP no e-mail (self-service). Depois de entrar na plataforma, pode vincular rascunhos à conta — nessa vinculação o CNPJ deve estar no payload (ADR-013). Com sessão já iniciada, CNPJ obrigatório e gravação direta. LGPD: consentimento abaixo.")}
                 {w.step === 2 &&
                   "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). Ao concluir sem sessão na plataforma, o assistente **grava um rascunho na API** e segue para **OTP no e-mail**; com sessão iniciada, a gravação do diagnóstico é direta no tenant do JWT."}
                 {w.step === 3 &&

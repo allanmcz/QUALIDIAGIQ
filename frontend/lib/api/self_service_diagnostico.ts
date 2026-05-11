@@ -4,7 +4,7 @@
  * Ordem: solicitar código → trocar por token (consome OTP) → gravar payload (Idempotency-Key).
  */
 
-import type { DiagnosticoPayload } from "@/lib/schemas/wizard";
+import type { DiagnosticoPayloadArmazenado } from "@/lib/schemas/wizard";
 import type { SelfServiceDiagnosticoResultado } from "@/lib/wizard/self_service_result";
 
 import { getApiUrlForFetch } from "./config";
@@ -66,7 +66,7 @@ export async function postSelfServiceToken(
 
 /** Grava rascunho na BD (tenant self-service) e envia OTP — devolve token de resgate (fragmento de URL). */
 export async function postRascunhoDiagnosticoSelfService(
-  payload: DiagnosticoPayload,
+  payload: DiagnosticoPayloadArmazenado,
 ): Promise<{ resgate_token: string; mensagem: string; expira_em: string }> {
   const res = await fetch(`${apiBase()}/diagnosticos/rascunho-self-service`, {
     method: "POST",
@@ -85,6 +85,8 @@ export async function postRascunhoDiagnosticoSelfService(
 /** Metadados do rascunho para a página de OTP (sem JSON completo). */
 export async function getRascunhoDiagnosticoSelfServiceResumo(resgateToken: string): Promise<{
   empresa_razao_social: string;
+  /** CNPJ só com dígitos ou string vazia — se vazio, vincular à conta após login exige revisar o assistente (ADR-013). */
+  empresa_cnpj: string;
   email_mascarado: string;
   respondente_email: string;
   expira_em: string;
@@ -96,11 +98,16 @@ export async function getRascunhoDiagnosticoSelfServiceResumo(resgateToken: stri
   if (!res.ok) {
     throw new Error(await mensagemErroHttp(res));
   }
-  return (await res.json()) as {
+  const j = (await res.json()) as {
     empresa_razao_social: string;
+    empresa_cnpj?: string;
     email_mascarado: string;
     respondente_email: string;
     expira_em: string;
+  };
+  return {
+    ...j,
+    empresa_cnpj: typeof j.empresa_cnpj === "string" ? j.empresa_cnpj : "",
   };
 }
 
@@ -222,7 +229,7 @@ export async function postVincularRascunhoContaPlataforma(
 
 /** Persiste diagnóstico no tenant self-service (JWT após OTP). */
 export async function postDiagnosticoSelfService(
-  payload: DiagnosticoPayload,
+  payload: DiagnosticoPayloadArmazenado,
   accessToken: string,
 ): Promise<unknown> {
   const res = await fetch(`${apiBase()}/diagnosticos/self-service`, {

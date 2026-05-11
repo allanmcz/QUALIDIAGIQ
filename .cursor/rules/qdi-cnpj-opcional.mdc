@@ -1,30 +1,28 @@
----
-description: Regra de produto QDI — CNPJ opcional no diagnóstico (não reverter para obrigatório)
-globs: "**/*"
-alwaysApply: true
----
+# QDI — CNPJ por contexto (lead vs painel)
 
-# QDI — CNPJ opcional no diagnóstico (regra de produto)
+Decisão formal: **ADR-013** (`.github/adr/ADR-013-cnpj-contextos-lead-vs-painel.md`).
 
-## Decisão (Allan — imutável sem ADR novo)
+## Resumo
 
-- **CNPJ é opcional** no fluxo do diagnóstico (wizard + POST `/diagnosticos/` e equivalentes).
-- **Se o utilizador informar CNPJ**, deve ser **validado** (14 dígitos, DV RFB) e **persistido** como hoje — **cadastro da empresa (PJ)** quando existir número válido.
-- **Se não informar** (`""` após normalização): o diagnóstico segue com **empresa sem identificação cadastral PJ**; PDF/API usam texto do tipo «CNPJ não informado» onde aplicável.
-- **Nunca** voltar a exigir CNPJ em schema HTTP, Zod do front, copy do passo 1, nem `ValueError` genérico «obrigatório» para CNPJ vazio — já houve **reversões incorretas** duplicadas; qualquer mudança a isto exige **ADR + aceite explícito**.
+| Contexto | CNPJ |
+|----------|------|
+| Self-service **sem** obrigar conta na plataforma no primeiro passo (rascunho, OTP, `POST .../self-service` com JWT self-service) | **Opcional** (`""` após normalização; DV quando preenchido) |
+| **Sessão na plataforma:** `POST /diagnosticos/` (JWT painel) | **Obrigatório** (14 dígitos, DV RFB) |
+| **Vincular rascunho à conta:** `POST .../rascunho-self-service/vincular-conta` | **Obrigatório** no payload do rascunho |
 
-## Onde está alinhado no código
+## Onde está no código
 
-- **Domínio:** `EmpresaInfo` / `exigir_cnpj_vazio_ou_com_dv_ok` — string vazia ou 14 dígitos válidos.
-- **API:** `EmpresaSchema` em `src/presentation/api/schemas.py` — campo `cnpj` normalizado; vazio permitido.
-- **Front:** `EmpresaSchema` (Zod) em `frontend/lib/schemas/wizard.ts` — mesmo contrato.
-- **BD:** `empresa_cnpj VARCHAR(14) NOT NULL` — armazenar **`''`** quando ausente (não exige migração para NULL).
+- **API:** `EmpresaSchema` (opcional) · `EmpresaPainelSchema` · `IniciarDiagnosticoPainelRequest` — router core `POST /diagnosticos/`; vinculação em `routes_vinculos.py`.
+- **Domínio:** `EmpresaInfo` mantém `cnpj: str` com `""` ou 14 dígitos válidos (inalterado).
+- **Front:** `frontend/lib/schemas/wizard.ts` — `superRefine` em `DiagnosticoPayloadSchema` quando existe `admin_token`.
+- **Wizard:** copy condicional em `WizardStepIdentificacao.tsx` / `WizardForm.tsx`.
 
-## Anti-padrão (proibido)
+## Anti-padrão
 
-- Mensagens do tipo «CNPJ é obrigatório» no POST público ou no wizard passo 1.
-- Exigir CNPJ só para «gravar na API» sem decisão documentada (duas regras diferentes).
+- Exigir CNPJ no **primeiro** passo do **lead** que só vai ao OTP (contradiz ADR-013 e funil).
+- Aceitar `POST /diagnosticos/` (painel) **sem** CNPJ válido.
 
 ## Cruzamento
 
-- **Gravação sem conta na plataforma / e-mail / self-service:** `.cursor/rules/qdi-gravacao-diagnostico-email.mdc`
+- `.cursor/rules/qdi-gravacao-diagnostico-email.mdc`
+- `.cursor/rules/qdi-storage-policy.mdc`

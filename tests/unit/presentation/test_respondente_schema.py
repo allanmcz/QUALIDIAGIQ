@@ -5,7 +5,13 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from src.presentation.api.schemas import EmpresaSchema, IniciarDiagnosticoRequest, RespondenteSchema
+from src.presentation.api.schemas import (
+    EmpresaPainelSchema,
+    EmpresaSchema,
+    IniciarDiagnosticoPainelRequest,
+    IniciarDiagnosticoRequest,
+    RespondenteSchema,
+)
 
 
 def _empresa_min() -> dict:
@@ -112,7 +118,7 @@ class TestRespondenteTelefoneBr:
 
 
 class TestEmpresaSchemaCnpjOpcional:
-    """POST /diagnosticos: CNPJ opcional; se informado, DV válido (regra produto QDI)."""
+    """Self-service / lead: CNPJ opcional; se informado, DV válido (ADR-013)."""
 
     def test_aceita_cnpj_vazio(self) -> None:
         d = _empresa_min()
@@ -154,3 +160,38 @@ class TestEmpresaSchemaCnpjOpcional:
         d["uf"] = "ZX"
         with pytest.raises(ValidationError, match="UF"):
             EmpresaSchema.model_validate(d)
+
+
+class TestEmpresaPainelSchemaCnpjObrigatorio:
+    """Painel / vinculação: CNPJ obrigatório (ADR-013)."""
+
+    def test_rejeita_cnpj_vazio(self) -> None:
+        d = dict(_empresa_min())
+        d["cnpj"] = ""
+        with pytest.raises(ValidationError, match=r"(obrigatório|CNPJ)"):
+            EmpresaPainelSchema.model_validate(d)
+
+    def test_aceita_cnpj_valido(self) -> None:
+        e = EmpresaPainelSchema.model_validate(_empresa_min())
+        assert e.cnpj == "12345678000195"
+
+    def test_iniciar_diagnostico_painel_rejeita_sem_cnpj(self) -> None:
+        with pytest.raises(ValidationError):
+            IniciarDiagnosticoPainelRequest.model_validate(
+                {
+                    "empresa": {
+                        "cnpj": "",
+                        "razao_social": "Empresa",
+                        "porte": "micro",
+                        "regime": "simples_nacional",
+                        "cnae_principal": "1234567",
+                        "uf": "SP",
+                        "setor_macro": "comercio",
+                    },
+                    "respondente": {"email": "a@b.com", "nome": "Maria"},
+                    "respostas": [
+                        {"pergunta_id": "1f74e164-195d-5fde-ba27-8ae08b8e011e", "valor": 4}
+                    ],
+                    "aceite_termos_privacidade": True,
+                }
+            )

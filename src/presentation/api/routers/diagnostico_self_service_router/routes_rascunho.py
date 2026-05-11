@@ -131,6 +131,10 @@ async def resumo_rascunho_diagnostico_self_service(
     razao = (
         str(emp.get("razao_social", "")).strip() if isinstance(emp, dict) else ""
     ) or "(sem razão social)"
+    cnpj_norm = ""
+    if isinstance(emp, dict):
+        cnpj_bruto = str(emp.get("cnpj", "") or "").strip()
+        cnpj_norm = "".join(ch for ch in cnpj_bruto if ch.isdigit())
     email_norm = str(row.get("email_norm") or "").strip()
     exp_raw = row.get("expira_em")
     if exp_raw is None:
@@ -147,6 +151,7 @@ async def resumo_rascunho_diagnostico_self_service(
         exp_dt = exp_dt.replace(tzinfo=UTC)
     return DiagnosticoRascunhoResumoResponse(
         empresa_razao_social=razao,
+        empresa_cnpj=cnpj_norm,
         email_mascarado=diagnostico_helpers._mascarar_email_norm(email_norm),
         respondente_email=str(email_norm),
         expira_em=exp_dt,

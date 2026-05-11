@@ -39,14 +39,24 @@ export function WizardStepIdentificacao({
       <div>
         <h3 className="text-sm font-semibold text-foreground tracking-tight">Cadastro da empresa</h3>
         <p className="text-xs text-muted-foreground mt-1">
-          CNPJ opcional; se preenchido, use 14 dígitos com DV válidos. Com sessão na plataforma pode pré-preencher
-          dados públicos (cadastro nacional) antes de seguir — sem conta, continue manualmente até confirmar por
-          e-mail (OTP).
+          {hasToken ? (
+            <>
+              Com <strong className="font-medium text-foreground">sessão na plataforma</strong>, o{" "}
+              <strong className="font-medium text-foreground">CNPJ é obrigatório</strong> (14 dígitos, DV válido)
+              para histórico por empresa no painel. Pode pré-preencher dados públicos antes de seguir.
+            </>
+          ) : (
+            <>
+              Sem sessão, o CNPJ é <strong className="font-medium text-foreground">opcional</strong> neste passo; se
+              preencher, use 14 dígitos com DV válidos. O fluxo segue para confirmar por e-mail (OTP) e gravar no
+              ambiente self-service.
+            </>
+          )}
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="cnpj">CNPJ (opcional)</Label>
+          <Label htmlFor="cnpj">{hasToken ? "CNPJ *" : "CNPJ (opcional)"}</Label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3">
             <Input
               id="cnpj"

@@ -31,5 +31,5 @@ alwaysApply: true
 
 ## Cruzamento
 
-- **CNPJ opcional:** `.cursor/rules/qdi-cnpj-opcional.mdc`
+- **CNPJ por contexto (lead opcional / painel obrigatório):** `.cursor/rules/qdi-cnpj-opcional.mdc` + ADR-013
 - **D1 produto:** `docs/operacao/DECISOES_PRODUTO_MVP_D1_D5.md`

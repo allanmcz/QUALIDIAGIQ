@@ -90,21 +90,21 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         return self._para_entity(data[0])
 
     async def listar_por_tenant(
-        self, tenant_id: UUID, limit: int = 100, offset: int = 0
+        self,
+        tenant_id: UUID,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        empresa_cnpj: str | None = None,
     ) -> list[Diagnostico]:
         """Listagem paginada por tenant."""
         stid = str(tenant_id)
 
         def _select() -> Any:
-            return (
-                self._client.table("diagnosticos")
-                .select("*")
-                .eq("tenant_id", stid)
-                .order("criado_em", desc=True)
-                .limit(limit)
-                .offset(offset)
-                .execute()
-            )
+            q: Any = self._client.table("diagnosticos").select("*").eq("tenant_id", stid)
+            if empresa_cnpj:
+                q = q.eq("empresa_cnpj", empresa_cnpj)
+            return q.order("criado_em", desc=True).limit(limit).offset(offset).execute()
 
         response = await asyncio.to_thread(_select)
         return [self._para_entity(row) for row in response.data]

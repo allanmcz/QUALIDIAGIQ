@@ -940,7 +940,7 @@
           "Diagnósticos"
         ],
         "summary": "Materializar rascunho no tenant da conta (JWT)",
-        "description": "Exige **Bearer** da conta na plataforma. O e-mail do respondente no rascunho deve ser **igual** ao e-mail do admin (LGPD / prova de posse). **Idempotency-Key** obrigatório.",
+        "description": "Exige **Bearer** da conta na plataforma. O e-mail do respondente no rascunho deve ser **igual** ao e-mail do admin (LGPD / prova de posse). **Idempotency-Key** obrigatório.\n\n**CNPJ:** o payload do rascunho deve incluir CNPJ válido — ao vincular à conta o diagnóstico passa a exigir identificação PJ para histórico por empresa no tenant (ADR-013).",
         "operationId": "vincular_rascunho_conta_plataforma_diagnosticos_rascunho_self_service_vincular_conta_post",
         "requestBody": {
           "content": {
@@ -1102,6 +1102,24 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "empresa_cnpj",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opcional: filtra pela coluna `empresa_cnpj` (14 dígitos, DV válido). Omite ou vazio = todos os diagnósticos do tenant.",
+              "title": "Empresa Cnpj"
+            },
+            "description": "Opcional: filtra pela coluna `empresa_cnpj` (14 dígitos, DV válido). Omite ou vazio = todos os diagnósticos do tenant."
           }
         ],
         "responses": {
@@ -1136,7 +1154,7 @@
           "Diagnósticos"
         ],
         "summary": "Criar diagnóstico",
-        "description": "Calcula o score e persiste o diagnóstico no tenant do JWT.\n\n**Headers obrigatórios:** `Authorization: Bearer <JWT>` (claim `tenant_id`) e `Idempotency-Key` (UUID v4 recomendado). Reexecução com a mesma chave devolve a mesma resposta 2xx em cache (middleware de idempotência).\n\n**Corpo:** incluir `aceite_termos_privacidade: true` (LGPD); o servidor persiste `aceite_termos_privacidade_em` (UTC) na linha do diagnóstico.",
+        "description": "Calcula o score e persiste o diagnóstico no tenant do JWT.\n\n**Headers obrigatórios:** `Authorization: Bearer <JWT>` (claim `tenant_id`) e `Idempotency-Key` (UUID v4 recomendado). Reexecução com a mesma chave devolve a mesma resposta 2xx em cache (middleware de idempotência).\n\n**Corpo:** incluir `aceite_termos_privacidade: true` (LGPD); o servidor persiste `aceite_termos_privacidade_em` (UTC) na linha do diagnóstico.\n\n**CNPJ:** obrigatório com sessão na plataforma (histórico por empresa no tenant). Fluxo só com OTP sem conta: usar rotas self-service / rascunho onde o CNPJ pode ser opcional.",
         "operationId": "criar_diagnostico_diagnosticos__post",
         "security": [
           {
@@ -1148,7 +1166,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IniciarDiagnosticoRequest"
+                "$ref": "#/components/schemas/IniciarDiagnosticoPainelRequest"
               },
               "examples": {
                 "micro_comercio_um_item": {
@@ -2757,6 +2775,12 @@
             "type": "string",
             "title": "Empresa Razao Social"
           },
+          "empresa_cnpj": {
+            "type": "string",
+            "title": "Empresa Cnpj",
+            "description": "CNPJ normalizado no payload do rascunho (14 dígitos) ou vazio — UX antes de vincular à conta.",
+            "default": ""
+          },
           "email_mascarado": {
             "type": "string",
             "title": "Email Mascarado"
@@ -2803,6 +2827,38 @@
           "empresa_razao_social": {
             "type": "string",
             "title": "Empresa Razao Social"
+          },
+          "empresa_cnpj": {
+            "type": "string",
+            "title": "Empresa Cnpj",
+            "description": "CNPJ no snapshot do diagnóstico (14 dígitos ou vazio se não informado).",
+            "default": ""
+          },
+          "criado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Criado Em",
+            "description": "Instante de criação (UTC) — útil para linha do tempo e comparativo entre ciclos."
+          },
+          "finalizado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalizado Em",
+            "description": "Instante de finalização (UTC), se aplicável."
           },
           "empresa_faixa_faturamento": {
             "anyOf": [
@@ -3003,6 +3059,12 @@
             "type": "string",
             "title": "Empresa Razao Social"
           },
+          "empresa_cnpj": {
+            "type": "string",
+            "title": "Empresa Cnpj",
+            "description": "CNPJ normalizado (14 dígitos) ou vazio — agrupa ciclos «antes/depois» no painel.",
+            "default": ""
+          },
           "status": {
             "type": "string",
             "title": "Status"
@@ -3178,13 +3240,73 @@
         "title": "EliminarDiagnosticoLgpdHttpResponse",
         "description": "Confirmação após DELETE do diagnóstico (pré-finalização) e conclusão da solicitação."
       },
+      "EmpresaPainelSchema": {
+        "properties": {
+          "cnpj": {
+            "type": "string",
+            "maxLength": 18,
+            "title": "Cnpj",
+            "description": "CNPJ: **opcional** em fluxos só self-service (rascunho / OTP sem conta na plataforma). Vazio = sem cadastro PJ naquele ciclo. Se informado: 14 dígitos ou máscara, DV RFB válido. Com **sessão na plataforma** ou **vinculação de rascunho à conta**, o CNPJ é **obrigatório** (histórico por empresa no tenant) — ver `EmpresaPainelSchema` / ADR-013.",
+            "default": ""
+          },
+          "razao_social": {
+            "type": "string",
+            "title": "Razao Social"
+          },
+          "porte": {
+            "$ref": "#/components/schemas/PorteEmpresa"
+          },
+          "regime": {
+            "$ref": "#/components/schemas/RegimeTributario"
+          },
+          "cnae_principal": {
+            "type": "string",
+            "maxLength": 7,
+            "minLength": 7,
+            "title": "Cnae Principal",
+            "description": "CNAE principal com 7 dígitos"
+          },
+          "uf": {
+            "type": "string",
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Uf",
+            "description": "Sigla da UF com 2 letras"
+          },
+          "setor_macro": {
+            "$ref": "#/components/schemas/SetorMacro"
+          },
+          "faixa_faturamento": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FaixaFaturamentoDeclarada"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opcional — faixa de faturamento bruto anual autodeclarada (R$), para segmentação; omitir ou null se o respondente não informar."
+          }
+        },
+        "type": "object",
+        "required": [
+          "razao_social",
+          "porte",
+          "regime",
+          "cnae_principal",
+          "uf",
+          "setor_macro"
+        ],
+        "title": "EmpresaPainelSchema",
+        "description": "Empresa no pedido com **conta na plataforma** (JWT painel) ou **vinculação de rascunho à conta**.\n\nCNPJ obrigatório para permitir histórico fiável por PJ no tenant (LC 214/2025 — transparência\noperacional; LGPD em dados de empresa como contexto de negócio)."
+      },
       "EmpresaSchema": {
         "properties": {
           "cnpj": {
             "type": "string",
             "maxLength": 18,
             "title": "Cnpj",
-            "description": "CNPJ: opcional. Vazio = sem cadastro PJ no diagnóstico. Se informado: 14 dígitos ou máscara (00.000.000/0000-00), DV RFB válido; armazenado sem máscara. Regra de produto — ver `.cursor/rules/qdi-cnpj-opcional.mdc`.",
+            "description": "CNPJ: **opcional** em fluxos só self-service (rascunho / OTP sem conta na plataforma). Vazio = sem cadastro PJ naquele ciclo. Se informado: 14 dígitos ou máscara, DV RFB válido. Com **sessão na plataforma** ou **vinculação de rascunho à conta**, o CNPJ é **obrigatório** (histórico por empresa no tenant) — ver `EmpresaPainelSchema` / ADR-013.",
             "default": ""
           },
           "razao_social": {
@@ -3272,6 +3394,58 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IniciarDiagnosticoPainelRequest": {
+        "properties": {
+          "empresa": {
+            "$ref": "#/components/schemas/EmpresaPainelSchema"
+          },
+          "respondente": {
+            "$ref": "#/components/schemas/RespondenteSchema"
+          },
+          "respostas": {
+            "items": {
+              "$ref": "#/components/schemas/RespostaRequestSchema"
+            },
+            "type": "array",
+            "title": "Respostas"
+          },
+          "plano": {
+            "type": "string",
+            "title": "Plano",
+            "default": "gratuito"
+          },
+          "locale_relatorio": {
+            "type": "string",
+            "enum": [
+              "pt-BR",
+              "en"
+            ],
+            "title": "Locale Relatorio",
+            "description": "Idioma do relatório PDF (WeasyPrint): pt-BR completo; en — labels em inglês (conteúdo gerado dinamicamente pode permanecer em PT até tradução total).",
+            "default": "pt-BR"
+          },
+          "aceite_termos_privacidade": {
+            "type": "boolean",
+            "title": "Aceite Termos Privacidade",
+            "description": "Ciência explícita dos termos de uso e desta política de privacidade (LGPD Lei 13.709/2018)."
+          },
+          "force_refresh_cnpj": {
+            "type": "boolean",
+            "title": "Force Refresh Cnpj",
+            "description": "Se verdadeiro e ``empresa.cnpj`` preenchido: nova consulta às fontes públicas ignorando TTL antes de fechar evidência WORM; merge com histórico em ``diagnostico_empresa_campo_historico``.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "empresa",
+          "respondente",
+          "respostas",
+          "aceite_termos_privacidade"
+        ],
+        "title": "IniciarDiagnosticoPainelRequest",
+        "description": "Mesmo contrato que `IniciarDiagnosticoRequest`, com **CNPJ obrigatório** (painel / conta na plataforma)."
       },
       "IniciarDiagnosticoRequest": {
         "properties": {

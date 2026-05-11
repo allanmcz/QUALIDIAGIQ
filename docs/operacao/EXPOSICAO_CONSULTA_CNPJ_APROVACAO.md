@@ -15,7 +15,7 @@
   |-------|-------------|-----|
   | **1ª** | **BrasilAPI** (`QDI_CNPJ_BRASIL_API_BASE_URL`) | Primeira tentativa sempre que há rede fresca ou refresh. |
   | **2ª** | **Minha Receita** (`QDI_CNPJ_MINHA_RECEITA_URL_TEMPLATE`, placeholder `{cnpj}`) | Só depois de **timeout**, erro de rede, **5xx/429**, ou payload inválido da 1ª — **nunca** apenas por HTTP **404**. |
-- **CNPJ opcional** no wizard e na API (`qdi-cnpj-opcional`); quando preenchido, DV RFB válido obrigatório para consultas.
+- **CNPJ por contexto (ADR-013):** opcional no **lead** / self-service / rascunho (`IniciarDiagnosticoRequest`); **obrigatório** com sessão na plataforma ou ao **vincular rascunho à conta** (`EmpresaPainelSchema`). Quando preenchido em qualquer fluxo, DV RFB válido para consultas — ver `qdi-cnpj-opcional`.
 - **Finalização diagnóstico:** corpo pode incluir `force_refresh_cnpj: true` para ignorar TTL e retratar fontes públicas antes do snapshot WORM, com histórico de valores anteriores no servidor (`diagnostico_empresa_campo_historico`).
 
 ---
@@ -53,7 +53,7 @@ Sem Docker: use `PostgreSQL_CI_URL` / `DATABASE_URL` e um cliente `psql` apontan
 | **Corpo** | `ConsultarCnpjRequest`: `cnpj` (14 dígitos + DV válidos); `force_refresh` boolean; opcional `aplicar_no_diagnostico_id` (merge em diagnóstico **em_andamento**). |
 
 **Fluxo diagnose / rascunho — campo `force_refresh_cnpj`:**  
-Mesmo objeto de entrada que `POST /diagnosticos/` / rascunho self-service (`IniciarDiagnosticoRequest` em `schemas.py`). O cliente web envia quando o utilizador marca a opção no último passo do wizard (sessão na plataforma + CNPJ com 14 dígitos).
+Mesmo objeto base que o wizard envia: **`IniciarDiagnosticoRequest`** em rascunho / self-service; **`IniciarDiagnosticoPainelRequest`** em `POST /diagnosticos/` com JWT (CNPJ obrigatório). O cliente web envia `force_refresh_cnpj` quando o utilizador marca a opção no último passo (com **CNPJ com 14 dígitos** quando a rota exige).
 
 ---
 
@@ -122,7 +122,7 @@ Inalterados os princípios `_DEVELOPER/CONSULTA_CNPJ/06_LGPD_COMPLIANCE.md` quan
 | Snapshot por tenant + idempotência | Atendido. |
 | TTL triplo configurável por env | Atendido. |
 | Opção servidor `force_refresh_cnpj` na finalização WORM | Atendido. |
-| CNPJ opcional preservado | Atendido. |
+| CNPJ opcional no lead + obrigatório no painel (ADR-013) | Atendido nos contratos HTTP e wizard; consulta só quando há CNPJ válido. |
 
 ---
 

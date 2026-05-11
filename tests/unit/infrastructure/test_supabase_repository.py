@@ -142,6 +142,39 @@ async def test_deve_listar_por_tenant(diagnostico_mock):
 
     assert len(resultados) == 2
     assert resultados[0].id == diagnostico_mock.id
+    mock_eq.eq.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_deve_listar_por_tenant_com_filtro_cnpj(diagnostico_mock):
+    mock_client = MagicMock()
+
+    mock_table = MagicMock()
+    mock_select = MagicMock()
+    mock_eq_tenant = MagicMock()
+    mock_eq_cnpj = MagicMock()
+    mock_order = MagicMock()
+    mock_limit = MagicMock()
+    mock_offset = MagicMock()
+
+    mock_client.table.return_value = mock_table
+    mock_table.select.return_value = mock_select
+    mock_select.eq.return_value = mock_eq_tenant
+    mock_eq_tenant.eq.return_value = mock_eq_cnpj
+    mock_eq_cnpj.order.return_value = mock_order
+    mock_order.limit.return_value = mock_limit
+    mock_limit.offset.return_value = mock_offset
+
+    repo = SupabaseDiagnosticoRepository(client=mock_client)
+    payload_banco = repo._para_dict(diagnostico_mock)
+    mock_offset.execute = MagicMock(return_value=MagicMock(data=[payload_banco]))
+
+    resultados = await repo.listar_por_tenant(
+        diagnostico_mock.tenant_id, empresa_cnpj="12345678000195"
+    )
+
+    assert len(resultados) == 1
+    mock_eq_tenant.eq.assert_called_once_with("empresa_cnpj", "12345678000195")
 
 
 @pytest.mark.asyncio

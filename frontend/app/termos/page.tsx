@@ -17,7 +17,7 @@ export default function TermosPage() {
       <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
         <strong>Status:</strong> minuta <strong>aprovada</strong> (parecer jurídico de 5 mai. 2026 — Pereira e Rodrigues
         Advogados) e <strong>aprovada para publicação</strong> pelo controlador. Manter o texto alinhado à operação real e
-        aos apontamentos do parecer; versão e vigência em produção seguem controlo de mudanças interno. Dados pessoais
+        aos apontamentos do parecer; versão e vigência em produção seguem controle de mudanças interno. Dados pessoais
         e encarregado (DPO):{" "}
         <Link href="/privacidade#dpo" className="font-medium text-primary underline">
           Política de Privacidade

@@ -73,9 +73,10 @@ class EmpresaSchema(BaseModel):
         default="",
         max_length=18,
         description=(
-            "CNPJ: opcional. Vazio = sem cadastro PJ no diagnóstico. Se informado: 14 dígitos ou máscara "
-            "(00.000.000/0000-00), DV RFB válido; armazenado sem máscara. Regra de produto — ver "
-            "`.cursor/rules/qdi-cnpj-opcional.mdc`."
+            "CNPJ: **opcional** em fluxos só self-service (rascunho / OTP sem conta na plataforma). "
+            "Vazio = sem cadastro PJ naquele ciclo. Se informado: 14 dígitos ou máscara, DV RFB válido. "
+            "Com **sessão na plataforma** ou **vinculação de rascunho à conta**, o CNPJ é **obrigatório** "
+            "(histórico por empresa no tenant) — ver `EmpresaPainelSchema` / ADR-013."
         ),
     )
     razao_social: str
@@ -146,6 +147,26 @@ class EmpresaSchema(BaseModel):
         return v_upper
 
 
+class EmpresaPainelSchema(EmpresaSchema):
+    """
+    Empresa no pedido com **conta na plataforma** (JWT painel) ou **vinculação de rascunho à conta**.
+
+    CNPJ obrigatório para permitir histórico fiável por PJ no tenant (LC 214/2025 — transparência
+    operacional; LGPD em dados de empresa como contexto de negócio).
+    """
+
+    @model_validator(mode="after")
+    def exigir_cnpj_para_historico_no_tenant(self) -> Self:
+        if not self.cnpj or len(self.cnpj) != 14:
+            raise ValueError(
+                "CNPJ é obrigatório ao gravar diagnóstico com sessão na plataforma ou ao vincular "
+                "rascunho à conta — necessário para histórico por empresa no tenant. "
+                "No fluxo apenas com OTP (sem conta), use POST self-service / rascunho onde o CNPJ "
+                "permanece opcional até à conclusão no ambiente self-service."
+            )
+        return self
+
+
 class RespostaRequestSchema(BaseModel):
     pergunta_id: UUID
     valor: (
@@ -190,6 +211,12 @@ class IniciarDiagnosticoRequest(BaseModel):
         return v
 
 
+class IniciarDiagnosticoPainelRequest(IniciarDiagnosticoRequest):
+    """Mesmo contrato que `IniciarDiagnosticoRequest`, com **CNPJ obrigatório** (painel / conta na plataforma)."""
+
+    empresa: EmpresaPainelSchema
+
+
 class RascunhoDiagnosticoSelfServiceResponse(BaseModel):
     """Resposta ao gravar rascunho no servidor (token opaco devolvido uma vez)."""
 
@@ -211,6 +238,10 @@ class DiagnosticoRascunhoResumoResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     empresa_razao_social: str
+    empresa_cnpj: str = Field(
+        default="",
+        description="CNPJ normalizado no payload do rascunho (14 dígitos) ou vazio — UX antes de vincular à conta.",
+    )
     email_mascarado: str
     # str (não EmailStr): valor já validado em POST /rascunho-self-service; EmailStr na resposta
     # causava 500 com e-mails aceites pelo wizard mas rejeitados pelo validador de saída (ex.: TLD dev).
@@ -773,6 +804,10 @@ class DiagnosticoResumoSchema(BaseModel):
 
     id: UUID
     empresa_razao_social: str
+    empresa_cnpj: str = Field(
+        default="",
+        description="CNPJ normalizado (14 dígitos) ou vazio — agrupa ciclos «antes/depois» no painel.",
+    )
     status: str
     plano: str
     score_geral: float | None = None
@@ -790,6 +825,18 @@ class DiagnosticoResponse(BaseModel):
     status: str
     plano: str
     empresa_razao_social: str
+    empresa_cnpj: str = Field(
+        default="",
+        description="CNPJ no snapshot do diagnóstico (14 dígitos ou vazio se não informado).",
+    )
+    criado_em: datetime | None = Field(
+        default=None,
+        description="Instante de criação (UTC) — útil para linha do tempo e comparativo entre ciclos.",
+    )
+    finalizado_em: datetime | None = Field(
+        default=None,
+        description="Instante de finalização (UTC), se aplicável.",
+    )
     empresa_faixa_faturamento: str | None = Field(
         default=None,
         description="Faixa de faturamento autodeclarada no POST (slug canónico), se informada.",

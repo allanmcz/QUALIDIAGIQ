@@ -59,6 +59,8 @@ make verify-schema-mvp-strict
 
 ## T1.2 — Cinco PDFs reais e sign-off contábil
 
+**Instruções passo-a-passo:** [`CHECKLIST_T1_2_PDFS_SIGNOFF.md`](./CHECKLIST_T1_2_PDFS_SIGNOFF.md).
+
 **Cases obrigatórios:**
 
 - [ ] Varejo (ex.: supermercado ou drogaria)
@@ -85,6 +87,8 @@ make verify-schema-mvp-strict
 ---
 
 ## T1.3 — Smoke RLS dois tenants (Postgres Docker local)
+
+**Instruções passo-a-passo:** [`CHECKLIST_T1_3_RLS_DOIS_TENANTS.md`](./CHECKLIST_T1_3_RLS_DOIS_TENANTS.md).
 
 **Objetivo:** isolamento multi-tenant no **mesmo** Postgres do Compose (paridade semântica com CI / `make mvp-gate`).
 

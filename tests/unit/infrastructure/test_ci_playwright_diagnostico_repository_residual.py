@@ -69,6 +69,30 @@ class TestCiPlaywrightDiagnosticoRepositoryConsultas:
         assert len(lst) == 1
         assert lst[0].id == _ID_LISTA_CI
 
+    async def test_listar_filtra_por_empresa_cnpj(self) -> None:
+        repo = CiPlaywrightDiagnosticoRepository()
+        emp = EmpresaInfo(
+            cnpj="12345678000195",
+            razao_social="Filtrada LTDA",
+            porte=PorteEmpresa.MICRO,
+            regime=RegimeTributario.SIMPLES_NACIONAL,
+            cnae_principal="1234567",
+            uf="SP",
+            setor_macro=SetorMacro.COMERCIO,
+        )
+        d = Diagnostico(
+            tenant_id=_TENANT_PADRAO_CI,
+            empresa=emp,
+            respondente=Respondente(email="f@z.com"),
+            criado_em=datetime(2026, 5, 11, 12, 0, tzinfo=UTC),
+        )
+        d.finalizar_e_registrar_evidencia(_score())
+        await repo.salvar(d)
+        lst_ok = await repo.listar_por_tenant(_TENANT_PADRAO_CI, empresa_cnpj="12345678000195")
+        assert any(x.id == d.id for x in lst_ok)
+        lst_other = await repo.listar_por_tenant(_TENANT_PADRAO_CI, empresa_cnpj="11222333000181")
+        assert d.id not in {x.id for x in lst_other}
+
 
 @pytest.mark.asyncio
 class TestCiPlaywrightDiagnosticoRepositoryMutacoesVersao:

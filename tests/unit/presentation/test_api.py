@@ -152,6 +152,7 @@ def test_criar_diagnostico_com_sucesso():
     mock_resultado.diagnostico.plano.value = "gratuito"
     mock_resultado.diagnostico.empresa.razao_social = "Teste LTDA"
     mock_resultado.diagnostico.empresa.faixa_faturamento = None
+    mock_resultado.diagnostico.empresa.cnpj = "12345678000195"
 
     mock_resultado.score.score_geral.valor = 100.0
     mock_resultado.score.score_geral.peso_total_aplicado = 1.0
@@ -327,6 +328,7 @@ def test_criar_diagnostico_self_service_jwt_valido_sucesso():
     mock_resultado.diagnostico.plano.value = "gratuito"
     mock_resultado.diagnostico.empresa.razao_social = "Teste LTDA"
     mock_resultado.diagnostico.empresa.faixa_faturamento = None
+    mock_resultado.diagnostico.empresa.cnpj = "12345678000195"
     mock_resultado.score.score_geral.valor = 88.5
     mock_resultado.score.score_geral.peso_total_aplicado = 1.0
     dimensao_mock = MagicMock()
@@ -374,6 +376,7 @@ def test_obter_diagnostico_com_sucesso():
     mock_diagnostico.plano.value = "gratuito"
     mock_diagnostico.empresa.razao_social = "Empresa GET LTDA"
     mock_diagnostico.empresa.faixa_faturamento = None
+    mock_diagnostico.empresa.cnpj = "12345678000195"
     mock_diagnostico.relatorio_pdf_url = "http://pdf.url"
     mock_diagnostico.locale_relatorio = "pt-BR"
 
@@ -588,7 +591,80 @@ def test_listar_diagnosticos_resumo():
     assert body[0]["empresa_razao_social"] == "API PATCH LTDA"
     assert body[0]["score_geral"] == 62.0
     assert body[1]["empresa_razao_social"] == "Outra LTDA"
-    mock_repo.listar_por_tenant.assert_awaited_once_with(tid, limit=10, offset=0)
+    mock_repo.listar_por_tenant.assert_awaited_once_with(tid, limit=10, offset=0, empresa_cnpj=None)
+
+
+def test_listar_diagnosticos_filtra_por_empresa_cnpj():
+    from src.presentation.api.dependencies import get_diagnostico_repository
+
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    d1 = _diag_finalizado_micro()
+
+    mock_repo = AsyncMock()
+    mock_repo.listar_por_tenant.return_value = [d1]
+
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.get(
+        "/diagnosticos/?limit=50&empresa_cnpj=12.345.678%2F0001-95",
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    mock_repo.listar_por_tenant.assert_awaited_once_with(
+        tid, limit=50, offset=0, empresa_cnpj="12345678000195"
+    )
+
+
+def test_listar_diagnosticos_cnpj_invalido_422():
+    from src.presentation.api.dependencies import get_diagnostico_repository
+
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    mock_repo = AsyncMock()
+
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.get(
+        "/diagnosticos/?empresa_cnpj=12.345.678%2F0001-94",
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+    mock_repo.listar_por_tenant.assert_not_called()
+
+
+def test_listar_diagnosticos_cnpj_sem_digitos_ignora_filtro():
+    """Query com só pontuação → normalização vazia; lista todo o tenant (sem WHERE empresa_cnpj)."""
+    from src.presentation.api.dependencies import get_diagnostico_repository
+
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    d1 = _diag_finalizado_micro()
+    mock_repo = AsyncMock()
+    mock_repo.listar_por_tenant.return_value = [d1]
+
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.get(
+        "/diagnosticos/?empresa_cnpj=.%2F-%20",
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    mock_repo.listar_por_tenant.assert_awaited_once_with(
+        tid, limit=100, offset=0, empresa_cnpj=None
+    )
 
 
 def test_obter_diagnostico_nao_encontrado():

@@ -28,7 +28,7 @@ const draftComProgresso = {
   },
 };
 
-/** Payload válido para `DiagnosticoPayloadSchema.safeParse` (pendente pós-wizard). */
+/** Payload válido para `DiagnosticoPayloadArmazenadoSchema.safeParse` (pendente pós-wizard). */
 const pendingDiagnosticoValido = {
   empresa: {
     cnpj: "12345678000195",

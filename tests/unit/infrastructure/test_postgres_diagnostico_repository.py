@@ -167,6 +167,23 @@ class TestPostgresDiagnosticoRepository:
         assert len(rows) == 1
         assert rows[0].id == did
 
+    async def test_listar_por_tenant_filtra_empresa_cnpj(self) -> None:
+        did, tid = uuid4(), uuid4()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [_row_minima(did, tid)]
+        mock_conn = _mock_conn_cursor(mock_cursor)
+        with patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn,
+        ):
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            rows = await repo.listar_por_tenant(
+                tid, limit=10, offset=0, empresa_cnpj="12345678000195"
+            )
+        assert len(rows) == 1
+        sql_executado = mock_cursor.execute.call_args[0][0]
+        assert "empresa_cnpj = %s" in sql_executado
+
     async def test_atualizar_relatorio_retorna_none_se_zero_linhas(self) -> None:
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = None

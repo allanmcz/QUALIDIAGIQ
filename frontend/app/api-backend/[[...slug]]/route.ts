@@ -3,6 +3,8 @@
  *
  * O browser chama sempre same-origin `/api-backend/...`; este handler encaminha para
  * `API_PROXY_TARGET` (ex.: `http://api:8000` no Compose ou `http://127.0.0.1:60000` no host).
+ *
+ * `Host` no pedido ao upstream vem da URL em `fetch` (Undici); não forçar — cabeçalho proibido na API Fetch.
  */
 
 import fs from "node:fs";
@@ -58,64 +60,150 @@ function montarCabecalhos(request: NextRequest): Headers {
   return h;
 }
 
+/** Timeout ms para pedidos ao upstream (env opcional). */
+function timeoutProxyMs(): number {
+  const bruto = process.env.API_PROXY_TIMEOUT_MS?.trim();
+  const n = bruto ? Number.parseInt(bruto, 10) : NaN;
+  if (Number.isFinite(n) && n > 0) return Math.min(n, 120_000);
+  return 30_000;
+}
+
+/** Cabeçalhos que não devem ser repassados ao browser nem podem falhar em `Headers.append`. */
+const OMITIR_CABECALHO_RESPOSTA = new Set([
+  "connection",
+  "keep-alive",
+  "transfer-encoding",
+  "content-encoding",
+  "content-length",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "upgrade",
+]);
+
+function montarCabecalhosResposta(upstream: Response, buf: ArrayBuffer): Headers {
+  const out = new Headers();
+  upstream.headers.forEach((value, key) => {
+    const k = key.toLowerCase();
+    if (OMITIR_CABECALHO_RESPOSTA.has(k)) return;
+    try {
+      out.append(key, value);
+    } catch {
+      /* Nome/valor inválido para `Response` no runtime — ignorar (evita 500 genérico no Next). */
+    }
+  });
+  out.set("content-length", String(buf.byteLength));
+  return out;
+}
+
 async function proxy(request: NextRequest, segments: string[] | undefined): Promise<Response> {
-  const base = resolveUpstreamBase();
-  if (!base) {
+  try {
+    const base = resolveUpstreamBase();
+    if (!base) {
+      return NextResponse.json(
+        {
+          detail:
+            "Proxy /api-backend indisponível: defina API_PROXY_TARGET no ambiente do Next " +
+            "(ex.: http://api:8000 no Docker ou http://127.0.0.1:60000 no host) e reinicie o servidor.",
+        },
+        { status: 503 },
+      );
+    }
+
+    let pathSuffix: string;
+    try {
+      pathSuffix = montarCaminhoUpstream(segments);
+    } catch {
+      return NextResponse.json({ detail: "Caminho de proxy inválido" }, { status: 400 });
+    }
+
+    const alvo = `${base}${pathSuffix}${request.nextUrl.search}`;
+    const headers = montarCabecalhos(request);
+
+    const init: RequestInit = {
+      method: request.method,
+      headers,
+      /**
+       * Seguir redirecionamentos **no servidor** (Undici), não repassar 3xx ao browser.
+       * Com `manual`, o FastAPI/Starlette pode devolver `Location: http://api:8000/...`
+       * (host interno do Compose); o browser tenta seguir esse URL → hostname «api» irreconhecível
+       * → «Failed to fetch» sem resposta HTTP legível no painel.
+       */
+      redirect: "follow",
+      signal: AbortSignal.timeout(timeoutProxyMs()),
+    };
+
+    if (!["GET", "HEAD"].includes(request.method)) {
+      const corpoEntrada = await request.arrayBuffer();
+      if (corpoEntrada.byteLength > 0) {
+        init.body = corpoEntrada;
+      }
+    }
+
+    try {
+      const upstream = await fetch(alvo, init);
+      /** Corpo em buffer: reencaminhar `ReadableStream` cru falha em alguns browsers (fetch → «Failed to fetch»). */
+      const buf = await upstream.arrayBuffer();
+      const out = montarCabecalhosResposta(upstream, buf);
+      try {
+        return new NextResponse(buf, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: out,
+        });
+      } catch (montagem) {
+        const m = montagem instanceof Error ? montagem.message : String(montagem);
+        console.error(
+          JSON.stringify({
+            evento: "qdi_api_proxy_next_response_falhou",
+            metodo: request.method,
+            upstream_base: base,
+            caminho: pathSuffix || "/",
+            erro: m,
+          }),
+        );
+        return NextResponse.json(
+          {
+            detail:
+              "Proxy não conseguiu montar a resposta ao browser (cabeçalhos/corpo). " +
+              `Verifique logs «qdi_api_proxy_next_response_falhou». Detalhe: ${m}`,
+          },
+          { status: 502 },
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(
+        JSON.stringify({
+          evento: "qdi_api_proxy_upstream_falhou",
+          metodo: request.method,
+          upstream_base: base,
+          caminho: pathSuffix || "/",
+          timeout_ms: timeoutProxyMs(),
+          erro: msg,
+        }),
+      );
+      return NextResponse.json(
+        {
+          detail: `Falha ao contactar a API em «${base}» (${pathSuffix || "/"}). ` + `Erro: ${msg}`,
+        },
+        { status: 502 },
+      );
+    }
+  } catch (inesperado) {
+    const msg = inesperado instanceof Error ? inesperado.message : String(inesperado);
+    console.error(
+      JSON.stringify({
+        evento: "qdi_api_proxy_excecao_nao_tratada",
+        metodo: request.method,
+        erro: msg,
+      }),
+    );
     return NextResponse.json(
       {
         detail:
-          "Proxy /api-backend indisponível: defina API_PROXY_TARGET no ambiente do Next " +
-          "(ex.: http://api:8000 no Docker ou http://127.0.0.1:60000 no host) e reinicie o servidor.",
-      },
-      { status: 503 },
-    );
-  }
-
-  let pathSuffix: string;
-  try {
-    pathSuffix = montarCaminhoUpstream(segments);
-  } catch {
-    return NextResponse.json({ detail: "Caminho de proxy inválido" }, { status: 400 });
-  }
-
-  const alvo = `${base}${pathSuffix}${request.nextUrl.search}`;
-  const headers = montarCabecalhos(request);
-
-  const init: RequestInit = {
-    method: request.method,
-    headers,
-    redirect: "manual",
-  };
-
-  if (!["GET", "HEAD"].includes(request.method)) {
-    const buf = await request.arrayBuffer();
-    if (buf.byteLength > 0) {
-      init.body = buf;
-    }
-  }
-
-  try {
-    const upstream = await fetch(alvo, init);
-    /** Corpo em buffer: reencaminhar `ReadableStream` cru falha em alguns browsers (fetch → «Failed to fetch»). */
-    const buf = await upstream.arrayBuffer();
-    const out = new Headers();
-    const omitir = new Set(["connection", "keep-alive", "transfer-encoding", "content-encoding"]);
-    upstream.headers.forEach((value, key) => {
-      if (!omitir.has(key.toLowerCase())) {
-        out.set(key, value);
-      }
-    });
-    out.set("content-length", String(buf.byteLength));
-    return new NextResponse(buf, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: out,
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json(
-      {
-        detail: `Falha ao contactar a API em «${base}» (${pathSuffix || "/"}). ` + `Erro: ${msg}`,
+          `Exceção no proxy /api-backend (evita página HTML «Internal Server Error»). Detalhe: ${msg}`,
       },
       { status: 502 },
     );
@@ -125,25 +213,25 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
 type RotaCtx = { params: { slug?: string[] } };
 
 export async function GET(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params.slug);
+  return proxy(request, ctx.params?.slug);
 }
 
 export async function POST(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params.slug);
+  return proxy(request, ctx.params?.slug);
 }
 
 export async function PUT(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params.slug);
+  return proxy(request, ctx.params?.slug);
 }
 
 export async function PATCH(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params.slug);
+  return proxy(request, ctx.params?.slug);
 }
 
 export async function DELETE(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params.slug);
+  return proxy(request, ctx.params?.slug);
 }
 
 export async function OPTIONS(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params.slug);
+  return proxy(request, ctx.params?.slug);
 }

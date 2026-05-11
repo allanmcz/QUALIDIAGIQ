@@ -23,6 +23,10 @@ from src.application.use_cases.registrar_retificacao_diagnostico import (
     RegistrarRetificacaoDiagnostico,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.cnpj_brasil import (
+    exigir_cnpj_vazio_ou_com_dv_ok,
+    normalizar_cnpj_apenas_digitos,
+)
 from src.presentation.api.dependencies import (
     get_current_user_tenant,
     get_diagnostico_repository,
@@ -36,7 +40,7 @@ from src.presentation.api.schemas import (
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
     DiagnosticoRetificacaoHttpResponse,
-    IniciarDiagnosticoRequest,
+    IniciarDiagnosticoPainelRequest,
     RegistrarRetificacaoDiagnosticoRequest,
 )
 
@@ -64,10 +68,35 @@ async def listar_diagnosticos(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    empresa_cnpj: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Opcional: filtra pela coluna `empresa_cnpj` (14 dígitos, DV válido). "
+                "Omite ou vazio = todos os diagnósticos do tenant."
+            ),
+        ),
+    ] = None,
 ) -> list[DiagnosticoResumoSchema]:
     """Lista diagnósticos do tenant atual (ordenacao: mais recentes primeiro na camada repo/DB)."""
     _, tenant_id, _ = current
-    rows = await repo.listar_por_tenant(tenant_id, limit=limit, offset=offset)
+    filtro_cnpj: str | None = None
+    if empresa_cnpj is not None and empresa_cnpj.strip() != "":
+        norm = normalizar_cnpj_apenas_digitos(empresa_cnpj)
+        if norm == "":
+            filtro_cnpj = None
+        else:
+            try:
+                exigir_cnpj_vazio_ou_com_dv_ok(norm)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail=str(exc),
+                ) from exc
+            filtro_cnpj = norm
+    rows = await repo.listar_por_tenant(
+        tenant_id, limit=limit, offset=offset, empresa_cnpj=filtro_cnpj
+    )
     return [diagnostico_helpers._para_resumo(d) for d in rows]
 
 
@@ -82,13 +111,15 @@ async def listar_diagnosticos(
         "`Idempotency-Key` (UUID v4 recomendado). Reexecução com a mesma chave devolve a mesma "
         "resposta 2xx em cache (middleware de idempotência).\n\n"
         "**Corpo:** incluir `aceite_termos_privacidade: true` (LGPD); o servidor persiste "
-        "`aceite_termos_privacidade_em` (UTC) na linha do diagnóstico."
+        "`aceite_termos_privacidade_em` (UTC) na linha do diagnóstico.\n\n"
+        "**CNPJ:** obrigatório com sessão na plataforma (histórico por empresa no tenant). "
+        "Fluxo só com OTP sem conta: usar rotas self-service / rascunho onde o CNPJ pode ser opcional."
     ),
 )
 async def criar_diagnostico(
     request: Request,
     payload: Annotated[
-        IniciarDiagnosticoRequest,
+        IniciarDiagnosticoPainelRequest,
         Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
     ],
     current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],

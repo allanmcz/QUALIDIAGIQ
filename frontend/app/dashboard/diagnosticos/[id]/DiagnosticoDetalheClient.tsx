@@ -35,6 +35,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAccessToken, getApiUrlForFetch, normalizarHrefRelatorioPdf } from "@/lib/api/config";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
+import {
+  buildEmpresaDiagnosticosHref,
+  buildWizardUrlNovaDiagnosticoEmpresa,
+} from "@/lib/dashboard/empresa_diagnostico_urls";
 import { clearPendingDiagnosticoFromStorage } from "@/lib/wizard/pending_diagnostico";
 import { clearWizardDraft } from "@/lib/wizard/wizard_draft";
 
@@ -84,13 +88,16 @@ export type QuadroItemPersistidoApi = {
 export type DiagnosticoDetalheApi = {
   id: string;
   empresa_razao_social: string;
+  empresa_cnpj?: string;
+  criado_em?: string | null;
+  finalizado_em?: string | null;
   plano: string;
   status: string;
   relatorio_pdf_url: string | null;
   checklist: FrenteChecklist[] | null;
   matriz_impacto: MatrizLinha[] | null;
   cronograma: CronogramaFase[] | null;
-  /** Likert 1–5 por controlo M12 (API); booleanos legados são normalizados na leitura. */
+  /** Likert 1–5 por controle M12 (API); booleanos legados são normalizados na leitura. */
   checklist_m12_autoconf: (number | boolean)[] | null;
   /** Chave canónica f{i}_a{j} — meta de prazo (ISO) e vários comentários por ação sugerida. */
   quadro_implantacao_anotacoes?: Record<string, QuadroItemPersistidoApi> | null;
@@ -122,7 +129,7 @@ function m12EstadoInicialVazio(): (number | null)[] {
   return Array.from({ length: M12_NUM_ITENS }, () => null);
 }
 
-/** Só persiste na API quando os 10 controlos têm inteiro 1–5. */
+/** Só persiste na API quando os 10 controles têm inteiro 1–5. */
 function m12ValoresSeCompleto(vals: (number | null)[]): number[] | null {
   if (!Array.isArray(vals) || vals.length !== M12_NUM_ITENS) return null;
   const out: number[] = [];
@@ -622,7 +629,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const gravarM12NaApi = useCallback(async () => {
     const payload = m12ValoresSeCompleto(m12Likert);
     if (!payload) {
-      setM12Msg("Assine os 10 controlos (nível 1 a 5 em cada um) antes de gravar na API.");
+      setM12Msg("Assine os 10 controles (nível 1 a 5 em cada um) antes de gravar na API.");
       return;
     }
     await salvarM12LikertCompleto(payload);
@@ -686,6 +693,22 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             <Badge variant={data.plano === "gratuito" ? "secondary" : "default"} className="text-sm px-4 py-1">
               PLANO {data.plano.toUpperCase()}
             </Badge>
+            {data.empresa_cnpj && data.empresa_cnpj.replace(/\D/g, "").length === 14 ? (
+              <>
+                <Button variant="secondary" size="sm" asChild className="gap-2">
+                  <Link
+                    href={buildEmpresaDiagnosticosHref(data.empresa_cnpj, data.empresa_razao_social)}
+                  >
+                    Grelha da empresa
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild className="gap-2">
+                  <Link href={buildWizardUrlNovaDiagnosticoEmpresa(data.empresa_cnpj, data.empresa_razao_social)}>
+                    Novo diagnóstico (mesma empresa)
+                  </Link>
+                </Button>
+              </>
+            ) : null}
             {data.plano === "avancado" ? (
               <Button
                 type="button"
@@ -902,8 +925,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <CardHeader>
             <CardTitle>Autoconferência ABNT — 10 controles (M12)</CardTitle>
             <p className="text-sm font-normal text-muted-foreground">
-              Escala Likert 1 (mínimo) a 5 (máximo) por controlo — espelho do checklist do relatório PDF.{" "}
-              <strong className="font-medium text-foreground">Alterar</strong> aplica o nível apenas neste controlo
+              Escala Likert 1 (mínimo) a 5 (máximo) por controle — espelho do checklist do relatório PDF.{" "}
+              <strong className="font-medium text-foreground">Alterar</strong> aplica o nível apenas neste controle
               (sem valores por defeito). Depois de <strong className="font-medium text-foreground">10/10 assinalados</strong>, use{" "}
               <strong className="font-medium text-foreground">Gravar autoconf na API</strong> (
               <code className="text-xs">If-Match</code> / <code className="text-xs">versao_otimista</code>) — ABNT NBR
@@ -915,13 +938,13 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 role="note"
               >
                 <strong className="text-foreground">Independente do assistente:</strong> estas notas não são copiadas
-                do questionário («Inexistente», «Incipiente», etc.). Cada controlo tem de ser escolhido aqui.
+                do questionário («Inexistente», «Incipiente», etc.). Cada controle tem de ser escolhido aqui.
               </p>
             ) : null}
             {data.status === "finalizado" ? (
               <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <p className="text-sm font-medium text-foreground tabular-nums">
-                  Progresso: {m12ProgressoAssinalados}/{M12_NUM_ITENS} controlos assinalados
+                  Progresso: {m12ProgressoAssinalados}/{M12_NUM_ITENS} controles assinalados
                 </p>
                 <Button
                   type="button"
@@ -1366,10 +1389,10 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Controlo M12 — escala Likert</DialogTitle>
+            <DialogTitle>Controle M12 — escala Likert</DialogTitle>
             <DialogDescription>
               Escolha obrigatória: 1 = não implementado, 5 = implementado e monitorado. «Aplicar» atualiza só este
-              controlo no ecrã; a persistência na base faz-se com «Gravar autoconf na API» quando os 10 estiverem
+              controle no ecrã; a persistência na base faz-se com «Gravar autoconf na API» quando os 10 estiverem
               assinalados.
             </DialogDescription>
           </DialogHeader>
@@ -1410,7 +1433,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
               disabled={m12ModalDraft === null || data.status !== "finalizado"}
               onClick={() => confirmarM12Modal()}
             >
-              Aplicar ao controlo
+              Aplicar ao controle
             </Button>
           </DialogFooter>
         </DialogContent>

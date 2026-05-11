@@ -1,15 +1,19 @@
-import type { DiagnosticoPayload } from "../schemas/wizard";
+import type { DiagnosticoPayloadArmazenado } from "../schemas/wizard";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
 import { getAccessToken, getApiUrlForFetch } from "./config";
-import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
+import {
+  isLikelyNetworkFetchFailure,
+  mensagemConectividadeApiParaUsuario,
+  mensagemErroHttp,
+} from "./http_errors";
 
 /**
  * Cria diagnóstico na API FastAPI — persistência em PostgreSQL (Supabase), isolada por `tenant_id` do JWT (RLS).
  * Exige Bearer JWT (`/login`) + header Idempotency-Key (contrato API).
  * Envia `aceite_termos_privacidade` para LGPD (migração 0012).
  */
-export async function postDiagnostico(payload: DiagnosticoPayload) {
+export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
   const token = getAccessToken();
   if (!token) {
     throw new Error(
@@ -35,24 +39,18 @@ export async function postDiagnostico(payload: DiagnosticoPayload) {
       body: JSON.stringify(payload),
     });
 
+    const raw = await res.text();
     if (!res.ok) {
       if (encerrarSessaoPainelSe401(res.status)) {
         throw new Error("Sessão expirada — a abrir o login.");
       }
-      const errorData = await res.json().catch(() => ({}));
-      const detail = errorData.detail;
-      const msg =
-        typeof detail === "string"
-          ? detail
-          : Array.isArray(detail)
-            ? detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join("; ")
-            : detail
-              ? JSON.stringify(detail)
-              : `Erro na API: ${res.status}`;
-      throw new Error(msg);
+      throw new Error(mensagemErroHttp(res.status, raw));
     }
-
-    return await res.json();
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      throw new Error(mensagemErroHttp(res.status, raw));
+    }
   } catch (error) {
     console.error("Falha ao enviar diagnóstico:", error);
     if (isLikelyNetworkFetchFailure(error)) {
