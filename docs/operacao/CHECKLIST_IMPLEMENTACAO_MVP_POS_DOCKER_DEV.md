@@ -97,6 +97,7 @@ make verify-schema-mvp-strict
 - [ ] `make dev` ou `docker compose up -d db` + migrações aplicadas
 - [ ] Dois tenants / JWTs distintos; API local típica `http://127.0.0.1:60000` (compose)
 - [ ] Inserir diagnóstico no tenant A; com JWT do tenant B: `GET /diagnosticos/{id_A}` → `404` ou equivalente documentado
+- [ ] Opcional: com JWT do **tenant A**, `GET /diagnosticos/?empresa_cnpj=<CNPJ do diagnóstico>` → deve incluir `id_A` (filtro server-side; **`422`** se CNPJ com DV inválido) — alinha ao painel `/dashboard/empresas/[cnpj]` e ao §Passo 3 opcional em [`CHECKLIST_T1_3_RLS_DOIS_TENANTS.md`](./CHECKLIST_T1_3_RLS_DOIS_TENANTS.md)
 - [ ] Opcional: SQL controlado com `SET qdi.jwt_tenant_id` (role de serviço)
 
 **Aceite:**

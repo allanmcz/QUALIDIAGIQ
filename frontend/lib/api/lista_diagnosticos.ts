@@ -30,6 +30,35 @@ export type FetchDiagnosticosResumoOpts = {
  * Lista diagnósticos do tenant logado (JWT obrigatório).
  * P7 — lista de diagnósticos no painel (conta na plataforma).
  */
+/** Alinhado ao `Query(ge=1, le=200)` da API — página máxima por pedido. */
+export const DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX = 200;
+
+/**
+ * Carrega **todas** as páginas de `GET /diagnosticos/?empresa_cnpj=` (ordenadas no servidor).
+ * Usado na grelha por empresa quando o histórico pode exceder uma única página.
+ *
+ * Limite de segurança: no máximo 50 × 200 = 10 000 linhas; acima disso lança erro legível.
+ */
+export async function fetchDiagnosticosResumoTodasPaginasPorEmpresa(
+  cnpj14: string,
+): Promise<DiagnosticoResumoApi[]> {
+  const PAGE = DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX;
+  const MAX_PAGES = 50;
+  const acc: DiagnosticoResumoApi[] = [];
+  for (let p = 0; p < MAX_PAGES; p++) {
+    const batch = await fetchDiagnosticosResumo(PAGE, p * PAGE, {
+      empresaCnpj14: cnpj14,
+    });
+    acc.push(...batch);
+    if (batch.length < PAGE) {
+      return acc;
+    }
+  }
+  throw new Error(
+    `Esta empresa ultrapassa ${MAX_PAGES * PAGE} diagnósticos neste tenant no painel. Contacte suporte para relatório completo.`,
+  );
+}
+
 export async function fetchDiagnosticosResumo(
   limit = 100,
   offset = 0,

@@ -75,7 +75,7 @@ export function RetificacaoDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
   };
 
   return (
-    <Card className="mb-10">
+    <Card id="diag-retificacoes" className="mb-10 scroll-mt-24">
       <CardHeader>
         <CardTitle className="text-lg">Retificações (compliance / LGPD)</CardTitle>
         <CardDescription>

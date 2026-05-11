@@ -48,6 +48,7 @@ O isolamento é por **`tenant_id`** no JWT (`get_current_user_tenant`), não por
 2. [ ] `POST /diagnosticos/` com `Idempotency-Key` único e payload válido (wizard completo ou corpo mínimo aceite pela API).
 3. [ ] Resposta **`201`** — anotar **`diagnostico_id`** (= `id_A`).
 4. [ ] Opcional: `GET /diagnosticos/` com o mesmo JWT → lista deve incluir `id_A`.
+5. [ ] Opcional: `GET /diagnosticos/?empresa_cnpj=<CNPJ do payload>` → deve incluir `id_A` quando o diagnóstico foi gravado com esse `empresa_cnpj` (filtro server-side por tenant).
 
 ---
 

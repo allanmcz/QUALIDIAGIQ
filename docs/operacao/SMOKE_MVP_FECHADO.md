@@ -40,7 +40,7 @@ Passos **2** (login na API / sessão na plataforma — típico em **`http://127.
 2. [ ] **Login:** obter Bearer JWT (`POST /auth/login` ou tela `/login`).
 3. [ ] **Wizard:** preencher fluxo até finalizar; checkbox LGPD marcado.
 4. [ ] **POST diagnóstico:** corpo contém `aceite_termos_privacidade: true`; resposta **`201`** com `aceite_termos_privacidade_em` preenchido (ISO-8601).
-5. [ ] **Lista:** `GET /diagnosticos/` → linha do diagnóstico criado.
+5. [ ] **Lista:** `GET /diagnosticos/` → linha do diagnóstico criado. *(Opcional: `GET /diagnosticos/?empresa_cnpj=<14 dígitos>` com o mesmo CNPJ do POST — deve incluir o mesmo `id`; **`422`** se DV inválido.)*
 6. [ ] **Detalhe:** `GET /diagnosticos/{id}` → score, checklist, hash, versão otimista coerentes.
 7. [ ] **M12:** alterar um checkbox na autoconf ABNT → após debounce, **`PATCH .../checklist-m12-autoconf`** com `If-Match` → `200` ou `412` seguido de refetch coerente no browser.
 8. [ ] **PDF (se ambiente com WeasyPrint/storage):** URL do relatório preenchida ou fluxo documentado como pendência **P5**.

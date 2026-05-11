@@ -55,6 +55,8 @@ Sem Docker: use `PostgreSQL_CI_URL` / `DATABASE_URL` e um cliente `psql` apontan
 **Fluxo diagnose / rascunho — campo `force_refresh_cnpj`:**  
 Mesmo objeto base que o wizard envia: **`IniciarDiagnosticoRequest`** em rascunho / self-service; **`IniciarDiagnosticoPainelRequest`** em `POST /diagnosticos/` com JWT (CNPJ obrigatório). O cliente web envia `force_refresh_cnpj` quando o utilizador marca a opção no último passo (com **CNPJ com 14 dígitos** quando a rota exige).
 
+**Listagem no painel por CNPJ (não é consulta BrasilAPI):** em **`GET /diagnosticos/`**, query opcional **`empresa_cnpj`** — normalização para 14 dígitos + validação DV; filtra **`diagnosticos.empresa_cnpj`** dentro do **mesmo** `tenant_id` do Bearer. **`422`** se o valor informado tiver dígitos mas DV inválido. O ecrã **`/dashboard/empresas/[cnpj]`** usa este parâmetro para carregar todos os ciclos daquela PJ sem depender apenas dos primeiros registos da lista global.
+
 ---
 
 ## 4. TTL configurável (`QDI_*`)

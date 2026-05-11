@@ -98,7 +98,7 @@ Executar **pelo menos** os itens **1–5** de `SMOKE_MVP_FECHADO.md` contra URLs
 2. Login JWT  
 3. Wizard até LGPD  
 4. POST diagnóstico `201` com aceite  
-5. Lista `GET /diagnosticos/`
+5. Lista `GET /diagnosticos/` (opcional: repetir com `?empresa_cnpj=` do diagnóstico criado — smoke da grelha por empresa)
 
 Se falhar em **4 ou 5**: considerar rollback da API ou front conforme `RUNBOOK_DEPLOY_ROLLBACK.md`.
 
