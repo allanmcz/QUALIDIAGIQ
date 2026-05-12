@@ -6,6 +6,7 @@ Camada: Infrastructure (adaptador de config — sem regras de domínio).
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import Literal, Self
 from uuid import UUID
@@ -317,6 +318,34 @@ class Settings(BaseSettings):
                 "SMTP_HOST nao pode apontar para ambiente local em producao "
                 "(localhost, 127.0.0.1, mailpit)."
             )
+        if self.llm_backend == "anthropic" and (
+            self.anthropic_api_key is None
+            or not str(self.anthropic_api_key.get_secret_value()).strip()
+        ):
+            raise ValueError(
+                "ANTHROPIC_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=anthropic."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _cadastro_consultor_producao_opt_in_explicito(self) -> Self:
+        """
+        QDI-H-035 — em produção o cadastro público na plataforma fica desligado salvo opt-in explícito.
+
+        Define ``QDI_CADASTRO_CONSULTOR_B2B_HABILITADO=true`` (ou 1) para reativar o POST /auth/cadastro.
+        """
+        if (self.app_env or "").strip().lower() != "production":
+            return self
+        bruto = os.environ.get("QDI_CADASTRO_CONSULTOR_B2B_HABILITADO")
+        if bruto is None or str(bruto).strip() == "":
+            self.cadastro_consultor_b2b_habilitado = False
+            return self
+        self.cadastro_consultor_b2b_habilitado = str(bruto).strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
         return self
 
     @model_validator(mode="after")

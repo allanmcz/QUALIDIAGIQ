@@ -28,6 +28,7 @@ from uuid import UUID, uuid4
 
 from src.domain.value_objects.checklist_m12_likert import validar_itens_m12_likert
 from src.domain.value_objects.cnpj_brasil import exigir_cnpj_vazio_ou_com_dv_ok
+from src.domain.value_objects.email import normalizar_email
 
 if TYPE_CHECKING:
     from src.domain.value_objects.score import ScoreCompleto
@@ -121,6 +122,19 @@ class EmpresaInfo:
             exigir_cnpj_vazio_ou_com_dv_ok(self.cnpj)
         if len(self.uf) != 2:
             raise ValueError("UF deve ter 2 caracteres (ex: SP, RJ)")
+
+    def para_snapshot_evidencia(self) -> dict[str, Any]:
+        """Campos de empresa incluídos no hash de evidência v2 (alinhamento WORM / LGPD art. 46)."""
+        return {
+            "cnpj": self.cnpj,
+            "razao_social": self.razao_social,
+            "porte": self.porte.value,
+            "regime": self.regime.value,
+            "cnae_principal": self.cnae_principal,
+            "uf": self.uf,
+            "setor_macro": self.setor_macro.value,
+            "faixa_faturamento": self.faixa_faturamento.value if self.faixa_faturamento else None,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,12 +234,28 @@ class Diagnostico:
 
         self.score_completo_snapshot = score_completo
         payload = {
+            "_versao_payload_hash": "v2",
             "diagnostico_id": str(self.id),
             "tenant_id": str(self.tenant_id),
+            "plano": self.plano.value,
+            "versao_plano": self.versao_plano,
+            "empresa": self.empresa.para_snapshot_evidencia(),
+            "respondente": {
+                "email": normalizar_email(self.respondente.email),
+                "nome": self.respondente.nome,
+                "cargo": self.respondente.cargo,
+                "telefone": self.respondente.telefone,
+            },
             "score_geral": self.score_geral,
             "status": self.status.value,
             "finalizado_em": self.finalizado_em.isoformat() if self.finalizado_em else None,
             "score_completo": score_completo.para_dict_serializavel(),
+            "checklist_m12_estado": self.checklist_m12_estado,
+            "aceite_termos_privacidade_em": (
+                self.aceite_termos_privacidade_em.isoformat()
+                if self.aceite_termos_privacidade_em
+                else None
+            ),
             "locale_relatorio": self.locale_relatorio,
         }
         canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))

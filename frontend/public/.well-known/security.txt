@@ -1,6 +1,10 @@
-Contact: mailto:security@tributiq.example
-Expires: 2027-12-31T23:59:59.000Z
-Preferred-Languages: pt-BR, en
-Canonical: https://qualidiagiq.example/.well-known/security.txt
+# Política de divulgação responsável — QualiDiagIQ (RFC 9116)
+# QDI-H-002 — https://www.rfc-editor.org/rfc/rfc9116.html
 
-# Substituir security@tributiq.example e URL canônica antes da produção.
+Contact: mailto:contato@tributiq.com.br
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: pt, en
+
+Canonical: https://qualidiagiq.com.br/.well-known/security.txt
+
+# Substitua o Contact pelo canal acordado com o DPO em produção.

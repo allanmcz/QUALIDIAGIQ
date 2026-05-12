@@ -27,9 +27,9 @@ from src.domain.entities.diagnostico import (
     StatusDiagnostico,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.email import normalizar_email
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.score import ScoreCompleto
-from src.infrastructure.email_verificacao import codigo_store
 
 _TENANT_PADRAO_CI = UUID("33333333-3333-4333-8333-333333333333")
 _ID_LISTA_CI = UUID("22222222-2222-4222-a222-222222222222")
@@ -269,14 +269,14 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
 
         Usado quando `QDI_CI_PLAYWRIGHT_INTEGRATED=1` — diagnósticos não passam pelo PostgREST.
         """
-        email = codigo_store.normalizar_email(email_admin_normalizado)
+        email = normalizar_email(email_admin_normalizado)
         ids: list[UUID] = []
         for rid, d in list(self._rows.items()):
             if d.tenant_id != tenant_self_service:
                 continue
             if d.plano != PlanoDiagnostico.GRATUITO:
                 continue
-            if codigo_store.normalizar_email(d.respondente.email) != email:
+            if normalizar_email(d.respondente.email) != email:
                 continue
             self._rows[rid] = replace(d, tenant_id=tenant_destino)
             ids.append(rid)

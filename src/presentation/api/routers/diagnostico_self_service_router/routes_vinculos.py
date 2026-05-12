@@ -15,6 +15,7 @@ from src.application.use_cases.vincular_diagnosticos_lead_self_service import (
     VincularDiagnosticosLeadSelfService,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.email import normalizar_email
 from src.infrastructure.repositories.postgres_diagnostico_leitura_publica_self_service import (
     buscar_diagnostico_conclusao_publica_sync,
 )
@@ -90,7 +91,7 @@ async def vincular_rascunho_conta_plataforma(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Token não corresponde a um consultor com e-mail resolvível.",
         )
-    email_admin_norm = deps.codigo_store.normalizar_email(email_admin)
+    email_admin_norm = normalizar_email(email_admin)
     pj = diagnostico_helpers._payload_json_como_dict(row.get("payload_json"))
     if pj is None:
         raise HTTPException(
@@ -104,7 +105,7 @@ async def vincular_rascunho_conta_plataforma(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=jsonable_encoder(ve.errors(include_url=False)),
         ) from ve
-    email_resp = deps.codigo_store.normalizar_email(str(payload.respondente.email))
+    email_resp = normalizar_email(str(payload.respondente.email))
     if email_resp != email_admin_norm:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -220,7 +221,7 @@ async def vincular_leads_self_service(
             detail="Token não corresponde a um consultor com e-mail resolvível para vinculação.",
         )
     comando = ComandoVincularDiagnosticosLeadSelfService(
-        email_admin_normalizado=deps.codigo_store.normalizar_email(email),
+        email_admin_normalizado=normalizar_email(email),
         tenant_destino=tenant_id,
         tenant_self_service=settings.self_service_tenant_id,
     )

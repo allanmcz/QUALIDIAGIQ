@@ -35,6 +35,52 @@
         }
       }
     },
+    "/health/live": {
+      "get": {
+        "tags": [
+          "Infra"
+        ],
+        "summary": "Health Live",
+        "description": "Liveness — processo UP (Kubernetes).",
+        "operationId": "health_live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Live Health Live Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "Infra"
+        ],
+        "summary": "Health Ready",
+        "description": "Readiness — Postgres acessível via engine síncrono (idempotência).",
+        "operationId": "health_ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/public/institucional": {
       "get": {
         "tags": [
@@ -3537,6 +3583,62 @@
           "privacidade_solicitacoes_path": "/privacidade/solicitacoes"
         }
       },
+      "LgpdTitularSolicitacaoPayload": {
+        "properties": {
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          },
+          "detalhes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detalhes"
+          },
+          "idioma_resposta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idioma Resposta"
+          },
+          "referencia_diagnostico_texto": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referencia Diagnostico Texto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LgpdTitularSolicitacaoPayload",
+        "description": "Metadados estruturados da solicitação (art. 18 LGPD) — QDI-H-013."
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -4165,10 +4267,8 @@
             "title": "Solicitante Email"
           },
           "payload": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Payload",
-            "description": "Metadados da solicitação (texto livre/estrutura simples)."
+            "$ref": "#/components/schemas/LgpdTitularSolicitacaoPayload",
+            "description": "Metadados estruturados da solicitação (campos conhecidos; extra proibido)."
           }
         },
         "additionalProperties": false,

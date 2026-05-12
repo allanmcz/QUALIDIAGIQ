@@ -79,6 +79,7 @@ from src.domain.repositories.normativa_score_macro_repository import (
     NormativaScoreMacroRepository,
 )
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
+from src.domain.value_objects.email import normalizar_email
 from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNormativaAdapter
 from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
 from src.infrastructure.adapters.cnpj_provedor_externo_http import CnpjProvedorExternoHttpAdapter
@@ -113,7 +114,6 @@ from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
 from src.infrastructure.diagnosticos.postgres_lead_diagnostico_vinculo import (
     PostgresLeadDiagnosticoVinculoAdapter,
 )
-from src.infrastructure.email_verificacao import codigo_store
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
 from src.infrastructure.repositories.ci_playwright_diagnostico_repository import (
     CiPlaywrightDiagnosticoRepository,
@@ -323,7 +323,7 @@ async def get_self_service_diagnostico_claims(
             detail="Tenant do token incompatível com self-service",
         )
 
-    email_norm = codigo_store.normalizar_email(str(email_raw))
+    email_norm = normalizar_email(str(email_raw))
     return session_uuid, tenant_uuid, email_norm
 
 

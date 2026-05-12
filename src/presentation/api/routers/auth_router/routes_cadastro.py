@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, status
 
+from src.domain.value_objects.email import normalizar_email
+
 from . import deps, jwt_tokens
 from .schemas import CadastroConsultorB2BRequest, LoginResponse
 
@@ -34,7 +36,7 @@ async def cadastro_consultor_b2b(body: CadastroConsultorB2BRequest) -> LoginResp
             detail="Cadastro na plataforma está desabilitado neste ambiente (QDI_CADASTRO_CONSULTOR_B2B_HABILITADO).",
         )
 
-    email_norm = deps.codigo_store.normalizar_email(str(body.email))
+    email_norm = normalizar_email(str(body.email))
     nome_limpo = body.nome.strip()
     hashed = deps.pwd_context.hash(body.password)
     tenant_novo = uuid4()

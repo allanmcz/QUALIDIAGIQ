@@ -11,6 +11,7 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, st
 from src.application.ports.email_service import EmailServicePort
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.email import normalizar_email
 from src.infrastructure.repositories.postgres_diagnostico_leitura_publica_self_service import (
     inserir_leitura_publica_self_service_sync,
 )
@@ -67,7 +68,7 @@ async def criar_rascunho_diagnostico_self_service(
             detail="Rascunho indisponível: configure DATABASE_URL na API.",
         )
     tenant_ss = settings.self_service_tenant_id
-    email_norm = deps.codigo_store.normalizar_email(str(payload.respondente.email))
+    email_norm = normalizar_email(str(payload.respondente.email))
     payload_dict = payload.model_dump(mode="json")
     try:
         token_plain, expira_em = await deps.asyncio.to_thread(
@@ -216,7 +217,7 @@ async def concluir_rascunho_diagnostico_self_service(
             detail="Formato de rascunho inconsistente.",
         )
     payload = IniciarDiagnosticoRequest.model_validate(pj)
-    if deps.codigo_store.normalizar_email(str(payload.respondente.email)) != email_norm:
+    if normalizar_email(str(payload.respondente.email)) != email_norm:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inconsistência entre rascunho e respondente.",

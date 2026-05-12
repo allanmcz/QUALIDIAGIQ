@@ -15,7 +15,7 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
     SolicitacaoTitular,
     TipoSolicitacaoTitular,
 )
-from src.infrastructure.email_verificacao.codigo_store import normalizar_email
+from src.domain.value_objects.email import normalizar_email
 
 if TYPE_CHECKING:
     from uuid import UUID

@@ -119,6 +119,23 @@ class TestEmpresaInfo:
         )
         assert empresa.faixa_faturamento == FaixaFaturamentoDeclarada.ENTRE_360_MIL_E_4_8_MI
 
+    def test_para_snapshot_evidencia(self) -> None:
+        """QDI-H-017 — snapshot serializável para hash de evidência v2."""
+        empresa = EmpresaInfo(
+            cnpj="12345678000195",
+            razao_social="ACME",
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.LUCRO_PRESUMIDO,
+            cnae_principal="1234567",
+            uf="RJ",
+            setor_macro=SetorMacro.SERVICOS,
+            faixa_faturamento=None,
+        )
+        snap = empresa.para_snapshot_evidencia()
+        assert snap["cnpj"] == "12345678000195"
+        assert snap["uf"] == "RJ"
+        assert snap["faixa_faturamento"] is None
+
 
 class TestRespondente:
     def test_deve_criar_respondente_completo(self):

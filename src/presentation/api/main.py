@@ -6,15 +6,17 @@ Camada: Presentation
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator  # noqa: TC003
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cachetools import TTLCache
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from starlette.requests import Request  # noqa: TC002 — runtime para FastAPI Depends/injeção
 
 from src.domain.entities.diagnostico import DiagnosticoNaoFinalizavelError
 from src.infrastructure.config.logging import configurar_logging
@@ -25,9 +27,33 @@ from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 from src.presentation.api.routers import diagnostico_router
 
 if TYPE_CHECKING:
-    from starlette.requests import Request
+    from sqlalchemy.engine import Engine
 
     from src.infrastructure.idempotency.cached_response import CorpoCacheadoIdempotencia
+
+
+def _sentry_scrub_pii(event: Any, hint: dict[str, Any]) -> Any:
+    """QDI-H-016 — reduz vazamento de PII em extras/request (melhor esforço, não substitui DLP)."""
+    _ = hint
+    chaves_sensiveis = ("password", "senha", "codigo", "token", "authorization", "email", "e-mail")
+    try:
+        if not isinstance(event, dict):
+            return event
+        req = event.get("request")
+        if isinstance(req, dict):
+            data = req.get("data")
+            if isinstance(data, dict):
+                for k in list(data.keys()):
+                    if any(s in str(k).lower() for s in chaves_sensiveis):
+                        data[k] = "[REDACTED]"
+    except Exception:
+        pass
+    return event
+
+
+def _ping_db_sync(eng: Engine) -> None:
+    with eng.connect() as conn:
+        conn.execute(text("SELECT 1"))
 
 
 def _parse_otlp_headers(raw: str | None) -> dict[str, str] | None:
@@ -117,6 +143,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             dsn=dsn_sentry,
             traces_sample_rate=0.1,
             environment=(settings.app_env or "development").strip(),
+            before_send=_sentry_scrub_pii,
         )
     engine = None
     sync_url = settings.sync_database_url
@@ -124,6 +151,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(sync_url, pool_pre_ping=True)
     app.state.idempotency_engine = engine
     app.state.idempotency_ttl_seconds = settings.idempotency_ttl_seconds
+
+    env_norm = (settings.app_env or "").strip().lower()
+    if env_norm != "development" and engine is None:
+        raise RuntimeError(
+            "QDI-H-037: `DATABASE_URL` obrigatório para backend de idempotência em Postgres "
+            f"quando APP_ENV={settings.app_env!r} (memória apenas permitida em development)."
+        )
 
     yield
 
@@ -209,6 +243,8 @@ def create_app() -> FastAPI:
             "If-Match",
             "X-Trace-Id",
             "X-Rascunho-Token",
+            "traceparent",
+            "tracestate",
         ],
         expose_headers=["X-Idempotent-Replay", "X-Trace-Id"],
     )
@@ -230,10 +266,33 @@ def create_app() -> FastAPI:
             content={"detail": str(exc)},
         )
 
-    # Healthcheck simples
+    # Healthcheck simples (legado — preferir /health/live e /health/ready).
     @app.get("/health", tags=["Infra"])
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": "qualidiagiq"}
+
+    @app.get("/health/live", tags=["Infra"])
+    async def health_live() -> dict[str, str]:
+        """Liveness — processo UP (Kubernetes)."""
+        return {"status": "ok", "check": "live", "service": "qualidiagiq"}
+
+    @app.get("/health/ready", tags=["Infra"], response_model=None)
+    async def health_ready(request: Request) -> dict[str, str] | JSONResponse:
+        """Readiness — Postgres acessível via engine síncrono (idempotência)."""
+        eng = getattr(request.app.state, "idempotency_engine", None)
+        if eng is None:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "not_ready", "reason": "database_unconfigured"},
+            )
+        try:
+            await asyncio.to_thread(_ping_db_sync, eng)
+        except Exception:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "not_ready", "reason": "database_unreachable"},
+            )
+        return {"status": "ok", "check": "ready", "service": "qualidiagiq"}
 
     # Registrar os Routers do Domínio
     from src.presentation.api.routers import (

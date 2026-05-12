@@ -36,3 +36,4 @@ Prazos e critérios de eliminação devem espelhar a política de retenção apr
 | Data | Autor | Notas |
 |------|-------|-------|
 | 2026-05-09 | Engenharia QDI | Versão inicial para encadeamento S-02/S-03 (documentação LGPD). |
+| 2026-05-11 | Engenharia QDI | Registo de **subprocessadores** de infraestrutura (Supabase, Sentry, e-mail transaccional, LLM em produção conforme ADR-003) deve constar do **Anexo de subprocessadores** aprovado pelo DPO; este RAT referencia `docs/legal/BASES_LEGAIS_TRATAMENTO.md` e `docs/operacao/RETENCAO_DADOS.md` como rastreio técnico. |

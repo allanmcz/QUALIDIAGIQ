@@ -9,6 +9,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.email import normalizar_email
 from src.presentation.api.dependencies import (
     get_diagnostico_repository,
     get_realizar_diagnostico_use_case,
@@ -17,8 +18,6 @@ from src.presentation.api.dependencies import (
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import DiagnosticoResponse, IniciarDiagnosticoRequest
-
-from . import deps
 
 router = APIRouter()
 
@@ -47,7 +46,7 @@ async def criar_diagnostico_self_service(
 ) -> DiagnosticoResponse:
     """Persiste diagnóstico no tenant self-service (verificação de posse do e-mail)."""
     _sub, tenant_id, email_norm = claims
-    payload_email = deps.codigo_store.normalizar_email(str(payload.respondente.email))
+    payload_email = normalizar_email(str(payload.respondente.email))
     if payload_email != email_norm:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

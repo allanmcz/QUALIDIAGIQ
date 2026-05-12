@@ -8,7 +8,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.infrastructure.config.settings import get_settings
-from src.presentation.api.main import _derive_otlp_metrics_endpoint, _parse_otlp_headers, lifespan
+from src.presentation.api.main import (
+    _derive_otlp_metrics_endpoint,
+    _parse_otlp_headers,
+    _ping_db_sync,
+    _sentry_scrub_pii,
+    lifespan,
+)
 
 
 @pytest.fixture
@@ -207,3 +213,128 @@ async def test_lifespan_inicializa_sentry_quando_dsn(
 
     mock_log.assert_called_once()
     mock_sentry_init.assert_called_once()
+    kwargs = mock_sentry_init.call_args.kwargs
+    assert "before_send" in kwargs
+
+
+@pytest.mark.anyio
+async def test_lifespan_rejeita_staging_sem_database_url(
+    clear_settings_cache: None,
+) -> None:
+    """QDI-H-037 — fora de development exige Postgres para idempotência persistente."""
+    fake = MagicMock()
+    fake.sync_database_url = ""
+    fake.sentry_dsn = ""
+    fake.idempotency_ttl_seconds = 3600
+    fake.app_env = "staging"
+
+    mock_app = MagicMock()
+    mock_app.state = MagicMock()
+
+    with (
+        patch("src.presentation.api.main.get_settings", return_value=fake),
+        patch("src.presentation.api.main.configurar_logging"),
+        pytest.raises(RuntimeError, match="QDI-H-037"),
+    ):
+        async with lifespan(mock_app):
+            pass
+
+
+def test_health_live_e_ready_endpoints(clear_settings_cache: None) -> None:
+    """QDI-H-026 — liveness sempre OK; readiness 503 sem engine síncrono."""
+    from src.presentation.api.main import create_app
+
+    client = TestClient(create_app())
+    live = client.get("/health/live")
+    assert live.status_code == 200
+    assert live.json().get("check") == "live"
+    ready = client.get("/health/ready")
+    assert ready.status_code == 503
+    body = ready.json()
+    assert body.get("reason") == "database_unconfigured"
+
+
+def test_sentry_scrub_pii_ignora_evento_nao_dict() -> None:
+    assert _sentry_scrub_pii("noop", {}) == "noop"
+
+
+def test_sentry_scrub_pii_redact_campos_sensiveis() -> None:
+    event: dict = {"request": {"data": {"email": "a@b.com", "password": "x", "nome": "ok"}}}
+    out = _sentry_scrub_pii(event, {})
+    assert isinstance(out, dict)
+    data = out["request"]["data"]
+    assert data["email"] == "[REDACTED]"
+    assert data["password"] == "[REDACTED]"
+    assert data["nome"] == "ok"
+
+
+def test_sentry_scrub_pii_request_nao_dict() -> None:
+    """Cobre ramo ``request`` presente mas não-dict (branch 43→51)."""
+    event = {"request": "raw-string"}
+    assert _sentry_scrub_pii(event, {}) is event
+
+
+def test_sentry_scrub_pii_data_nao_dict() -> None:
+    """Cobre ramo ``data`` não-dict (branch 45→51)."""
+    event = {"request": {"data": [1, 2, 3]}}
+    assert _sentry_scrub_pii(event, {}) is event
+
+
+def test_sentry_scrub_pii_excecao_retorna_evento_sem_explodir() -> None:
+    """Ramificação ``except`` — falha ao iterar chaves não deve derrubar o hook."""
+
+    class _BadDict(dict):
+        def keys(self):  # type: ignore[override]
+            raise RuntimeError("simulado")
+
+    event = {"request": {"data": _BadDict(x=1)}}
+    assert _sentry_scrub_pii(event, {}) is event
+
+
+def test_ping_db_sync_executa_select_one() -> None:
+    mock_eng = MagicMock()
+    mock_conn = MagicMock()
+    mock_cm = MagicMock()
+    mock_cm.__enter__.return_value = mock_conn
+    mock_cm.__exit__.return_value = None
+    mock_eng.connect.return_value = mock_cm
+    _ping_db_sync(mock_eng)
+    mock_conn.execute.assert_called_once()
+
+
+def test_health_ready_200_com_engine_simulado(
+    monkeypatch: pytest.MonkeyPatch,
+    clear_settings_cache: None,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:59999/test_qdi")
+    get_settings.cache_clear()
+    mock_eng = MagicMock()
+    mock_conn = MagicMock()
+    mock_cm = MagicMock()
+    mock_cm.__enter__.return_value = mock_conn
+    mock_cm.__exit__.return_value = None
+    mock_eng.connect.return_value = mock_cm
+    with patch("src.presentation.api.main.create_engine", return_value=mock_eng):
+        from src.presentation.api.main import create_app
+
+        with TestClient(create_app()) as client:
+            ready = client.get("/health/ready")
+    assert ready.status_code == 200
+    assert ready.json().get("check") == "ready"
+
+
+def test_health_ready_503_quando_ping_falha(
+    monkeypatch: pytest.MonkeyPatch,
+    clear_settings_cache: None,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@127.0.0.1:59999/test_qdi")
+    get_settings.cache_clear()
+    mock_eng = MagicMock()
+    mock_eng.connect.side_effect = OSError("db fora")
+    with patch("src.presentation.api.main.create_engine", return_value=mock_eng):
+        from src.presentation.api.main import create_app
+
+        with TestClient(create_app()) as client:
+            ready = client.get("/health/ready")
+    assert ready.status_code == 503
+    assert ready.json().get("reason") == "database_unreachable"

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, status
 
+from src.domain.value_objects.email import normalizar_email
+
 from . import deps, jwt_tokens
 from .schemas import SelfServiceTokenRequest, SelfServiceTokenResponse
 
@@ -21,7 +23,7 @@ router = APIRouter()
     ),
 )
 async def emitir_token_self_service(body: SelfServiceTokenRequest) -> SelfServiceTokenResponse:
-    email_norm = deps.codigo_store.normalizar_email(str(body.email))
+    email_norm = normalizar_email(str(body.email))
     codigo_limpo = body.codigo.strip().replace(" ", "")
     if not codigo_limpo.isdigit():
         raise HTTPException(

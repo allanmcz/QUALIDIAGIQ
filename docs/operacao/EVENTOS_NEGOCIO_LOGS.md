@@ -19,3 +19,8 @@ Adapters **devem** usar **`structlog`** — ver `.cursorrules` anti-padrão S-06
 ## OpenTelemetry
 
 Guia local: `docs/operacao/OTEL_QUICKSTART_LOCAL.md`. Variáveis: `OTEL_TRACING_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT`, etc. — `README.md` raiz.
+
+## Propagação W3C Trace Context (QDI-H-008)
+
+- O proxy Next (`frontend/app/api-backend/[[...slug]]/route.ts`) repassa **`traceparent`** e **`tracestate`** para a API quando presentes no pedido do browser.
+- A API aceita estes cabeçalhos no CORS (`src/presentation/api/main.py`) para permitir correlação ponta-a-ponta com exportadores OTLP.

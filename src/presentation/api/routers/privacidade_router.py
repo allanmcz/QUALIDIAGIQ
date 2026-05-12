@@ -146,7 +146,7 @@ async def registrar_solicitacao_lgpd(
         tipo=_parse_tipo(payload.tipo),
         canal=_parse_canal(payload.canal),
         solicitante_email=payload.solicitante_email,
-        payload=payload.payload,
+        payload=payload.payload.model_dump(mode="json", exclude_none=True),
         actor_user_id=user_id,
     )
     try:

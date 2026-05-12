@@ -421,6 +421,17 @@ class PatchSubtarefaPlanoDiagnosticoRequest(BaseModel):
     ordem: int | None = Field(default=None, ge=0, le=10_000)
 
 
+class LgpdTitularSolicitacaoPayload(BaseModel):
+    """Metadados estruturados da solicitação (art. 18 LGPD) — QDI-H-013."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    motivo: str | None = Field(default=None, max_length=4000)
+    detalhes: str | None = Field(default=None, max_length=8000)
+    idioma_resposta: str | None = Field(default=None, max_length=16)
+    referencia_diagnostico_texto: str | None = Field(default=None, max_length=500)
+
+
 class RegistrarSolicitacaoTitularLgpdRequest(BaseModel):
     """Corpo do POST /privacidade/solicitacoes (art. 18)."""
 
@@ -443,9 +454,9 @@ class RegistrarSolicitacaoTitularLgpdRequest(BaseModel):
         description="plataforma, self_service ou dpo_email.",
     )
     solicitante_email: str = Field(..., min_length=5, max_length=254)
-    payload: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Metadados da solicitação (texto livre/estrutura simples).",
+    payload: LgpdTitularSolicitacaoPayload = Field(
+        default_factory=LgpdTitularSolicitacaoPayload,
+        description="Metadados estruturados da solicitação (campos conhecidos; extra proibido).",
     )
 
 

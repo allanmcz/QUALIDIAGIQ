@@ -22,6 +22,8 @@ const CABECALHOS_REPASSE = [
   "accept",
   "accept-language",
   "x-rascunho-token",
+  "traceparent",
+  "tracestate",
 ] as const;
 
 function isLikelyDockerContainer(): boolean {
@@ -66,6 +68,11 @@ function timeoutProxyMs(): number {
   const n = bruto ? Number.parseInt(bruto, 10) : NaN;
   if (Number.isFinite(n) && n > 0) return Math.min(n, 120_000);
   return 30_000;
+}
+
+/** QDI-H-036 — em produção não expor host interno / stack ao browser. */
+function respostaErroProxySeguro(): boolean {
+  return process.env.NODE_ENV === "production" || process.env.QDI_PROXY_SAFE_ERRORS === "1";
 }
 
 /** Cabeçalhos que não devem ser repassados ao browser nem podem falhar em `Headers.append`. */
@@ -165,9 +172,10 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
         );
         return NextResponse.json(
           {
-            detail:
-              "Proxy não conseguiu montar a resposta ao browser (cabeçalhos/corpo). " +
-              `Verifique logs «qdi_api_proxy_next_response_falhou». Detalhe: ${m}`,
+            detail: respostaErroProxySeguro()
+              ? "Indisponível temporariamente (proxy). Consulte os logs do servidor."
+              : "Proxy não conseguiu montar a resposta ao browser (cabeçalhos/corpo). " +
+                  `Verifique logs «qdi_api_proxy_next_response_falhou». Detalhe: ${m}`,
           },
           { status: 502 },
         );
@@ -186,7 +194,9 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
       );
       return NextResponse.json(
         {
-          detail: `Falha ao contactar a API em «${base}» (${pathSuffix || "/"}). ` + `Erro: ${msg}`,
+          detail: respostaErroProxySeguro()
+            ? "Indisponível temporariamente (proxy). Consulte os logs do servidor."
+            : `Falha ao contactar a API em «${base}» (${pathSuffix || "/"}). ` + `Erro: ${msg}`,
         },
         { status: 502 },
       );
@@ -202,8 +212,9 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
     );
     return NextResponse.json(
       {
-        detail:
-          `Exceção no proxy /api-backend (evita página HTML «Internal Server Error»). Detalhe: ${msg}`,
+        detail: respostaErroProxySeguro()
+          ? "Indisponível temporariamente (proxy). Consulte os logs do servidor."
+          : `Exceção no proxy /api-backend (evita página HTML «Internal Server Error»). Detalhe: ${msg}`,
       },
       { status: 502 },
     );

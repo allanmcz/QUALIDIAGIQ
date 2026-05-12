@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.application.ports.email_service import EmailServicePort
+from src.domain.value_objects.email import normalizar_email
 from src.presentation.api.dependencies import get_email_service
 
 from . import deps
@@ -37,7 +38,7 @@ async def solicitar_verificacao_email(
     email_service: Annotated[EmailServicePort, Depends(get_email_service)],
 ) -> SolicitarVerificacaoEmailResponse:
     settings = deps.get_settings()
-    email_norm = deps.codigo_store.normalizar_email(str(body.email))
+    email_norm = normalizar_email(str(body.email))
     if not deps.codigo_store.pode_reenviar(email_norm):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -77,7 +78,7 @@ async def solicitar_verificacao_email(
 async def confirmar_verificacao_email(
     body: ConfirmarVerificacaoEmailRequest,
 ) -> ConfirmarVerificacaoEmailResponse:
-    email_norm = deps.codigo_store.normalizar_email(str(body.email))
+    email_norm = normalizar_email(str(body.email))
     codigo_limpo = body.codigo.strip().replace(" ", "")
     if not codigo_limpo.isdigit():
         raise HTTPException(

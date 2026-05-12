@@ -38,4 +38,8 @@
 \i /docker-entrypoint-initdb.d/migrations/0034_revoke_delete_append_only.sql
 \i /docker-entrypoint-initdb.d/migrations/0035_diagnostico_retificacao_append_only.sql
 \i /docker-entrypoint-initdb.d/migrations/0036_respondente_ip_origem_lgpd.sql
+\i /docker-entrypoint-initdb.d/migrations/0037_revoke_qdi_rag_writes_authenticated.sql
+\i /docker-entrypoint-initdb.d/migrations/0038_force_rls_idempotency_cnae_cnpj_cache.sql
+\i /docker-entrypoint-initdb.d/migrations/0039_check_diagnosticos_empresa_cnpj_format.sql
+\i /docker-entrypoint-initdb.d/migrations/0040_indices_diagnosticos_tenant_cnpj.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

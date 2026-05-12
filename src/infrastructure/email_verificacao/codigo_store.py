@@ -14,6 +14,11 @@ from typing import Final
 
 from cachetools import TTLCache
 
+from src.domain.value_objects import email as _email_vo
+
+# Re-export para compatibilidade com ``from codigo_store import normalizar_email``.
+normalizar_email = _email_vo.normalizar_email
+
 _MAX_EMAILS: Final[int] = 20_000
 _CODIGO_TTL_SEC: Final[int] = 600  # 10 min
 _RATE_SEGUNDOS: Final[int] = 45
@@ -21,10 +26,6 @@ _RATE_SEGUNDOS: Final[int] = 45
 _codigos: TTLCache[str, str] = TTLCache(maxsize=_MAX_EMAILS, ttl=_CODIGO_TTL_SEC)
 _ultimo_envio: TTLCache[str, float] = TTLCache(maxsize=_MAX_EMAILS, ttl=_CODIGO_TTL_SEC)
 _lock = threading.Lock()
-
-
-def normalizar_email(email: str) -> str:
-    return email.strip().lower()
 
 
 def pode_reenviar(email_norm: str) -> bool:
