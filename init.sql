@@ -42,4 +42,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0038_force_rls_idempotency_cnae_cnpj_cache.sql
 \i /docker-entrypoint-initdb.d/migrations/0039_check_diagnosticos_empresa_cnpj_format.sql
 \i /docker-entrypoint-initdb.d/migrations/0040_indices_diagnosticos_tenant_cnpj.sql
+\i /docker-entrypoint-initdb.d/migrations/0041_force_rls_cnpj_consultas.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

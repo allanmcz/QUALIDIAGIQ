@@ -231,6 +231,12 @@ async def _montar_diagnostico_response(
         cronograma_data = list(blob.cronograma)
         versao_plano = blob.versao_plano
     else:
+        logger.info(
+            "plano_painel_resposta_fallback_motor_legado",
+            diagnostico_id=str(diagnostico.id),
+            tenant_id=str(diagnostico.tenant_id),
+            evento="plano_materializado_ausente",
+        )
         snap_chk = getattr(diagnostico, "score_completo_snapshot", None)
         checklist_entities = ConsultoriaService.gerar_checklist(
             diagnostico,

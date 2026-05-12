@@ -753,6 +753,8 @@ def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter | Anthropi
         logger.warning(
             "llm_backend_anthropic_sem_api_key",
             fallback="langgraph_ollama",
+            llm_backend_solicitado="anthropic",
+            evento="llm_plano_fallback_backend",
         )
 
     if settings.llm_backend == "http_ollama":

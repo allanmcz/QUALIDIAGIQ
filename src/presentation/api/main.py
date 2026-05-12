@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator  # noqa: TC003
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
+import structlog
 from cachetools import TTLCache
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,8 @@ from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
 from src.presentation.api.middleware.public_rate_limit import PublicRateLimitMiddleware
 from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 from src.presentation.api.routers import diagnostico_router
+
+logger = structlog.get_logger(__name__)
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -151,6 +154,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(sync_url, pool_pre_ping=True)
     app.state.idempotency_engine = engine
     app.state.idempotency_ttl_seconds = settings.idempotency_ttl_seconds
+    app.state.idempotency_backend_active = engine is not None
+    logger.info(
+        "idempotency_backend_startup",
+        idempotency_backend_active=bool(engine),
+        app_env=(settings.app_env or "").strip(),
+    )
 
     env_norm = (settings.app_env or "").strip().lower()
     if env_norm != "development" and engine is None:
@@ -292,7 +301,12 @@ def create_app() -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content={"status": "not_ready", "reason": "database_unreachable"},
             )
-        return {"status": "ok", "check": "ready", "service": "qualidiagiq"}
+        return {
+            "status": "ok",
+            "check": "ready",
+            "service": "qualidiagiq",
+            "idempotency_backend": "postgres",
+        }
 
     # Registrar os Routers do Domínio
     from src.presentation.api.routers import (

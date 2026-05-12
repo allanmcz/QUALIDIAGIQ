@@ -15,7 +15,6 @@
     "test:e2e:integrado": "PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_INTEGRATED=1 playwright test e2e/dashboard-list-integrado.spec.ts e2e/a11y-critical.spec.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.1",
     "@base-ui/react": "^1.4.1",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",

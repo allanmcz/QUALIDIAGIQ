@@ -160,10 +160,15 @@ def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     with (
         patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
         patch("src.presentation.api.dependencies.build_base_normativa_port") as mock_bn,
+        patch("src.presentation.api.dependencies.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service()
     assert type(svc).__name__ == "LangGraphOllamaLlmAdapter"
+    log.warning.assert_called_once()
+    kwa = log.warning.call_args.kwargs
+    assert kwa.get("llm_backend_solicitado") == "anthropic"
+    assert kwa.get("evento") == "llm_plano_fallback_backend"
 
 
 def test_perfil_empresa_questionario_rejeita_uf_invalida() -> None:

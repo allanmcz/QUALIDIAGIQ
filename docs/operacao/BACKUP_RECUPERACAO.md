@@ -1,5 +1,7 @@
 # Backup e recuperação — QualiDiagIQ (rascunho operacional)
 
+Visão **DR / dono / escalação:** `docs/operacao/BACKUP_E_DR.md` (QDI-H-025).
+
 ## PostgreSQL (Supabase)
 
 - **Responsável:** operação da conta Supabase / DBA designado.

@@ -37,16 +37,17 @@ O wizard usa **`localStorage`** para rascunho de UX (`wizard_draft`), pendente l
 - TypeScript 5.5+
 - Tailwind CSS 3.4+
 - shadcn/ui
-- Anthropic SDK (`@anthropic-ai/sdk`) para chat-tributário
 - recharts (radar + heatmap)
 - lucide-react (ícones)
+
+> Chamadas a modelos de IA no **browser** não são requisito do MVP: o SDK Anthropic foi **removido** do frontend (**ADR-017**); recomendações usam a API FastAPI.
 
 ## Inicialização (executar uma vez)
 
 ```bash
 cd frontend
 npx create-next-app@14 . --ts --tailwind --app --eslint --no-src-dir
-npm install @anthropic-ai/sdk lucide-react @radix-ui/react-progress recharts
+npm install lucide-react @radix-ui/react-progress recharts
 
 # Setup shadcn/ui
 npx shadcn-ui@latest init

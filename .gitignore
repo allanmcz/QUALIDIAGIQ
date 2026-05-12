@@ -83,6 +83,10 @@ docs/*
 !docs/legal/
 !docs/legal/**
 
+# Segurança — políticas operacionais (exceção — versionados; QDI-H-014)
+!docs/seguranca/
+!docs/seguranca/**
+
 # Mapa da documentação (índice humano — versionado)
 !docs/README.md
 

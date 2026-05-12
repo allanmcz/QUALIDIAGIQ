@@ -36,8 +36,8 @@ def test_lifespan_cria_engine_quando_database_url(
         from src.presentation.api.main import create_app
 
         app = create_app()
-        with TestClient(app):
-            pass
+        with TestClient(app) as client:
+            assert getattr(client.app.state, "idempotency_backend_active", None) is True
         mock_ce.assert_called_once()
         mock_ce.return_value.dispose.assert_called_once()
 
@@ -240,6 +240,24 @@ async def test_lifespan_rejeita_staging_sem_database_url(
             pass
 
 
+def test_create_app_emite_log_idempotency_backend_startup(
+    monkeypatch: pytest.MonkeyPatch,
+    clear_settings_cache: None,
+) -> None:
+    """QDI-H-037 — startup regista ``idempotency_backend_active`` (observabilidade / métrica textual)."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    get_settings.cache_clear()
+    with patch("src.presentation.api.main.logger") as log:
+        from src.presentation.api.main import create_app
+
+        with TestClient(create_app()):
+            pass
+    assert any(
+        len(c.args) >= 1 and c.args[0] == "idempotency_backend_startup"
+        for c in log.info.call_args_list
+    )
+
+
 def test_health_live_e_ready_endpoints(clear_settings_cache: None) -> None:
     """QDI-H-026 — liveness sempre OK; readiness 503 sem engine síncrono."""
     from src.presentation.api.main import create_app
@@ -320,7 +338,9 @@ def test_health_ready_200_com_engine_simulado(
         with TestClient(create_app()) as client:
             ready = client.get("/health/ready")
     assert ready.status_code == 200
-    assert ready.json().get("check") == "ready"
+    body = ready.json()
+    assert body.get("check") == "ready"
+    assert body.get("idempotency_backend") == "postgres"
 
 
 def test_health_ready_503_quando_ping_falha(

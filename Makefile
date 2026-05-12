@@ -120,7 +120,7 @@ ci-integration: ## Espelho local do CI: migra Postgres + pytest integration (ana
 
 frontend-init: ## Inicializa o frontend Next.js (executar uma vez)
 	cd frontend && npx create-next-app@14 . --ts --tailwind --app --eslint --no-src-dir
-	cd frontend && npm install @anthropic-ai/sdk lucide-react @radix-ui/react-progress recharts
+	cd frontend && npm install lucide-react @radix-ui/react-progress recharts
 
 all: install dev ## Setup completo + sobe ambiente
 

@@ -17,3 +17,8 @@ Stack declarada pelo produto menciona modelo primário Claude (Anthropic). O có
 
 - Divergências de comportamento Dev vs Produção ficam tratadas como **infra**, não regressão matemática do score (motor de score permanece determinístico).
 - Time avalia atualização deste ADR quando tiers **Plus/Pro** tiverem anexo contratual modelo.
+
+## Atualização QDI-H-032 (2026-05-11)
+
+- **`QDI_LLM_BACKEND`** + **`ANTHROPIC_API_KEY`** em `Settings` materializam a fábrica em `get_llm_service()` (`dependencies.py`): `anthropic` com chave ⇒ `AnthropicLlmAdapter`; sem chave ⇒ fallback **LangGraph/Ollama** com log estruturado (`llm_backend_anthropic_sem_api_key`).
+- Produção com `anthropic` **exige** chave não vazia (validador `_producao_segredos_obrigatorios`).

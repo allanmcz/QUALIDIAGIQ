@@ -13,8 +13,11 @@
 | Diagnóstico | `diagnostico_criado`, `diagnostico_finalizado` | POST/PATCH fluxos principais |
 | PDF | `pdf_geracao_ok` / `pdf_geracao_falhou` | Geração WeasyPrint |
 | Mutação | `diagnostico_mutacao_audit_gravada` | Auditoria pós-mutação (migração 0026) |
+| Idempotência | `idempotency_backend_startup` | Lifespan — backend Postgres ativo (`app.state.idempotency_backend_active`) |
+| Plano painel | `plano_painel_resposta_fallback_motor_legado` | Resposta HTTP sem plano materializado na BD (motor legado) |
+| LLM | `llm_backend_anthropic_sem_api_key` | Fallback para Ollama quando `QDI_LLM_BACKEND=anthropic` sem chave |
 
-Adapters **devem** usar **`structlog`** — ver `.cursorrules` anti-padrão S-06 (`print` em API).
+Cruzamento com código: **`docs/operacao/AUDITORIA_EVENTOS_VS_CODIGO.md`** (QDI-H-022).
 
 ## OpenTelemetry
 

@@ -8,7 +8,7 @@
 > **Diagnóstico Tributário Automatizado para a Reforma Tributária do Consumo**
 > Módulo do ecossistema **Tributiq** · 6 produtos Quali*IQ · `014-SAAS_REFORMA`
 > **Sigla:** QDI
-> **Status:** MVP desenvolvido (FastAPI + Next.js 14 + Postgres); usar `docs/operacao/CHECKLIST_GO_LIVE_45MIN.md` para cortes em produção.
+> **Status:** MVP desenvolvido (FastAPI + Next.js 14 + Postgres); usar `docs/operacao/CHECKLIST_GO_LIVE_45MIN.md` para cortes em produção. Remediação segurança: `docs/operacao/STATUS_REMEDIACAO_2026-05-11.md`.
 
 ---
 

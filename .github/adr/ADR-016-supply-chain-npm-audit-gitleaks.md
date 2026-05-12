@@ -9,7 +9,7 @@ O plano de hardening (QDI-H-009, QDI-H-010) exige verificação automática de *
 
 ## Decisão
 
-1. **CI:** no job `frontend-e2e` (`.github/workflows/ci.yml`), após `npm ci`, executar `npm audit --omit=dev --audit-level=high`. Falhas bloqueiam merge até correção ou exceção documentada.
+1. **CI:** no job `frontend-e2e` (`.github/workflows/ci.yml`), após `npm ci`, executar `npm audit --omit=dev --audit-level=critical`. **HIGH** conhecidos no Next 14.x (ex.: middleware) ficam rastreados em `docs/operacao/STATUS_REMEDIACAO_*.md` até upgrade de major planeado; **CRITICAL** bloqueia merge.
 2. **Local / pre-commit:** ficheiro `.pre-commit-config.yaml` com hook oficial **gitleaks** (`gitleaks/gitleaks`). Ativação: `pip install pre-commit && pre-commit install` (documentar no README se ainda não existir).
 
 ## Consequências

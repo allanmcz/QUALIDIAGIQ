@@ -28,6 +28,7 @@ from src.presentation.api.routers.diagnostico_helpers import (
     _enviar_otp_verificacao_para_email,
     _executar_criar_diagnostico_core,
     _mascarar_email_norm,
+    _montar_diagnostico_response,
     _parse_if_match_versao,
     _payload_json_como_dict,
     _plano_efetivo_para_criacao,
@@ -298,3 +299,19 @@ async def test_executar_criar_diagnostico_core_pergunta_nao_encontrada_e_value_e
                 repo=repo,
             )
     assert exc2.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_montar_diagnostico_response_sem_plano_materializado_regista_fallback() -> None:
+    """QDI-H-020 — ausência de plano na BD dispara motor legado e regista evento estruturado."""
+    d = _diag()
+    repo = AsyncMock()
+    repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
+    with patch("src.presentation.api.routers.diagnostico_helpers.logger") as log:
+        resp = await _montar_diagnostico_response(repo, d)
+    log.info.assert_called()
+    assert any(
+        len(c.args) >= 1 and c.args[0] == "plano_painel_resposta_fallback_motor_legado"
+        for c in log.info.call_args_list
+    )
+    assert resp.id == d.id
