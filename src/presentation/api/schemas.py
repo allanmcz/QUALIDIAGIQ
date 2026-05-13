@@ -13,7 +13,15 @@ from enum import StrEnum
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    JsonValue,
+    field_validator,
+    model_validator,
+)
 
 from src.domain.entities.diagnostico import (
     FaixaFaturamentoDeclarada,
@@ -484,7 +492,7 @@ class SolicitacaoTitularLgpdResponse(BaseModel):
     status: str
     canal: str
     solicitante_email: str
-    payload: dict[str, Any]
+    payload: JsonValue
     observacao_interna: str | None
     actor_user_id: UUID | None
     criado_em: datetime

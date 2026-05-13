@@ -10,7 +10,7 @@
 | Área | Evento (chave sugerida) | Quando |
 |------|-------------------------|--------|
 | Auth | `auth_login_sucesso` / falha | POST `/auth/login` |
-| Diagnóstico | `diagnostico_criado`, `diagnostico_finalizado` | POST/PATCH fluxos principais |
+| Diagnóstico | `diagnostico_finalizado` | Use case ``RealizarDiagnostico`` após persistência; ``diagnostico_criado`` / PATCH — alinhar noutros fluxos |
 | PDF | `pdf_geracao_ok` / `pdf_geracao_falhou` | Geração WeasyPrint |
 | Mutação | `diagnostico_mutacao_audit_gravada` | Auditoria pós-mutação (migração 0026) |
 | Idempotência | `idempotency_backend_startup` | Lifespan — backend Postgres ativo (`app.state.idempotency_backend_active`) |

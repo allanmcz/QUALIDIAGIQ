@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -246,3 +247,26 @@ async def test_force_refresh_chama_materializar_e_propaga_historico(
     hist = kw["historico_campos_empresa_cnpj"]
     assert hist is not None
     assert any(h[0] == "empresa_razao_social" for h in hist)
+
+
+@pytest.mark.asyncio
+async def test_execute_emite_evento_diagnostico_finalizado(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    """QDI-H-022 — após persistência, regista chave estável ``diagnostico_finalizado`` (structlog)."""
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    uc = RealizarDiagnostico(repo=repo, calcular_score_use_case=calcular_real)
+    cmd = replace(_comando_base(), trace_id="trace-handoff-99")
+    with patch("src.application.use_cases.realizar_diagnostico.logger") as log:
+        res = await uc.execute(cmd)
+    assert res.diagnostico.status.value == "finalizado"
+    final_calls = [
+        c for c in log.info.call_args_list if c.args and c.args[0] == "diagnostico_finalizado"
+    ]
+    assert len(final_calls) == 1
+    kwa = final_calls[0].kwargs
+    assert kwa.get("trace_id") == "trace-handoff-99"
+    assert kwa.get("tenant_id") == str(cmd.tenant_id)
+    assert kwa.get("diagnostico_id") == str(res.diagnostico.id)
+    assert kwa.get("relatorio_pdf") is False

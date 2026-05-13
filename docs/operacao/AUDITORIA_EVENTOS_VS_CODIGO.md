@@ -17,7 +17,8 @@
 | Auth | `auth_login_sucesso` | Parcial | Login não emite chave única; erros: `admin_sem_hashed_password`, `admin_sem_tenant_id` (`routes_login.py`). |
 | Auth | cadastro consultor | Implementado | `cadastro_consultor_b2b_ok` (`routes_cadastro.py`). |
 | Auth | JWT inválido | Implementado | `jwt_invalido`, `jwt_self_service_invalido` (`dependencies.py`). |
-| Diagnóstico | `diagnostico_criado` | Parcial | Use cases / routers podem não centralizar uma única chave — rever em hardening. |
+| Diagnóstico | `diagnostico_finalizado` | Implementado | ``src/application/use_cases/realizar_diagnostico.py`` após ``salvar_e_materializar_plano_painel``. |
+| Diagnóstico | `diagnostico_criado` | Parcial | Chave dedicada ainda não emitida em todos os POST (rascunho / PATCH). |
 | PDF | `pdf_geracao_*` | Implementado | `pdf_generator_weasyprint.py` (warnings/errors de geração). |
 | Mutação | `diagnostico_mutacao_audit_gravada` | Parcial | Trigger/migração 0026 — confirmar log explícito em adapter se necessário. |
 | CNPJ | fallback / erros | Implementado | `cnpj_brasil_api_timeout`, `cnpj_minha_receita_falhou`, etc. (`cnpj_provedor_externo_http.py`). |
@@ -28,5 +29,5 @@
 
 ## Próximo passo
 
-- Normalizar eventos de diagnóstico (`diagnostico_criado`, `diagnostico_finalizado`) numa única passagem de use cases com nomes estáveis.
+- Emitir `diagnostico_criado` nos fluxos de rascunho / PATCH quando aplicável.
 - Exportar chaves para o dashboard (QDI-H-024) após Grafana disponível.

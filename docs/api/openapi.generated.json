@@ -3583,6 +3583,7 @@
           "privacidade_solicitacoes_path": "/privacidade/solicitacoes"
         }
       },
+      "JsonValue": {},
       "LgpdTitularSolicitacaoPayload": {
         "properties": {
           "motivo": {
@@ -4497,9 +4498,7 @@
             "title": "Solicitante Email"
           },
           "payload": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Payload"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "observacao_interna": {
             "anyOf": [

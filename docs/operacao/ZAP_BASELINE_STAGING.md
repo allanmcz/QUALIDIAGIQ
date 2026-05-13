@@ -7,7 +7,11 @@
 - Staging com API + Next publicados e TLS válido (ou rede interna confiável).
 - Variável `ZAP_TARGET` = URL base (ex.: `https://api-staging.exemplo.com`).
 
-## Fluxo sugerido (Docker ZAP)
+## Execução no GitHub Actions
+
+Workflow **manual**: `.github/workflows/zap-baseline-dispatch.yml` — *Actions* → *ZAP baseline (manual)* → indicar `target_url` (URL pública de staging).
+
+## Execução local (Docker)
 
 ```bash
 docker run --rm -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t "$ZAP_TARGET" -r zap-report.html

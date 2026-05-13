@@ -1,0 +1,28 @@
+# ZAP Baseline — execução manual (QDI-H-029)
+
+name: zap-baseline-dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "URL base pública a analisar (ex.: https://app-staging.exemplo.com)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ inputs.target_url }}
+          allow_issue_writing: false
+          fail_action: false
+      - name: Resumo
+        run: echo "Artefactos ZAP no separador Summary / job logs do GitHub Actions."

@@ -21,6 +21,20 @@ function connectSrcCspParts() {
   return parts;
 }
 
+/** CSP produção — mesmo valor para ``Content-Security-Policy`` e opcionalmente Report-Only (QDI-H-021). */
+function buildProductionCspValue() {
+  return [
+    "default-src 'self'",
+    "img-src 'self' data: https:",
+    `connect-src ${connectSrcCspParts().join(" ")}`,
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "frame-ancestors 'self'",
+  ].join("; ");
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /**
@@ -68,6 +82,7 @@ const nextConfig = {
       },
     ];
     if (isProd) {
+      const cspValue = buildProductionCspValue();
       securityHeaders.push(
         {
           key: "Strict-Transport-Security",
@@ -76,18 +91,15 @@ const nextConfig = {
         { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         {
           key: "Content-Security-Policy",
-          value: [
-            "default-src 'self'",
-            "img-src 'self' data: https:",
-            `connect-src ${connectSrcCspParts().join(" ")}`,
-            "script-src 'self' 'unsafe-inline'",
-            "style-src 'self' 'unsafe-inline'",
-            "worker-src 'self'",
-            "manifest-src 'self'",
-            "frame-ancestors 'self'",
-          ].join("; "),
+          value: cspValue,
         },
       );
+      if (process.env.QDI_CSP_REPORT_ONLY === "1") {
+        securityHeaders.push({
+          key: "Content-Security-Policy-Report-Only",
+          value: cspValue,
+        });
+      }
     }
     return [{ source: "/:path*", headers: securityHeaders }];
   },

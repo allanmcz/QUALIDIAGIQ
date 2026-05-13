@@ -2,7 +2,7 @@
 Use Case principal — orquestra o ciclo completo do diagnóstico.
 
 Camada: Application
-Depende de: Domain (entities, value_objects, repositories)
+Depende de: Domain (entities, value_objects, repositories); **structlog** apenas para eventos de observabilidade (QDI-H-022).
 NÃO depende de: Infrastructure, Presentation
 
 Sequência orquestrada:
@@ -22,6 +22,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+import structlog
+
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.services.cnpj_consulta_mapeamento import mesclar_empresa_com_sugestao_cnpj
 from src.application.services.cnpj_consulta_service import CnpjConsultaService
@@ -32,6 +34,8 @@ from src.domain.entities.diagnostico import (
     Respondente,
 )
 from src.domain.entities.questionario import Pergunta, Resposta
+
+logger = structlog.get_logger(__name__)
 
 _ANCORA_FIXA_LLM = (
     "Âncoras: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026. "
@@ -231,6 +235,16 @@ class RealizarDiagnostico:
             score_completo,
             historico_campos_empresa_cnpj=historico_cnpj or None,
             cnpj_consulta_id=consulta_cnpj_uuid,
+        )
+
+        logger.info(
+            "diagnostico_finalizado",
+            tenant_id=str(comando.tenant_id),
+            diagnostico_id=str(diagnostico.id),
+            status=diagnostico.status.value,
+            plano=diagnostico.plano.value,
+            relatorio_pdf=bool(pdf_url),
+            trace_id=comando.trace_id,
         )
 
         # 7. Envio de E-mail

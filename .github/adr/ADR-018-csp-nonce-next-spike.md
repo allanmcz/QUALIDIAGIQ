@@ -12,8 +12,7 @@ Mitigar XSS (especialmente com JWT em `localStorage`, **ADR-004**) exige CSP est
 1. Avaliar `middleware.ts` emitindo `Content-Security-Policy` com `script-src 'nonce-{random}'` + hashes para scripts estáticos inevitáveis.
 2. Integrar com **Turbopack/Webpack** e `next/script` — documentar exceções (analytics, Sentry browser).
 3. **Não** ativar CSP bloqueante em produção sem checklist de regressão visual e E2E.
-
-## Consequências
+4. **Report-Only duplicado:** em build de produção do Next, `QDI_CSP_REPORT_ONLY=1` envia o mesmo valor em `Content-Security-Policy-Report-Only` (`next.config.mjs` — QDI-H-021).
 
 - Spike pode resultar em PR dedicado pós-MVP ou Onda 1.1.
 - Até lá: manter `npm audit`, scrub Sentry (**ADR-016**, QDI-H-016) e proxy com erros genéricos (QDI-H-036).
