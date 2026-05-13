@@ -53,6 +53,7 @@ router = APIRouter()
     ),
 )
 async def criar_rascunho_diagnostico_self_service(
+    request: Request,
     payload: Annotated[
         IniciarDiagnosticoRequest,
         Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
@@ -71,7 +72,7 @@ async def criar_rascunho_diagnostico_self_service(
     email_norm = normalizar_email(str(payload.respondente.email))
     payload_dict = payload.model_dump(mode="json")
     try:
-        token_plain, expira_em = await deps.asyncio.to_thread(
+        token_plain, expira_em, rascunho_id = await deps.asyncio.to_thread(
             inserir_rascunho_sync,
             dsn,
             tenant_id=tenant_ss,
@@ -84,6 +85,15 @@ async def criar_rascunho_diagnostico_self_service(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Não foi possível gravar o rascunho no PostgreSQL.",
         ) from e
+
+    tid_trace = getattr(request.state, "trace_id", None)
+    trace_log = str(tid_trace).strip() if tid_trace else None
+    deps.logger.info(
+        "diagnostico_rascunho_self_service_gravado",
+        tenant_id=str(tenant_ss),
+        rascunho_id=str(rascunho_id),
+        trace_id=trace_log,
+    )
 
     mensagem = await diagnostico_helpers._enviar_otp_verificacao_para_email(
         email_norm, email_service

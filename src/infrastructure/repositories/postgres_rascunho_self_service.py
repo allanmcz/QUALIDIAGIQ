@@ -9,12 +9,10 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
+from uuid import UUID
 
 import psycopg2
-
-if TYPE_CHECKING:
-    import uuid
 from psycopg2.extras import Json, RealDictCursor
 
 _RASCUNHO_TTL_HORAS = 24
@@ -27,12 +25,14 @@ def _token_sha256(token_plain: str) -> str:
 def inserir_rascunho_sync(
     dsn: str,
     *,
-    tenant_id: uuid.UUID,
+    tenant_id: UUID,
     email_norm: str,
     payload_dict: dict[str, Any],
-) -> tuple[str, datetime]:
+) -> tuple[str, datetime, UUID]:
     """
-    Insere rascunho e devolve (token em texto claro uma única vez, expira_em UTC).
+    Insere rascunho e devolve (token em texto claro uma única vez, expira_em UTC, id da linha).
+
+    O ``id`` permite correlação em logs (QDI-H-022) sem expor o token opaco.
     """
     token_plain = secrets.token_urlsafe(32)
     th = _token_sha256(token_plain)
@@ -45,16 +45,21 @@ def inserir_rascunho_sync(
                 INSERT INTO diagnostico_rascunhos_self_service (
                     tenant_id, email_norm, payload_json, token_sha256, expira_em
                 ) VALUES (%s, %s, %s::jsonb, %s, %s)
+                RETURNING id
                 """,
                 (str(tenant_id), email_norm, Json(payload_dict), th, expira),
             )
+            row = cur.fetchone()
+            if not row or row[0] is None:
+                raise RuntimeError("INSERT rascunho self-service sem RETURNING id.")
+            rascunho_id = UUID(str(row[0]))
         conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
-    return token_plain, expira
+    return token_plain, expira, rascunho_id
 
 
 def buscar_rascunho_ativo_por_token_sync(dsn: str, token_plain: str) -> dict[str, Any] | None:
@@ -96,7 +101,7 @@ def buscar_rascunho_ativo_por_token_sync(dsn: str, token_plain: str) -> dict[str
         conn.close()
 
 
-def marcar_rascunho_consumido_sync(dsn: str, rascunho_id: uuid.UUID) -> None:
+def marcar_rascunho_consumido_sync(dsn: str, rascunho_id: UUID) -> None:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:

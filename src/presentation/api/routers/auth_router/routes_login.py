@@ -99,6 +99,12 @@ async def login(request: LoginRequest) -> LoginResponse:
         )
         nome_raw = user.get("nome")
         nome = str(nome_raw) if nome_raw is not None else None
+        deps.logger.info(
+            "auth_login_sucesso",
+            tenant_id=str(tenant_id),
+            user_id=str(user_id),
+            perfil_conta=perfil_login,
+        )
         return LoginResponse(
             access_token=access_token,
             token_type="bearer",

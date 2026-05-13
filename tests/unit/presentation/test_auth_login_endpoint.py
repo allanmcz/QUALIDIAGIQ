@@ -83,6 +83,34 @@ class TestAuthLoginPostgres:
         assert body.get("perfil_conta") == "gratuito"
         assert isinstance(body.get("access_token"), str)
 
+    def test_login_200_emite_auth_login_sucesso(self) -> None:
+        """QDI-H-022 — login bem-sucedido emite chave estável ``auth_login_sucesso`` (sem e-mail em claro)."""
+        user, pwd = _usuario_valido_bcryp()
+        settings = _jwt_settings()
+        with (
+            patch(
+                "src.presentation.api.routers.auth_router.deps.get_settings", return_value=settings
+            ),
+            patch(
+                "src.presentation.api.routers.auth_router.deps.buscar_admin_por_email_postgres",
+                return_value=user,
+            ),
+            patch("src.presentation.api.routers.auth_router.deps.logger") as log,
+        ):
+            r = TestClient(app).post(
+                "/auth/login",
+                json={"email": user["email"], "password": pwd},
+            )
+        assert r.status_code == 200, r.text
+        infos = [c.args[0] for c in log.info.call_args_list if c.args]
+        assert "auth_login_sucesso" in infos
+        suc = next(
+            c for c in log.info.call_args_list if c.args and c.args[0] == "auth_login_sucesso"
+        )
+        assert suc.kwargs.get("tenant_id") == user["tenant_id"]
+        assert suc.kwargs.get("user_id") == user["id"]
+        assert suc.kwargs.get("perfil_conta") == "gratuito"
+
     def test_login_400_usuario_inexistente(self) -> None:
         settings = _jwt_settings()
         with (

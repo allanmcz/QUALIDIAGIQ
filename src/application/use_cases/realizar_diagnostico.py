@@ -238,6 +238,14 @@ class RealizarDiagnostico:
         )
 
         logger.info(
+            "diagnostico_criado",
+            tenant_id=str(comando.tenant_id),
+            diagnostico_id=str(diagnostico.id),
+            status=diagnostico.status.value,
+            plano=diagnostico.plano.value,
+            trace_id=comando.trace_id,
+        )
+        logger.info(
             "diagnostico_finalizado",
             tenant_id=str(comando.tenant_id),
             diagnostico_id=str(diagnostico.id),

@@ -99,7 +99,7 @@ async def test_post_rascunho_201(rascunho_async_client: AsyncClient) -> None:
 
     async def fake_to_thread(fn: object, /, *args: object, **kwargs: object) -> object:
         if getattr(fn, "__name__", "") == "inserir_rascunho_sync":
-            return ("resgate-token-fixo", datetime.now(UTC))
+            return ("resgate-token-fixo", datetime.now(UTC), uuid4())
         raise AssertionError(getattr(fn, "__name__", fn))
 
     with patch.object(dss.deps, "get_settings", return_value=S()):

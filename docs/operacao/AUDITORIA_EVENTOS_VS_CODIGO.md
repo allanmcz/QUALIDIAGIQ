@@ -14,11 +14,12 @@
 
 | Área | Evento recomendado (doc) | Estado | Onde / chave real |
 |------|---------------------------|--------|-------------------|
-| Auth | `auth_login_sucesso` | Parcial | Login não emite chave única; erros: `admin_sem_hashed_password`, `admin_sem_tenant_id` (`routes_login.py`). |
+| Auth | `auth_login_sucesso` | Implementado | ``routes_login.py`` após emitir JWT (``tenant_id``, ``user_id``, ``perfil_conta``). |
 | Auth | cadastro consultor | Implementado | `cadastro_consultor_b2b_ok` (`routes_cadastro.py`). |
 | Auth | JWT inválido | Implementado | `jwt_invalido`, `jwt_self_service_invalido` (`dependencies.py`). |
-| Diagnóstico | `diagnostico_finalizado` | Implementado | ``src/application/use_cases/realizar_diagnostico.py`` após ``salvar_e_materializar_plano_painel``. |
-| Diagnóstico | `diagnostico_criado` | Parcial | Chave dedicada ainda não emitida em todos os POST (rascunho / PATCH). |
+| Diagnóstico | `diagnostico_criado` | Implementado | ``realizar_diagnostico.py`` logo após ``salvar_e_materializar_plano_painel``. |
+| Diagnóstico | `diagnostico_finalizado` | Implementado | Mesmo ficheiro, após ``diagnostico_criado``. |
+| Diagnóstico | rascunho self-service | Implementado | ``diagnostico_rascunho_self_service_gravado`` em ``routes_rascunho.py`` (``rascunho_id``, ``trace_id``). |
 | PDF | `pdf_geracao_*` | Implementado | `pdf_generator_weasyprint.py` (warnings/errors de geração). |
 | Mutação | `diagnostico_mutacao_audit_gravada` | Parcial | Trigger/migração 0026 — confirmar log explícito em adapter se necessário. |
 | CNPJ | fallback / erros | Implementado | `cnpj_brasil_api_timeout`, `cnpj_minha_receita_falhou`, etc. (`cnpj_provedor_externo_http.py`). |
@@ -29,5 +30,4 @@
 
 ## Próximo passo
 
-- Emitir `diagnostico_criado` nos fluxos de rascunho / PATCH quando aplicável.
 - Exportar chaves para o dashboard (QDI-H-024) após Grafana disponível.

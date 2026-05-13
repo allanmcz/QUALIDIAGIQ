@@ -6,8 +6,8 @@
 
 | Estado | Contagem aproximada |
 |--------|---------------------|
-| Fechado (código/SQL/CI) | H-001–H-005, H-008–H-010, H-013, H-016–H-020, H-021 (Report-Only opcional), H-022 (``diagnostico_finalizado``), H-026, H-029 (workflow dispatch), H-035–H-037, migrações até **0041** |
-| Parcial / docs rascunho | H-011, H-012, H-014, H-015, H-022 (``diagnostico_criado``), H-023, H-025, H-027, H-032, **H-038** (payload LGPD → ``JsonValue``) |
+| Fechado (código/SQL/CI) | H-001–H-005, H-008–H-010, H-013, H-016–H-020, H-021 (Report-Only opcional), **H-022** (``diagnostico_criado``, ``diagnostico_finalizado``, ``diagnostico_rascunho_self_service_gravado``, ``auth_login_sucesso``), H-026, H-029 (workflow dispatch), H-035–H-037, migrações até **0041** |
+| Parcial / docs rascunho | H-011, H-012, H-014, H-015, H-023, H-025, H-027, H-032, **H-038** (payload LGPD → ``JsonValue``) |
 | Externo ou Onda 1.1 | H-024, H-028–H-031, H-033 (smoke real), H-034, H-039, CSP nonce completo (ADR-018) |
 
 ## % P1 (estimativa manual)
@@ -20,7 +20,7 @@
 - Adicionada migração **0041** (FORCE RLS `cnpj_consultas` + histórico empresa).
 - Teste integração **H-003** em `tests/integration/test_qdi_rag_revoke_authenticated_postgres.py`.
 - **npm audit CI:** threshold **critical** (HIGH no Next 14.x — middleware — até decisão de upgrade).
-- **H-022:** evento ``diagnostico_finalizado`` em ``realizar_diagnostico.py`` + teste unitário.
+- **H-022:** ``diagnostico_criado`` + ``diagnostico_finalizado`` em ``realizar_diagnostico.py``; ``diagnostico_rascunho_self_service_gravado`` em rascunho POST; ``auth_login_sucesso`` em ``routes_login.py``; ``RETURNING id`` em ``inserir_rascunho_sync``.
 - **H-021:** ``QDI_CSP_REPORT_ONLY=1`` no build Next + documentação em ``.env.example``.
 - **H-029:** workflow ``zap-baseline-dispatch.yml`` (execução manual no GitHub).
 

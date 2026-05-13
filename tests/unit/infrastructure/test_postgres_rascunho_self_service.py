@@ -28,7 +28,7 @@ class _FakeCursor:
     def execute(self, *args: object, **kwargs: object) -> None:
         self._factory.on_execute(*args, **kwargs)
 
-    def fetchone(self) -> dict[str, Any] | None:
+    def fetchone(self) -> Any:
         return self._factory.on_fetchone()
 
 
@@ -61,7 +61,7 @@ class _FakeConn:
 class _ConnFactory:
     def __init__(
         self,
-        fetch_rows: list[dict[str, Any] | None],
+        fetch_rows: list[Any],
         *,
         execute_error: Exception | None = None,
     ) -> None:
@@ -79,7 +79,7 @@ class _ConnFactory:
             raise self.execute_error
         self.executes.append((args, kwargs))
 
-    def on_fetchone(self) -> dict[str, Any] | None:
+    def on_fetchone(self) -> Any:
         if not self.fetch_rows:
             return None
         return self.fetch_rows.pop(0)
@@ -99,10 +99,11 @@ def patch_psycopg2_connect(monkeypatch: pytest.MonkeyPatch) -> Any:
 def test_inserir_rascunho_insere_e_devolve_token(
     monkeypatch: pytest.MonkeyPatch, patch_psycopg2_connect: Any
 ) -> None:
-    f = _ConnFactory(fetch_rows=[])
+    rid = uuid4()
+    f = _ConnFactory(fetch_rows=[(str(rid),)])
     patch_psycopg2_connect(f)
     tid = uuid4()
-    token, exp = inserir_rascunho_sync(
+    token, exp, rid_out = inserir_rascunho_sync(
         "postgresql://test",
         tenant_id=tid,
         email_norm="lead@example.com",
@@ -111,6 +112,7 @@ def test_inserir_rascunho_insere_e_devolve_token(
     assert f.committed is True
     assert len(token) > 20
     assert exp.tzinfo is not None
+    assert rid_out == rid
 
 
 def test_buscar_ativo_none_quando_sem_linha(
@@ -219,6 +221,23 @@ def test_inserir_rascunho_rollback_quando_execute_falha(
     f = _ConnFactory(fetch_rows=[], execute_error=RuntimeError("disc cheio"))
     patch_psycopg2_connect(f)
     with pytest.raises(RuntimeError, match="disc cheio"):
+        inserir_rascunho_sync(
+            "postgresql://test",
+            tenant_id=uuid4(),
+            email_norm="e@x.com",
+            payload_dict={},
+        )
+    assert f.rolled_back is True
+    assert f.committed is False
+
+
+def test_inserir_rascunho_erro_quando_returning_id_ausente(
+    monkeypatch: pytest.MonkeyPatch, patch_psycopg2_connect: Any
+) -> None:
+    """Defesa: INSERT sem id devolvido não deve commitar estado inconsistente."""
+    f = _ConnFactory(fetch_rows=[(None,)])
+    patch_psycopg2_connect(f)
+    with pytest.raises(RuntimeError, match="RETURNING id"):
         inserir_rascunho_sync(
             "postgresql://test",
             tenant_id=uuid4(),

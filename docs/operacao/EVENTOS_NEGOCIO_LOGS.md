@@ -9,8 +9,10 @@
 
 | Área | Evento (chave sugerida) | Quando |
 |------|-------------------------|--------|
-| Auth | `auth_login_sucesso` / falha | POST `/auth/login` |
-| Diagnóstico | `diagnostico_finalizado` | Use case ``RealizarDiagnostico`` após persistência; ``diagnostico_criado`` / PATCH — alinhar noutros fluxos |
+| Auth | `auth_login_sucesso` | POST `/auth/login` — credenciais válidas (sem e-mail em claro no log) |
+| Diagnóstico | `diagnostico_criado` | Use case ``RealizarDiagnostico`` após INSERT atómico na BD (painel, self-service, concluir/vincular rascunho) |
+| Diagnóstico | `diagnostico_finalizado` | ``RealizarDiagnostico`` após ``diagnostico_criado`` (mesma transação de persistência) |
+| Diagnóstico | `diagnostico_rascunho_self_service_gravado` | POST ``/diagnosticos/rascunho-self-service`` após INSERT do rascunho (antes do OTP) |
 | PDF | `pdf_geracao_ok` / `pdf_geracao_falhou` | Geração WeasyPrint |
 | Mutação | `diagnostico_mutacao_audit_gravada` | Auditoria pós-mutação (migração 0026) |
 | Idempotência | `idempotency_backend_startup` | Lifespan — backend Postgres ativo (`app.state.idempotency_backend_active`) |

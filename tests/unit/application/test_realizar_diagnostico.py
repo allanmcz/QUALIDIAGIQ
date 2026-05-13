@@ -253,7 +253,7 @@ async def test_force_refresh_chama_materializar_e_propaga_historico(
 async def test_execute_emite_evento_diagnostico_finalizado(
     calcular_real: CalcularScoreUseCase,
 ) -> None:
-    """QDI-H-022 — após persistência, regista chave estável ``diagnostico_finalizado`` (structlog)."""
+    """QDI-H-022 — após persistência, regista ``diagnostico_criado`` e ``diagnostico_finalizado`` (structlog)."""
     repo = AsyncMock()
     repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
     uc = RealizarDiagnostico(repo=repo, calcular_score_use_case=calcular_real)
@@ -261,6 +261,10 @@ async def test_execute_emite_evento_diagnostico_finalizado(
     with patch("src.application.use_cases.realizar_diagnostico.logger") as log:
         res = await uc.execute(cmd)
     assert res.diagnostico.status.value == "finalizado"
+    infos = [c.args[0] for c in log.info.call_args_list if c.args]
+    assert infos.count("diagnostico_criado") == 1
+    assert infos.count("diagnostico_finalizado") == 1
+    assert infos.index("diagnostico_criado") < infos.index("diagnostico_finalizado")
     final_calls = [
         c for c in log.info.call_args_list if c.args and c.args[0] == "diagnostico_finalizado"
     ]
