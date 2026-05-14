@@ -132,6 +132,32 @@ def test_producao_llm_openai_rejeita_chave_somente_espacos(
         Settings()
 
 
+def test_producao_llm_openai_sem_chave_aceita_fallback_anthropic_opt_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """QDI hardening 2.3.5 — sem OpenAI, política explícita + Anthropic válido inicializa."""
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("QDI_LLM_BACKEND", "openai")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("QDI_LLM_OPENAI_FALLBACK_ANTHROPIC", "true")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-producao-teste")
+    s = Settings()
+    assert s.llm_backend == "openai"
+    assert s.qdi_llm_openai_fallback_anthropic is True
+
+
+def test_producao_llm_openai_fallback_ant_sem_anthropic_lanca(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("QDI_LLM_BACKEND", "openai")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("QDI_LLM_OPENAI_FALLBACK_ANTHROPIC", "true")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        Settings()
+
+
 def test_producao_segunda_barreira_jwt_curto_defensivo(monkeypatch: pytest.MonkeyPatch) -> None:
     """Cobre validação redundante após enfraquecimento manual do segredo (defesa em profundidade)."""
     _base_producao(monkeypatch)

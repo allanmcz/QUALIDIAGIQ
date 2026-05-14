@@ -102,6 +102,7 @@ def test_build_base_normativa_pgvector_quando_dsn_e_openai(
 
 def test_get_llm_http_ollama_adapter() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_openai_fallback_anthropic = False
     mock_s.qdi_llm_default_tier = "local"
     mock_s.llm_backend = "http_ollama"
     fk = MagicMock()
@@ -126,6 +127,7 @@ def test_get_llm_http_ollama_adapter() -> None:
 
 def test_get_llm_anthropic_com_chave_adapter() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_openai_fallback_anthropic = False
     mock_s.qdi_llm_default_tier = "premium"
     mock_s.llm_backend = "anthropic"
     fk = MagicMock()
@@ -150,6 +152,7 @@ def test_get_llm_anthropic_com_chave_adapter() -> None:
 
 def test_get_llm_openai_com_chave_adapter() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_openai_fallback_anthropic = False
     mock_s.qdi_llm_default_tier = "standard"
     mock_s.llm_backend = "openai"
     fk_o = MagicMock()
@@ -175,6 +178,7 @@ def test_get_llm_openai_com_chave_adapter() -> None:
 
 def test_get_llm_openai_sem_chave_fallback_langgraph() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_openai_fallback_anthropic = False
     mock_s.qdi_llm_default_tier = "local"
     mock_s.llm_backend = "openai"
     mock_s.openai_api_key = None
@@ -203,8 +207,35 @@ def test_get_llm_openai_sem_chave_fallback_langgraph() -> None:
     assert kwa.get("evento") == "llm_plano_fallback_backend"
 
 
+def test_get_llm_openai_sem_chave_politica_anthropic_adapter() -> None:
+    mock_s = MagicMock()
+    mock_s.qdi_llm_openai_fallback_anthropic = True
+    mock_s.qdi_llm_default_tier = "premium"
+    mock_s.llm_backend = "openai"
+    mock_s.openai_api_key = None
+    mock_s.openai_chat_model = "gpt-4o-mini"
+    fk_a = MagicMock()
+    fk_a.get_secret_value.return_value = "sk-ant-fallback"
+    mock_s.anthropic_api_key = fk_a
+    mock_s.anthropic_model = "claude-3-haiku-latest"
+    mock_s.ollama_base_url = "http://localhost:11434"
+    mock_s.ollama_model = "m"
+    mock_s.ollama_timeout_seconds = 9.0
+    mock_s.qdi_rag_similarity_threshold = "0.13"
+    mock_s.sync_database_url = None
+
+    with (
+        patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
+    ):
+        mock_bn.return_value = MagicMock()
+        svc = deps.get_llm_service()
+    assert type(svc).__name__ == "AnthropicLlmAdapter"
+
+
 def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_openai_fallback_anthropic = False
     mock_s.qdi_llm_default_tier = "standard"
     mock_s.llm_backend = "anthropic"
     fk = MagicMock()

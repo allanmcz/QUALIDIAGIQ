@@ -68,11 +68,31 @@ def build_llm_adapter_from_settings(
 
     if settings.llm_backend == "openai":
         okey = settings.openai_api_key.get_secret_value().strip() if settings.openai_api_key else ""
+        ak = (
+            settings.anthropic_api_key.get_secret_value().strip()
+            if settings.anthropic_api_key
+            else ""
+        )
         if okey:
             resolved_label = "openai_chat"
             adapter = OpenAiChatLlmAdapter(
                 api_key=okey,
                 model=settings.openai_chat_model.strip(),
+                base_normativa_port=base_normativa_port,
+                rag_similarity_threshold=thr,
+            )
+        elif settings.qdi_llm_openai_fallback_anthropic and ak:
+            logger.info(
+                "llm_openai_indisponivel_fallback_anthropic",
+                evento="llm_plano_fallback_backend",
+                tier=tier,
+                llm_backend_solicitado="openai",
+                fallback="anthropic",
+            )
+            resolved_label = "anthropic"
+            adapter = AnthropicLlmAdapter(
+                api_key=ak,
+                model=settings.anthropic_model.strip(),
                 base_normativa_port=base_normativa_port,
                 rag_similarity_threshold=thr,
             )
@@ -139,6 +159,9 @@ def build_llm_adapter_from_settings(
         modelo_claude=settings.anthropic_model.strip() if resolved_label == "anthropic" else None,
         modelo_openai=(
             settings.openai_chat_model.strip() if resolved_label == "openai_chat" else None
+        ),
+        openai_politica_fallback_anthropic=(
+            settings.llm_backend == "openai" and resolved_label == "anthropic"
         ),
         ollama_host=_host_sem_credenciais(url),
     )

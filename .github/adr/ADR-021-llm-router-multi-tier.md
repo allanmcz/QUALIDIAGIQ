@@ -13,7 +13,7 @@ Base normativa: **LC 214/2025** — previsibilidade de ambiente e rastreabilidad
 
 1. **Fábrica única** `build_llm_adapter_from_settings()` em `src/infrastructure/adapters/llm_router.py` — precedência:
    - `QDI_LLM_BACKEND=openai` + `OPENAI_API_KEY` não vazia → `OpenAiChatLlmAdapter` (`OPENAI_CHAT_MODEL` / `QDI_OPENAI_CHAT_MODEL`);
-   - `openai` sem chave → `logger.warning` (`llm_backend_openai_sem_api_key`) + fallback `LangGraphOllamaLlmAdapter`;
+   - `openai` sem chave → se ``QDI_LLM_OPENAI_FALLBACK_ANTHROPIC=true`` e ``ANTHROPIC_API_KEY`` válida → ``AnthropicLlmAdapter`` (log ``llm_openai_indisponivel_fallback_anthropic``); caso contrário ``logger.warning`` (`llm_backend_openai_sem_api_key`) + fallback ``LangGraphOllamaLlmAdapter``;
    - `QDI_LLM_BACKEND=anthropic` + `ANTHROPIC_API_KEY` não vazia → `AnthropicLlmAdapter`;
    - `anthropic` sem chave → `logger.warning` (`llm_backend_anthropic_sem_api_key`) + fallback `LangGraphOllamaLlmAdapter`;
    - `QDI_LLM_BACKEND=http_ollama` → `OllamaLlmAdapter`;
@@ -28,6 +28,7 @@ Base normativa: **LC 214/2025** — previsibilidade de ambiente e rastreabilidad
 - CI e testes locais **sem** keys reais: mocks de `get_settings` / `AsyncOpenAI` nos testes unitários.
 - Docker: manter **`OLLAMA_BASE_URL=http://host.docker.internal:11434`** no `docker-compose.yml` quando Ollama corre no host; em `uvicorn` no host usar `http://127.0.0.1:11434` (ver README / compose).
 - **Use case** `RealizarDiagnostico`: `try/except` à volta de `gerar_recomendacao` — se qualquer adapter lançar excepção não prevista, o diagnóstico **não falha**; devolve mensagem estável de indisponibilidade de IA (PDF e persistência seguem).
+- **2.3.5 (produção):** opt-in ``QDI_LLM_OPENAI_FALLBACK_ANTHROPIC`` — com ``QDI_LLM_BACKEND=openai`` sem chave OpenAI, usar Claude se Anthropic estiver configurado; validação em ``Settings._producao_segredos_obrigatorios`` exige Anthropic válido nesse modo.
 
 ## Cruzamento
 

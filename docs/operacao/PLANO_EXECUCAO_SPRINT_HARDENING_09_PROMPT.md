@@ -85,7 +85,7 @@
 - [x] **2.3.2** **Não** usar header HTTP público como fonte directa de tier premium (restrito a dev/test documentado se existir) — ver ADR-021 § decisão (4)
 - [x] **2.3.3** Router coberto por `tests/unit/infrastructure/test_llm_router.py` (matriz mínima openai / anthropic / http_ollama / langgraph)
 - [x] **2.3.4** Falha de LLM (incl. excepção não tratada no adapter): mensagem estável; POST diagnóstico não aborta — `RealizarDiagnostico` + adapters (Ollama/Anthropic/OpenAI devolvem mensagem em erro HTTP)
-- [ ] **2.3.5** Produção: OpenAI indisponível + Anthropic configurada + política → fallback premium permitido
+- [x] **2.3.5** Produção: OpenAI indisponível (sem chave) + Anthropic configurada + política ``QDI_LLM_OPENAI_FALLBACK_ANTHROPIC`` → fallback Anthropic; caso contrário LangGraph local ou erro em produção conforme validador
 - [x] **2.3.6** Logs estruturados: `llm_router_resolvido` + `llm_backend_*_sem_api_key` com `tier`, `adapter`, modelos, `ollama_host` — sem prompt nem keys
 - [x] **2.3.7** Guardrail Lexiq mantido (`filtrar_resposta_recomendacao_llm` em adapters cloud + Ollama)
 

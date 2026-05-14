@@ -25,6 +25,6 @@ Stack declarada pelo produto menciona modelo primário Claude (Anthropic). O có
 
 ## Atualização QDI-H-032b (2026-05-13)
 
-- **`QDI_LLM_BACKEND=openai`** + **`OPENAI_API_KEY`** + **`OPENAI_CHAT_MODEL`** (ou `QDI_OPENAI_CHAT_MODEL`) ⇒ `OpenAiChatLlmAdapter`; sem chave ⇒ fallback **LangGraph/Ollama** (`llm_backend_openai_sem_api_key`, evento `llm_plano_fallback_backend`).
-- Produção com `openai` **exige** `OPENAI_API_KEY` não vazia (mesmo validador `_producao_segredos_obrigatorios`).
+- **`QDI_LLM_BACKEND=openai`** + **`OPENAI_API_KEY`** + **`OPENAI_CHAT_MODEL`** (ou `QDI_OPENAI_CHAT_MODEL`) ⇒ `OpenAiChatLlmAdapter`; sem chave OpenAI ⇒ se **`QDI_LLM_OPENAI_FALLBACK_ANTHROPIC=true`** e **`ANTHROPIC_API_KEY`** válida ⇒ **Anthropic** (`llm_openai_indisponivel_fallback_anthropic`); senão fallback **LangGraph/Ollama** (`llm_backend_openai_sem_api_key`, evento `llm_plano_fallback_backend`).
+- Produção com `openai` **exige** `OPENAI_API_KEY` não vazia **ou** `QDI_LLM_OPENAI_FALLBACK_ANTHROPIC=true` com `ANTHROPIC_API_KEY` válida (mesmo validador `_producao_segredos_obrigatorios`).
 - A chave **OpenAI** continua a servir também **embeddings** (RAG-light / pgvector) quando `DATABASE_URL` e adapter pgvector estão activos — ver `Settings.openai_embedding_model`.

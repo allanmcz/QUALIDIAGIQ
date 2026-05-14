@@ -16,6 +16,7 @@ class TestBuildLlmAdapterFromSettings:
 
     def test_http_ollama(self) -> None:
         mock_s = MagicMock()
+        mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "local"
         mock_s.llm_backend = "http_ollama"
         mock_s.anthropic_api_key = None
@@ -40,6 +41,7 @@ class TestBuildLlmAdapterFromSettings:
 
     def test_openai_com_chave(self) -> None:
         mock_s = MagicMock()
+        mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "standard"
         mock_s.llm_backend = "openai"
         fk = MagicMock()
@@ -68,6 +70,7 @@ class TestBuildLlmAdapterFromSettings:
 
     def test_openai_sem_chave_cai_langgraph(self) -> None:
         mock_s = MagicMock()
+        mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "local"
         mock_s.llm_backend = "openai"
         mock_s.openai_api_key = None
@@ -93,8 +96,39 @@ class TestBuildLlmAdapterFromSettings:
         log.info.assert_called_once()
         assert log.info.call_args.kwargs.get("adapter") == "langgraph_ollama"
 
+    def test_openai_sem_chave_politica_anthropic_usa_claude(self) -> None:
+        mock_s = MagicMock()
+        mock_s.qdi_llm_openai_fallback_anthropic = True
+        mock_s.qdi_llm_default_tier = "premium"
+        mock_s.llm_backend = "openai"
+        mock_s.openai_api_key = None
+        mock_s.openai_chat_model = "gpt-4o-mini"
+        fk_a = MagicMock()
+        fk_a.get_secret_value.return_value = "sk-ant-fallback"
+        mock_s.anthropic_api_key = fk_a
+        mock_s.anthropic_model = "claude-3-haiku-latest"
+        mock_s.ollama_base_url = "http://host.docker.internal:11434"
+        mock_s.ollama_model = "llama3"
+        mock_s.ollama_timeout_seconds = 30.0
+
+        norm = MagicMock()
+        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+            svc = build_llm_adapter_from_settings(
+                mock_s,
+                base_normativa_port=norm,
+                rag_similarity_threshold=0.55,
+            )
+        assert isinstance(svc, AnthropicLlmAdapter)
+        eventos_info = [c.args[0] for c in log.info.call_args_list if c.args]
+        assert "llm_openai_indisponivel_fallback_anthropic" in eventos_info
+        router_kw = log.info.call_args_list[-1].kwargs
+        assert router_kw.get("evento") == "llm_router_resolvido"
+        assert router_kw.get("adapter") == "anthropic"
+        assert router_kw.get("openai_politica_fallback_anthropic") is True
+
     def test_anthropic_com_chave(self) -> None:
         mock_s = MagicMock()
+        mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "premium"
         mock_s.llm_backend = "anthropic"
         fk = MagicMock()
@@ -119,6 +153,7 @@ class TestBuildLlmAdapterFromSettings:
 
     def test_default_langgraph(self) -> None:
         mock_s = MagicMock()
+        mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "local"
         mock_s.llm_backend = "langgraph_ollama"
         mock_s.anthropic_api_key = None

@@ -200,6 +200,14 @@ class Settings(BaseSettings):
             "Não substitui ``QDI_LLM_BACKEND`` na versão actual — ver ADR-021."
         ),
     )
+    qdi_llm_openai_fallback_anthropic: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("QDI_LLM_OPENAI_FALLBACK_ANTHROPIC"),
+        description=(
+            "Opt-in: com ``QDI_LLM_BACKEND=openai`` sem chave OpenAI válida, usar Anthropic "
+            "se ``ANTHROPIC_API_KEY`` existir (produção — plano hardening 2.3.5; ADR-021)."
+        ),
+    )
 
     anthropic_api_key: SecretStr | None = Field(
         default=None,
@@ -363,12 +371,16 @@ class Settings(BaseSettings):
             raise ValueError(
                 "ANTHROPIC_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=anthropic."
             )
-        if self.llm_backend == "openai" and (
-            self.openai_api_key is None or not str(self.openai_api_key.get_secret_value()).strip()
-        ):
-            raise ValueError(
-                "OPENAI_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=openai."
+        if self.llm_backend == "openai":
+            openai_ok = self.openai_api_key and str(self.openai_api_key.get_secret_value()).strip()
+            anthropic_ok = (
+                self.anthropic_api_key and str(self.anthropic_api_key.get_secret_value()).strip()
             )
+            if not openai_ok and not (self.qdi_llm_openai_fallback_anthropic and anthropic_ok):
+                raise ValueError(
+                    "OPENAI_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=openai, "
+                    "salvo QDI_LLM_OPENAI_FALLBACK_ANTHROPIC=true com ANTHROPIC_API_KEY valida."
+                )
         # ADR-020 — mitigação compensatória: sessão painel curta em produção (XSS + localStorage).
         if self.jwt_expire_minutes > 30:
             raise ValueError(
