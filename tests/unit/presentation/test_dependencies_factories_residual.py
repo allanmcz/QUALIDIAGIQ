@@ -46,6 +46,7 @@ from src.infrastructure.repositories.postgres_diagnostico_repository import (
 )
 from src.presentation.api import dependencies as deps
 from src.presentation.api import deps_auth_supabase
+from src.presentation.api import deps_infra_services as deps_infra
 
 
 @pytest.fixture(autouse=True)
@@ -210,8 +211,8 @@ def test_get_consultar_cnpj_use_case_camada_feliz(monkeypatch) -> None:
     diag_repo = MagicMock()
     try:
         with (
-            patch.object(deps, "PostgresCnpjConsultaRepository") as ctor_repo,
-            patch.object(deps, "CnpjProvedorExternoHttpAdapter") as ctor_prov,
+            patch.object(deps_infra, "PostgresCnpjConsultaRepository") as ctor_repo,
+            patch.object(deps_infra, "CnpjProvedorExternoHttpAdapter") as ctor_prov,
         ):
             ctor_repo.return_value = MagicMock(name="repo_cnpj")
             ctor_prov.return_value = MagicMock(name="provedor_http")
@@ -231,8 +232,11 @@ def test_get_diagnostico_repository_ci_playwright_sem_dsn() -> None:
     mock_s.ci_playwright_integrated = True
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
-        patch("src.presentation.api.dependencies._singleton_ci_playwright_repo", return_value=fake),
+        patch("src.presentation.api.deps_repositories_core.get_settings", return_value=mock_s),
+        patch(
+            "src.presentation.api.deps_repositories_core._singleton_ci_playwright_repo",
+            return_value=fake,
+        ),
     ):
         repo = deps.get_diagnostico_repository()
     assert repo is fake
@@ -257,8 +261,8 @@ def test_cnpj_consulta_service_optional_retorna_servico(monkeypatch) -> None:
     get_settings.cache_clear()
     try:
         with (
-            patch.object(deps, "PostgresCnpjConsultaRepository"),
-            patch.object(deps, "CnpjProvedorExternoHttpAdapter"),
+            patch.object(deps_infra, "PostgresCnpjConsultaRepository"),
+            patch.object(deps_infra, "CnpjProvedorExternoHttpAdapter"),
         ):
             svc = deps._cnpj_consulta_service_optional()
         assert svc is not None

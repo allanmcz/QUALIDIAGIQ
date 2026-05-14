@@ -47,7 +47,9 @@ def test_diagnostico_repository_supabase_sem_dsn_nem_ci_playwright(
     deps_auth_supabase.reset_supabase_client_singleton()
     fake = MagicMock()
 
-    with patch("src.presentation.api.dependencies.get_supabase_client", return_value=fake):
+    with patch(
+        "src.presentation.api.deps_repositories_core.get_supabase_client", return_value=fake
+    ):
         repo = deps.get_diagnostico_repository()
     assert isinstance(repo, SupabaseDiagnosticoRepository)
 
@@ -93,7 +95,7 @@ def test_build_base_normativa_pgvector_quando_dsn_e_openai(
     m.openai_api_key = fk
     m.openai_embedding_model = "text-embedding-3-small"
 
-    with patch("src.presentation.api.dependencies.get_settings", return_value=m):
+    with patch("src.presentation.api.deps_infra_services.get_settings", return_value=m):
         port = deps.build_base_normativa_port()
     assert type(port).__name__ == "PgvectorBaseNormativaAdapter"
 
@@ -113,8 +115,8 @@ def test_get_llm_http_ollama_adapter() -> None:
     mock_s.openai_api_key = None
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
-        patch("src.presentation.api.dependencies.build_base_normativa_port") as mock_bn,
+        patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service()
@@ -136,8 +138,8 @@ def test_get_llm_anthropic_com_chave_adapter() -> None:
     mock_s.openai_api_key = None
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
-        patch("src.presentation.api.dependencies.build_base_normativa_port") as mock_bn,
+        patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service()
@@ -159,9 +161,9 @@ def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     mock_s.openai_api_key = None
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
-        patch("src.presentation.api.dependencies.build_base_normativa_port") as mock_bn,
-        patch("src.presentation.api.dependencies.logger") as log,
+        patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
+        patch("src.presentation.api.deps_infra_services.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service()
@@ -203,13 +205,13 @@ def test_perfil_empresa_questionario_rejeita_cnpj_tamanho() -> None:
 
 
 def test_singleton_ci_playwright_repo_reutiliza_instancia() -> None:
-    deps._repo_ci_playwright_singleton = None
+    deps.reset_ci_playwright_diagnostico_singleton()
 
     a = deps._singleton_ci_playwright_repo()
     b = deps._singleton_ci_playwright_repo()
     assert a is b
 
-    deps._repo_ci_playwright_singleton = None
+    deps.reset_ci_playwright_diagnostico_singleton()
 
 
 def test_get_lead_vinculo_memoria_quando_ci_sem_dsn_via_settings_mock() -> None:
@@ -219,13 +221,13 @@ def test_get_lead_vinculo_memoria_quando_ci_sem_dsn_via_settings_mock() -> None:
     mock_s.ci_playwright_integrated = True
     mock_s.self_service_tenant_id = uuid4()
 
-    deps._repo_ci_playwright_singleton = None
+    deps.reset_ci_playwright_diagnostico_singleton()
     try:
-        with patch("src.presentation.api.dependencies.get_settings", return_value=mock_s):
+        with patch("src.presentation.api.deps_repositories_core.get_settings", return_value=mock_s):
             port = deps.get_lead_diagnostico_vinculo_port()
         assert isinstance(port, MemoriaLeadDiagnosticoVinculoAdapter)
     finally:
-        deps._repo_ci_playwright_singleton = None
+        deps.reset_ci_playwright_diagnostico_singleton()
 
 
 def test_get_lead_nop_sem_dsn_sem_ci(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -239,7 +241,7 @@ def test_get_lead_nop_sem_dsn_sem_ci(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_get_normativa_score_macro_postgres_com_dsn() -> None:
     mock_s = MagicMock()
     mock_s.sync_database_url = "postgresql://user:pass@localhost/db"
-    with patch("src.presentation.api.dependencies.get_settings", return_value=mock_s):
+    with patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s):
         repo = deps.get_normativa_score_macro_repository()
     assert isinstance(repo, PostgresNormativaScoreMacroRepository)
 
@@ -247,7 +249,7 @@ def test_get_normativa_score_macro_postgres_com_dsn() -> None:
 def test_get_normativa_score_macro_embutidas_sem_dsn() -> None:
     mock_s = MagicMock()
     mock_s.sync_database_url = None
-    with patch("src.presentation.api.dependencies.get_settings", return_value=mock_s):
+    with patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s):
         repo = deps.get_normativa_score_macro_repository()
     assert isinstance(repo, EmbutidasNormativaScoreMacroRepository)
 

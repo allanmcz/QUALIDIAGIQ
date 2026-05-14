@@ -25,7 +25,7 @@ from src.presentation.api.dependencies import (
 
 
 def test_get_diagnostico_retificacao_port_sem_sync_database_url() -> None:
-    with patch("src.presentation.api.dependencies.get_settings") as gs:
+    with patch("src.presentation.api.deps_repositories_core.get_settings") as gs:
         gs.return_value.sync_database_url = None
         with pytest.raises(HTTPException) as ei:
             get_diagnostico_retificacao_port()
@@ -58,7 +58,7 @@ def test_get_diagnostico_retificacao_port_com_dsn_retorna_adapter() -> None:
         PostgresDiagnosticoRetificacaoAdapter,
     )
 
-    with patch("src.presentation.api.dependencies.get_settings") as gs:
+    with patch("src.presentation.api.deps_repositories_core.get_settings") as gs:
         gs.return_value.sync_database_url = "postgresql://u:p@localhost/db"
         port = get_diagnostico_retificacao_port()
         assert isinstance(port, PostgresDiagnosticoRetificacaoAdapter)
