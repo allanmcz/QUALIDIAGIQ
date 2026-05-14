@@ -1,7 +1,12 @@
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
-import { getAccessToken, getApiUrlForFetch, normalizarHrefRelatorioPdf } from "./config";
+import {
+  cabecalhosAuthPainelOpcional,
+  getApiUrlForFetch,
+  normalizarHrefRelatorioPdf,
+  temSessaoPainelParaApiCliente,
+} from "./config";
 import {
   isLikelyNetworkFetchFailure,
   mensagemConectividadeApiParaUsuario,
@@ -10,8 +15,7 @@ import {
 
 /** GET /diagnosticos/{id} — Bearer obrigatório no painel. */
 export async function fetchDiagnosticoDetalhe(diagnosticoId: string): Promise<DiagnosticoDetalheApi> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária: faça login em /login.");
   }
   const base = getApiUrlForFetch().replace(/\/$/, "");
@@ -20,9 +24,10 @@ export async function fetchDiagnosticoDetalhe(diagnosticoId: string): Promise<Di
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
       },
       cache: "no-store",
+      credentials: "include",
     });
     const raw = await res.text();
     if (!res.ok) {

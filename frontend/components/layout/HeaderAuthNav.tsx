@@ -17,8 +17,9 @@ import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
 import { clearPainelSessionLocal } from "@/lib/auth/painel_session";
 
 /**
- * Sessão com conta na plataforma (JWT em localStorage) — só no cabeçalho global.
- * Estado inicial «convidado» evita placeholder «…» preso em hidratação; `useLayoutEffect` corrige antes do paint.
+ * Sessão com conta na plataforma no cabeçalho global.
+ *
+ * Fluxo novo: JWT em cookie httpOnly (`/api/auth/login`); fluxo legado: JWT em `localStorage`.
  */
 export function HeaderAuthNav() {
   const router = useRouter();
@@ -27,11 +28,26 @@ export function HeaderAuthNav() {
   const sincronizar = useCallback(() => {
     if (typeof window === "undefined") return;
     const token = getAccessToken();
-    if (!token) {
-      setNome(null);
+    if (token) {
+      setNome(window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY) || "Consultor");
       return;
     }
-    setNome(window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY) || "Consultor");
+    void fetch("/api/auth/session", { credentials: "same-origin" })
+      .then((r) => r.json() as Promise<{ authenticated?: boolean; nome?: string | null }>)
+      .then((j) => {
+        if (j.authenticated) {
+          setNome(
+            (j.nome && String(j.nome).trim()) ||
+              window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY) ||
+              "Consultor",
+          );
+        } else {
+          setNome(null);
+        }
+      })
+      .catch(() => {
+        setNome(null);
+      });
   }, []);
 
   useLayoutEffect(() => {

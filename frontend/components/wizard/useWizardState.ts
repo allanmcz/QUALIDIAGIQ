@@ -16,6 +16,7 @@ import {
   ADMIN_NOME_STORAGE_KEY,
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
   getAccessToken,
+  temSessaoPainelParaApiCliente,
 } from "@/lib/api/config";
 import { postConsultarCnpjAutenticado, rotuloFonteConsultaCnpj } from "@/lib/api/consulta_cnpj";
 import { postDiagnostico } from "@/lib/api/diagnostico";
@@ -100,8 +101,8 @@ export function useWizardState() {
    */
   useEffect(() => {
     if (!tokenChecked) return;
+    if (!temSessaoPainelParaApiCliente()) return;
     const tokenJwt = getAccessToken();
-    if (!tokenJwt) return;
 
     const rt = loadRascunhoResgateToken();
     if (rt) {
@@ -110,7 +111,7 @@ export function useWizardState() {
         try {
           setIsSubmitting(true);
           setApiError(null);
-          await postVincularRascunhoContaPlataforma(rt, tokenJwt);
+          await postVincularRascunhoContaPlataforma(rt, tokenJwt ?? null);
           clearRascunhoResgateToken();
           clearPendingDiagnosticoFromStorage();
           clearWizardDraft();
@@ -188,7 +189,7 @@ export function useWizardState() {
   /** Com JWT ativo, preenche nome/e-mail do respondente a partir do login (sem sobrescrever rascunho já preenchido). */
   const aplicarRespondenteDaConta = useCallback(() => {
     if (typeof window === "undefined") return;
-    if (!getAccessToken()) return;
+    if (!temSessaoPainelParaApiCliente()) return;
     const nomeLs = window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY)?.trim() ?? "";
     const emailLs = window.localStorage.getItem(ADMIN_EMAIL_STORAGE_KEY)?.trim() ?? "";
     if (!nomeLs && !emailLs) return;
@@ -203,7 +204,7 @@ export function useWizardState() {
   }, [getValues, setValue]);
 
   const consultarCnpjNoWizard = useCallback(async () => {
-    if (!getAccessToken()) {
+    if (!temSessaoPainelParaApiCliente()) {
       setConsultaCnpjFeedback(
         "Para buscar dados públicos pelo CNPJ, inicie sessão na plataforma (este passo não substitui rascunho + OTP).",
       );
@@ -408,7 +409,7 @@ export function useWizardState() {
         const temRascunho = !!(draft && wizardDraftHasProgress(draft));
         if (temRascunho && draft) {
           await aplicarRascunhoWizard(draft);
-        } else if (!getAccessToken() && loadPendingDiagnosticoFromStorage()) {
+        } else if (!temSessaoPainelParaApiCliente() && loadPendingDiagnosticoFromStorage()) {
           router.push("/diagnostico/confirmar-gravacao");
         }
       } finally {
@@ -445,7 +446,7 @@ export function useWizardState() {
     }
 
     const skipRestore =
-      !!getAccessToken() && (hasPendingDiagnosticoInBrowser() || !!loadRascunhoResgateToken());
+      !!temSessaoPainelParaApiCliente() && (hasPendingDiagnosticoInBrowser() || !!loadRascunhoResgateToken());
 
     if (skipRestore) {
       setDraftHydrated(true);
@@ -461,7 +462,7 @@ export function useWizardState() {
     }
 
     const pendenteOk =
-      !getAccessToken() ? loadPendingDiagnosticoFromStorage() : null;
+      !temSessaoPainelParaApiCliente() ? loadPendingDiagnosticoFromStorage() : null;
     const hasDraft = !!(draft && wizardDraftHasProgress(draft));
     const hasPending = pendenteOk != null;
 
@@ -513,7 +514,7 @@ export function useWizardState() {
     const persist = () => {
       if (skipPersistRef.current) return;
       if (typeof window === "undefined") return;
-      if (getAccessToken() && (hasPendingDiagnosticoInBrowser() || loadRascunhoResgateToken())) return;
+      if (temSessaoPainelParaApiCliente() && (hasPendingDiagnosticoInBrowser() || loadRascunhoResgateToken())) return;
 
       saveWizardDraft({
         v: 1,
@@ -553,7 +554,7 @@ export function useWizardState() {
     const flush = () => {
       if (skipPersistRef.current) return;
       if (typeof window === "undefined") return;
-      if (getAccessToken() && (hasPendingDiagnosticoInBrowser() || loadRascunhoResgateToken())) return;
+      if (temSessaoPainelParaApiCliente() && (hasPendingDiagnosticoInBrowser() || loadRascunhoResgateToken())) return;
       saveWizardDraft({
         v: 1,
         step,
@@ -761,7 +762,7 @@ export function useWizardState() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    if (!getAccessToken()) {
+    if (!temSessaoPainelParaApiCliente()) {
       await gerarDiagnosticoLocalmente();
       return;
     }
@@ -792,7 +793,7 @@ export function useWizardState() {
     const payload = await montarPayloadDiagnosticoValidado();
     if (!payload) return;
 
-    if (!getAccessToken()) {
+    if (!temSessaoPainelParaApiCliente()) {
       setApiError(
         "Sessão ausente — use «Gerar diagnóstico» e confirme por e-mail ou entre com a sua conta na plataforma.",
       );
@@ -821,7 +822,7 @@ export function useWizardState() {
         ? ((2 + (indicePerguntaAtual + 1) / totalPerguntas) / TOTAL_STEPS) * 100
         : (step / TOTAL_STEPS) * 100;
   const progressBarPercent = progress;
-  const hasToken = tokenChecked && !!getAccessToken();
+  const hasToken = tokenChecked && temSessaoPainelParaApiCliente();
   const ultimaPerguntaDoQuestionario =
     step === 3 && totalPerguntas > 0 && indicePerguntaAtual >= totalPerguntas - 1;
 

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
-import { getAccessToken } from "@/lib/api/config";
+import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
 import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostico_urls";
 
@@ -21,7 +21,7 @@ export default function PainelDiagnosticosPage() {
   useEffect(() => {
     let cancel = false;
     async function load() {
-      if (!getAccessToken()) {
+      if (!temSessaoPainelParaApiCliente()) {
         setErro(null);
         setItens([]);
         return;
@@ -40,7 +40,7 @@ export default function PainelDiagnosticosPage() {
   }, []);
 
   const recarregarLista = async () => {
-    if (!getAccessToken()) return;
+    if (!temSessaoPainelParaApiCliente()) return;
     try {
       const rows = await fetchDiagnosticosResumo();
       setItens(rows);
@@ -49,7 +49,7 @@ export default function PainelDiagnosticosPage() {
     }
   };
 
-  const semSessao = !getAccessToken();
+  const semSessao = !temSessaoPainelParaApiCliente();
 
   const importarLeadsSelfService = async () => {
     setMsgVinculo(null);

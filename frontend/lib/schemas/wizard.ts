@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getAccessToken } from "@/lib/api/config";
+import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 
 // Utils
 /** DV alinhado ao domínio Python (`cnpj_brasil`) — pesos oficiais RFB. */
@@ -146,8 +146,7 @@ export type DiagnosticoPayloadArmazenado = z.infer<typeof DiagnosticoPayloadArma
 
 export const DiagnosticoPayloadSchema = DiagnosticoPayloadObjectSchema.superRefine((data, ctx) => {
     if (typeof window === "undefined") return;
-    const jwt = getAccessToken()?.trim();
-    if (!jwt) return;
+    if (!temSessaoPainelParaApiCliente()) return;
     const bruto = String(data.empresa?.cnpj ?? "").replace(/\D/g, "");
     if (bruto.length !== 14) {
       ctx.addIssue({

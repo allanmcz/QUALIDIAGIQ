@@ -3,7 +3,7 @@
  */
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
-import { getAccessToken, getApiUrlForFetch } from "./config";
+import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
 export type VincularLeadsSelfServiceResult = {
@@ -12,8 +12,7 @@ export type VincularLeadsSelfServiceResult = {
 };
 
 export async function postVincularLeadsSelfService(): Promise<VincularLeadsSelfServiceResult> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária: faça login em /login.");
   }
   const idempotencyKey =
@@ -25,9 +24,10 @@ export async function postVincularLeadsSelfService(): Promise<VincularLeadsSelfS
     const res = await fetch(`${base}/diagnosticos/vincular-leads-self-service`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
         "Idempotency-Key": idempotencyKey,
       },
+      credentials: "include",
     });
     if (!res.ok) {
       if (encerrarSessaoPainelSe401(res.status)) {

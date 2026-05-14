@@ -33,7 +33,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAccessToken, getApiUrlForFetch, normalizarHrefRelatorioPdf } from "@/lib/api/config";
+import {
+  cabecalhosAuthPainelOpcional,
+  getApiUrlForFetch,
+  normalizarHrefRelatorioPdf,
+  temSessaoPainelParaApiCliente,
+} from "@/lib/api/config";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import {
   buildEmpresaDiagnosticosHref,
@@ -216,15 +221,15 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   useEffect(() => {
     let cancel = false;
     (async () => {
-      const token = getAccessToken();
       const base = getApiUrlForFetch().replace(/\/$/, "");
       try {
         const res = await fetch(`${base}/diagnosticos/${id}`, {
           headers: {
             Accept: "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...cabecalhosAuthPainelOpcional(),
           },
           cache: "no-store",
+          credentials: "include",
         });
         if (!res.ok) {
           if (encerrarSessaoPainelSe401(res.status)) return;
@@ -288,14 +293,14 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   }, [data?.id]);
 
   const refetchDetalhe = useCallback(async () => {
-    const token = getAccessToken();
     const base = getApiUrlForFetch().replace(/\/$/, "");
     const res = await fetch(`${base}/diagnosticos/${id}`, {
       headers: {
         Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...cabecalhosAuthPainelOpcional(),
       },
       cache: "no-store",
+      credentials: "include",
     });
     if (!res.ok) {
       if (encerrarSessaoPainelSe401(res.status)) return;
@@ -310,8 +315,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
   const salvarQuadroAcao = useCallback(
     async (qk: string, snapshot?: Partial<QuadroEdicaoAcao>): Promise<boolean> => {
-      const token = getAccessToken();
-      if (!token || data?.status !== "finalizado") {
+      const autenticado = temSessaoPainelParaApiCliente();
+      if (!autenticado || data?.status !== "finalizado") {
         setQuadroMsgPorAcao((prev) => ({
           ...prev,
           [qk]: "É necessário estar autenticado e o diagnóstico finalizado.",
@@ -356,9 +361,10 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Bearer ${token}`,
+            ...cabecalhosAuthPainelOpcional(),
             "If-Match": String(v),
           },
+          credentials: "include",
           body: JSON.stringify({ quadro_implantacao_anotacoes: body }),
         });
         if (encerrarSessaoPainelSe401(res.status)) return false;
@@ -477,8 +483,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
   const salvarM12LikertCompleto = useCallback(
     async (proximo: number[]): Promise<boolean> => {
-      const token = getAccessToken();
-      if (!token || data?.status !== "finalizado") {
+      const autenticado = temSessaoPainelParaApiCliente();
+      if (!autenticado || data?.status !== "finalizado") {
         setM12Msg("É necessário estar autenticado e o diagnóstico finalizado.");
         return false;
       }
@@ -496,9 +502,10 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Bearer ${token}`,
+            ...cabecalhosAuthPainelOpcional(),
             "If-Match": String(v),
           },
+          credentials: "include",
           body: JSON.stringify({ checklist_m12_autoconf: proximo }),
         });
         if (encerrarSessaoPainelSe401(res.status)) return false;

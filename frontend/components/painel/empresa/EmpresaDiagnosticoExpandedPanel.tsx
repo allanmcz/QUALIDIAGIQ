@@ -32,7 +32,11 @@ import {
   fetchDiagnosticoDetalhe,
   hrefRelatorioPdfAbsoluto,
 } from "@/lib/api/fetch_diagnostico_detalhe";
-import { getAccessToken, getApiUrlForFetch } from "@/lib/api/config";
+import {
+  cabecalhosAuthPainelOpcional,
+  getApiUrlForFetch,
+  temSessaoPainelParaApiCliente,
+} from "@/lib/api/config";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import {
   BAR_GAP_COLORS,
@@ -132,14 +136,14 @@ export default function EmpresaDiagnosticoExpandedPanel({
   }, [detalhesEmpresaParaAgregado]);
 
   const refetchDetalhe = useCallback(async () => {
-    const token = getAccessToken();
     const base = getApiUrlForFetch().replace(/\/$/, "");
     const res = await fetch(`${base}/diagnosticos/${diagnosticoId}`, {
       headers: {
         Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...cabecalhosAuthPainelOpcional(),
       },
       cache: "no-store",
+      credentials: "include",
     });
     if (!res.ok) return;
     const json = (await res.json()) as DiagnosticoDetalheApi;
@@ -150,8 +154,8 @@ export default function EmpresaDiagnosticoExpandedPanel({
 
   const salvarM12LikertCompleto = useCallback(
     async (proximo: number[]): Promise<boolean> => {
-      const token = getAccessToken();
-      if (!token || data?.status !== "finalizado") {
+      const autenticado = temSessaoPainelParaApiCliente();
+      if (!autenticado || data?.status !== "finalizado") {
         setM12Msg("É necessário estar autenticado e o diagnóstico finalizado.");
         return false;
       }
@@ -169,9 +173,10 @@ export default function EmpresaDiagnosticoExpandedPanel({
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Bearer ${token}`,
+            ...cabecalhosAuthPainelOpcional(),
             "If-Match": String(v),
           },
+          credentials: "include",
           body: JSON.stringify({ checklist_m12_autoconf: proximo }),
         });
         if (encerrarSessaoPainelSe401(res.status)) return false;

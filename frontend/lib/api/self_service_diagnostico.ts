@@ -207,18 +207,23 @@ export async function postConcluirRascunhoDiagnosticoSelfService(
   return res.json();
 }
 
-/** JWT da conta na plataforma + token de resgate → diagnóstico no tenant do consultor. */
+/** JWT da conta na plataforma (opcional se cookie httpOnly) + token de resgate → diagnóstico no tenant. */
 export async function postVincularRascunhoContaPlataforma(
   resgateToken: string,
-  accessToken: string,
+  accessToken: string | null,
 ): Promise<unknown> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Idempotency-Key": novoIdempotencyKey(),
+  };
+  const t = accessToken?.trim();
+  if (t) {
+    headers.Authorization = `Bearer ${t}`;
+  }
   const res = await fetch(`${apiBase()}/diagnosticos/rascunho-self-service/vincular-conta`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      "Idempotency-Key": novoIdempotencyKey(),
-    },
+    headers,
+    credentials: "include",
     body: JSON.stringify({ resgate_token: resgateToken.trim() }),
   });
   if (!res.ok) {

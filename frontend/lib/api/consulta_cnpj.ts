@@ -7,7 +7,7 @@
 import type { CnpjCanonicoCampos } from "@/lib/cnpj/canonical_merge";
 
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
-import { getAccessToken, getApiUrlForFetch } from "./config";
+import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
 export type ConsultarCnpjResponseApi = {
@@ -57,8 +57,7 @@ export async function postConsultarCnpjAutenticado(params: {
   forceRefresh?: boolean;
   aplicarNoDiagnosticoId?: string | null;
 }): Promise<ConsultarCnpjResponseApi> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária para consultar CNPJ na API (login na plataforma).");
   }
 
@@ -76,9 +75,10 @@ export async function postConsultarCnpjAutenticado(params: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
         "Idempotency-Key": novoIdempotencyKey(),
       },
+      credentials: "include",
       body: JSON.stringify(body),
     });
 

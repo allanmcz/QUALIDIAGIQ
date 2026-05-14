@@ -4,12 +4,16 @@
  * O browser chama sempre same-origin `/api-backend/...`; este handler encaminha para
  * `API_PROXY_TARGET` (ex.: `http://api:8000` no Compose ou `http://127.0.0.1:60000` no host).
  *
+ * Se o pedido **não** trouxer `Authorization` e existir cookie httpOnly `qdi_painel_access` (BFF login),
+ * o proxy acrescenta `Authorization: Bearer <JWT>` ao upstream — o token não fica em `localStorage`.
+ *
  * `Host` no pedido ao upstream vem da URL em `fetch` (Undici); não forçar — cabeçalho proibido na API Fetch.
  */
 
-import fs from "node:fs";
-
 import { type NextRequest, NextResponse } from "next/server";
+
+import { PAINEL_ACCESS_TOKEN_COOKIE } from "@/lib/auth/painel_access_cookie";
+import { resolveApiUpstreamBase } from "@/lib/server/api_proxy_upstream";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,24 +30,6 @@ const CABECALHOS_REPASSE = [
   "tracestate",
 ] as const;
 
-function isLikelyDockerContainer(): boolean {
-  try {
-    return fs.existsSync("/.dockerenv");
-  } catch {
-    return false;
-  }
-}
-
-/** Mesma regra que existia em `next.config.mjs` antes do proxy em Route Handler. */
-function resolveUpstreamBase(): string | null {
-  const explicit = process.env.API_PROXY_TARGET?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  if (process.env.NODE_ENV === "production") return null;
-  // Compose QDI: serviço `api` na rede interna (evita 503 se `.env.local` montado esvaziar o env).
-  if (isLikelyDockerContainer()) return "http://api:8000";
-  return "http://127.0.0.1:60000";
-}
-
 function montarCaminhoUpstream(segments: string[] | undefined): string {
   if (!segments?.length) return "";
   const joined = segments.join("/");
@@ -58,6 +44,12 @@ function montarCabecalhos(request: NextRequest): Headers {
   for (const nome of CABECALHOS_REPASSE) {
     const v = request.headers.get(nome);
     if (v) h.set(nome, v);
+  }
+  if (!h.get("authorization")) {
+    const tokenPainel = request.cookies.get(PAINEL_ACCESS_TOKEN_COOKIE)?.value?.trim();
+    if (tokenPainel) {
+      h.set("authorization", `Bearer ${tokenPainel}`);
+    }
   }
   return h;
 }
@@ -106,7 +98,7 @@ function montarCabecalhosResposta(upstream: Response, buf: ArrayBuffer): Headers
 
 async function proxy(request: NextRequest, segments: string[] | undefined): Promise<Response> {
   try {
-    const base = resolveUpstreamBase();
+    const base = resolveApiUpstreamBase();
     if (!base) {
       return NextResponse.json(
         {

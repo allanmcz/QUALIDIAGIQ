@@ -18,6 +18,9 @@ export function clearPainelSessionLocal(): void {
   if (typeof window === "undefined") return;
   clearPainelSessionStorageOnly();
   setPainelSessionCookiePresent(false);
+  void fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {
+    /* BFF opcional em testes sem servidor — ignora falha de rede */
+  });
   window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
 }
 

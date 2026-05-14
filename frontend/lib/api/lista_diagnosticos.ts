@@ -1,6 +1,6 @@
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
-import { getAccessToken, getApiUrlForFetch } from "./config";
+import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import {
   isLikelyNetworkFetchFailure,
   mensagemConectividadeApiParaUsuario,
@@ -64,8 +64,7 @@ export async function fetchDiagnosticosResumo(
   offset = 0,
   opts?: FetchDiagnosticosResumoOpts,
 ): Promise<DiagnosticoResumoApi[]> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária: faça login em /login.");
   }
   const base = getApiUrlForFetch().replace(/\/$/, "");
@@ -84,8 +83,9 @@ export async function fetchDiagnosticosResumo(
 
   try {
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { ...cabecalhosAuthPainelOpcional() },
       cache: "no-store",
+      credentials: "include",
     });
     const raw = await res.text();
     if (!res.ok) {

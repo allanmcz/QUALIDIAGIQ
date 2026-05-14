@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SlotMensagemErroCampo } from "@/components/wizard/SlotMensagemErroCampo";
 import type { CnaeSubclasseItem } from "@/lib/api/cnae";
-import { getAccessToken } from "@/lib/api/config";
+import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import {
   MENSAGEM_SELECT_PERFIL_EMPRESA,
   type DiagnosticoPayloadFormInput,
@@ -63,7 +63,7 @@ export function WizardStepPerfilEmpresa({
       <span className="sr-only" aria-live="polite">
         {catalogLoading ? "Carregando questionário adaptativo." : ""}
       </span>
-      {!getAccessToken() && (
+      {!temSessaoPainelParaApiCliente() && (
         <div className="rounded-md border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground md:text-sm leading-relaxed">
           Sem login corporativo você pode concluir o assistente; na última pergunta,{" "}
           <span className="font-medium text-foreground">Gerar diagnóstico</span> guarda as respostas e abre a etapa

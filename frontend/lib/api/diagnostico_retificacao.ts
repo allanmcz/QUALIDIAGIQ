@@ -6,7 +6,7 @@
 
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
-import { getAccessToken, getApiUrlForFetch } from "./config";
+import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
 /** Resposta de uma linha em `diagnostico_retificacao` (schema HTTP da API). */
@@ -37,8 +37,7 @@ export async function fetchRetificacoesDiagnostico(
   diagnosticoId: string,
   params?: { limit?: number },
 ): Promise<DiagnosticoRetificacaoHttp[]> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária.");
   }
   const sp = new URLSearchParams();
@@ -48,8 +47,9 @@ export async function fetchRetificacoesDiagnostico(
 
   try {
     const res = await fetch(url, {
-      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      headers: { Accept: "application/json", ...cabecalhosAuthPainelOpcional() },
       cache: "no-store",
+      credentials: "include",
     });
     if (!res.ok) {
       if (encerrarSessaoPainelSe401(res.status)) {
@@ -74,8 +74,7 @@ export async function postRetificacaoDiagnostico(
   diagnosticoId: string,
   body: { motivo_retificacao: string; payload_retificacao?: Record<string, unknown> },
 ): Promise<DiagnosticoRetificacaoHttp> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária.");
   }
   const url = `${base()}/diagnosticos/${diagnosticoId}/retificacao`;
@@ -86,9 +85,10 @@ export async function postRetificacaoDiagnostico(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
         "Idempotency-Key": novaIdempotencyKey(),
       },
+      credentials: "include",
       body: JSON.stringify({
         motivo_retificacao: body.motivo_retificacao,
         payload_retificacao: body.payload_retificacao ?? {},

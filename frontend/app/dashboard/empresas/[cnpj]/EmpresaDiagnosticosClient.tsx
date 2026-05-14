@@ -12,7 +12,7 @@ import {
   fetchDiagnosticosResumoTodasPaginasPorEmpresa,
   type DiagnosticoResumoApi,
 } from "@/lib/api/lista_diagnosticos";
-import { getAccessToken } from "@/lib/api/config";
+import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
@@ -53,7 +53,7 @@ export default function EmpresaDiagnosticosClient({
   useEffect(() => {
     let cancel = false;
     async function load() {
-      if (!getAccessToken()) {
+      if (!temSessaoPainelParaApiCliente()) {
         setDiagnosticos([]);
         return;
       }
@@ -76,7 +76,7 @@ export default function EmpresaDiagnosticosClient({
 
   /** Prefetch em segundo plano — alimenta ranking «global empresa» e cache por ID. */
   useEffect(() => {
-    if (!diagnosticos?.length || !getAccessToken()) return;
+    if (!diagnosticos?.length || !temSessaoPainelParaApiCliente()) return;
     let cancel = false;
     const ids = diagnosticos.map((d) => d.id);
     setPrefetchErro(null);
@@ -130,7 +130,7 @@ export default function EmpresaDiagnosticosClient({
   }, []);
 
   const daEmpresa = diagnosticos ?? [];
-  const semSessao = !getAccessToken();
+  const semSessao = !temSessaoPainelParaApiCliente();
 
   return (
     <div className="container py-10">

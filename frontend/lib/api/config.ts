@@ -99,6 +99,26 @@ export function clearPainelSessionStorageOnly(): void {
   window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
 }
 
+type PainelSessionMetadataInput = {
+  nome: string;
+  email: string;
+  perfilConta: "gratuito" | "avancado";
+};
+
+/**
+ * Grava só metadados do painel **sem** JWT em `localStorage` (fluxo BFF + cookie httpOnly).
+ *
+ * Remove chaves de token para não manter segredo no browser; o proxy `/api-backend` lê o cookie.
+ */
+export function persistPainelSessionMetadataOnly(input: PainelSessionMetadataInput): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY);
+  window.localStorage.setItem(ADMIN_NOME_STORAGE_KEY, input.nome);
+  window.localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, input.email);
+  window.localStorage.setItem(ADMIN_PERFIL_CONTA_STORAGE_KEY, input.perfilConta);
+}
+
 type PainelSessionStorageInput = {
   token: string;
   nome: string;
@@ -135,6 +155,28 @@ export function getAccessToken(): string | null {
     window.localStorage.setItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY, String(expiresAt));
   }
   return token;
+}
+
+/**
+ * O painel pode chamar a API com Bearer em `localStorage` (legado) **ou** só com cookie httpOnly
+ * (`qdi_painel_access`), porque o proxy `/api-backend` injeta `Authorization` quando o header falta.
+ *
+ * Usamos `admin_perfil_conta` como indicador de login BFF (gravado por `persistPainelSessionMetadataOnly`;
+ * o wizard não grava esta chave).
+ */
+export function temSessaoPainelParaApiCliente(): boolean {
+  if (typeof window === "undefined") return false;
+  if (getAccessToken()) return true;
+  return Boolean(window.localStorage.getItem(ADMIN_PERFIL_CONTA_STORAGE_KEY));
+}
+
+/**
+ * Cabeçalhos para `/api-backend`: Bearer só se o token estiver em `localStorage` (legado).
+ */
+export function cabecalhosAuthPainelOpcional(): Record<string, string> {
+  const token = getAccessToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 /**

@@ -6,7 +6,7 @@
 
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
-import { getAccessToken, getApiUrlForFetch } from "./config";
+import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
 /** Linha de `lgpd_titular_solicitacao` exposta pela API. */
@@ -46,8 +46,7 @@ export async function fetchSolicitacoesLgpd(params?: {
   status?: string;
   limit?: number;
 }): Promise<SolicitacaoTitularLgpd[]> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária: faça login em /login.");
   }
   const sp = new URLSearchParams();
@@ -58,8 +57,9 @@ export async function fetchSolicitacoesLgpd(params?: {
 
   try {
     const res = await fetch(url, {
-      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      headers: { Accept: "application/json", ...cabecalhosAuthPainelOpcional() },
       cache: "no-store",
+      credentials: "include",
     });
     if (!res.ok) {
       if (encerrarSessaoPainelSe401(res.status)) {
@@ -84,8 +84,7 @@ export async function patchStatusSolicitacaoLgpd(
   solicitacaoId: string,
   body: { status: string; observacao_interna?: string | null },
 ): Promise<SolicitacaoTitularLgpd> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária.");
   }
   const url = `${baseUrl()}/privacidade/solicitacoes/${solicitacaoId}/status`;
@@ -95,8 +94,9 @@ export async function patchStatusSolicitacaoLgpd(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
       },
+      credentials: "include",
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -126,8 +126,7 @@ export async function postAnonimizarRespondenteLgpd(
   diagnosticoId: string,
   solicitacaoId: string,
 ): Promise<AnonimizarRespondenteLgpdResponse> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária.");
   }
   const url = `${baseUrl()}/privacidade/diagnosticos/${diagnosticoId}/anonimizar-respondente`;
@@ -137,8 +136,9 @@ export async function postAnonimizarRespondenteLgpd(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
       },
+      credentials: "include",
       body: JSON.stringify({ solicitacao_id: solicitacaoId }),
     });
     if (!res.ok) {
@@ -167,8 +167,7 @@ export async function postRegistrarSolicitacaoLgpd(body: {
   diagnostico_id?: string | null;
   payload?: Record<string, unknown>;
 }): Promise<SolicitacaoTitularLgpd> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária.");
   }
   const url = `${baseUrl()}/privacidade/solicitacoes`;
@@ -183,9 +182,10 @@ export async function postRegistrarSolicitacaoLgpd(body: {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
         "Idempotency-Key": idempotencyKey,
       },
+      credentials: "include",
       body: JSON.stringify({
         tipo: body.tipo,
         canal: body.canal ?? "plataforma",
@@ -224,8 +224,7 @@ export async function fetchExportPortabilidadeDiagnostico(params: {
   solicitacaoId: string;
   formato?: FormatoExportPortabilidade;
 }): Promise<Blob> {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error("Sessão necessária.");
   }
   const sp = new URLSearchParams();
@@ -235,8 +234,9 @@ export async function fetchExportPortabilidadeDiagnostico(params: {
 
   try {
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { ...cabecalhosAuthPainelOpcional() },
       cache: "no-store",
+      credentials: "include",
     });
     if (!res.ok) {
       if (encerrarSessaoPainelSe401(res.status)) {

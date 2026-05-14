@@ -28,7 +28,15 @@ O wizard usa **`localStorage`** para rascunho de UX (`wizard_draft`), pendente l
 | `wizard_draft` | `localStorage` | Rascunho do wizard (passos 1–2 e estado parcial). |
 | `pending_diagnostico` | `localStorage` | Payload pendente legado até POST autenticado (migrar para rascunho BD quando possível). |
 | `qdi_rascunho_resgate_token_v1` | `localStorage` | Token opaco da BD após «Entrar» (redirect perde o `#`). |
-| `admin_token`, `admin_nome` | `localStorage` | Sessão do painel após login na plataforma (MVP — não é modelo-alvo produção). |
+| `admin_token`, `admin_nome` | `localStorage` | Metadados / legado do painel; JWT de acesso tende a ir em cookie **httpOnly** (`qdi_painel_access`) via BFF. |
+
+## Sessão do painel (BFF + proxy)
+
+- **Login:** `POST /api/auth/login` (Route Handler) chama a FastAPI, define cookie `qdi_painel_access` (**HttpOnly**, `SameSite=Lax`, `Secure` em produção) e devolve JSON **sem** `access_token` no corpo.
+- **Logout:** `POST /api/auth/logout` limpa o cookie.
+- **Sessão (UX):** `GET /api/auth/session` expõe apenas dados não sensíveis.
+- **Chamadas à API:** com `NEXT_PUBLIC_API_URL=/api-backend`, o `app/api-backend/[[...slug]]/route.ts` faz proxy same-origin; se o `fetch` não enviar `Authorization`, o servidor injeta `Bearer` a partir do cookie. Use `credentials: "include"` nos `fetch` ao proxy.
+- **Exemplo local:** ver `frontend/.env.local.example` (`API_PROXY_TARGET` + `NEXT_PUBLIC_API_URL=/api-backend`).
 
 ## Stack-alvo
 

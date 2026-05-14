@@ -20,13 +20,48 @@ export default function DashboardLayout({
   const [nome, setNome] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = getAccessToken()
-    if (!token) {
+    let cancelado = false
+
+    async function validarSessao(): Promise<void> {
+      try {
+        const r = await fetch("/api/auth/session", { credentials: "same-origin" })
+        const j = (await r.json()) as {
+          authenticated?: boolean
+          nome?: string | null
+          perfil_conta?: string
+        }
+        if (cancelado) return
+        if (j.authenticated) {
+          setNome(
+            (j.nome && String(j.nome).trim()) ||
+              (typeof window !== "undefined"
+                ? window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY)
+                : null) ||
+              "Admin",
+          )
+          setPainelSessionCookiePresent(true)
+          return
+        }
+      } catch {
+        /* rede / BFF indisponível — cai no legado localStorage */
+      }
+      if (cancelado) return
+      const legacy = getAccessToken()
+      if (legacy) {
+        setNome(
+          (typeof window !== "undefined" && window.localStorage.getItem(ADMIN_NOME_STORAGE_KEY)) ||
+            "Admin",
+        )
+        setPainelSessionCookiePresent(true)
+        return
+      }
       setPainelSessionCookiePresent(false)
       router.push("/login")
-    } else {
-      setPainelSessionCookiePresent(true)
-      setNome(localStorage.getItem(ADMIN_NOME_STORAGE_KEY) || "Admin")
+    }
+
+    void validarSessao()
+    return () => {
+      cancelado = true
     }
   }, [router])
 

@@ -3,10 +3,7 @@
 import Link from "next/link"
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import {
-  getApiUrlForFetch,
-  persistPainelSessionLocal,
-} from "@/lib/api/config"
+import { persistPainelSessionMetadataOnly } from "@/lib/api/config"
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events"
 import { mensagemErroHttp } from "@/lib/api/http_errors"
 import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie"
@@ -30,11 +27,12 @@ function LoginPageContent() {
     setLoading(true)
 
     try {
-      const base = getApiUrlForFetch().replace(/\/$/, "")
-      const res = await fetch(`${base}/auth/login`, {
+      /** BFF: JWT fica em cookie httpOnly — ver `app/api/auth/login/route.ts`. */
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        credentials: "same-origin",
+        body: JSON.stringify({ email, password }),
       })
 
       const raw = await res.text()
@@ -42,24 +40,22 @@ function LoginPageContent() {
         throw new Error(mensagemErroHttp(res.status, raw))
       }
 
-      let data: { access_token?: string; nome?: string | null; perfil_conta?: string }
+      let data: { ok?: boolean; nome?: string | null; perfil_conta?: string; email?: string }
       try {
-        data = JSON.parse(raw) as { access_token?: string; nome?: string | null; perfil_conta?: string }
+        data = JSON.parse(raw) as { ok?: boolean; nome?: string | null; perfil_conta?: string; email?: string }
       } catch {
         throw new Error(mensagemErroHttp(res.status, raw))
       }
-      if (!data.access_token || typeof data.access_token !== "string") {
-        throw new Error("Resposta de login sem token. Confira a versão da API.")
+      if (!data.ok) {
+        throw new Error("Resposta de login inválida. Confira a versão do BFF.")
       }
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
           ? data.perfil_conta
           : "gratuito"
-      // ADR-020: grava o JWT MVP com validade local derivada do claim `exp`.
-      persistPainelSessionLocal({
-        token: data.access_token,
+      persistPainelSessionMetadataOnly({
         nome: data.nome || "Admin",
-        email: email.trim(),
+        email: (data.email ?? email).trim(),
         perfilConta: perfil,
       })
       window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))

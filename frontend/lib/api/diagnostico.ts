@@ -1,7 +1,7 @@
 import type { DiagnosticoPayloadArmazenado } from "../schemas/wizard";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
-import { getAccessToken, getApiUrlForFetch } from "./config";
+import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import {
   isLikelyNetworkFetchFailure,
   mensagemConectividadeApiParaUsuario,
@@ -14,8 +14,7 @@ import {
  * Envia `aceite_termos_privacidade` para LGPD (migração 0012).
  */
 export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
-  const token = getAccessToken();
-  if (!token) {
+  if (!temSessaoPainelParaApiCliente()) {
     throw new Error(
       "Sessão necessária: faça login em /login antes de enviar o diagnóstico (Bearer JWT)."
     );
@@ -33,9 +32,10 @@ export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...cabecalhosAuthPainelOpcional(),
         "Idempotency-Key": idempotencyKey,
       },
+      credentials: "include",
       body: JSON.stringify(payload),
     });
 
