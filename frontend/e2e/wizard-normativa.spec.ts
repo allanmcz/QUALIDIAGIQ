@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+import { fillWizardCnpjPasso1 } from "./helpers/wizard_cnpj_e2e";
 
 /**
  * P8 — painel “validar âncora” no passo 3 do wizard (NEXT_PUBLIC_WIZARD_NORMATIVA).
@@ -124,7 +125,7 @@ const enabled = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
 
     await page.goto("/wizard");
 
-    await page.locator("#cnpj").fill("12345678000195");
+    await fillWizardCnpjPasso1(page);
     await page.locator("#razao_social").fill("Empresa E2E LTDA");
     await page.locator("#nome").fill("Tester");
     await page.locator("#email").fill("tester@empresa.com");

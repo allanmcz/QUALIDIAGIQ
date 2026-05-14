@@ -7,6 +7,8 @@
 
 **Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/login` + **`/api/auth/cadastro`**, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; E2E Playwright: `e2e/helpers/mock_bff_painel_auth.ts`, `NEXT_PUBLIC_API_URL=/api-backend` no `playwright.config.ts`; ver `frontend/.env.local.example` e `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
 
+**Última actualização (Fase 5 — E2E mobile):** 2026-05-14 — projectos Playwright desktop/mobile, `e2e/mobile-smoke.spec.ts`, script `npm run test:e2e:mobile`.
+
 ---
 
 ## Fase 0 — Pré-requisitos (antes de qualquer tarefa)
@@ -138,13 +140,13 @@
 
 *Executar **depois** da **Fase 1** estável; actualizar specs se middleware/login mudou.*
 
-- [ ] **5.1** Config mobile em `frontend/playwright.config.ts` (ou equivalente)
-- [ ] **5.2** `frontend/e2e/mobile-smoke.spec.ts` — `/wizard` (sem overflow horizontal, CTA visível, avançar primeiro passo)
-- [ ] **5.3** `/login` — formulário e botão visíveis em viewport móvel
-- [ ] **5.4** `/dashboard` — sem sessão → redirect login; com mock de sessão → layout básico não quebra (se já existir padrão)
-- [ ] **5.5** Smoke **sem** backend real para o cenário simples (salvo specs integradas já existentes)
+- [x] **5.1** Config mobile em `frontend/playwright.config.ts` — projectos `chromium-desktop` (ignora `mobile-smoke`) + `chromium-mobile` (só `mobile-smoke`); `reuseExistingServer` fora de CI para não colidir com dev local
+- [x] **5.2** `frontend/e2e/mobile-smoke.spec.ts` — `/wizard`: overflow horizontal verificado no `main` (conteúdo; header global pode ser mais largo que o viewport em alguns breakpoints); CTA «Próxima Etapa»; avanço passo 1 → «Perfil da Empresa»
+- [x] **5.3** `/login` — campos e botão visíveis (Pixel 5)
+- [x] **5.4** `/dashboard` — sem sessão → `/login`; com mock BFF + lista vazia → painel estável
+- [x] **5.5** Cenários **sem** backend real (mocks BFF + `GET …/diagnosticos`)
 
-**Gate após Fase 5:** `cd frontend && npm run test:e2e` (ou script acordado).
+**Gate após Fase 5:** `cd frontend && npm run test:e2e` (inclui mobile) ou `npm run test:e2e:mobile` só viewport móvel.
 
 ---
 
@@ -200,4 +202,4 @@ flowchart LR
 
 ---
 
-**Última actualização:** plano gerado para acompanhamento incremental; alinhar número do ADR (`00X`) ao índice real em `docs/refs/00_INDICE.md` quando criares o ADR.
+**Última actualização:** plano gerado para acompanhamento incremental; Fase 5 E2E mobile acrescentada 2026-05-14; alinhar número do ADR (`00X`) ao índice real em `docs/refs/00_INDICE.md` quando criares o ADR.

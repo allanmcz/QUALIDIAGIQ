@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+import { fillWizardCnpjPasso1 } from "./helpers/wizard_cnpj_e2e";
 
 /**
  * N3 — intercepta chamadas à API (sem Docker obrigatório).
@@ -121,7 +122,7 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
     }
 
     await expect(page.locator("#cnpj")).toBeVisible();
-    await page.locator("#cnpj").fill("12345678000195");
+    await fillWizardCnpjPasso1(page);
     await page.locator("#razao_social").fill("Empresa E2E LTDA");
     await page.locator("#nome").fill("Tester");
     await page.locator("#email").fill("tester@empresa.com");

@@ -124,9 +124,10 @@ services:
       # Código-fonte no host; dependências e cache de build só no Linux do container.
       # Sem isto, `node_modules`/`.next` gerados no macOS misturam-se com `npm run dev` no Alpine
       # e o browser recebe chunks truncados/HTML → «layout.js: Invalid or unexpected token».
+      # Volumes **nomeados** (não anónimos `/app/...`) — evita acumular volumes órfãos a cada recreate do container.
       - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - qdi-web-node-modules:/app/node_modules
+      - qdi-web-next-cache:/app/.next
     networks:
       - qdi-network
     command:
@@ -139,6 +140,8 @@ services:
 volumes:
   qdi-db-data:
   qdi-mock-pdf-spool:
+  qdi-web-node-modules:
+  qdi-web-next-cache:
 
 networks:
   qdi-network:

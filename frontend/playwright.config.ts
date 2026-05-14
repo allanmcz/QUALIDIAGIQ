@@ -20,14 +20,26 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
-    ...devices["Desktop Chrome"],
   },
+  /** Fase 5 hardening — mobile só em `mobile-smoke.spec.ts` (viewport Pixel 5). */
+  projects: [
+    {
+      name: "chromium-desktop",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: "**/mobile-smoke.spec.ts",
+    },
+    {
+      name: "chromium-mobile",
+      use: { ...devices["Pixel 5"] },
+      testMatch: "**/mobile-smoke.spec.ts",
+    },
+  ],
   webServer: skipServer
     ? undefined
     : {
         command: `npm run dev -- -p ${e2ePort}`,
         url: baseURL,
-        reuseExistingServer: false,
+        reuseExistingServer: process.env.CI ? false : true,
         timeout: 120_000,
         env: {
           ...process.env,

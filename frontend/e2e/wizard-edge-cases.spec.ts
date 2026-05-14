@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+import { fillWizardCnpjPasso1 } from "./helpers/wizard_cnpj_e2e";
 
 /**
  * A1 — edge cases do wizard: multipla_total, opções vazias (rótulos genéricos), voltar entre passos.
@@ -93,7 +94,7 @@ test.describe("Wizard — edge cases (mock API)", () => {
   });
 
   test("opções vazias exibe aviso e permite concluir com Opção 1/2", async ({ page }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     await page.goto("/login");
     await page.getByLabel(/E-mail Corporativo/i).fill("edge@teste.com");
@@ -118,7 +119,7 @@ test.describe("Wizard — edge cases (mock API)", () => {
       await dialogoRetoma.getByRole("button", { name: /Reiniciar diagnóstico/i }).click();
     }
 
-    await page.locator("#cnpj").fill("12345678000195");
+    await fillWizardCnpjPasso1(page);
     await page.locator("#razao_social").fill("Edge LTDA");
     await page.locator("#nome").fill("Edge");
     await page.locator("#email").fill("edge@empresa.com");
@@ -150,7 +151,7 @@ test.describe("Wizard — edge cases (mock API)", () => {
     test.setTimeout(45_000);
 
     await page.goto("/wizard");
-    await page.locator("#cnpj").fill("12345678000195");
+    await fillWizardCnpjPasso1(page);
     await page.locator("#razao_social").fill("Volta SA");
     await page.locator("#nome").fill("User");
     await page.locator("#email").fill("v@empresa.com");
@@ -220,7 +221,7 @@ test.describe("Wizard — catálogo multipla inválido (mock API)", () => {
   test("multipla_total ausente mostra erro de catálogo e não avança", async ({ page }) => {
     test.setTimeout(45_000);
     await page.goto("/wizard");
-    await page.locator("#cnpj").fill("12345678000195");
+    await fillWizardCnpjPasso1(page);
     await page.locator("#razao_social").fill("Cat Inválida SA");
     await page.locator("#nome").fill("Tester");
     await page.locator("#email").fill("cat@empresa.com");

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+import { installMockListaDiagnosticosGet } from "./helpers/mock_diagnosticos_lista_get";
 
 /**
  * Plano ANALISE §G — smoke dashboard com GET /diagnosticos/ mockado (sem API real).
@@ -12,33 +13,18 @@ test.describe("Dashboard lista (mock API)", () => {
       nome: "Consultor QA",
     });
 
-    await page.route("**/diagnosticos/**", async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.continue();
-        return;
-      }
-      const path = new URL(route.request().url()).pathname.replace(/\/$/, "");
-      if (!path.endsWith("/diagnosticos")) {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: "11111111-1111-4111-a111-111111111111",
-            empresa_razao_social: "Empresa Lista E2E",
-            status: "finalizado",
-            plano: "gratuito",
-            score_geral: 68.5,
-            criado_em: "2026-05-05T12:00:00Z",
-            finalizado_em: "2026-05-05T12:05:00Z",
-            relatorio_pdf_url: null,
-          },
-        ]),
-      });
-    });
+    await installMockListaDiagnosticosGet(page, [
+      {
+        id: "11111111-1111-4111-a111-111111111111",
+        empresa_razao_social: "Empresa Lista E2E",
+        status: "finalizado",
+        plano: "gratuito",
+        score_geral: 68.5,
+        criado_em: "2026-05-05T12:00:00Z",
+        finalizado_em: "2026-05-05T12:05:00Z",
+        relatorio_pdf_url: null,
+      },
+    ]);
 
     await page.goto("/login");
     await page.getByLabel(/E-mail Corporativo/i).fill("consultor@teste.com.br");

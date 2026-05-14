@@ -8,6 +8,10 @@
 - **B2 (planeado):** SW com política explícita (**não** cachear `/api-backend`, `/api/*`, rotas autenticadas); branch sugerida `feat/qdi-front-pwa-onda1`.  
 - Após alterações PWA: `npm run build` + smoke manual login → dashboard → `/wizard`.
 
+## E2E com mocks do painel (BFF + `/api-backend`)
+
+O `playwright.config.ts` define `NEXT_PUBLIC_API_URL=/api-backend` (por omissão) e `API_PROXY_TARGET` para o proxy do Next alcançar a API. Os specs que simulam login usam `e2e/helpers/mock_bff_painel_auth.ts` (`Set-Cookie` `qdi_painel_access` + corpo `{ ok: true, … }`). Para o passo 1 do wizard, preferir `fillWizardCnpjPasso1` em `e2e/helpers/wizard_cnpj_e2e.ts` (evita flakiness com `react-hook-form`).
+
 ## E2E integrado (API Python real — C1)
 
 Variáveis típicas no mesmo shell antes de subir Next + Playwright:

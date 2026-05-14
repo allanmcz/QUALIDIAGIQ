@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+import { installMockBffPainelCadastro } from "./helpers/mock_bff_painel_auth";
+import { installMockListaDiagnosticosGet } from "./helpers/mock_diagnosticos_lista_get";
+
 test.describe("Smoke QDI", () => {
   test("landing CTA Metodologia aponta para /metodologia", async ({ page }) => {
     await page.goto("/");
@@ -27,6 +30,24 @@ test.describe("Smoke QDI", () => {
     await expect(page.getByLabel(/^Nome$/i)).toBeVisible();
     await expect(page.getByLabel(/^E-mail$/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /Cadastrar e entrar/i })).toBeVisible();
+  });
+
+  test("cadastro BFF mock: submete e abre painel de diagnósticos", async ({ page }) => {
+    await installMockBffPainelCadastro(page, {
+      tokenParaUpstream: "e2e-smoke-cadastro",
+      nome: "Utilizador Smoke Cadastro",
+    });
+    await installMockListaDiagnosticosGet(page, []);
+
+    await page.goto("/cadastro");
+    await page.getByLabel(/^Nome$/i).fill("Utilizador Smoke Cadastro");
+    await page.getByLabel(/^E-mail$/i).fill("smoke.cadastro@e2e.qualidiagiq.test");
+    await page.getByLabel(/^Senha$/i).fill("senha1234");
+    await page.getByRole("button", { name: /Cadastrar e entrar/i }).click();
+
+    await page.waitForURL("**/dashboard/diagnosticos**", { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /Painel de diagnósticos/i })).toBeVisible();
+    await expect(page.getByText(/Nenhum diagnóstico neste painel ainda/i)).toBeVisible();
   });
 
   test("landing: cabeçalho com links Cadastrar e Entrar", async ({ page }) => {
