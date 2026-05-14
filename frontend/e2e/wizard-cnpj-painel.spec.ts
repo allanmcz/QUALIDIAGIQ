@@ -10,14 +10,16 @@ const LS_EMAIL = "admin_email";
 
 test.describe("Wizard — ADR-013 CNPJ com sessão na plataforma", () => {
   test("passo 1 sem CNPJ não avança quando há sessão de painel (metadados)", async ({ page }) => {
-    await page.addInitScript(
-      ([perfil, nome, email]: [string, string, string]) => {
-        window.localStorage.setItem(perfil, "gratuito");
-        window.localStorage.setItem(nome, "QA E2E ADR-013");
-        window.localStorage.setItem(email, "fulano.qa@example.com");
-      },
-      [LS_PERFIL, LS_NOME, LS_EMAIL],
-    );
+    await page.addInitScript((keys: string[]) => {
+      // Playwright serializa o argumento como `string[]` no tipo `PageFunction`.
+      const perfil = keys[0];
+      const nome = keys[1];
+      const email = keys[2];
+      if (!perfil || !nome || !email) return;
+      window.localStorage.setItem(perfil, "gratuito");
+      window.localStorage.setItem(nome, "QA E2E ADR-013");
+      window.localStorage.setItem(email, "fulano.qa@example.com");
+    }, [LS_PERFIL, LS_NOME, LS_EMAIL]);
 
     await page.goto("/wizard");
 
