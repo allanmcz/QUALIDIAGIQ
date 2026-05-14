@@ -11,6 +11,9 @@ import pytest
 
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-pytest-only-32chars!!")
 os.environ.setdefault("APP_ENV", "development")
+# ADR-020 — testes unitários disparam dezenas de POST /auth/* e /diagnosticos/* no mesmo processo;
+# o rate-limit sensível deve ficar desligado salvo testes dedicados.
+os.environ.setdefault("QDI_SENSITIVE_RATE_LIMIT_ENABLED", "false")
 
 
 @pytest.fixture(autouse=True)

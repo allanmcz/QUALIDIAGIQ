@@ -1,6 +1,6 @@
 # Frontend — QualiDiagIQ
 
-> **Status:** MVP App Router ativo (Next 14+) — wizard, dashboard M05/M06/M12 e páginas públicas (`/metodologia`, LGPD).
+> **Status:** MVP App Router ativo (Next 15.x) — wizard, dashboard M05/M06/M12 e páginas públicas (`/metodologia`, LGPD).
 
 ## PWA — Onda 1 (ADR-011)
 
@@ -32,7 +32,7 @@ O wizard usa **`localStorage`** para rascunho de UX (`wizard_draft`), pendente l
 
 ## Stack-alvo
 
-- Next.js 14 (App Router)
+- Next.js 15 (App Router)
 - React 19
 - TypeScript 5.5+
 - Tailwind CSS 3.4+

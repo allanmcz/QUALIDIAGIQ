@@ -3,6 +3,7 @@ from pathlib import Path
 
 import structlog
 from jinja2 import Environment, FileSystemLoader
+from structlog.contextvars import get_contextvars
 
 from src.application.ports.pdf_generator import PdfGeneratorPort
 from src.domain.entities.diagnostico import Diagnostico
@@ -81,6 +82,10 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
 
         css_path = str(self.templates_dir / "style.css")
 
+        # Importante: geração corre em thread — ``structlog`` context não propaga; capturamos aqui.
+        _ctx = get_contextvars()
+        http_tid = _ctx.get("http_trace_id") if isinstance(_ctx, dict) else None
+
         # WeasyPrint processa o HTML e o CSS
         # Importante: Geração ocorre em thread bloqueante nativa, em prod
         # idealmente encapsulada em asyncio.to_thread, mas aqui WeasyPrint é rápido o suficiente
@@ -105,6 +110,9 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
                 logger.warning(
                     "weasyprint_indisponivel_pdf_mock",
                     erro=str(e),
+                    http_trace_id=http_tid,
+                    diagnostico_id=str(diagnostico.id),
+                    tenant_id=str(diagnostico.tenant_id),
                     exc_info=True,
                 )
                 return b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
@@ -117,6 +125,8 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
                 "weasyprint_timeout_render",
                 timeout_segundos=timeout_s,
                 diagnostico_id=str(diagnostico.id),
+                tenant_id=str(diagnostico.tenant_id),
+                http_trace_id=http_tid,
             )
             raise RuntimeError(
                 f"Timeout ao gerar PDF (>{timeout_s}s). Ajuste QDI_PDF_RENDER_TIMEOUT_SECONDS ou infra WeasyPrint."

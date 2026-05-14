@@ -4,11 +4,8 @@ import Link from "next/link"
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  ADMIN_EMAIL_STORAGE_KEY,
-  ADMIN_NOME_STORAGE_KEY,
-  ADMIN_PERFIL_CONTA_STORAGE_KEY,
-  ADMIN_TOKEN_STORAGE_KEY,
   getApiUrlForFetch,
+  persistPainelSessionLocal,
 } from "@/lib/api/config"
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events"
 import { mensagemErroHttp } from "@/lib/api/http_errors"
@@ -54,15 +51,17 @@ function LoginPageContent() {
       if (!data.access_token || typeof data.access_token !== "string") {
         throw new Error("Resposta de login sem token. Confira a versão da API.")
       }
-      // Salva em localStorage (apenas para o MVP/Dev)
-      localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, data.access_token)
-      localStorage.setItem(ADMIN_NOME_STORAGE_KEY, data.nome || "Admin")
-      localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, email.trim())
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
           ? data.perfil_conta
           : "gratuito"
-      localStorage.setItem(ADMIN_PERFIL_CONTA_STORAGE_KEY, perfil)
+      // ADR-020: grava o JWT MVP com validade local derivada do claim `exp`.
+      persistPainelSessionLocal({
+        token: data.access_token,
+        nome: data.nome || "Admin",
+        email: email.trim(),
+        perfilConta: perfil,
+      })
       window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))
       setPainelSessionCookiePresent(true)
 

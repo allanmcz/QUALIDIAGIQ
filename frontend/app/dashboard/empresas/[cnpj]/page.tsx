@@ -13,18 +13,20 @@ function decodeRazaoSocialHint(raw: string | string[] | undefined): string {
   }
 }
 
-export default function EmpresaDiagnosticosPage({
+export default async function EmpresaDiagnosticosPage({
   params,
   searchParams,
 }: {
-  params: { cnpj: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ cnpj: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const cnpjNorm = parseCnpjFromRouteSegment(params.cnpj);
+  const { cnpj } = await params;
+  const sp = await searchParams;
+  const cnpjNorm = parseCnpjFromRouteSegment(cnpj);
   if (!cnpjNorm) {
     notFound();
   }
-  const razaoSocialHint = decodeRazaoSocialHint(searchParams.razao_social);
+  const razaoSocialHint = decodeRazaoSocialHint(sp.razao_social);
 
   return (
     <EmpresaDiagnosticosClient cnpjNormalizado={cnpjNorm} razaoSocialHint={razaoSocialHint} />

@@ -59,7 +59,11 @@ class Settings(BaseSettings):
     )
     jwt_algorithm: str = Field(default="HS256", validation_alias=AliasChoices("JWT_ALGORITHM"))
     jwt_expire_minutes: int = Field(
-        default=480, validation_alias=AliasChoices("JWT_EXPIRE_MINUTES")
+        default=480,
+        validation_alias=AliasChoices("JWT_EXPIRE_MINUTES"),
+        description=(
+            "Validade do JWT do painel (minutos). Em APP_ENV=production deve ser ≤ 30 (ADR-020)."
+        ),
     )
 
     #: Tenant dedicado a diagnósticos gravados após OTP no e-mail (sem conta na plataforma).
@@ -121,6 +125,19 @@ class Settings(BaseSettings):
         ge=1,
         validation_alias=AliasChoices("QDI_PUBLIC_RATE_LIMIT_PER_MINUTE"),
         description="Limite por IP/minuto para rotas públicas (normativa, manifesto, metodologia, questionário).",
+    )
+
+    #: ADR-020 — POST sensíveis (login, cadastro, OTP, rascunho self-service): janela 1 minuto por IP.
+    sensitive_rate_limit_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("QDI_SENSITIVE_RATE_LIMIT_ENABLED"),
+    )
+    sensitive_rate_limit_per_minute: int = Field(
+        default=5,
+        ge=1,
+        le=120,
+        validation_alias=AliasChoices("QDI_SENSITIVE_RATE_LIMIT_PER_MINUTE"),
+        description="Limite por IP/minuto e por grupo de rota sensível (auth + rascunho self-service).",
     )
 
     cadastro_consultor_b2b_habilitado: bool = Field(
@@ -216,9 +233,13 @@ class Settings(BaseSettings):
     )
 
     lgpd_dpo_email: str = Field(
-        default="",
+        default="allan@tributolab.com.br",
         validation_alias=AliasChoices("LGPD_DPO_EMAIL"),
-        description="E-mail público do encarregado (DPO) — GET /public/institucional e futuros templates da API.",
+        description=(
+            "E-mail público do encarregado (DPO) — GET /public/institucional e futuros templates da API. "
+            "Default MVP: Allan Marcio (pessoa física, DPO provisório); sobrescrever em produção se o controlador "
+            "nomear outro encarregado."
+        ),
     )
     lgpd_retention_days: int = Field(
         default=180,
@@ -324,6 +345,11 @@ class Settings(BaseSettings):
         ):
             raise ValueError(
                 "ANTHROPIC_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=anthropic."
+            )
+        # ADR-020 — mitigação compensatória: sessão painel curta em produção (XSS + localStorage).
+        if self.jwt_expire_minutes > 30:
+            raise ValueError(
+                "JWT_EXPIRE_MINUTES deve ser <= 30 em APP_ENV=production (ADR-020 mitigacoes compensatorias)."
             )
         return self
 

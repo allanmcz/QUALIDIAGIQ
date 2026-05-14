@@ -221,28 +221,34 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
   }
 }
 
-type RotaCtx = { params: { slug?: string[] } };
+/** Next 15: ``params`` em dynamic routes é assíncrono. */
+type RotaCtx = { params: Promise<{ slug?: string[] }> };
+
+async function segmentos(ctx: RotaCtx): Promise<string[] | undefined> {
+  const p = await ctx.params;
+  return p.slug;
+}
 
 export async function GET(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params?.slug);
+  return proxy(request, await segmentos(ctx));
 }
 
 export async function POST(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params?.slug);
+  return proxy(request, await segmentos(ctx));
 }
 
 export async function PUT(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params?.slug);
+  return proxy(request, await segmentos(ctx));
 }
 
 export async function PATCH(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params?.slug);
+  return proxy(request, await segmentos(ctx));
 }
 
 export async function DELETE(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params?.slug);
+  return proxy(request, await segmentos(ctx));
 }
 
 export async function OPTIONS(request: NextRequest, ctx: RotaCtx) {
-  return proxy(request, ctx.params?.slug);
+  return proxy(request, await segmentos(ctx));
 }

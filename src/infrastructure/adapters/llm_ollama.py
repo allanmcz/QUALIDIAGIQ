@@ -83,12 +83,14 @@ class OllamaLlmAdapter(LlmServicePort):
                 "ollama_http_error",
                 erro=str(exc),
                 url_host=self.ollama_url,
+                model=self.model,
             )
             return "Devido a indisponibilidade temporária do serviço de IA, a recomendação personalizada não pôde ser gerada no momento."
         except Exception as exc:
             logger.error(
                 "ollama_erro_inesperado",
                 erro=str(exc),
+                model=self.model,
                 exc_info=True,
             )
             return "Erro ao processar a recomendação de IA."

@@ -9,10 +9,12 @@ import {
   ADMIN_EMAIL_STORAGE_KEY,
   ADMIN_NOME_STORAGE_KEY,
   ADMIN_PERFIL_CONTA_STORAGE_KEY,
+  ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY,
   ADMIN_TOKEN_STORAGE_KEY,
+  getAccessToken,
 } from "@/lib/api/config";
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
-import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie";
+import { clearPainelSessionLocal } from "@/lib/auth/painel_session";
 
 /**
  * Sessão com conta na plataforma (JWT em localStorage) — só no cabeçalho global.
@@ -24,7 +26,7 @@ export function HeaderAuthNav() {
 
   const sincronizar = useCallback(() => {
     if (typeof window === "undefined") return;
-    const token = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+    const token = getAccessToken();
     if (!token) {
       setNome(null);
       return;
@@ -37,6 +39,7 @@ export function HeaderAuthNav() {
     const onStorage = (e: StorageEvent) => {
       if (
         e.key === ADMIN_TOKEN_STORAGE_KEY ||
+        e.key === ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY ||
         e.key === ADMIN_NOME_STORAGE_KEY ||
         e.key === ADMIN_EMAIL_STORAGE_KEY ||
         e.key === ADMIN_PERFIL_CONTA_STORAGE_KEY ||
@@ -55,12 +58,7 @@ export function HeaderAuthNav() {
   }, [sincronizar]);
 
   const sair = () => {
-    window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem(ADMIN_NOME_STORAGE_KEY);
-    window.localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
-    window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
-    setPainelSessionCookiePresent(false);
-    window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
+    clearPainelSessionLocal();
     router.push("/");
     router.refresh();
   };

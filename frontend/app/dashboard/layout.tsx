@@ -5,12 +5,10 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import {
-  ADMIN_EMAIL_STORAGE_KEY,
   ADMIN_NOME_STORAGE_KEY,
-  ADMIN_PERFIL_CONTA_STORAGE_KEY,
-  ADMIN_TOKEN_STORAGE_KEY,
+  getAccessToken,
 } from "@/lib/api/config"
-import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events"
+import { clearPainelSessionLocal } from "@/lib/auth/painel_session"
 import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie"
 
 export default function DashboardLayout({
@@ -22,7 +20,7 @@ export default function DashboardLayout({
   const [nome, setNome] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)
+    const token = getAccessToken()
     if (!token) {
       setPainelSessionCookiePresent(false)
       router.push("/login")
@@ -80,12 +78,7 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={() => {
-                  localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY)
-                  localStorage.removeItem(ADMIN_NOME_STORAGE_KEY)
-                  localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY)
-                  localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY)
-                  setPainelSessionCookiePresent(false)
-                  window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT))
+                  clearPainelSessionLocal()
                   router.push("/login")
                 }}
                 className="text-sm font-medium text-red-500 hover:underline"

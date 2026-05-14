@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -129,6 +129,9 @@ go-live: ## Executa pré-voo técnico do checklist de go-live (~45min)
 
 go-live-45min: ## Alias para go-live (compatibilidade)
 	@bash scripts/go_live_45min.sh
+
+go-live-tecnico: ## Gate técnico único: lint + mypy + front (test/tsc/build) + audit-secrets + mvp-gate se Postgres UP
+	@bash scripts/go_live_tecnico.sh
 
 uv-lock: ## Regenera uv.lock a partir do pyproject.toml (resolve deps; commit o ficheiro)
 	@test -x "$(UV)" || { echo "❌ uv não encontrado. Rode: make install (instala uv no venv) ou: brew install uv"; exit 1; }

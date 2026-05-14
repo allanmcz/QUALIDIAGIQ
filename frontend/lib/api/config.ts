@@ -60,16 +60,81 @@ export function getApiUrlForFetch(): string {
 
 /** Chaves `localStorage` — sessão com conta na plataforma MVP (`/login` → painel). */
 export const ADMIN_TOKEN_STORAGE_KEY = "admin_token";
+export const ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY = "admin_token_expires_at";
 export const ADMIN_NOME_STORAGE_KEY = "admin_nome";
 /** E-mail da conta gravado no login/cadastro (pré-preenche respondente no wizard). */
 export const ADMIN_EMAIL_STORAGE_KEY = "admin_email";
 /** Espelho do claim JWT `perfil_conta` (UX apenas; servidor revalida no POST). */
 export const ADMIN_PERFIL_CONTA_STORAGE_KEY = "admin_perfil_conta";
 
+function decodeBase64UrlJson(segment: string): unknown {
+  const normalizado = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalizado.padEnd(Math.ceil(normalizado.length / 4) * 4, "=");
+  return JSON.parse(window.atob(padded)) as unknown;
+}
+
+function jwtExpiresAtMs(token: string): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const payload = decodeBase64UrlJson(token.split(".")[1] ?? "");
+    if (!payload || typeof payload !== "object" || !("exp" in payload)) {
+      return null;
+    }
+    const exp = Number((payload as { exp?: unknown }).exp);
+    if (!Number.isFinite(exp) || exp <= 0) {
+      return null;
+    }
+    return exp * 1000;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPainelSessionStorageOnly(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY);
+  window.localStorage.removeItem(ADMIN_NOME_STORAGE_KEY);
+  window.localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
+  window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
+}
+
+type PainelSessionStorageInput = {
+  token: string;
+  nome: string;
+  email: string;
+  perfilConta: "gratuito" | "avancado";
+};
+
+export function persistPainelSessionLocal(input: PainelSessionStorageInput): void {
+  if (typeof window === "undefined") return;
+  const expiresAt = jwtExpiresAtMs(input.token);
+  window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, input.token);
+  if (expiresAt !== null) {
+    window.localStorage.setItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY, String(expiresAt));
+  } else {
+    window.localStorage.removeItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY);
+  }
+  window.localStorage.setItem(ADMIN_NOME_STORAGE_KEY, input.nome);
+  window.localStorage.setItem(ADMIN_EMAIL_STORAGE_KEY, input.email);
+  window.localStorage.setItem(ADMIN_PERFIL_CONTA_STORAGE_KEY, input.perfilConta);
+}
+
 /** JWT salvo pelo fluxo de login MVP (`/login`). */
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+  const token = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+  if (!token) return null;
+  const expiresAtRaw = window.localStorage.getItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY);
+  const expiresAt = expiresAtRaw ? Number(expiresAtRaw) : jwtExpiresAtMs(token);
+  if (expiresAt && Number.isFinite(expiresAt) && Date.now() >= expiresAt) {
+    clearPainelSessionStorageOnly();
+    return null;
+  }
+  if (!expiresAtRaw && expiresAt && Number.isFinite(expiresAt)) {
+    window.localStorage.setItem(ADMIN_TOKEN_EXPIRES_AT_STORAGE_KEY, String(expiresAt));
+  }
+  return token;
 }
 
 /**

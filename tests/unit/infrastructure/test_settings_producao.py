@@ -18,6 +18,7 @@ def _limpar_cache_settings() -> None:
 def _base_producao(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("JWT_SECRET_KEY", "k" * 32)
+    monkeypatch.setenv("JWT_EXPIRE_MINUTES", "30")
     monkeypatch.setenv("SUPABASE_URL", "https://projeto.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "chave-anon-nao-vazia")
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@db.example.com:5432/app")
@@ -36,6 +37,7 @@ def test_producao_cadastro_consultor_desligado_sem_env_explicito(
     monkeypatch.setenv("SUPABASE_ANON_KEY", "chave-anon-nao-vazia")
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://u:p@db.example.com:5432/app")
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("JWT_EXPIRE_MINUTES", "30")
     monkeypatch.delenv("QDI_CADASTRO_CONSULTOR_B2B_HABILITADO", raising=False)
     s = Settings()
     assert s.cadastro_consultor_b2b_habilitado is False
@@ -45,6 +47,14 @@ def test_producao_rejeita_jwt_curto(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("JWT_SECRET_KEY", "curto")
     with pytest.raises(ValueError, match="32"):
+        Settings()
+
+
+def test_producao_rejeita_jwt_expire_acima_de_30(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR-020 — produção exige sessão painel curta (mitigação XSS + localStorage)."""
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("JWT_EXPIRE_MINUTES", "480")
+    with pytest.raises(ValueError, match="JWT_EXPIRE_MINUTES"):
         Settings()
 
 
@@ -81,6 +91,7 @@ def test_producao_config_valida(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings()
     assert s.supabase_url.startswith("https://")
     assert len(s.jwt_secret_key.get_secret_value()) >= 32
+    assert s.jwt_expire_minutes <= 30
 
 
 def test_producao_llm_anthropic_exige_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

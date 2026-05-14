@@ -277,8 +277,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - name: npm audit (produção — QDI-H-009)
-        # HIGH em Next 14.x conhecido (middleware); upgrade major tratado em roadmap — falha só em CRITICAL.
-        run: npm audit --omit=dev --audit-level=critical
+        # Postura: bloquear HIGH+CRITICAL (ADR-016). Sem fix → substituir pacote, overrides ou ADR de exceção.
+        run: npm audit --omit=dev --audit-level=high
       - name: Confirmar versão lucide-react (QDI-H-007)
         run: npm ls lucide-react
       - name: Vitest (unit — lib/painel)

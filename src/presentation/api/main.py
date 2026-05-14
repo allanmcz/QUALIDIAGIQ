@@ -24,6 +24,9 @@ from src.infrastructure.config.logging import configurar_logging
 from src.infrastructure.config.settings import Settings, get_settings
 from src.presentation.api.middleware.idempotency import IdempotencyMiddleware
 from src.presentation.api.middleware.public_rate_limit import PublicRateLimitMiddleware
+from src.presentation.api.middleware.sensitive_route_rate_limit import (
+    SensitiveRouteRateLimitMiddleware,
+)
 from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 from src.presentation.api.routers import diagnostico_router
 
@@ -36,9 +39,21 @@ if TYPE_CHECKING:
 
 
 def _sentry_scrub_pii(event: Any, hint: dict[str, Any]) -> Any:
-    """QDI-H-016 — reduz vazamento de PII em extras/request (melhor esforço, não substitui DLP)."""
+    """QDI-H-016 — reduz vazamento de PII em extras/request/user (melhor esforço, não substitui DLP)."""
     _ = hint
-    chaves_sensiveis = ("password", "senha", "codigo", "token", "authorization", "email", "e-mail")
+    chaves_sensiveis = (
+        "password",
+        "senha",
+        "codigo",
+        "token",
+        "authorization",
+        "email",
+        "e-mail",
+        "telefone",
+        "celular",
+        "otp",
+        "cpf",
+    )
     try:
         if not isinstance(event, dict):
             return event
@@ -49,6 +64,16 @@ def _sentry_scrub_pii(event: Any, hint: dict[str, Any]) -> Any:
                 for k in list(data.keys()):
                     if any(s in str(k).lower() for s in chaves_sensiveis):
                         data[k] = "[REDACTED]"
+        user = event.get("user")
+        if isinstance(user, dict):
+            for k in ("email", "username", "ip_address", "telefone", "celular", "phone"):
+                if k in user:
+                    user[k] = "[REDACTED]"
+        extra = event.get("extra")
+        if isinstance(extra, dict):
+            for k in list(extra.keys()):
+                if any(s in str(k).lower() for s in chaves_sensiveis):
+                    extra[k] = "[REDACTED]"
     except Exception:
         pass
     return event
@@ -260,6 +285,7 @@ def create_app() -> FastAPI:
     app.add_middleware(IdempotencyMiddleware, cache=idempotency_cache)
     app.add_middleware(TraceContextMiddleware)
     app.add_middleware(PublicRateLimitMiddleware)
+    app.add_middleware(SensitiveRouteRateLimitMiddleware)
 
     @app.exception_handler(DiagnosticoNaoFinalizavelError)
     async def diagnostico_nao_finalizavel_handler(

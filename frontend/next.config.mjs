@@ -1,4 +1,9 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import withPWAInit from "@ducanh2912/next-pwa";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Origem da API para CSP `connect-src` em produção (evita «Failed to fetch» quando
@@ -37,6 +42,8 @@ function buildProductionCspValue() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /** Evita aviso «multiple lockfiles» quando existe `package-lock` na home ou na raiz do mono. */
+  outputFileTracingRoot: path.join(__dirname, ".."),
   /**
    * Next 14.2+ (block-cross-site): compara só o **hostname** do `Origin` com cada entrada
    * (ex.: Origin `http://127.0.0.1:60001` → hostname `127.0.0.1`). Incluir `127.0.0.1` literal;
@@ -72,13 +79,12 @@ const nextConfig = {
   async headers() {
     const isProd = process.env.NODE_ENV === "production";
     const securityHeaders = [
-      { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      { key: "X-Frame-Options", value: "DENY" },
       { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Referrer-Policy", value: "no-referrer" },
       {
         key: "Permissions-Policy",
-        value:
-          "camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()",
+        value: "geolocation=(), microphone=(), camera=()",
       },
     ];
     if (isProd) {

@@ -40,7 +40,7 @@
 - Python 3.12+ · FastAPI 0.115+ · Pydantic v2 (sempre — nunca dataclass para schemas externos)
 - Supabase (PostgreSQL 16 + RLS + pgvector)
 - Anthropic Codex (Codex-sonnet-4-6) + LangChain + LangGraph
-- Next.js 14 (App Router) + Tailwind + shadcn/ui
+- Next.js 15 (App Router) + Tailwind + shadcn/ui
 - WeasyPrint (PDF Python-native)
 - Docker + OrbStack
 - pytest + Playwright

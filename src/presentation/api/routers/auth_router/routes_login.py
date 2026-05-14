@@ -39,7 +39,10 @@ async def login(request: LoginRequest) -> LoginResponse:
 
         hash_bruto = user.get("hashed_password")
         if hash_bruto is None or str(hash_bruto).strip() == "":
-            deps.logger.error("admin_sem_hashed_password", email=request.email)
+            deps.logger.error(
+                "admin_sem_hashed_password",
+                admin_id=str(user.get("id", "")),
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Cadastro de administrador incompleto (senha não definida). Recrie o usuário.",
@@ -51,7 +54,7 @@ async def login(request: LoginRequest) -> LoginResponse:
         except ValueError as e:
             deps.logger.exception(
                 "login_hash_bcrypt_invalido",
-                email=request.email,
+                admin_id=str(user.get("id", "")),
                 erro=str(e),
             )
             raise HTTPException(
@@ -70,7 +73,7 @@ async def login(request: LoginRequest) -> LoginResponse:
 
         raw_tid = user.get("tenant_id")
         if raw_tid is None:
-            deps.logger.error("admin_sem_tenant_id", email=request.email)
+            deps.logger.error("admin_sem_tenant_id", admin_id=str(user.get("id", "")))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Configuração de tenant ausente para este usuário",

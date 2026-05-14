@@ -1,5 +1,10 @@
 import DiagnosticoDetalheClient from "./DiagnosticoDetalheClient";
 
-export default function DiagnosticoDetalhePage({ params }: { params: { id: string } }) {
-  return <DiagnosticoDetalheClient id={params.id} />;
+export default async function DiagnosticoDetalhePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  return <DiagnosticoDetalheClient id={id} />;
 }

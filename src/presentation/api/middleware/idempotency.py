@@ -17,6 +17,7 @@ import asyncio
 import hashlib
 from typing import TYPE_CHECKING, Any, cast
 
+import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
@@ -30,6 +31,8 @@ if TYPE_CHECKING:
     from starlette.middleware.base import RequestResponseEndpoint
     from starlette.requests import Request
     from starlette.types import ASGIApp
+
+logger = structlog.get_logger(__name__)
 
 # Limite para não armazenar PDF/base64 acidentalmente no cache MVP
 _MAX_BODY_BYTES = 512 * 1024
@@ -120,6 +123,14 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if hit is not None:
             h = dict(hit.headers)
             h["X-Idempotent-Replay"] = "true"
+            logger.info(
+                "idempotency_replay",
+                path=request.url.path,
+                method=request.method,
+                status_code=hit.status_code,
+                tenant_id=str(tenant_id) if tenant_id else None,
+                idempotency_key_prefix=idem_key[:16],
+            )
             content_type = next(
                 (v for k, v in hit.headers if k.lower() == "content-type"),
                 None,

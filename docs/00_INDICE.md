@@ -12,7 +12,7 @@
 | 02 | [Domínio QDI](02_dominio_qdi.md) | Entidades, value objects, agregados, eventos |
 | 03 | [Roadmap Sprint 1](../_DEVELOPER/03_roadmap_sprint_1.md) | Plano dia-a-dia — `_DEVELOPER/` |
 | 04 | [Remediação QDI-H (status)](operacao/STATUS_REMEDIACAO_2026-05-11.md) | Inventário handoff Codex/Claude |
-| 05 | [Segurança — política de autenticação](seguranca/POLITICA_AUTENTICACAO.md) | MVP / ADR-004 |
+| 05 | [Segurança — política de autenticação](../_DEVELOPER/DECISAO_EXTERNA/POLITICA_AUTENTICACAO.md) | MVP / ADR-004 — decisão PO/DPO |
 | 06 | [Operação — BACKUP e DR](operacao/BACKUP_E_DR.md) | RTO/RPO + ligação a backup técnico |
 | 07 | [Operação — auditoria eventos vs código](operacao/AUDITORIA_EVENTOS_VS_CODIGO.md) | QDI-H-022 |
 

@@ -5,6 +5,11 @@ Requer migrações aplicadas (job CI ou `make dev` / `make migrate`).
 Variável: QDI_POSTGRES_TEST_URL (default postgres@127.0.0.1:60322).
 
 Analogia: como validar VPD no Oracle com dois USER — aqui o ``tenant_id`` vem do JWT simulado.
+
+**Papel das ligações:** ``test_rls_authenticated_ve_apenas_proprio_tenant`` insere duas linhas com
+``asyncpg`` como **superuser** (bypass RLS), depois abre segunda ligação com role ``qdi_rls_smoke_login``
+membro de ``authenticated`` e ``request.jwt.claims`` — reproduz cliente real. Não usar só superuser
+para SELECT de isolamento: mascararia falhas de policy.
 """
 
 from __future__ import annotations
@@ -119,6 +124,9 @@ async def test_rls_authenticated_ve_apenas_proprio_tenant(pg_conn):
     Dois ``tenant_id`` distintos: sessão ``authenticated`` + JWT simulado só enxerga seu conjunto.
 
     Base: ``0003_rls_policies.sql`` (``qdi_jwt_tenant_id`` + policies).
+
+    INSERT inicial usa ``pg_conn`` (superuser) — permitido para setup. Leitura isolada valida
+    role ``authenticated`` + claims (ver docstring do módulo).
     """
     db_name = await pg_conn.fetchval("SELECT current_database()")
     # CREATE ROLE não pode rodar dentro de transação explícita — usar try/except.

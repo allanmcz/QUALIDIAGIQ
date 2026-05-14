@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from starlette.requests import Request
 from starlette.responses import Response
+from structlog.contextvars import get_contextvars
 
 from src.presentation.api.middleware.trace_context import TraceContextMiddleware
 
@@ -37,6 +38,33 @@ def _scope_com_auth(trace: str, bearer_token: str | None) -> dict[str, object]:
         "server": ("test", 80),
         "client": ("127.0.0.1", 5555),
     }
+
+
+@pytest.mark.asyncio
+async def test_http_trace_id_em_context_structlog_durante_pedido() -> None:
+    """``bind_contextvars`` expõe ``http_trace_id`` aos logs durante ``call_next``; limpa no ``finally``."""
+    mw = TraceContextMiddleware(MagicMock())
+    seen_during: dict[str, object] = {}
+
+    async def call_next(_: Request) -> Response:
+        seen_during.update(get_contextvars())
+        return Response(b"ok")
+
+    async def receive() -> dict[str, object]:  # pragma: no cover
+        return {"type": "http.disconnect"}
+
+    scope = _scope_com_auth("trace-structlog-ctx", None)
+    req = Request(scope, receive)
+
+    with patch(
+        "src.presentation.api.middleware.trace_context.get_settings",
+        return_value=MagicMock(otel_tracing_enabled=False),
+    ):
+        resp = await mw.dispatch(req, call_next)
+
+    assert resp.headers["X-Trace-Id"] == "trace-structlog-ctx"
+    assert seen_during.get("http_trace_id") == "trace-structlog-ctx"
+    assert "http_trace_id" not in get_contextvars()
 
 
 @pytest.mark.asyncio

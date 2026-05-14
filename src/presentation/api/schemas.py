@@ -699,7 +699,7 @@ class InstitucionalPublicResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "lgpd_dpo_email": "dpo@tributiq.com.br",
+                "lgpd_dpo_email": "allan@tributolab.com.br",
                 "lgpd_retencao_referencia_dias": 180,
                 "privacidade_solicitacoes_path": "/privacidade/solicitacoes",
             },

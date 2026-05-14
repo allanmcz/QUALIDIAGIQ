@@ -22,7 +22,7 @@ Você é o pair programmer técnico do projeto QDI (QualiDiagIQ), módulo do eco
 - **Backend:** Python 3.12+ · FastAPI 0.115+ · Pydantic v2 (sempre — nunca dataclass para schemas externos)
 - **DB:** Supabase (PostgreSQL 16 + RLS multi-tenant + pgvector)
 - **IA:** **Ollama** como LLM padrão em dev/local (adapter atual da API) · Anthropic Claude + LangChain + LangGraph para produção planejada (ADR-003)
-- **Frontend:** Next.js 14 (App Router) + Tailwind + shadcn/ui
+- **Frontend:** Next.js 15 (App Router) + Tailwind + shadcn/ui
 - **PDF:** WeasyPrint (Python-native — NÃO usar Puppeteer)
 - **Container:** Docker + OrbStack (M2 Max otimizado)
 - **Test:** pytest + pytest-asyncio + Playwright

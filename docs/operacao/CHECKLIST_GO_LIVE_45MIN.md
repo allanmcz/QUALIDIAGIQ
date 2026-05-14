@@ -11,6 +11,9 @@
 ### Execução assistida (automatiza A + C)
 
 ```bash
+# Gate técnico único (lint + mypy + front test/tsc/build + audit-secrets + mvp-gate se Postgres UP)
+make go-live-tecnico
+
 # modo padrão (sem E2E; com verify-schema strict)
 make go-live
 

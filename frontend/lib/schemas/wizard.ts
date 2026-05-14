@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ADMIN_TOKEN_STORAGE_KEY } from "@/lib/api/config";
+import { getAccessToken } from "@/lib/api/config";
 
 // Utils
 /** DV alinhado ao domínio Python (`cnpj_brasil`) — pesos oficiais RFB. */
@@ -146,7 +146,7 @@ export type DiagnosticoPayloadArmazenado = z.infer<typeof DiagnosticoPayloadArma
 
 export const DiagnosticoPayloadSchema = DiagnosticoPayloadObjectSchema.superRefine((data, ctx) => {
     if (typeof window === "undefined") return;
-    const jwt = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)?.trim();
+    const jwt = getAccessToken()?.trim();
     if (!jwt) return;
     const bruto = String(data.empresa?.cnpj ?? "").replace(/\D/g, "");
     if (bruto.length !== 14) {

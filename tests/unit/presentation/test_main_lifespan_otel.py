@@ -286,6 +286,49 @@ def test_sentry_scrub_pii_redact_campos_sensiveis() -> None:
     assert data["nome"] == "ok"
 
 
+def test_sentry_scrub_pii_redact_user_e_extra() -> None:
+    """QDI-H-016 — ``user`` e ``extra`` também passam por redaction (paridade com browser)."""
+    event: dict = {
+        "user": {
+            "email": "t@t.com",
+            "username": "u",
+            "id": "1",
+            "telefone": "+5511999990000",
+        },
+        "extra": {"token_hint": "abc", "contexto": "ok"},
+    }
+    out = _sentry_scrub_pii(event, {})
+    assert isinstance(out, dict)
+    u = out["user"]
+    assert isinstance(u, dict)
+    assert u["email"] == "[REDACTED]"
+    assert u["username"] == "[REDACTED]"
+    assert u["telefone"] == "[REDACTED]"
+    assert u["id"] == "1"
+    ex = out["extra"]
+    assert isinstance(ex, dict)
+    assert ex["token_hint"] == "[REDACTED]"
+    assert ex["contexto"] == "ok"
+
+
+def test_sentry_scrub_pii_redact_codigo_otp_e_telefone_em_request_data() -> None:
+    """QDI-H-016 — OTP e telefone em ``request.data`` (MANUS / LGPD)."""
+    event: dict = {
+        "request": {
+            "data": {
+                "codigo_verificacao": "123456",
+                "telefone_contato": "+5511987654321",
+                "nome": "OK",
+            }
+        }
+    }
+    out = _sentry_scrub_pii(event, {})
+    data = out["request"]["data"]
+    assert data["codigo_verificacao"] == "[REDACTED]"
+    assert data["telefone_contato"] == "[REDACTED]"
+    assert data["nome"] == "OK"
+
+
 def test_sentry_scrub_pii_request_nao_dict() -> None:
     """Cobre ramo ``request`` presente mas não-dict (branch 43→51)."""
     event = {"request": "raw-string"}

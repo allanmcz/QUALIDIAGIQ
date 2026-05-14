@@ -34,12 +34,18 @@ Substituir ou acrescentar PDF se houver nova versão assinada; manter este `STAT
 |-------|-------|
 | **URL pública** | `https://<site>/privacidade#dpo` (âncora `id="dpo"`). |
 | **Configuração** | `NEXT_PUBLIC_LGPD_DPO_EMAIL` (obrigatório para exibir o mailto); opcional `NEXT_PUBLIC_LGPD_DPO_NOME`, `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VERSAO`, `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VIGENCIA`. |
-| **Exemplo institucional** | `dpo@tributiq.com.br` em `frontend/.env.example`, `frontend/.env.production.example` e serviço `web` do `docker-compose.yml` — **substituir** se o encarregado ou domínio forem outros. |
+| **Exemplo institucional** | **MVP (2026-05-13):** encarregado provisório **Allan Marcio** (pessoa física), e-mail **allan@tributolab.com.br**, em `frontend/.env.example`, `frontend/.env.production.example`, `docker-compose.yml` (serviço `web`) e default de `LGPD_DPO_EMAIL` em `Settings`. Substituir se o controlador nomear outro DPO ou domínio institucional definitivo. |
 | **API (paridade)** | `GET /public/institucional` — `lgpd_dpo_email`, `lgpd_retencao_referencia_dias`, caminho `/privacidade/solicitacoes` |
+
+## Designação do encarregado (registo PO — 2026-05-13)
+
+- **Nome:** Allan Marcio (pessoa física).  
+- **Função:** Encarregado de Proteção de Dados (DPO) **provisório**, até designação formal em acto societário / contrato de prestação de serviços ou nomeação de DPO externo.  
+- **Canal:** **allan@tributolab.com.br** (deve coincidir com `NEXT_PUBLIC_LGPD_DPO_EMAIL` e `LGPD_DPO_EMAIL` em produção).
 
 ## Pendências operacionais (não substituem o parecer)
 
-1. **Produção:** confirmar que o e-mail exibido é o **canal oficial** acordado com o DPO nomeado (Res. ANPD nº 18/2024) e alterar variáveis de deploy se for diferente do exemplo.
+1. **Produção:** confirmar que o e-mail exibido é o **canal oficial** do encarregado nomeado (Res. ANPD nº 18/2024) e alterar variáveis de deploy se divergirem deste registo provisório.
 2. **Versão publicada** — opcional: `NEXT_PUBLIC_POLITICA_PRIVACIDADE_VERSAO` e `_VIGENCIA`; ou registo só no changelog interno.
 
 ### Retenção do telefone (baseline controlador — 2026-05)

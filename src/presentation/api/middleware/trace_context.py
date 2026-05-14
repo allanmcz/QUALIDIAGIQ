@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware
+from structlog.contextvars import bind_contextvars, unbind_contextvars
 
 from src.infrastructure.config.settings import get_settings
 
@@ -34,7 +35,12 @@ class TraceContextMiddleware(BaseHTTPMiddleware):
         raw = request.headers.get("x-trace-id") or request.headers.get("X-Trace-Id")
         tid = raw.strip() if raw and str(raw).strip() else str(uuid4())
         request.state.trace_id = tid
-        response = await call_next(request)
+        # Correlação structlog (QDI — observabilidade): não confundir com trace_id OTEL (hex no processor).
+        bind_contextvars(http_trace_id=tid)
+        try:
+            response = await call_next(request)
+        finally:
+            unbind_contextvars("http_trace_id")
         settings = get_settings()
         if settings.otel_tracing_enabled:
             try:

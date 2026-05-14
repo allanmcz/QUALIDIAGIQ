@@ -8,7 +8,7 @@
 > **Diagnóstico Tributário Automatizado para a Reforma Tributária do Consumo**
 > Módulo do ecossistema **Tributiq** · 6 produtos Quali*IQ · `014-SAAS_REFORMA`
 > **Sigla:** QDI
-> **Status:** MVP desenvolvido (FastAPI + Next.js 14 + Postgres); usar `docs/operacao/CHECKLIST_GO_LIVE_45MIN.md` para cortes em produção. Remediação segurança: `docs/operacao/STATUS_REMEDIACAO_2026-05-11.md`.
+> **Status:** MVP desenvolvido (FastAPI + Next.js 15 + Postgres); usar `docs/operacao/CHECKLIST_GO_LIVE_45MIN.md` para cortes em produção. Remediação segurança: `docs/operacao/STATUS_REMEDIACAO_2026-05-11.md`.
 
 ---
 
@@ -124,7 +124,7 @@ Use **`CORS_ALLOWED_ORIGINS`** (lista CSV explícita de origens permitidas). **N
 │   ├── infrastructure/         ← Adapters (Supabase, Ollama/LLM, WeasyPrint)
 │   └── presentation/           ← API FastAPI
 ├── tests/                      ← pytest (unit + integration + e2e)
-├── frontend/                   ← Next.js 14 — wizard, painel e páginas institucionais
+├── frontend/                   ← Next.js 15 — wizard, painel e páginas institucionais
 ├── pyproject.toml              ← Dependências Python + tooling
 ├── Dockerfile                  ← Multi-stage build
 ├── docker-compose.yml          ← DB + API + Web
@@ -136,7 +136,7 @@ Use **`CORS_ALLOWED_ORIGINS`** (lista CSV explícita de origens permitidas). **N
 | Camada | Tecnologia |
 |--------|-----------|
 | Backend | Python 3.12 + FastAPI 0.115 + Pydantic v2 |
-| Frontend | Next.js 14 + Tailwind + shadcn/ui |
+| Frontend | Next.js 15 + Tailwind + shadcn/ui |
 | DB | Supabase (PostgreSQL 16 + RLS + pgvector) |
 | IA / LLM | **LangGraph + LangChain ChatOllama** + servidor **Ollama** (default dev — ADR-007) · Claude/API produção (ADR-003) · fallback **`QDI_LLM_BACKEND=http_ollama`** |
 | PDF | WeasyPrint |

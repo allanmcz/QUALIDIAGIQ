@@ -7,10 +7,7 @@
  */
 
 import {
-  ADMIN_EMAIL_STORAGE_KEY,
-  ADMIN_NOME_STORAGE_KEY,
-  ADMIN_PERFIL_CONTA_STORAGE_KEY,
-  ADMIN_TOKEN_STORAGE_KEY,
+  clearPainelSessionStorageOnly,
 } from "@/lib/api/config";
 
 import { QDI_AUTH_CHANGED_EVENT } from "./auth_events";
@@ -19,10 +16,7 @@ import { setPainelSessionCookiePresent } from "./session_cookie";
 /** Remove JWT e metadados do painel e notifica ouvintes (ex.: cabeçalho público). */
 export function clearPainelSessionLocal(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-  window.localStorage.removeItem(ADMIN_NOME_STORAGE_KEY);
-  window.localStorage.removeItem(ADMIN_EMAIL_STORAGE_KEY);
-  window.localStorage.removeItem(ADMIN_PERFIL_CONTA_STORAGE_KEY);
+  clearPainelSessionStorageOnly();
   setPainelSessionCookiePresent(false);
   window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
 }

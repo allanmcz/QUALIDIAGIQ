@@ -93,6 +93,7 @@ class LangGraphOllamaLlmAdapter(LlmServicePort):
             logger.warning(
                 "langgraph_ollama_erro",
                 erro=str(exc),
+                model=getattr(self._llm, "model", "unknown"),
                 exc_info=True,
             )
             return (

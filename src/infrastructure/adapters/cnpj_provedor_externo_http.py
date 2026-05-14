@@ -35,10 +35,18 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
             try:
                 resp = await client.get(url_br)
             except httpx.TimeoutException as e:
-                logger.warning("cnpj_brasil_api_timeout", cnpj=cnpj_14, erro=str(e))
+                logger.warning(
+                    "cnpj_brasil_api_timeout",
+                    cnpj_radical=cnpj_14[:8],
+                    erro=str(e),
+                )
                 return await self._fallback_minha_receita(client, cnpj_14, t0)
             except httpx.RequestError as e:
-                logger.warning("cnpj_brasil_api_rede", cnpj=cnpj_14, erro=str(e))
+                logger.warning(
+                    "cnpj_brasil_api_rede",
+                    cnpj_radical=cnpj_14[:8],
+                    erro=str(e),
+                )
                 return await self._fallback_minha_receita(client, cnpj_14, t0)
 
             ms = int((time.perf_counter() - t0) * 1000)
@@ -49,7 +57,7 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
             if resp.status_code >= 500 or resp.status_code == 429:
                 logger.warning(
                     "cnpj_brasil_api_fallback",
-                    cnpj=cnpj_14,
+                    cnpj_radical=cnpj_14[:8],
                     status=resp.status_code,
                 )
                 return await self._fallback_minha_receita(client, cnpj_14, t0)
@@ -76,7 +84,11 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
         try:
             resp = await client.get(url_mr)
         except (httpx.TimeoutException, httpx.RequestError) as e:
-            logger.error("cnpj_minha_receita_falhou", cnpj=cnpj_14, erro=str(e))
+            logger.error(
+                "cnpj_minha_receita_falhou",
+                cnpj_radical=cnpj_14[:8],
+                erro=str(e),
+            )
             raise RuntimeError(
                 "Indisponível consultar CNPJ nas fontes públicas (BrasilAPI e Minha Receita)."
             ) from e

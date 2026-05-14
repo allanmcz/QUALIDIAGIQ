@@ -77,7 +77,7 @@ services:
       # :- evita WARN do Compose quando as variáveis não existem no host (LLM é opcional em dev).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LGPD_DPO_EMAIL: "${LGPD_DPO_EMAIL:-dpo@tributiq.com.br}"
+      LGPD_DPO_EMAIL: "${LGPD_DPO_EMAIL:-allan@tributolab.com.br}"
       LGPD_RETENTION_DAYS: "${LGPD_RETENTION_DAYS:-180}"
     ports:
       - "60000:8000"
@@ -118,7 +118,8 @@ services:
     environment:
       API_PROXY_TARGET: http://api:8000
       NEXT_PUBLIC_API_URL: /api-backend
-      NEXT_PUBLIC_LGPD_DPO_EMAIL: dpo@tributiq.com.br
+      NEXT_PUBLIC_LGPD_DPO_EMAIL: allan@tributolab.com.br
+      NEXT_PUBLIC_LGPD_DPO_NOME: "Allan Marcio"
     volumes:
       # Código-fonte no host; dependências e cache de build só no Linux do container.
       # Sem isto, `node_modules`/`.next` gerados no macOS misturam-se com `npm run dev` no Alpine

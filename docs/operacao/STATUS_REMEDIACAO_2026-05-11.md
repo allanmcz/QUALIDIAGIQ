@@ -19,7 +19,7 @@
 
 - Adicionada migração **0041** (FORCE RLS `cnpj_consultas` + histórico empresa).
 - Teste integração **H-003** em `tests/integration/test_qdi_rag_revoke_authenticated_postgres.py`.
-- **npm audit CI:** threshold **critical** (HIGH no Next 14.x — middleware — até decisão de upgrade).
+- **npm audit CI:** threshold **HIGH** (`--audit-level=high`, ADR-016). Sem fix upstream: substituir pacote, `overrides` ou **ADR de exceção** (sem waiver silencioso).
 - **H-022:** ``diagnostico_criado`` + ``diagnostico_finalizado`` em ``realizar_diagnostico.py``; ``diagnostico_rascunho_self_service_gravado`` em rascunho POST; ``auth_login_sucesso`` em ``routes_login.py``; ``RETURNING id`` em ``inserir_rascunho_sync``.
 - **H-021:** ``QDI_CSP_REPORT_ONLY=1`` no build Next + documentação em ``.env.example``.
 - **H-029:** workflow ``zap-baseline-dispatch.yml`` (execução manual no GitHub).
