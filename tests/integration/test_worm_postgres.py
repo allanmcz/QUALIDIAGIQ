@@ -141,6 +141,86 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
 
 @pytest.mark.asyncio
 @pytest.mark.postgres
+async def test_worm_bloqueia_upsert_que_tenta_mutar_evidencia_pos_finalizado(pg_conn):
+    """
+    UPSERT (INSERT … ON CONFLICT DO UPDATE) não contorna WORM: o adapter Postgres
+    usa este padrão; se no futuro alguém incluir colunas de evidência no UPDATE,
+    o trigger deve continuar a falhar (item 3.7 do plano hardening).
+    """
+    mig_0006 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0006_worm_column_granular.sql"
+    )
+    mig_0011 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0011_checklist_m12_autoconf.sql"
+    )
+    mig_0012 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0012_aceite_lgpd_e_worm.sql"
+    )
+    mig_0025 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0025_worm_permite_reatribuir_tenant_vinculo_lead.sql"
+    )
+    await pg_conn.execute(mig_0006.read_text(encoding="utf-8"))
+    await pg_conn.execute(mig_0011.read_text(encoding="utf-8"))
+    await pg_conn.execute(mig_0012.read_text(encoding="utf-8"))
+    if mig_0025.exists():
+        await pg_conn.execute(mig_0025.read_text(encoding="utf-8"))
+
+    tid = uuid.uuid4()
+    did = uuid.uuid4()
+    await pg_conn.execute(
+        """
+        INSERT INTO diagnosticos (
+          id, tenant_id, respondente_email,
+          empresa_cnpj, empresa_razao_social, empresa_porte, empresa_regime,
+          empresa_cnae, empresa_uf, empresa_setor_macro,
+          status, plano, score_geral, criado_em, finalizado_em,
+          versao_otimista
+        ) VALUES (
+          $1, $2, 'worm-upsert@teste.com',
+          '12345678000195', 'WORM UPSERT LTDA', 'micro', 'simples_nacional',
+          '1234567', 'SP', 'comercio',
+          'finalizado', 'gratuito', 50.0, now(), now(),
+          1
+        )
+        """,
+        did,
+        tid,
+    )
+
+    with pytest.raises(asyncpg.PostgresError) as excinfo:
+        await pg_conn.execute(
+            """
+            INSERT INTO diagnosticos (
+              id, tenant_id, respondente_email,
+              empresa_cnpj, empresa_razao_social, empresa_porte, empresa_regime,
+              empresa_cnae, empresa_uf, empresa_setor_macro,
+              status, plano, score_geral, criado_em, finalizado_em,
+              versao_otimista
+            ) VALUES (
+              $1, $2, 'outro@worm.com',
+              '12345678000195', 'WORM UPSERT LTDA', 'micro', 'simples_nacional',
+              '1234567', 'SP', 'comercio',
+              'finalizado', 'gratuito', 99.0, now(), now(),
+              1
+            )
+            ON CONFLICT (id) DO UPDATE SET
+              score_geral = EXCLUDED.score_geral
+            """,
+            did,
+            tid,
+        )
+    msg = str(excinfo.value).lower()
+    assert "worm" in msg or "evidência" in msg or "imutável" in msg
+
+    await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)
+
+
+@pytest.mark.asyncio
+@pytest.mark.postgres
 async def test_worm_permite_reatribuir_tenant_id_pos_finalizado(pg_conn):
     """Mesmo finalizado, UPDATE só de tenant_id deve passar (vincular lead self-service)."""
     mig_0006 = (

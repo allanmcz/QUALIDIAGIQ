@@ -7,7 +7,7 @@
 
 **Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/login` + **`/api/auth/cadastro`**, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; E2E Playwright: `e2e/helpers/mock_bff_painel_auth.ts`, `NEXT_PUBLIC_API_URL=/api-backend` no `playwright.config.ts`; ver `frontend/.env.local.example` e `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
 
-**Última actualização (Fase 3–4 — rastreio):** 2026-05-14 — contrato idempotência/WORM consolidado no plano; teste «mesma chave, corpo diferente»; Fase 4 marcada concluída. *(Fase 2 LLM router ADR-021 e Fase 5 E2E mobile em commits anteriores.)*
+**Última actualização (Fase 3–4 — rastreio):** 2026-05-14 — contrato idempotência/WORM consolidado no plano; teste «mesma chave, corpo diferente»; Fase 4 marcada concluída; **3.7** fechado com regressão UPSERT vs WORM em `test_worm_postgres`. *(Fase 2 LLM router ADR-021 e Fase 5 E2E mobile em commits anteriores.)*
 
 ---
 
@@ -120,7 +120,7 @@
 - [x] **3.4** Chave B distinta → nova execução (`test_post_diagnostico_chaves_idempotencia_distintas_executa_duas_vezes`); mesma chave e **corpo JSON diferente** → replay da 1.ª resposta (`test_post_diagnostico_mesma_chave_corpo_json_diferente_replay_primeira_resposta`)
 - [x] **3.5** UPDATE score pós-finalizado bloqueado (`test_worm_postgres`); aceite LGPD imutável após finalizado
 - [x] **3.6** `relatorio_pdf_url` + `versao_otimista` + M12 permitidos com `WHERE versao_otimista` (`test_worm_bloqueia_mutacao_de_evidence_pos_finalizado`)
-- [ ] **3.7** Conflito UPSERT vs WORM em evolução futura do adapter — monitorizar; não reproduzido em 2026-05-14
+- [x] **3.7** UPSERT vs WORM — `INSERT … ON CONFLICT DO UPDATE` que altera evidência (ex.: `score_geral`) em `finalizado` falha no trigger; regressão: `test_worm_bloqueia_upsert_que_tenta_mutar_evidencia_pos_finalizado` (`tests/integration/test_worm_postgres.py`). Evolução de colunas em `_UPSERT_SQL` do adapter Postgres exige rever lista WORM nas migrações.
 
 **Ficheiros candidatos:** `tests/integration/test_worm_postgres.py`, `tests/integration/test_mvp_gate_postgres.py`, `tests/unit/presentation/test_idempotency_middleware.py`
 
