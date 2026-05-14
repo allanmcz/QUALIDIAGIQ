@@ -41,7 +41,7 @@ jobs:
       POSTGRES_CI_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Instalar uv
         uses: astral-sh/setup-uv@v5
@@ -222,7 +222,7 @@ jobs:
       QDI_GO_LIVE_SKIP_SCHEMA: "0"
       QDI_GO_LIVE_RUN_E2E: "0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Migrar Postgres (ordem lexical migrations)
         run: |
@@ -269,7 +269,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -302,7 +302,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -343,7 +343,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://127.0.0.1:8765
       CI: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Migrar Postgres (ordem lexical migrations)
         run: |
