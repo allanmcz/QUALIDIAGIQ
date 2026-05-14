@@ -132,6 +132,11 @@ const enabled = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
     await page.locator("#lgpd").check();
     await page.getByRole("button", { name: "Próxima Etapa" }).click();
 
+    /** Passo 2 — mesmo mínimo que `wizard-post.spec.ts` (validação bloqueia «Próxima» sem perfil). */
+    await page.locator("#porte").selectOption("micro");
+    await page.locator("#regime").selectOption("simples_nacional");
+    await page.locator("#setor_macro").selectOption("comercio");
+    await page.locator("#uf").selectOption("SP");
     await page.locator("#cnae_principal").fill("1234567");
     await page.getByRole("button", { name: "Próxima Etapa" }).click();
 
@@ -142,7 +147,9 @@ const enabled = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
 
     await page.getByRole("button", { name: /Validar texto/i }).click();
 
-    await expect(page.getByRole("status")).toContainText(/Aceito/i);
+    await expect(
+      page.getByTestId("wizard-p8-normativa").getByRole("status"),
+    ).toContainText(/Aceito/i);
     expect(normativaHits).toBeGreaterThanOrEqual(1);
 
     await expect(page.getByTestId("wizard-pergunta-atual")).toBeVisible();

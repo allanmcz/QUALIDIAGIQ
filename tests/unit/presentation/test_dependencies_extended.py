@@ -16,8 +16,14 @@ from src.infrastructure.config.settings import get_settings
 from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
     MemoriaLeadDiagnosticoVinculoAdapter,
 )
+from src.infrastructure.repositories.embutidas_normativa_pergunta_peso_repository import (
+    EmbutidasNormativaPerguntaPesoRepository,
+)
 from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
     EmbutidasNormativaScoreMacroRepository,
+)
+from src.infrastructure.repositories.postgres_normativa_pergunta_peso_repository import (
+    PostgresNormativaPerguntaPesoRepository,
 )
 from src.infrastructure.repositories.postgres_normativa_score_macro_repository import (
     PostgresNormativaScoreMacroRepository,
@@ -361,6 +367,22 @@ def test_get_normativa_score_macro_embutidas_sem_dsn() -> None:
     with patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s):
         repo = deps.get_normativa_score_macro_repository()
     assert isinstance(repo, EmbutidasNormativaScoreMacroRepository)
+
+
+def test_get_normativa_pergunta_peso_postgres_com_dsn() -> None:
+    mock_s = MagicMock()
+    mock_s.sync_database_url = "postgresql://user:pass@localhost/db"
+    with patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s):
+        repo = deps.get_normativa_pergunta_peso_repository()
+    assert isinstance(repo, PostgresNormativaPerguntaPesoRepository)
+
+
+def test_get_normativa_pergunta_peso_embutidas_sem_dsn() -> None:
+    mock_s = MagicMock()
+    mock_s.sync_database_url = None
+    with patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s):
+        repo = deps.get_normativa_pergunta_peso_repository()
+    assert isinstance(repo, EmbutidasNormativaPerguntaPesoRepository)
 
 
 def test_perfil_empresa_questionario_rejeita_cnpj_nao_numerico() -> None:

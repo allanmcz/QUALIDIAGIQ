@@ -3717,7 +3717,7 @@
           "peso": {
             "type": "number",
             "title": "Peso",
-            "description": "Peso no cálculo dentro da dimensão."
+            "description": "Peso no cálculo dentro da dimensão (após overlay DB, se houver)."
           },
           "base_legal": {
             "anyOf": [
@@ -3742,6 +3742,17 @@
             ],
             "title": "Pilar Abnt",
             "description": "Pilar/tema ABNT NBR 17301:2026 opcional (catálogo versionado)."
+          },
+          "normativa_overlay": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NormativaPesoPerguntaOverlaySchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Metadados da linha Postgres quando o peso efetivo não é só o do JSON."
           }
         },
         "type": "object",
@@ -3899,6 +3910,60 @@
           ],
           "versao_normativa": "ABNT NBR 17301:2026"
         }
+      },
+      "NormativaPesoPerguntaOverlaySchema": {
+        "properties": {
+          "peso_catalogo_json": {
+            "type": "number",
+            "title": "Peso Catalogo Json",
+            "description": "Peso publicado no ficheiro `perguntas_mvp.json` antes do overlay."
+          },
+          "peso_normativo_db": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Peso Normativo Db",
+            "description": "Peso aplicado (linha vigente na data do pedido)."
+          },
+          "vigencia_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Vigencia Inicio",
+            "description": "Início da vigência da linha normativa (inclusive)."
+          },
+          "vigencia_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vigencia Fim",
+            "description": "Fim da vigência (inclusive) ou null quando vigência aberta."
+          },
+          "rotulo_versao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotulo Versao",
+            "description": "Rótulo editorial da versão normativa (ex.: overlay-m03-qdi-2026)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "peso_catalogo_json",
+          "peso_normativo_db",
+          "vigencia_inicio"
+        ],
+        "title": "NormativaPesoPerguntaOverlaySchema",
+        "description": "Transparência quando o peso efetivo substitui o do catálogo JSON (Postgres).\n\nTabela: ``qdi.normativa_pergunta_peso`` (migração 0042). LC 214/2025 art. 5º — previsibilidade."
       },
       "PatchChecklistM12AutoconfRequest": {
         "properties": {

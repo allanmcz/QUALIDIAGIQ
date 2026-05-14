@@ -19,12 +19,22 @@ export type MetodologiaPublic = {
   recomendacoes_gaps_criticos: string[];
 };
 
+export type NormativaPesoPerguntaOverlayPublic = {
+  peso_catalogo_json: number;
+  peso_normativo_db: number;
+  vigencia_inicio: string;
+  vigencia_fim: string | null;
+  rotulo_versao: string | null;
+};
+
 export type ManifestoPesoPerguntaPublic = {
   codigo: string;
   dimensao: string;
   tipo: string;
   peso: number;
   base_legal: string | null;
+  pilar_abnt?: string | null;
+  normativa_overlay?: NormativaPesoPerguntaOverlayPublic | null;
 };
 
 export type ManifestoPesosPublic = {

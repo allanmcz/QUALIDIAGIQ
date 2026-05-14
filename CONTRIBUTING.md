@@ -6,6 +6,14 @@
 - **Bateria de QA em um fluxo:** `make qa-backend` ou `./INICIAR_APP/iniciar-app.sh backend` — ver [INICIAR_APP/README.md](INICIAR_APP/README.md).
 - ADRs novos em [.github/adr/](.github/adr/).
 
+## Cursor — MCP Playwright (opcional)
+
+O repositório inclui [`.cursor/mcp.json`](.cursor/mcp.json) com o servidor oficial [**@playwright/mcp**](https://playwright.dev/docs/getting-started-mcp) (Model Context Protocol). No **Cursor**: *Settings → MCP* — confirme que o servidor `playwright` aparece e está activo (pode ser necessário reabrir o workspace).
+
+- Requer **Node.js 18+** (o Cursor executa `npx -y @playwright/mcp@latest` à primeira utilização).
+- **Não substitui** a suite E2E (`cd frontend && npm run test:e2e` / `test:e2e:ci`); serve para o agente **navegar e inspeccionar** a UI com o motor Playwright (snapshots de acessibilidade, cliques, etc.).
+- URLs típicas em dev (ver `docker-compose.yml`): API `http://127.0.0.1:60000`, Next no compose `http://127.0.0.1:60001`.
+
 ## Catálogo de perguntas (`perguntas_mvp.json`)
 
 Ao alterar o JSON:

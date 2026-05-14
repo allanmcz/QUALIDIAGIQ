@@ -600,6 +600,36 @@ class PesoMacroNormativaItemSchema(BaseModel):
     )
 
 
+class NormativaPesoPerguntaOverlaySchema(BaseModel):
+    """
+    Transparência quando o peso efetivo substitui o do catálogo JSON (Postgres).
+
+    Tabela: ``qdi.normativa_pergunta_peso`` (migração 0042). LC 214/2025 art. 5º — previsibilidade.
+    """
+
+    peso_catalogo_json: float = Field(
+        ...,
+        description="Peso publicado no ficheiro `perguntas_mvp.json` antes do overlay.",
+    )
+    peso_normativo_db: float = Field(
+        ...,
+        gt=0,
+        description="Peso aplicado (linha vigente na data do pedido).",
+    )
+    vigencia_inicio: date = Field(
+        ...,
+        description="Início da vigência da linha normativa (inclusive).",
+    )
+    vigencia_fim: date | None = Field(
+        default=None,
+        description="Fim da vigência (inclusive) ou null quando vigência aberta.",
+    )
+    rotulo_versao: str | None = Field(
+        default=None,
+        description="Rótulo editorial da versão normativa (ex.: overlay-m03-qdi-2026).",
+    )
+
+
 class ManifestoPesoPerguntaSchema(BaseModel):
     """Um item do catálogo com peso explícito (transparência M03)."""
 
@@ -609,7 +639,9 @@ class ManifestoPesoPerguntaSchema(BaseModel):
         description="Dimensão ABNT / score (fiscal, estrategica, tecnologica, etc.).",
     )
     tipo: str = Field(..., description="Tipo de resposta (ternaria, binaria, escala_1_5, ...).")
-    peso: float = Field(..., description="Peso no cálculo dentro da dimensão.")
+    peso: float = Field(
+        ..., description="Peso no cálculo dentro da dimensão (após overlay DB, se houver)."
+    )
     base_legal: str | None = Field(
         default=None,
         description="Referência normativa associada à pergunta (LC 214/2025, NT, EC 132/2023, ...).",
@@ -617,6 +649,10 @@ class ManifestoPesoPerguntaSchema(BaseModel):
     pilar_abnt: str | None = Field(
         default=None,
         description="Pilar/tema ABNT NBR 17301:2026 opcional (catálogo versionado).",
+    )
+    normativa_overlay: NormativaPesoPerguntaOverlaySchema | None = Field(
+        default=None,
+        description="Metadados da linha Postgres quando o peso efetivo não é só o do JSON.",
     )
 
 
@@ -654,6 +690,7 @@ class ManifestoPesosResponse(BaseModel):
                         "tipo": "ternaria",
                         "peso": 7.5,
                         "base_legal": "EC 132/2023; LC 214/2025",
+                        "normativa_overlay": None,
                     },
                 ],
             }

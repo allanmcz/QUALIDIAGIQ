@@ -137,6 +137,15 @@ def carregar_perguntas_de_arquivo(caminho: Path) -> list[Pergunta]:
     return resultado
 
 
+def versao_catalogo_banco_mvp() -> str:
+    """Lê apenas ``versao_catalogo`` do JSON do catálogo (manifesto público / wizard)."""
+    texto = _ARQUIVO_PADRAO.read_text(encoding="utf-8")
+    raiz = json.loads(texto)
+    if not isinstance(raiz, dict):
+        return "unknown"
+    return str(raiz.get("versao_catalogo", "unknown"))
+
+
 def carregar_banco_mvp() -> list[Pergunta]:
     """Catálogo embutido para o MVP (substituível depois por DB/Lexiq)."""
     return carregar_perguntas_de_arquivo(_ARQUIVO_PADRAO)

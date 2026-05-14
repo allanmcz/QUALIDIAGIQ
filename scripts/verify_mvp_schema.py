@@ -2,7 +2,8 @@
 """
 Verifica no Postgres alvo se o schema mínimo do MVP está presente (migrações até 0012 + RLS).
 
-Modo estrito (``QDI_VERIFY_SCHEMA_STRICT_CNAE=1``): CNAE 0013/0014 e tabela normativa de score macro (0015).
+Modo estrito (``QDI_VERIFY_SCHEMA_STRICT_CNAE=1``): CNAE 0013/0014, tabela normativa de score macro (0015)
+e tabela de overlay de pesos por pergunta (0042).
 
 Uso (uma das opções):
   DATABASE_URL=postgresql://user:pass@host:5432/db python scripts/verify_mvp_schema.py
@@ -227,6 +228,31 @@ async def _verificar_normativa_score_macro_strict(conn: asyncpg.Connection) -> l
     return erros
 
 
+async def _verificar_normativa_pergunta_peso_strict(conn: asyncpg.Connection) -> list[str]:
+    """Migração 0042 — overlay de pesos por pergunta (catálogo JSON)."""
+    erros: list[str] = []
+
+    tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'qdi' AND table_name = 'normativa_pergunta_peso'
+    """)
+    if tbl != 1:
+        erros.append("Tabela qdi.normativa_pergunta_peso ausente (aplique migração 0042).")
+        return erros
+
+    rls = await conn.fetchval("""
+        SELECT c.relrowsecurity
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'qdi' AND c.relname = 'normativa_pergunta_peso'
+    """)
+    if rls is not True:
+        erros.append("RLS não habilitada em qdi.normativa_pergunta_peso (migração 0042).")
+
+    return erros
+
+
 async def _verificar_strict_cnae(conn: asyncpg.Connection) -> list[str]:
     erros: list[str] = []
 
@@ -301,6 +327,7 @@ async def _verificar(conn_dsn: str, *, strict_cnae: bool, rag_light: bool) -> li
         if strict_cnae:
             erros.extend(await _verificar_strict_cnae(conn))
             erros.extend(await _verificar_normativa_score_macro_strict(conn))
+            erros.extend(await _verificar_normativa_pergunta_peso_strict(conn))
         if rag_light:
             erros.extend(await _verificar_rag_light(conn))
         return erros

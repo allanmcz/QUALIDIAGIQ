@@ -10,16 +10,32 @@ const skipServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
 /** P8 — só specs que usam `test.describe.skip` quando ausente; servidor precisa do build-time flag. */
 const wizardNormativaE2E = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
 
+/**
+ * Gravação completa para avaliação (vídeo, trace, screenshot + relatório HTML).
+ * Activar: ``PLAYWRIGHT_RECORD_EVAL=1`` (ex.: ``npm run test:e2e:record-eval``).
+ */
+const recordEval = process.env.PLAYWRIGHT_RECORD_EVAL === "1";
+
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  fullyParallel: !recordEval,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: "list",
+  workers: recordEval ? 1 : process.env.CI ? 1 : undefined,
+  reporter: recordEval
+    ? [
+        ["list"],
+        [
+          "html",
+          { open: "never", outputFolder: "playwright-report-eval" },
+        ],
+      ]
+    : "list",
   use: {
     baseURL,
-    trace: "on-first-retry",
+    trace: recordEval ? "on" : "on-first-retry",
+    video: recordEval ? "on" : "off",
+    screenshot: recordEval ? "on" : "only-on-failure",
   },
   /** Fase 5 hardening — mobile só em `mobile-smoke.spec.ts` (viewport Pixel 5). */
   projects: [
@@ -39,7 +55,13 @@ export default defineConfig({
     : {
         command: `npm run dev -- -p ${e2ePort}`,
         url: baseURL,
-        reuseExistingServer: process.env.CI ? false : true,
+        /**
+         * P8: `NEXT_PUBLIC_WIZARD_NORMATIVA` só entra no bundle ao subir o dev server.
+         * Reutilizar um Next já na porta sem esse flag quebra `wizard-normativa.spec.ts`.
+         */
+        reuseExistingServer: process.env.CI
+          ? false
+          : !wizardNormativaE2E,
         timeout: 120_000,
         env: {
           ...process.env,

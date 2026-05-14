@@ -33,6 +33,9 @@ from src.domain.entities.diagnostico import (
     SetorMacro,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.repositories.normativa_pergunta_peso_repository import (
+    NormativaPerguntaPesoRepository,
+)
 from src.domain.repositories.normativa_score_macro_repository import (
     NormativaScoreMacroRepository,
 )
@@ -47,6 +50,9 @@ from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGe
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
+from src.infrastructure.repositories.embutidas_normativa_pergunta_peso_repository import (
+    EmbutidasNormativaPerguntaPesoRepository,
+)
 from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
     EmbutidasNormativaScoreMacroRepository,
 )
@@ -55,6 +61,9 @@ from src.infrastructure.repositories.postgres_cnae_subclasse_repository import (
 )
 from src.infrastructure.repositories.postgres_cnpj_consulta_repository import (
     PostgresCnpjConsultaRepository,
+)
+from src.infrastructure.repositories.postgres_normativa_pergunta_peso_repository import (
+    PostgresNormativaPerguntaPesoRepository,
 )
 from src.infrastructure.repositories.postgres_normativa_score_macro_repository import (
     PostgresNormativaScoreMacroRepository,
@@ -109,6 +118,19 @@ def get_normativa_score_macro_repository() -> NormativaScoreMacroRepository:
     if dsn is None:
         return EmbutidasNormativaScoreMacroRepository()
     return PostgresNormativaScoreMacroRepository(dsn=dsn)
+
+
+def get_normativa_pergunta_peso_repository() -> NormativaPerguntaPesoRepository:
+    """
+    Overlay opcional de pesos por pergunta sobre o catálogo JSON.
+
+    Com ``DATABASE_URL``, lê ``qdi.normativa_pergunta_peso``; senão devolve mapa vazio (só JSON).
+    """
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn is None:
+        return EmbutidasNormativaPerguntaPesoRepository()
+    return PostgresNormativaPerguntaPesoRepository(dsn)
 
 
 def get_calcular_score_use_case(

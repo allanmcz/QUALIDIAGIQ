@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci fe-playwright-record-eval qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -129,6 +129,9 @@ frontend-init: ## Inicializa o frontend Next.js (executar uma vez)
 
 fe-playwright-ci: ## Playwright E2E reprodutível (CI=1: 1 worker + retries; alinha job frontend-e2e no GitHub Actions)
 	cd frontend && npm run test:e2e:ci
+
+fe-playwright-record-eval: ## E2E com vídeo+trace+HTML (P8 incluso); artefactos em frontend/playwright-report-eval e test-results
+	cd frontend && npm run test:e2e:record-eval
 
 all: install dev ## Setup completo + sobe ambiente
 

@@ -284,6 +284,17 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("IDEMPOTENCY_MAX_ENTRIES"),
     )
 
+    qdi_normativa_pergunta_peso_cache_ttl_seconds: int = Field(
+        default=60,
+        ge=0,
+        le=24 * 3600,
+        validation_alias=AliasChoices("QDI_NORMATIVA_PERGUNTA_PESO_CACHE_TTL_SECONDS"),
+        description=(
+            "TTL em memória do catálogo após merge JSON + overlay ``qdi.normativa_pergunta_peso``. "
+            "0 desactiva o cache (sempre consulta Postgres quando há DSN)."
+        ),
+    )
+
     #: TTL (segundos) por classe de volatilidade — defaults: cadastral 30d, qualificação 24h, situação 4h.
     qdi_cnpj_ttl_cadastral_seconds: int = Field(
         default=30 * 24 * 3600,

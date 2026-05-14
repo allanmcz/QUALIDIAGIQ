@@ -15,9 +15,10 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
 from src.domain.entities.diagnostico import EmpresaInfo
+from src.domain.value_objects.normativa_pergunta_peso import PesoPerguntaNormativoVigente
 from src.domain.value_objects.score import PesoMacroNormativoVigente
 from src.infrastructure.questionario.banco_cache import (
-    get_banco_perguntas_cached,
+    get_catalogo_perguntas_efetivo,
     versao_catalogo_lida,
 )
 from src.presentation.api.dependencies import (
@@ -30,6 +31,7 @@ from src.presentation.api.schemas import (
     ManifestoPesoPerguntaSchema,
     ManifestoPesosResponse,
     MetodologiaResponse,
+    NormativaPesoPerguntaOverlaySchema,
     PesoMacroNormativaItemSchema,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
@@ -51,6 +53,20 @@ def _pesos_macro_normativa_para_schema(
         )
         for k, v in metadados.items()
     }
+
+
+def _peso_pergunta_overlay_para_schema(
+    peso_catalogo_json: float,
+    meta: PesoPerguntaNormativoVigente,
+) -> NormativaPesoPerguntaOverlaySchema:
+    """Converte VO de domínio em DTO HTTP (manifesto público)."""
+    return NormativaPesoPerguntaOverlaySchema(
+        peso_catalogo_json=float(peso_catalogo_json),
+        peso_normativo_db=float(meta.peso),
+        vigencia_inicio=meta.vigencia_inicio,
+        vigencia_fim=meta.vigencia_fim,
+        rotulo_versao=meta.rotulo_versao,
+    )
 
 
 @router.get(
@@ -112,18 +128,25 @@ async def obter_manifesto_pesos(
 
     Endpoint público (sem JWT), coerente com transparência do motor.
     """
-    banco = get_banco_perguntas_cached()
-    itens = [
-        ManifestoPesoPerguntaSchema(
-            codigo=p.codigo,
-            dimensao=p.dimensao.value,
-            tipo=p.tipo.value,
-            peso=p.peso,
-            base_legal=p.base_legal,
-            pilar_abnt=p.pilar_abnt,
+    ce = get_catalogo_perguntas_efetivo()
+    overlays = ce.overlay_por_codigo
+    itens: list[ManifestoPesoPerguntaSchema] = []
+    for p in ce.perguntas:
+        ov_raw = overlays.get(p.codigo)
+        overlay_schema = (
+            _peso_pergunta_overlay_para_schema(ov_raw[0], ov_raw[1]) if ov_raw is not None else None
         )
-        for p in banco
-    ]
+        itens.append(
+            ManifestoPesoPerguntaSchema(
+                codigo=p.codigo,
+                dimensao=p.dimensao.value,
+                tipo=p.tipo.value,
+                peso=p.peso,
+                base_legal=p.base_legal,
+                pilar_abnt=p.pilar_abnt,
+                normativa_overlay=overlay_schema,
+            )
+        )
     return ManifestoPesosResponse(
         versao_catalogo=versao_catalogo_lida(),
         pesos_macro_dimensao=macro_pub.valores,
