@@ -2,7 +2,7 @@
 
 Este ficheiro **substitui** no histórico versionado o painel em `_DEVELOPER/DEV_DIAG_04052026/ROADMAP_HANDOFF_REFACTOR_LGPD_PWA.md` (pasta `_DEVELOPER/` ignorada pelo Git).
 
-**Última sincronização:** 2026-05-13 — **Onda 2a** `deps_auth_supabase.py`; **Onda 2b** `deps_repositories_core.py` (repos diagnóstico, audit mutação, vínculo lead, LGPD, retificação) + `reset_ci_playwright_diagnostico_singleton()`; E2E `wizard-offline-banner.spec.ts`; `make report-rls-public`. Handoff 2026-05-10: [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md).
+**Última sincronização:** 2026-05-13 — **Onda 2a** `deps_auth_supabase.py`; **Onda 2b** `deps_repositories_core.py`; **Onda 2c** `deps_infra_services.py` (normativa, score, LLM, CNPJ/CNAE, PDF, e-mail, orquestrador); **Onda 3** `deps_lgpd_painel.py` (LGPD titular, export portável, retificações, vínculo lead, mutações painel/plano); `dependencies.py` = reexports. E2E `wizard-offline-banner.spec.ts`; `make report-rls-public`. Handoff 2026-05-10: [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md).
 
 ## Painel
 
@@ -17,8 +17,10 @@ Este ficheiro **substitui** no histórico versionado o painel em `_DEVELOPER/DEV
 | Retificação WORM | C.3 | Em produção (técnico) | Migração `0035_diagnostico_retificacao_append_only.sql`; `POST/GET /diagnosticos/{id}/retificacao(|es)`; cadeia append-only sem `UPDATE` do diagnóstico original. |
 | OpenAPI versionado | A2c | Em CI | `docs/api/openapi.generated.json` versionado; `tests/unit/presentation/test_openapi_generated_contract.py`; CI falha em drift do contrato gerado. |
 | Go-live 45min | A2c/C3 | Pronto para execução | `make go-live`; A2c valida drift OpenAPI; C3 smoke `GET /public/institucional` e `GET /diagnosticos/metodologia` após `/health`. |
-| Refactor `dependencies.py` (auth + Supabase) | Onda 2 | Fatia 1 concluída | `deps_auth_supabase.py`; reexport em `dependencies.py`. |
-| Refactor `dependencies.py` (repos diagnóstico + LGPD) | Onda 2 | Fatia 2 concluída | `deps_repositories_core.py`; `reset_ci_playwright_diagnostico_singleton()`; `make test` verde. Próxima fatia opcional: normativa/LLM/CNPJ factories. |
+| Refactor `dependencies.py` (auth + Supabase) | Onda 2 | Concluído | `deps_auth_supabase.py`. |
+| Refactor `dependencies.py` (repos core) | Onda 2 | Concluído | `deps_repositories_core.py`; `reset_ci_playwright_diagnostico_singleton()`. |
+| Refactor `dependencies.py` (infra / serviços) | Onda 2c | Concluído | `deps_infra_services.py` (normativa, score, questionário, LLM, CNPJ/CNAE, PDF, storage, e-mail, `RealizarDiagnostico`). |
+| Refactor `dependencies.py` (LGPD + painel) | Onda 3 | Concluído | `deps_lgpd_painel.py`; `dependencies.py` só reexports + `logger`. |
 | Relatório RLS `public` | Ops | Disponível | `make report-rls-public` · `scripts/report_rls_public.py` (requer Postgres alvo). |
 
 ## Testes E2E (frontend)
