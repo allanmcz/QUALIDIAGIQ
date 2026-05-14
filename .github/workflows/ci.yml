@@ -293,10 +293,8 @@ jobs:
         run: npm run build
       - name: Playwright (Chromium apenas)
         run: npx playwright install --with-deps chromium
-      - name: E2E
-        env:
-          CI: true
-        run: npm run test:e2e
+      - name: E2E (gate reprodutível — ver `npm run test:e2e:ci` no frontend)
+        run: npm run test:e2e:ci
 
   frontend-lighthouse:
     runs-on: ubuntu-latest

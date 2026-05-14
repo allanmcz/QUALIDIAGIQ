@@ -7,7 +7,7 @@
 
 **Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/login` + **`/api/auth/cadastro`**, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; E2E Playwright: `e2e/helpers/mock_bff_painel_auth.ts`, `NEXT_PUBLIC_API_URL=/api-backend` no `playwright.config.ts`; ver `frontend/.env.local.example` e `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
 
-**Última actualização (Fase 3–4 — rastreio):** 2026-05-14 — contrato idempotência/WORM consolidado no plano; teste «mesma chave, corpo diferente»; Fase 4 marcada concluída; **3.7** fechado com regressão UPSERT vs WORM em `test_worm_postgres`. *(Fase 2 LLM router ADR-021 e Fase 5 E2E mobile em commits anteriores.)*
+**Última actualização (Fase 3–6 — rastreio):** 2026-05-14 — Fase **6** fechada (V1–V7 com evidência); **3.7** UPSERT vs WORM; E2E mobile corrigido (`CardTitle` sem `role="heading"`); banner offline sincroniza com `navigator.onLine` + teste reforçado. *(Fase 2 ADR-021 em commits anteriores.)*
 
 ---
 
@@ -156,13 +156,13 @@
 
 Marcar só quando **todas** as fases em escopo estiverem concluídas.
 
-- [ ] **V1** `make lint`
-- [ ] **V2** `make type-check`
-- [ ] **V3** `make test-domain`
-- [ ] **V4** `make test`
-- [ ] **V5** `cd frontend && npm run test:unit`
-- [ ] **V6** `cd frontend && npm run build`
-- [ ] **V7** Se Playwright alterado: `cd frontend && npm run test:e2e`
+- [x] **V1** `make lint`
+- [x] **V2** `make type-check`
+- [x] **V3** `make test-domain`
+- [x] **V4** `make test`
+- [x] **V5** `cd frontend && npm run test:unit`
+- [x] **V6** `cd frontend && npm run build`
+- [x] **V7** `make fe-playwright-ci` ou `cd frontend && npm run test:e2e:ci` — 1 worker + retries; webServer `next dev` na porta do `playwright.config.ts` (job `frontend-e2e` no `.github/workflows/ci.yml`). Evidência: 2026-05-14 — 34 passed, 2 skipped (integrado CI + normativa P8).
 
 ---
 

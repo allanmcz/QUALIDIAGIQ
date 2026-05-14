@@ -10,7 +10,7 @@
 
 ## E2E com mocks do painel (BFF + `/api-backend`)
 
-O `playwright.config.ts` define `NEXT_PUBLIC_API_URL=/api-backend` (por omissão) e `API_PROXY_TARGET` para o proxy do Next alcançar a API. Os specs que simulam login usam `e2e/helpers/mock_bff_painel_auth.ts` (`Set-Cookie` `qdi_painel_access` + corpo `{ ok: true, … }`). Para o passo 1 do wizard, preferir `fillWizardCnpjPasso1` em `e2e/helpers/wizard_cnpj_e2e.ts` (evita flakiness com `react-hook-form`).
+O `playwright.config.ts` define `NEXT_PUBLIC_API_URL=/api-backend` (por omissão) e `API_PROXY_TARGET` para o proxy do Next alcançar a API. Os specs que simulam login usam `e2e/helpers/mock_bff_painel_auth.ts` (`Set-Cookie` `qdi_painel_access` + corpo `{ ok: true, … }`). Para o passo 1 do wizard, preferir `fillWizardCnpjPasso1` em `e2e/helpers/wizard_cnpj_e2e.ts` (evita flakiness com `react-hook-form`). **Gate reprodutível (CI / sprint hardening):** na raiz do monorepo `make fe-playwright-ci`, ou em `frontend/` `npm run test:e2e:ci` (`CI=1` → 1 worker + retries no `playwright.config.ts`).
 
 ## E2E integrado (API Python real — C1)
 

@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -126,6 +126,9 @@ ci-integration: ## Espelho local do CI: migra Postgres + pytest integration (ana
 frontend-init: ## Inicializa o frontend Next.js (executar uma vez)
 	cd frontend && npx create-next-app@14 . --ts --tailwind --app --eslint --no-src-dir
 	cd frontend && npm install lucide-react @radix-ui/react-progress recharts
+
+fe-playwright-ci: ## Playwright E2E reprodutível (CI=1: 1 worker + retries; alinha job frontend-e2e no GitHub Actions)
+	cd frontend && npm run test:e2e:ci
 
 all: install dev ## Setup completo + sobe ambiente
 

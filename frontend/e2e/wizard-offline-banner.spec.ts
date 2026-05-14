@@ -22,10 +22,15 @@ test.describe("Wizard — banner sem ligação (offline)", () => {
     const aviso = page.getByRole("status").filter({
       hasText: /Sem ligação à Internet/i,
     });
-    await expect(aviso).toBeVisible();
+    await expect(aviso).toBeVisible({ timeout: 15_000 });
     await expect(aviso).toContainText(/consulta CNPJ/i);
 
     await context.setOffline(false);
-    await expect(aviso).toBeHidden();
+    await page.waitForFunction(() => window.navigator.onLine, null, { timeout: 15_000 });
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    /** Evento `online` + re-render React podem atrasar um pouco face ao `setOffline(false)`. */
+    await expect(aviso).toBeHidden({ timeout: 15_000 });
   });
 });

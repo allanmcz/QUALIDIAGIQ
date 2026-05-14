@@ -13,13 +13,16 @@ export function WizardOfflineBanner() {
   );
 
   useEffect(() => {
-    const onOff = () => setOffline(true);
-    const onOn = () => setOffline(false);
-    window.addEventListener("offline", onOff);
-    window.addEventListener("online", onOn);
+    /** Sempre alinhar a `navigator.onLine` — o CDP do Playwright por vezes actualiza o estado sem disparar o par de eventos esperado. */
+    const sync = () => {
+      setOffline(typeof navigator !== "undefined" && !navigator.onLine);
+    };
+    sync();
+    window.addEventListener("offline", sync);
+    window.addEventListener("online", sync);
     return () => {
-      window.removeEventListener("offline", onOff);
-      window.removeEventListener("online", onOn);
+      window.removeEventListener("offline", sync);
+      window.removeEventListener("online", sync);
     };
   }, []);
 

@@ -57,7 +57,10 @@ test.describe("Smoke mobile (viewport estreito)", () => {
     await page.locator("#lgpd").check({ force: true });
 
     await proxima.click();
-    await expect(page.getByRole("heading", { name: /Perfil da Empresa/i })).toBeVisible({ timeout: 20_000 });
+    /** `CardTitle` (shadcn) é `div[data-slot=card-title]`, não `role="heading"`. */
+    await expect(
+      page.locator('[data-slot="card-title"]').filter({ hasText: /Perfil da Empresa/i }),
+    ).toBeVisible({ timeout: 20_000 });
   });
 
   test("/login — campos e botão visíveis no viewport móvel", async ({ page }) => {
