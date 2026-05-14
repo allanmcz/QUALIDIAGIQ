@@ -14,6 +14,7 @@ import structlog
 
 from src.application.ports.cnpj_provedor_externo_port import CnpjProvedorExternoPort
 from src.infrastructure.config.settings import Settings
+from src.infrastructure.observability.qdi_otel_metrics import record_cnpj_lookup
 
 logger = structlog.get_logger(__name__)
 
@@ -71,6 +72,7 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
                 raise ValueError("Resposta BrasilAPI não é JSON válido.") from e
             if not isinstance(data, dict):
                 raise ValueError("Payload BrasilAPI inválido.")
+            record_cnpj_lookup(fonte="brasil_api", http_status_group="2xx")
             return data, "brasil_api", resp.status_code, ms
 
     async def _fallback_minha_receita(
@@ -102,4 +104,5 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
             raise RuntimeError("Fallback Minha Receita não retornou JSON válido.") from e
         if not isinstance(data, dict):
             raise RuntimeError("Payload Minha Receita inválido.")
+        record_cnpj_lookup(fonte="minha_receita", http_status_group="2xx")
         return data, "minha_receita", resp.status_code, ms

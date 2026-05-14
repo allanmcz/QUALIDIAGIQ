@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { WizardOfflineBanner } from "@/components/wizard/WizardOfflineBanner";
 import { WizardCacheResumeOverlay } from "@/components/wizard/WizardCacheResumeOverlay";
 import { WizardNavigationButtons } from "@/components/wizard/WizardNavigationButtons";
 import { WizardStepIdentificacao } from "@/components/wizard/steps/WizardStepIdentificacao";
@@ -48,6 +49,7 @@ export function WizardForm() {
           onReiniciar={w.handleCacheReiniciar}
         />
       )}
+      <WizardOfflineBanner />
       <div
         className={cn(
           "w-full max-w-3xl mx-auto flex flex-col min-h-0",

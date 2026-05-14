@@ -276,6 +276,10 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+
+      - name: TypeScript (tsc --noEmit — paridade make go-live-tecnico)
+        run: npx tsc --noEmit
+
       - name: npm audit (produção — QDI-H-009)
         # Postura: bloquear HIGH+CRITICAL (ADR-016). Sem fix → substituir pacote, overrides ou ADR de exceção.
         run: npm audit --omit=dev --audit-level=high

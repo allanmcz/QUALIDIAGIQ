@@ -9,6 +9,7 @@ from src.application.ports.pdf_generator import PdfGeneratorPort
 from src.domain.entities.diagnostico import Diagnostico
 from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.config.settings import get_settings
+from src.infrastructure.observability.qdi_otel_metrics import record_pdf_generation
 from src.infrastructure.pdf.relatorio_pdf_i18n import (
     formatar_data_geracao_pdf,
     formatar_telefone_exibicao_br,
@@ -115,12 +116,14 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
                     tenant_id=str(diagnostico.tenant_id),
                     exc_info=True,
                 )
+                record_pdf_generation(outcome="mock_fallback")
                 return b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
 
         timeout_s = float(get_settings().pdf_render_timeout_seconds)
         try:
             pdf_bytes = await asyncio.wait_for(asyncio.to_thread(_render), timeout=timeout_s)
         except TimeoutError:
+            record_pdf_generation(outcome="timeout")
             logger.error(
                 "weasyprint_timeout_render",
                 timeout_segundos=timeout_s,
@@ -131,4 +134,5 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             raise RuntimeError(
                 f"Timeout ao gerar PDF (>{timeout_s}s). Ajuste QDI_PDF_RENDER_TIMEOUT_SECONDS ou infra WeasyPrint."
             ) from None
+        record_pdf_generation(outcome="success")
         return bytes(pdf_bytes)

@@ -41,6 +41,8 @@ bash scripts/go_live_tecnico.sh
 - `make go-live` / `scripts/go_live_45min.sh` — pré-voo alargado (OpenAPI drift, health, endpoints públicos, opcional E2E).
 - `make go-live-tecnico` — foco em **qualidade de código** e **gate MVP/RLS** quando o ambiente permite.
 
+O job **frontend-e2e** do GitHub Actions (`.github/workflows/ci.yml`) inclui **`npx tsc --noEmit`** em paralelo ao gate local, para falhar PR se o TypeScript regredir antes do `next build`.
+
 ## Segurança
 
 O script **não** executa `git commit`, `git push`, `git rebase`, nem comandos destrutivos sobre dados.

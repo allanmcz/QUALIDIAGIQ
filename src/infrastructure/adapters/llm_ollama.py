@@ -10,6 +10,7 @@ from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
 from src.application.services.lexiq_guardrail import filtrar_resposta_recomendacao_llm
 from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
+from src.infrastructure.observability.qdi_otel_metrics import record_llm_recommendation
 
 logger = structlog.get_logger(__name__)
 
@@ -73,12 +74,15 @@ class OllamaLlmAdapter(LlmServicePort):
                 data = await self._post_generate_json(client, prompt)
                 texto = data.get("response", "Recomendação não gerada pelo modelo.")
                 out = str(texto).strip()
-                return await filtrar_resposta_recomendacao_llm(
+                result = await filtrar_resposta_recomendacao_llm(
                     out,
                     base_normativa_port=self._normativa_port,
                     rag_threshold=self._rag_threshold,
                 )
+                record_llm_recommendation(adapter="ollama_rest", outcome="success")
+                return result
         except httpx.HTTPError as exc:
+            record_llm_recommendation(adapter="ollama_rest", outcome="http_error")
             logger.warning(
                 "ollama_http_error",
                 erro=str(exc),
@@ -87,6 +91,7 @@ class OllamaLlmAdapter(LlmServicePort):
             )
             return "Devido a indisponibilidade temporária do serviço de IA, a recomendação personalizada não pôde ser gerada no momento."
         except Exception as exc:
+            record_llm_recommendation(adapter="ollama_rest", outcome="unexpected_error")
             logger.error(
                 "ollama_erro_inesperado",
                 erro=str(exc),
