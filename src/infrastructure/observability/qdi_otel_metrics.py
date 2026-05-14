@@ -53,7 +53,7 @@ def record_cnpj_lookup(
 
 def record_llm_recommendation(
     *,
-    adapter: Literal["ollama_rest", "langgraph_ollama", "anthropic"],
+    adapter: Literal["ollama_rest", "langgraph_ollama", "anthropic", "openai_chat"],
     outcome: Literal["success", "http_error", "unexpected_error"],
 ) -> None:
     """Regista chamada ao LLM de recomendação."""

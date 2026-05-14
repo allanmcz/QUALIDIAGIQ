@@ -4,7 +4,7 @@ Roteamento do adapter LLM por configuração (Settings).
 Camada: Infrastructure — implementa política documentada em **ADR-021** (cruzamento ADR-003, ADR-007).
 
 Analogia (Winthor): é o «parâmetro de filial + política de preço» que decide qual motor de cálculo chamar —
-aqui o «motor» é Anthropic vs Ollama vs LangGraph, sem expor SDK na camada de aplicação.
+aqui o «motor» é Anthropic vs Ollama vs LangGraph vs OpenAI Chat, sem expor SDK na camada de aplicação.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from src.application.ports.llm_service import LlmServicePort
 from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
 from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
+from src.infrastructure.adapters.llm_openai import OpenAiChatLlmAdapter
 from src.infrastructure.config.settings import Settings
 
 logger = structlog.get_logger(__name__)
@@ -27,6 +28,21 @@ def _host_sem_credenciais(url: str) -> str:
     """Extrai hostname para logs — sem path/query (evita ruído; nunca logar API keys)."""
     host = urlparse(url.strip()).hostname
     return host or "(sem host)"
+
+
+def _ollama_stack(
+    settings: Settings,
+    *,
+    base_normativa_port: BaseNormativaPort,
+    rag_similarity_threshold: float,
+) -> LangGraphOllamaLlmAdapter:
+    return LangGraphOllamaLlmAdapter(
+        ollama_url=settings.ollama_base_url.strip(),
+        model=settings.ollama_model.strip(),
+        timeout_seconds=float(settings.ollama_timeout_seconds),
+        base_normativa_port=base_normativa_port,
+        rag_similarity_threshold=float(rag_similarity_threshold),
+    )
 
 
 def build_llm_adapter_from_settings(
@@ -50,7 +66,29 @@ def build_llm_adapter_from_settings(
     resolved_label: str
     adapter: LlmServicePort
 
-    if settings.llm_backend == "anthropic":
+    if settings.llm_backend == "openai":
+        okey = settings.openai_api_key.get_secret_value().strip() if settings.openai_api_key else ""
+        if okey:
+            resolved_label = "openai_chat"
+            adapter = OpenAiChatLlmAdapter(
+                api_key=okey,
+                model=settings.openai_chat_model.strip(),
+                base_normativa_port=base_normativa_port,
+                rag_similarity_threshold=thr,
+            )
+        else:
+            logger.warning(
+                "llm_backend_openai_sem_api_key",
+                fallback="langgraph_ollama",
+                llm_backend_solicitado="openai",
+                evento="llm_plano_fallback_backend",
+                tier=tier,
+            )
+            resolved_label = "langgraph_ollama"
+            adapter = _ollama_stack(
+                settings, base_normativa_port=base_normativa_port, rag_similarity_threshold=thr
+            )
+    elif settings.llm_backend == "anthropic":
         ak = (
             settings.anthropic_api_key.get_secret_value().strip()
             if settings.anthropic_api_key
@@ -73,12 +111,8 @@ def build_llm_adapter_from_settings(
                 tier=tier,
             )
             resolved_label = "langgraph_ollama"
-            adapter = LangGraphOllamaLlmAdapter(
-                ollama_url=url,
-                model=model,
-                timeout_seconds=timeout,
-                base_normativa_port=base_normativa_port,
-                rag_similarity_threshold=thr,
+            adapter = _ollama_stack(
+                settings, base_normativa_port=base_normativa_port, rag_similarity_threshold=thr
             )
     elif settings.llm_backend == "http_ollama":
         resolved_label = "http_ollama"
@@ -91,12 +125,8 @@ def build_llm_adapter_from_settings(
         )
     else:
         resolved_label = "langgraph_ollama"
-        adapter = LangGraphOllamaLlmAdapter(
-            ollama_url=url,
-            model=model,
-            timeout_seconds=timeout,
-            base_normativa_port=base_normativa_port,
-            rag_similarity_threshold=thr,
+        adapter = _ollama_stack(
+            settings, base_normativa_port=base_normativa_port, rag_similarity_threshold=thr
         )
 
     logger.info(
@@ -105,8 +135,11 @@ def build_llm_adapter_from_settings(
         tier=tier,
         llm_backend=settings.llm_backend,
         adapter=resolved_label,
-        modelo_ollama=model if resolved_label != "anthropic" else None,
+        modelo_ollama=model if resolved_label not in ("anthropic", "openai_chat") else None,
         modelo_claude=settings.anthropic_model.strip() if resolved_label == "anthropic" else None,
+        modelo_openai=(
+            settings.openai_chat_model.strip() if resolved_label == "openai_chat" else None
+        ),
         ollama_host=_host_sem_credenciais(url),
     )
     return adapter

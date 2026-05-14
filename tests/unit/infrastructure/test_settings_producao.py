@@ -113,6 +113,25 @@ def test_producao_llm_anthropic_rejeita_chave_somente_espacos(
         Settings()
 
 
+def test_producao_llm_openai_exige_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Produção com backend OpenAI exige chave não vazia."""
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("QDI_LLM_BACKEND", "openai")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        Settings()
+
+
+def test_producao_llm_openai_rejeita_chave_somente_espacos(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _base_producao(monkeypatch)
+    monkeypatch.setenv("QDI_LLM_BACKEND", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "   ")
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        Settings()
+
+
 def test_producao_segunda_barreira_jwt_curto_defensivo(monkeypatch: pytest.MonkeyPatch) -> None:
     """Cobre validação redundante após enfraquecimento manual do segredo (defesa em profundidade)."""
     _base_producao(monkeypatch)

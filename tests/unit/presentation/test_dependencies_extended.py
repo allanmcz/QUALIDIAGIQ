@@ -148,6 +148,61 @@ def test_get_llm_anthropic_com_chave_adapter() -> None:
     assert type(svc).__name__ == "AnthropicLlmAdapter"
 
 
+def test_get_llm_openai_com_chave_adapter() -> None:
+    mock_s = MagicMock()
+    mock_s.qdi_llm_default_tier = "standard"
+    mock_s.llm_backend = "openai"
+    fk_o = MagicMock()
+    fk_o.get_secret_value.return_value = "sk-openai-test"
+    mock_s.openai_api_key = fk_o
+    mock_s.openai_chat_model = "gpt-4o-mini"
+    mock_s.anthropic_api_key = None
+    mock_s.anthropic_model = "ignored"
+    mock_s.ollama_base_url = "http://localhost:11434"
+    mock_s.ollama_model = "fallback"
+    mock_s.ollama_timeout_seconds = 20.0
+    mock_s.qdi_rag_similarity_threshold = "0.21"
+    mock_s.sync_database_url = None
+
+    with (
+        patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
+    ):
+        mock_bn.return_value = MagicMock()
+        svc = deps.get_llm_service()
+    assert type(svc).__name__ == "OpenAiChatLlmAdapter"
+
+
+def test_get_llm_openai_sem_chave_fallback_langgraph() -> None:
+    mock_s = MagicMock()
+    mock_s.qdi_llm_default_tier = "local"
+    mock_s.llm_backend = "openai"
+    mock_s.openai_api_key = None
+    mock_s.openai_chat_model = "gpt-4o-mini"
+    fk = MagicMock()
+    fk.get_secret_value.return_value = ""
+    mock_s.anthropic_api_key = fk
+    mock_s.anthropic_model = "x"
+    mock_s.ollama_base_url = "http://localhost:11434"
+    mock_s.ollama_model = "m"
+    mock_s.ollama_timeout_seconds = 9.0
+    mock_s.qdi_rag_similarity_threshold = "0.13"
+    mock_s.sync_database_url = None
+
+    with (
+        patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
+        patch("src.infrastructure.adapters.llm_router.logger") as log,
+    ):
+        mock_bn.return_value = MagicMock()
+        svc = deps.get_llm_service()
+    assert type(svc).__name__ == "LangGraphOllamaLlmAdapter"
+    log.warning.assert_called_once()
+    kwa = log.warning.call_args.kwargs
+    assert kwa.get("llm_backend_solicitado") == "openai"
+    assert kwa.get("evento") == "llm_plano_fallback_backend"
+
+
 def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     mock_s = MagicMock()
     mock_s.qdi_llm_default_tier = "standard"

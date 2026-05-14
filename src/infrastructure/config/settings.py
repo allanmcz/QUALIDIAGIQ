@@ -184,11 +184,11 @@ class Settings(BaseSettings):
         description="Timeout (segundos) nas chamadas ao Ollama — REST direta ou cliente LangChain.",
     )
 
-    llm_backend: Literal["langgraph_ollama", "http_ollama", "anthropic"] = Field(
+    llm_backend: Literal["langgraph_ollama", "http_ollama", "anthropic", "openai"] = Field(
         default="langgraph_ollama",
         validation_alias=AliasChoices("QDI_LLM_BACKEND"),
         description=(
-            "Backend de recomendação IA: LangGraph+Ollama (default), HTTP Ollama ou Anthropic Claude."
+            "Backend de recomendação IA: LangGraph+Ollama (default), HTTP Ollama, Anthropic Claude ou OpenAI Chat."
         ),
     )
 
@@ -215,7 +215,15 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("OPENAI_API_KEY"),
-        description="OpenAI — embeddings para RAG-light (busca pgvector) quando DATABASE_URL definido.",
+        description=(
+            "OpenAI — embeddings (RAG-light / pgvector) quando ``DATABASE_URL`` definido; "
+            "e chave Chat quando ``QDI_LLM_BACKEND=openai``."
+        ),
+    )
+    openai_chat_model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("OPENAI_CHAT_MODEL", "QDI_OPENAI_CHAT_MODEL"),
+        description="Modelo Chat Completions para recomendação quando ``QDI_LLM_BACKEND=openai``.",
     )
     openai_embedding_model: str = Field(
         default="text-embedding-3-small",
@@ -354,6 +362,12 @@ class Settings(BaseSettings):
         ):
             raise ValueError(
                 "ANTHROPIC_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=anthropic."
+            )
+        if self.llm_backend == "openai" and (
+            self.openai_api_key is None or not str(self.openai_api_key.get_secret_value()).strip()
+        ):
+            raise ValueError(
+                "OPENAI_API_KEY e obrigatorio em producao quando QDI_LLM_BACKEND=openai."
             )
         # ADR-020 — mitigação compensatória: sessão painel curta em produção (XSS + localStorage).
         if self.jwt_expire_minutes > 30:

@@ -28,7 +28,7 @@ Os pacotes listados no contexto passaram a ter uso direto na camada **Infrastruc
 | Pacote | Uso atual (referência) |
 |--------|-------------------------|
 | `anthropic` | `AnthropicLlmAdapter` — `llm_backend=anthropic` + `ANTHROPIC_API_KEY` |
-| `openai` | Indireto: embeddings via REST **httpx** em `base_normativa_pgvector.py` (API OpenAI) |
+| `openai` | `OpenAiChatLlmAdapter` — `llm_backend=openai` + `OPENAI_API_KEY`; embeddings RAG-light via REST **httpx** em `base_normativa_pgvector.py` |
 | `langchain*`, `langgraph` | `LangGraphOllamaLlmAdapter` (default dev) — **ADR-007** |
 
 RAG-light (**migração 0020**, pgvector) não adiciona dependência obrigatória além de **asyncpg** já presente; ingestão baseline usa o mesmo cliente HTTP de embeddings.

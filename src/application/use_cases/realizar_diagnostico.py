@@ -210,9 +210,21 @@ class RealizarDiagnostico:
                     rag_blob = "\n\n".join(c.texto for c in chunks_ctx)
                     base_normativa = f"{rag_blob}\n\n{_ANCORA_FIXA_LLM}"
 
-            recomendacao_ia = await self.llm_service.gerar_recomendacao(
-                contexto_empresa=contexto_empresa, base_normativa=base_normativa
-            )
+            try:
+                recomendacao_ia = await self.llm_service.gerar_recomendacao(
+                    contexto_empresa=contexto_empresa, base_normativa=base_normativa
+                )
+            except Exception as exc:
+                logger.warning(
+                    "recomendacao_llm_excecao_nao_tratada",
+                    erro=str(exc),
+                    trace_id=comando.trace_id,
+                    exc_info=True,
+                )
+                recomendacao_ia = (
+                    "Devido a indisponibilidade temporária do serviço de IA, a recomendação "
+                    "personalizada não pôde ser gerada no momento."
+                )
 
         # 5. Geração de PDF e Upload (Se configurado)
         pdf_url = None

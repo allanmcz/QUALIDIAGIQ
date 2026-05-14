@@ -23,3 +23,4 @@ class TestQdiOtelMetrics:
             adapter="langgraph_ollama", outcome="unexpected_error"
         )
         qdi_otel_metrics.record_llm_recommendation(adapter="anthropic", outcome="http_error")
+        qdi_otel_metrics.record_llm_recommendation(adapter="openai_chat", outcome="success")

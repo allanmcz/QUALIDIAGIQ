@@ -186,6 +186,22 @@ async def test_llm_com_chunks_injeta_rag(calcular_real: CalcularScoreUseCase) ->
 
 
 @pytest.mark.asyncio
+async def test_llm_gerar_recomendacao_excecao_mantem_diagnostico_com_mensagem_estavel(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    """Defesa em profundidade: falha do adapter não aborta o caso de uso."""
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    llm = AsyncMock()
+    llm.gerar_recomendacao = AsyncMock(side_effect=RuntimeError("falha interna simulada"))
+    uc = RealizarDiagnostico(repo=repo, calcular_score_use_case=calcular_real, llm_service=llm)
+    res = await uc.execute(_comando_base())
+    assert res.diagnostico is not None
+    assert res.recomendacao_ia is not None
+    assert "indispon" in res.recomendacao_ia.lower()
+
+
+@pytest.mark.asyncio
 async def test_pdf_storage_e_email_quando_configurado(calcular_real: CalcularScoreUseCase) -> None:
     repo = AsyncMock()
     repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())

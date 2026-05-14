@@ -22,3 +22,9 @@ Stack declarada pelo produto menciona modelo primário Claude (Anthropic). O có
 
 - **`QDI_LLM_BACKEND`** + **`ANTHROPIC_API_KEY`** em `Settings` materializam a fábrica em `build_llm_adapter_from_settings()` (**ADR-021**, `llm_router.py`), invocada por `get_llm_service()` (`deps_infra_services.py`): `anthropic` com chave ⇒ `AnthropicLlmAdapter`; sem chave ⇒ fallback **LangGraph/Ollama** com log estruturado (`llm_backend_anthropic_sem_api_key`).
 - Produção com `anthropic` **exige** chave não vazia (validador `_producao_segredos_obrigatorios`).
+
+## Atualização QDI-H-032b (2026-05-13)
+
+- **`QDI_LLM_BACKEND=openai`** + **`OPENAI_API_KEY`** + **`OPENAI_CHAT_MODEL`** (ou `QDI_OPENAI_CHAT_MODEL`) ⇒ `OpenAiChatLlmAdapter`; sem chave ⇒ fallback **LangGraph/Ollama** (`llm_backend_openai_sem_api_key`, evento `llm_plano_fallback_backend`).
+- Produção com `openai` **exige** `OPENAI_API_KEY` não vazia (mesmo validador `_producao_segredos_obrigatorios`).
+- A chave **OpenAI** continua a servir também **embeddings** (RAG-light / pgvector) quando `DATABASE_URL` e adapter pgvector estão activos — ver `Settings.openai_embedding_model`.

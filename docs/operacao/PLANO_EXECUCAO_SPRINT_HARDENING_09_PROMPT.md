@@ -74,7 +74,7 @@
 ### 2.2 Infraestrutura
 
 - [x] **2.2.1** `src/infrastructure/adapters/llm_router.py` — fábrica por `QDI_LLM_BACKEND` + log `tier` (`QDI_LLM_DEFAULT_TIER`)
-- [ ] **2.2.2** Adapters isolados: OpenAI e Anthropic (falha clara se key/modelo em falta quando o tier exigir)
+- [x] **2.2.2** Adapters isolados: OpenAI e Anthropic (falha clara se key/modelo em falta quando o tier exigir)
 - [x] **2.2.3** Integrar Ollama existente (`llm_langgraph_ollama`, `llm_ollama`) no router
 - [x] **2.2.4** `settings.py` + `.env.example` — `QDI_LLM_DEFAULT_TIER` (sem flags `QDI_LLM_ALLOW_*` neste incremento)
 - [x] **2.2.5** ADR-021 + `.env.example` (Ollama host vs Docker) — README raiz já documenta compose
@@ -82,12 +82,12 @@
 ### 2.3 Política de roteamento
 
 - [ ] **2.3.1** Implementar precedência de tier: use case → tenant/plano → `QDI_LLM_DEFAULT_TIER` → fallback (`local` dev/test, `standard` prod) *(tier só em log; não sobrescreve `QDI_LLM_BACKEND` — ADR-021)*
-- [ ] **2.3.2** **Não** usar header HTTP público como fonte directa de tier premium (restrito a dev/test documentado se existir)
-- [x] **2.3.3** Router coberto por `tests/unit/infrastructure/test_llm_router.py` (matriz mínima anthropic / http_ollama / langgraph)
-- [ ] **2.3.4** Ollama indisponível (local): mensagem estável; POST diagnóstico não “morte” silenciosa indevida
+- [x] **2.3.2** **Não** usar header HTTP público como fonte directa de tier premium (restrito a dev/test documentado se existir) — ver ADR-021 § decisão (4)
+- [x] **2.3.3** Router coberto por `tests/unit/infrastructure/test_llm_router.py` (matriz mínima openai / anthropic / http_ollama / langgraph)
+- [x] **2.3.4** Falha de LLM (incl. excepção não tratada no adapter): mensagem estável; POST diagnóstico não aborta — `RealizarDiagnostico` + adapters (Ollama/Anthropic/OpenAI devolvem mensagem em erro HTTP)
 - [ ] **2.3.5** Produção: OpenAI indisponível + Anthropic configurada + política → fallback premium permitido
-- [x] **2.3.6** Logs estruturados: `llm_router_resolvido` + `llm_backend_anthropic_sem_api_key` com `tier`, `adapter`, modelos, `ollama_host` — sem prompt nem keys
-- [ ] **2.3.7** Guardrail Lexiq mantido (resposta sem âncora normativa → rejeição conforme desenho actual)
+- [x] **2.3.6** Logs estruturados: `llm_router_resolvido` + `llm_backend_*_sem_api_key` com `tier`, `adapter`, modelos, `ollama_host` — sem prompt nem keys
+- [x] **2.3.7** Guardrail Lexiq mantido (`filtrar_resposta_recomendacao_llm` em adapters cloud + Ollama)
 
 ### 2.4 Presentation
 
@@ -103,8 +103,8 @@
 
 - [x] **A5** `get_llm_service` delega no router (`build_llm_adapter_from_settings`)
 - [x] **A6** ADR-021 publicado (`.github/adr/`)
-- [x] **A7** Local: Ollama inalterado; prod: Anthropic via `QDI_LLM_BACKEND` *(OpenAI chat fora deste incremento)*
-- [x] **A8** Testes do router + regressão `get_llm_service` *(fallback anthropic sem chave)*
+- [x] **A7** Local: Ollama inalterado; prod: Anthropic ou OpenAI Chat via `QDI_LLM_BACKEND` + segredos
+- [x] **A8** Testes do router + regressão `get_llm_service` *(fallback anthropic/openai sem chave)*
 
 **Gate após Fase 2:** `make test` + `make type-check` com novos módulos.
 
