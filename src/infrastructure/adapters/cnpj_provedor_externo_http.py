@@ -41,6 +41,7 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
                     cnpj_radical=cnpj_14[:8],
                     erro=str(e),
                 )
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="timeout")
                 return await self._fallback_minha_receita(client, cnpj_14, t0)
             except httpx.RequestError as e:
                 logger.warning(
@@ -48,29 +49,43 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
                     cnpj_radical=cnpj_14[:8],
                     erro=str(e),
                 )
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="rede")
                 return await self._fallback_minha_receita(client, cnpj_14, t0)
 
             ms = int((time.perf_counter() - t0) * 1000)
             if resp.status_code == 404:
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="4xx")
                 raise ValueError(
                     "CNPJ não encontrado na consulta BrasilAPI (equivalente 404 Receita)."
                 )
-            if resp.status_code >= 500 or resp.status_code == 429:
+            if resp.status_code >= 500:
                 logger.warning(
                     "cnpj_brasil_api_fallback",
                     cnpj_radical=cnpj_14[:8],
                     status=resp.status_code,
                 )
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="5xx")
+                return await self._fallback_minha_receita(client, cnpj_14, t0)
+            if resp.status_code == 429:
+                logger.warning(
+                    "cnpj_brasil_api_fallback",
+                    cnpj_radical=cnpj_14[:8],
+                    status=resp.status_code,
+                )
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="4xx")
                 return await self._fallback_minha_receita(client, cnpj_14, t0)
 
             if resp.status_code >= 400:
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="4xx")
                 raise ValueError(f"BrasilAPI retornou status {resp.status_code}.")
 
             try:
                 data = resp.json()
             except ValueError as e:
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="unknown")
                 raise ValueError("Resposta BrasilAPI não é JSON válido.") from e
             if not isinstance(data, dict):
+                record_cnpj_lookup(fonte="brasil_api", http_status_group="unknown")
                 raise ValueError("Payload BrasilAPI inválido.")
             record_cnpj_lookup(fonte="brasil_api", http_status_group="2xx")
             return data, "brasil_api", resp.status_code, ms
@@ -85,24 +100,41 @@ class CnpjProvedorExternoHttpAdapter(CnpjProvedorExternoPort):
         url_mr = tpl.format(cnpj=cnpj_14)
         try:
             resp = await client.get(url_mr)
-        except (httpx.TimeoutException, httpx.RequestError) as e:
+        except httpx.TimeoutException as e:
             logger.error(
                 "cnpj_minha_receita_falhou",
                 cnpj_radical=cnpj_14[:8],
                 erro=str(e),
             )
+            record_cnpj_lookup(fonte="minha_receita", http_status_group="timeout")
+            raise RuntimeError(
+                "Indisponível consultar CNPJ nas fontes públicas (BrasilAPI e Minha Receita)."
+            ) from e
+        except httpx.RequestError as e:
+            logger.error(
+                "cnpj_minha_receita_falhou",
+                cnpj_radical=cnpj_14[:8],
+                erro=str(e),
+            )
+            record_cnpj_lookup(fonte="minha_receita", http_status_group="rede")
             raise RuntimeError(
                 "Indisponível consultar CNPJ nas fontes públicas (BrasilAPI e Minha Receita)."
             ) from e
 
         ms = int((time.perf_counter() - t0) * 1000)
         if resp.status_code >= 400:
+            if resp.status_code >= 500:
+                record_cnpj_lookup(fonte="minha_receita", http_status_group="5xx")
+            else:
+                record_cnpj_lookup(fonte="minha_receita", http_status_group="4xx")
             raise RuntimeError(f"Fallback Minha Receita falhou com HTTP {resp.status_code}.")
         try:
             data = resp.json()
         except ValueError as e:
+            record_cnpj_lookup(fonte="minha_receita", http_status_group="unknown")
             raise RuntimeError("Fallback Minha Receita não retornou JSON válido.") from e
         if not isinstance(data, dict):
+            record_cnpj_lookup(fonte="minha_receita", http_status_group="unknown")
             raise RuntimeError("Payload Minha Receita inválido.")
         record_cnpj_lookup(fonte="minha_receita", http_status_group="2xx")
         return data, "minha_receita", resp.status_code, ms

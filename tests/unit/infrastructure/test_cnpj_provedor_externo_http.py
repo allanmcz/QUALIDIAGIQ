@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import httpx
 import pytest
@@ -42,14 +42,20 @@ async def test_brasil_api_200() -> None:
     mock_client.__aexit__.return_value = None
     mock_client.get = AsyncMock(return_value=ok)
 
-    with patch(
-        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
-        return_value=mock_client,
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
     ):
         data, fonte, st, _ms = await adapter.buscar_cnpj("33014556000196")
     assert fonte == "brasil_api"
     assert st == 200
     assert data["razao_social"] == "ACME"
+    m_otel.assert_called_once_with(fonte="brasil_api", http_status_group="2xx")
 
 
 @pytest.mark.asyncio
@@ -65,9 +71,13 @@ async def test_brasil_404_sem_fallback() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(ValueError, match="404"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_called_once_with(fonte="brasil_api", http_status_group="4xx")
 
 
 @pytest.mark.asyncio
@@ -84,14 +94,25 @@ async def test_fallback_minha_receita_quando_503() -> None:
     mock_client.__aexit__.return_value = None
     mock_client.get = AsyncMock(side_effect=[_resp(503), _resp(200, mr_payload)])
 
-    with patch(
-        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
-        return_value=mock_client,
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
     ):
         data, fonte, st, _ms = await adapter.buscar_cnpj("33014556000196")
     assert fonte == "minha_receita"
     assert st == 200
     assert data["razao_social"] == "ZETA"
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="2xx"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -105,12 +126,23 @@ async def test_timeout_dispara_fallback() -> None:
         side_effect=[httpx.TimeoutException("timeout"), _resp(200, mr_payload)]
     )
 
-    with patch(
-        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
-        return_value=mock_client,
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
     ):
         _data, fonte, _st, _ms = await adapter.buscar_cnpj("33014556000196")
     assert fonte == "minha_receita"
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="timeout"),
+            call(fonte="minha_receita", http_status_group="2xx"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -126,9 +158,43 @@ async def test_brasil_400_invalido() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(ValueError, match="400"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_called_once_with(fonte="brasil_api", http_status_group="4xx")
+
+
+@pytest.mark.asyncio
+async def test_fallback_minha_receita_timeout() -> None:
+    """MR no fallback pode dar timeout — métrica ``minha_receita`` + ``timeout``."""
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(
+        side_effect=[_resp(503), httpx.TimeoutException("mr timeout")],
+    )
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
+        pytest.raises(RuntimeError, match="Indisponível"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="timeout"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -144,9 +210,18 @@ async def test_fallback_minha_receita_tambem_falha() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(RuntimeError, match="Indisponível"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="rede"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -160,12 +235,23 @@ async def test_rede_brasil_dispara_fallback() -> None:
         side_effect=[httpx.RequestError("sem rede"), _resp(200, mr_payload)],
     )
 
-    with patch(
-        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
-        return_value=mock_client,
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
     ):
         _d, fonte, _st, _ms = await adapter.buscar_cnpj("33014556000196")
     assert fonte == "minha_receita"
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="rede"),
+            call(fonte="minha_receita", http_status_group="2xx"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -177,12 +263,23 @@ async def test_429_dispara_fallback() -> None:
     mock_client.__aexit__.return_value = None
     mock_client.get = AsyncMock(side_effect=[_resp(429), _resp(200, mr_payload)])
 
-    with patch(
-        "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
-        return_value=mock_client,
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
     ):
         _d, fonte, _st, _ms = await adapter.buscar_cnpj("33014556000196")
     assert fonte == "minha_receita"
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="4xx"),
+            call(fonte="minha_receita", http_status_group="2xx"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -202,9 +299,13 @@ async def test_brasil_json_invalido() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(ValueError, match="JSON válido"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_called_once_with(fonte="brasil_api", http_status_group="unknown")
 
 
 @pytest.mark.asyncio
@@ -223,9 +324,40 @@ async def test_brasil_payload_nao_dict() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(ValueError, match="Payload BrasilAPI"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_called_once_with(fonte="brasil_api", http_status_group="unknown")
+
+
+@pytest.mark.asyncio
+async def test_fallback_mr_http_500() -> None:
+    adapter = CnpjProvedorExternoHttpAdapter(_settings_mock())
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get = AsyncMock(side_effect=[_resp(503), _resp(503)])
+
+    with (
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
+        pytest.raises(RuntimeError, match="Minha Receita falhou com HTTP 503"),
+    ):
+        await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="5xx"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -241,9 +373,18 @@ async def test_fallback_mr_http_400() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(RuntimeError, match="Minha Receita falhou com HTTP 404"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="4xx"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -263,9 +404,18 @@ async def test_fallback_mr_json_invalido() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(RuntimeError, match="Minha Receita não retornou JSON"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="unknown"),
+        ]
+    )
 
 
 @pytest.mark.asyncio
@@ -285,6 +435,15 @@ async def test_fallback_mr_payload_nao_dict() -> None:
             "src.infrastructure.adapters.cnpj_provedor_externo_http.httpx.AsyncClient",
             return_value=mock_client,
         ),
+        patch(
+            "src.infrastructure.adapters.cnpj_provedor_externo_http.record_cnpj_lookup"
+        ) as m_otel,
         pytest.raises(RuntimeError, match="Payload Minha Receita"),
     ):
         await adapter.buscar_cnpj("33014556000196")
+    m_otel.assert_has_calls(
+        [
+            call(fonte="brasil_api", http_status_group="5xx"),
+            call(fonte="minha_receita", http_status_group="unknown"),
+        ]
+    )

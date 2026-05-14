@@ -15,6 +15,7 @@ class TestQdiOtelMetrics:
     def test_record_cnpj_lookup(self) -> None:
         qdi_otel_metrics.record_cnpj_lookup(fonte="brasil_api", http_status_group="2xx")
         qdi_otel_metrics.record_cnpj_lookup(fonte="minha_receita", http_status_group="timeout")
+        qdi_otel_metrics.record_cnpj_lookup(fonte="error", http_status_group="unknown")
 
     def test_record_llm_recommendation(self) -> None:
         qdi_otel_metrics.record_llm_recommendation(adapter="ollama_rest", outcome="success")
