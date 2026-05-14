@@ -45,6 +45,7 @@ from src.infrastructure.repositories.postgres_diagnostico_repository import (
     PostgresDiagnosticoRepository,
 )
 from src.presentation.api import dependencies as deps
+from src.presentation.api import deps_auth_supabase
 
 
 @pytest.fixture(autouse=True)
@@ -61,7 +62,7 @@ async def test_get_self_service_diagnostico_claims_token_jwt_invalido_401(monkey
     def _boom_decode(_token: str, _secret: str, algorithms=None, **kwargs):  # type: ignore[no-untyped-def]
         raise jwt.InvalidTokenError()
 
-    monkeypatch.setattr(deps.jwt, "decode", _boom_decode)
+    monkeypatch.setattr(deps_auth_supabase.jwt, "decode", _boom_decode)
 
     from src.presentation.api.dependencies import get_self_service_diagnostico_claims
 

@@ -46,7 +46,7 @@ async def test_self_service_claims_rejeita_scope_incompativel() -> None:
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=payload)
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_auth_supabase.get_settings", return_value=mock_s),
         pytest.raises(HTTPException) as ei,
     ):
         await deps.get_self_service_diagnostico_claims(credentials=cred)
@@ -77,7 +77,7 @@ async def test_self_service_claims_rejeita_tenant_divergente_do_pool() -> None:
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_auth_supabase.get_settings", return_value=mock_s),
         pytest.raises(HTTPException) as ei,
     ):
         await deps.get_self_service_diagnostico_claims(credentials=cred)
@@ -119,7 +119,7 @@ async def test_self_service_claims_token_exige_sub_tenant_email_completos() -> N
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_sem_email)
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_auth_supabase.get_settings", return_value=mock_s),
         pytest.raises(HTTPException) as ei,
     ):
         await deps.get_self_service_diagnostico_claims(credentials=cred)
@@ -151,7 +151,7 @@ async def test_self_service_claims_uuid_invalidos_no_token_401() -> None:
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_bad)
 
     with (
-        patch("src.presentation.api.dependencies.get_settings", return_value=mock_s),
+        patch("src.presentation.api.deps_auth_supabase.get_settings", return_value=mock_s),
         pytest.raises(HTTPException) as ei,
     ):
         await deps.get_self_service_diagnostico_claims(credentials=cred)

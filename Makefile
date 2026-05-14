@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
+.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -89,6 +89,11 @@ verify-schema-mvp: ## Verifica 0012/M11 + RLS no Postgres (DATABASE_URL ou QDI_P
 verify-schema-mvp-strict: ## Como verify-schema-mvp + CNAE 0013/0014 + normativa score macro 0015 (modo strict)
 	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
 	QDI_VERIFY_SCHEMA_STRICT_CNAE=1 $(VENV)/bin/python scripts/verify_mvp_schema.py
+
+report-rls-public: ## Lista tabelas public com RLS activo (DATABASE_URL ou QDI_POSTGRES_TEST_URL; default local :60322)
+	@export QDI_POSTGRES_TEST_URL="$${QDI_POSTGRES_TEST_URL:-postgresql://postgres:postgres@127.0.0.1:60322/postgres}"; \
+	export DATABASE_URL="$${DATABASE_URL:-$$QDI_POSTGRES_TEST_URL}"; \
+	PYTHONPATH=. $(VENV)/bin/python scripts/report_rls_public.py
 
 openapi-export: ## Gera docs/api/openapi.generated.json a partir do schema FastAPI (versionado no Git)
 	PYTHONPATH=. $(VENV)/bin/python scripts/export_openapi_json.py

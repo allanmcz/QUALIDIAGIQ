@@ -2,7 +2,7 @@
 
 Este ficheiro **substitui** no histórico versionado o painel em `_DEVELOPER/DEV_DIAG_04052026/ROADMAP_HANDOFF_REFACTOR_LGPD_PWA.md` (pasta `_DEVELOPER/` ignorada pelo Git).
 
-**Última sincronização:** 2026-05-10 — ver também **handoff de descanso:** [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md) (estado Git, commits sugeridos, pendências T1–T4). Marco técnico deste dia: eliminação LGPD pré-WORM (`POST .../eliminar-diagnostico`), SLA 15 dias úteis em `/privacidade`, checklist MVP pós-Docker e política sem commit automático por agente.
+**Última sincronização:** 2026-05-13 — fatia **Onda 2** de `dependencies.py` (`deps_auth_supabase.py` + reexport), E2E Playwright do banner offline do wizard (`frontend/e2e/wizard-offline-banner.spec.ts`), script operacional `scripts/report_rls_public.py` + alvo `make report-rls-public`. Ver também handoff 2026-05-10: [`HANDOFF_SESSAO_2026-05-10_DESCANSO.md`](./HANDOFF_SESSAO_2026-05-10_DESCANSO.md).
 
 ## Painel
 
@@ -17,12 +17,14 @@ Este ficheiro **substitui** no histórico versionado o painel em `_DEVELOPER/DEV
 | Retificação WORM | C.3 | Em produção (técnico) | Migração `0035_diagnostico_retificacao_append_only.sql`; `POST/GET /diagnosticos/{id}/retificacao(|es)`; cadeia append-only sem `UPDATE` do diagnóstico original. |
 | OpenAPI versionado | A2c | Em CI | `docs/api/openapi.generated.json` versionado; `tests/unit/presentation/test_openapi_generated_contract.py`; CI falha em drift do contrato gerado. |
 | Go-live 45min | A2c/C3 | Pronto para execução | `make go-live`; A2c valida drift OpenAPI; C3 smoke `GET /public/institucional` e `GET /diagnosticos/metodologia` após `/health`. |
+| Refactor `dependencies.py` (auth + Supabase) | Onda 2 | Em progresso (fatia 1) | `src/presentation/api/deps_auth_supabase.py`; reexport em `dependencies.py`; `make test` verde. Próxima fatia: factories LGPD/repos. |
+| Relatório RLS `public` | Ops | Disponível | `make report-rls-public` · `scripts/report_rls_public.py` (requer Postgres alvo). |
 
 ## Testes E2E (frontend)
 
 | Comando | Significado |
 |---------|-------------|
-| `npm run test:e2e` | Suíte mock + **2 skipped**: integrado (`PLAYWRIGHT_INTEGRATED`) · normativa (`PLAYWRIGHT_WIZARD_NORMATIVA`) |
+| `npm run test:e2e` | Suíte mock + **2 skipped**: integrado (`PLAYWRIGHT_INTEGRATED`) · normativa (`PLAYWRIGHT_WIZARD_NORMATIVA`); inclui `e2e/wizard-offline-banner.spec.ts` (banner sem rede no `/wizard`) |
 | `npm run test:e2e:integrado` | Exige API real + env documentados em `frontend/README.md` |
 | `npm run test:e2e:wizard-normativa` | P8 âncora normativa |
 

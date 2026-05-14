@@ -6,11 +6,12 @@ from unittest.mock import MagicMock, patch
 
 from src.infrastructure.config.settings import get_settings
 from src.presentation.api import dependencies as deps
+from src.presentation.api import deps_auth_supabase
 
 
 def test_supabase_singleton_reutiliza_instancia_entre_chamadas() -> None:
     get_settings.cache_clear()
-    deps._supabase_client = None
+    deps_auth_supabase.reset_supabase_client_singleton()
 
     fake_cli = MagicMock()
 
@@ -20,9 +21,9 @@ def test_supabase_singleton_reutiliza_instancia_entre_chamadas() -> None:
 
     try:
         with (
-            patch("src.presentation.api.dependencies.get_settings", return_value=m),
+            patch("src.presentation.api.deps_auth_supabase.get_settings", return_value=m),
             patch(
-                "src.presentation.api.dependencies.create_client",
+                "src.presentation.api.deps_auth_supabase.create_client",
                 return_value=fake_cli,
             ) as mock_create,
         ):
@@ -31,5 +32,5 @@ def test_supabase_singleton_reutiliza_instancia_entre_chamadas() -> None:
         assert a is fake_cli is b
         mock_create.assert_called_once_with("http://localhost:54321", "svc-key-xx")
     finally:
-        deps._supabase_client = None
+        deps_auth_supabase.reset_supabase_client_singleton()
         get_settings.cache_clear()

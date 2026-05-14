@@ -26,15 +26,16 @@ from src.infrastructure.repositories.supabase_diagnostico_repository import (
     SupabaseDiagnosticoRepository,
 )
 from src.presentation.api import dependencies as deps
+from src.presentation.api import deps_auth_supabase
 
 
 @pytest.fixture(autouse=True)
 def _cache() -> None:
     get_settings.cache_clear()
-    deps._supabase_client = None
+    deps_auth_supabase.reset_supabase_client_singleton()
     yield
     get_settings.cache_clear()
-    deps._supabase_client = None
+    deps_auth_supabase.reset_supabase_client_singleton()
 
 
 def test_diagnostico_repository_supabase_sem_dsn_nem_ci_playwright(
@@ -43,7 +44,7 @@ def test_diagnostico_repository_supabase_sem_dsn_nem_ci_playwright(
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("QDI_CI_PLAYWRIGHT_INTEGRATED", raising=False)
     get_settings.cache_clear()
-    deps._supabase_client = None
+    deps_auth_supabase.reset_supabase_client_singleton()
     fake = MagicMock()
 
     with patch("src.presentation.api.dependencies.get_supabase_client", return_value=fake):
