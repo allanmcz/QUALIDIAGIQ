@@ -89,7 +89,7 @@ jobs:
 
       - name: Artefacto SBOM CycloneDX
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: sbom-cyclonedx-json
@@ -98,7 +98,7 @@ jobs:
 
       - name: Artefacto assinaturas Cosign (SBOM)
         if: ${{ hashFiles('dist/sbom-cyclonedx.json.sig') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: sbom-cyclonedx-cosign
@@ -167,7 +167,7 @@ jobs:
 
       - name: Artefacto cobertura backend (XML + HTML)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
           name: coverage-backend
