@@ -5,7 +5,7 @@
 
 **Regras do prompt:** PT-BR em comentários/docstrings; Clean Architecture; Pydantic v2 para schemas HTTP; **sem** `git commit` / `git push` / `git rebase` pelo agente (revisão humana antes de versionar).
 
-**Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/*`, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; ver `frontend/.env.local.example` e secção no `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
+**Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/login` + **`/api/auth/cadastro`**, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; E2E Playwright: `e2e/helpers/mock_bff_painel_auth.ts`, `NEXT_PUBLIC_API_URL=/api-backend` no `playwright.config.ts`; ver `frontend/.env.local.example` e `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
 
 ---
 
@@ -33,7 +33,7 @@
 
 ### 1.2 UI e cliente
 
-- [x] **1.2.1** `frontend/app/login/page.tsx` — login via `/api/auth/login`, não `/auth/login` directo ao backend
+- [x] **1.2.1** `frontend/app/login/page.tsx` — login via `/api/auth/login`, não `/auth/login` directo ao backend; **`frontend/app/cadastro/page.tsx`** via `/api/auth/cadastro`
 - [x] **1.2.2** Helper ou padrão para chamadas autenticadas do painel **sem** depender de `localStorage` para o token (proxy server-side quando possível)
 - [x] **1.2.3** Reduzir ou eliminar uso de `ADMIN_TOKEN_STORAGE_KEY`; documentar fluxo legado se mantiver compatibilidade temporária
 
@@ -50,7 +50,7 @@
 
 **Critérios de aceite (checklist final Fase 1):**
 
-- [x] **A1** JWT **não** persistido em `localStorage` no fluxo novo de login
+- [x] **A1** JWT **não** persistido em `localStorage` nos fluxos novos de **login** e **cadastro**
 - [x] **A2** Dashboard continua acessível após login
 - [x] **A3** Logout remove sessão
 - [x] **A4** `make lint` / `npm run lint` relevantes ao âmbito — verde

@@ -3,10 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  getApiUrlForFetch,
-  persistPainelSessionLocal,
-} from "@/lib/api/config";
+import { persistPainelSessionMetadataOnly } from "@/lib/api/config";
 import { QDI_AUTH_CHANGED_EVENT } from "@/lib/auth/auth_events";
 import { mensagemErroHttp } from "@/lib/api/http_errors";
 import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie";
@@ -31,10 +28,11 @@ function CadastroPageContent() {
     setLoading(true);
 
     try {
-      const base = getApiUrlForFetch().replace(/\/$/, "");
-      const res = await fetch(`${base}/auth/cadastro`, {
+      /** BFF: JWT em cookie httpOnly — ver `app/api/auth/cadastro/route.ts`. */
+      const res = await fetch("/api/auth/cadastro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ nome: nome.trim(), email: email.trim(), password }),
       });
 
@@ -43,24 +41,22 @@ function CadastroPageContent() {
         throw new Error(mensagemErroHttp(res.status, raw));
       }
 
-      let data: { access_token?: string; nome?: string | null; perfil_conta?: string };
+      let data: { ok?: boolean; nome?: string | null; perfil_conta?: string; email?: string };
       try {
-        data = JSON.parse(raw) as { access_token?: string; nome?: string | null; perfil_conta?: string };
+        data = JSON.parse(raw) as { ok?: boolean; nome?: string | null; perfil_conta?: string; email?: string };
       } catch {
         throw new Error(mensagemErroHttp(res.status, raw));
       }
-      if (!data.access_token || typeof data.access_token !== "string") {
-        throw new Error("Resposta sem token. Confira a versão da API.");
+      if (!data.ok) {
+        throw new Error("Resposta de cadastro inválida. Confira a versão do BFF.");
       }
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
           ? data.perfil_conta
           : "gratuito";
-      // ADR-020: grava o JWT MVP com validade local derivada do claim `exp`.
-      persistPainelSessionLocal({
-        token: data.access_token,
+      persistPainelSessionMetadataOnly({
         nome: data.nome || nome.trim() || "Consultor",
-        email: email.trim(),
+        email: (data.email ?? email).trim(),
         perfilConta: perfil,
       });
       window.dispatchEvent(new Event(QDI_AUTH_CHANGED_EVENT));
@@ -135,7 +131,8 @@ function CadastroPageContent() {
               </Link>
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed border-t pt-4">
-              MVP: sessão no navegador (localStorage). Em produção o cadastro pode ser desligado na API
+              Sessão do painel: JWT em cookie httpOnly (`qdi_painel_access`) via BFF; metadados de UX em
+              `localStorage` (sem token). Em produção o cadastro pode ser desligado na API
               (`QDI_CADASTRO_CONSULTOR_B2B_HABILITADO=false`).
             </p>
           </form>

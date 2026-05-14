@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+
 /**
  * ADR-012 §4 — smoke do painel: solicitação portabilidade deferida → GET export mockado → mensagem de sucesso.
  * Sem API real (mesmo padrão de `dashboard-list.spec.ts`).
@@ -15,20 +17,9 @@ const PDF_MINIMO = Buffer.from(
 );
 
 async function mockPainelPrivacidadeApi(page: Page): Promise<void> {
-  await page.route("**/auth/login", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        access_token: "e2e-privacidade-token",
-        nome: "Consultor LGPD E2E",
-        perfil_conta: "gratuito",
-      }),
-    });
+  await installMockBffPainelLogin(page, {
+    tokenParaUpstream: "e2e-privacidade-token",
+    nome: "Consultor LGPD E2E",
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {

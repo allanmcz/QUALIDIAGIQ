@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
+import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+
 /** Smoke handoff P3 — grelha empresa + expandir (API mockada; sem backend real). */
 const DIAG_ID = "22222222-2222-4222-a222-222222222222";
 const CNPJ14 = "12345678000195";
@@ -59,20 +61,9 @@ const detalheBody = {
  * solicitações LGPD (lista vazia — card «Nenhuma solicitação…»).
  */
 async function installPainelEmpresaApiMocks(page: Page): Promise<void> {
-  await page.route("**/auth/login", async (route) => {
-    if (route.request().method() !== "POST") {
-      await route.continue();
-      return;
-    }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        access_token: "e2e-empresa-token",
-        nome: "Consultor QA",
-        perfil_conta: "gratuito",
-      }),
-    });
+  await installMockBffPainelLogin(page, {
+    tokenParaUpstream: "e2e-empresa-token",
+    nome: "Consultor QA",
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {

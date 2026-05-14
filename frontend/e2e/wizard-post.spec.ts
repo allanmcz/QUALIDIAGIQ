@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+
 /**
  * N3 — intercepta chamadas à API (sem Docker obrigatório).
  * Falha se o front alterar paths ou deixar de enviar POST /diagnosticos/.
@@ -8,105 +10,91 @@ const PID_TERNARIA = "cafe0001-0001-4001-8001-000000000001";
 const PID_ESCALA = "cafe0002-0002-4002-8002-000000000002";
 
 test.describe("Wizard envia diagnóstico (mock API)", () => {
-  test("login, wizard e POST com Bearer + Idempotency-Key", async ({ page }) => {
-    test.setTimeout(60_000);
-    const headersCapturados: { authorization?: string; idempotency?: string } = {};
+  test("login, wizard e POST com cookie BFF ou Bearer + Idempotency-Key", async ({ page }) => {
+    test.setTimeout(90_000);
+    const headersCapturados: { authorization?: string; idempotency?: string; cookie?: string } = {};
 
-    await page.route("**/auth/login", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          access_token: "e2e-token-playwright",
-          nome: "Usuário E2E",
-          perfil_conta: "gratuito",
-        }),
-      });
+    await installMockBffPainelLogin(page, {
+      tokenParaUpstream: "e2e-token-playwright",
+      nome: "Usuário E2E",
     });
 
     let postJson = "";
 
-    /** Rotas mais específicas devem ser registradas por último (Playwright avalia da última para a primeira). */
-    await page.route("**/diagnosticos**", async (route) => {
+    /** Um único handler evita cadeias `fallback()` entre globs e predicados (Playwright). */
+    await page.route((url) => url.pathname.includes("/diagnosticos"), async (route) => {
       const u = route.request().url();
-      if (
-        route.request().method() !== "POST" ||
-        u.includes("questionario") ||
-        u.includes("metodologia")
-      ) {
-        await route.continue();
-        return;
-      }
-      const h = route.request().headers();
-      headersCapturados.authorization = h["authorization"] ?? h["Authorization"];
-      headersCapturados.idempotency = h["idempotency-key"] ?? h["Idempotency-Key"];
-      postJson = route.request().postData() || "";
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        body: JSON.stringify({
-          id: "deadbeef-dead-dead-dead-deadbeefdead",
-          status: "finalizado",
-          plano: "gratuito",
-          empresa_razao_social: "Empresa E2E LTDA",
-          score: {
-            score_geral: { valor: 80, peso_total_aplicado: 1 },
-            score_por_dimensao: {
-              fiscal: { valor: 80, peso_total_aplicado: 1 },
-            },
-          },
-          relatorio_pdf_url: null,
-          recomendacao_ia: null,
-          checklist: [],
-          matriz_impacto: [],
-          cronograma: [],
-          hash_evidencia: null,
-          versao_otimista: null,
-        }),
-      });
-    });
+      const method = route.request().method();
 
-    await page.route("**/diagnosticos/questionario*", async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.continue();
+      if (method === "GET" && u.includes("questionario")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            versao_catalogo: "e2e-mock",
+            total: 2,
+            perguntas: [
+              {
+                id: PID_TERNARIA,
+                codigo: "Q-E2E-T",
+                texto: "Pergunta ternária E2E",
+                tipo: "ternaria",
+                peso: 1,
+                dimensao: "fiscal",
+                base_legal: null,
+                multipla_total: null,
+                opcoes: null,
+              },
+              {
+                id: PID_ESCALA,
+                codigo: "Q-E2E-E",
+                texto: "Pergunta escala E2E",
+                tipo: "escala_1_5",
+                peso: 1,
+                dimensao: "fiscal",
+                base_legal: null,
+                multipla_total: null,
+                opcoes: null,
+              },
+            ],
+          }),
+        });
         return;
       }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          versao_catalogo: "e2e-mock",
-          total: 2,
-          perguntas: [
-            {
-              id: PID_TERNARIA,
-              codigo: "Q-E2E-T",
-              texto: "Pergunta ternária E2E",
-              tipo: "ternaria",
-              peso: 1,
-              dimensao: "fiscal",
-              base_legal: null,
-              multipla_total: null,
-              opcoes: null,
+
+      if (method === "POST" && !u.includes("questionario") && !u.includes("metodologia")) {
+        const h = route.request().headers();
+        headersCapturados.authorization = h["authorization"] ?? h["Authorization"];
+        headersCapturados.idempotency = h["idempotency-key"] ?? h["Idempotency-Key"];
+        headersCapturados.cookie = h["cookie"] ?? h["Cookie"];
+        postJson = route.request().postData() || "";
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: "deadbeef-dead-dead-dead-deadbeefdead",
+            status: "finalizado",
+            plano: "gratuito",
+            empresa_razao_social: "Empresa E2E LTDA",
+            score: {
+              score_geral: { valor: 80, peso_total_aplicado: 1 },
+              score_por_dimensao: {
+                fiscal: { valor: 80, peso_total_aplicado: 1 },
+              },
             },
-            {
-              id: PID_ESCALA,
-              codigo: "Q-E2E-E",
-              texto: "Pergunta escala E2E",
-              tipo: "escala_1_5",
-              peso: 1,
-              dimensao: "fiscal",
-              base_legal: null,
-              multipla_total: null,
-              opcoes: null,
-            },
-          ],
-        }),
-      });
+            relatorio_pdf_url: null,
+            recomendacao_ia: null,
+            checklist: [],
+            matriz_impacto: [],
+            cronograma: [],
+            hash_evidencia: null,
+            versao_otimista: null,
+          }),
+        });
+        return;
+      }
+
+      await route.continue();
     });
 
     await page.goto("/login");
@@ -115,8 +103,24 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
     await page.getByRole("button", { name: /Entrar no Dashboard/i }).click();
     await page.waitForURL("**/dashboard**", { timeout: 15_000 });
 
+    await page.evaluate(() => {
+      try {
+        window.localStorage.removeItem("qdi_wizard_draft_v1");
+        window.localStorage.removeItem("qdi_pending_post_diagnostico_v1");
+        window.localStorage.removeItem("qdi_rascunho_resgate_token_v1");
+      } catch {
+        /* ignore */
+      }
+    });
+
     await page.goto("/wizard");
 
+    const dialogoRetoma = page.getByRole("dialog", { name: /Diagnóstico em andamento neste navegador/i });
+    if (await dialogoRetoma.isVisible().catch(() => false)) {
+      await dialogoRetoma.getByRole("button", { name: /Reiniciar diagnóstico/i }).click();
+    }
+
+    await expect(page.locator("#cnpj")).toBeVisible();
     await page.locator("#cnpj").fill("12345678000195");
     await page.locator("#razao_social").fill("Empresa E2E LTDA");
     await page.locator("#nome").fill("Tester");
@@ -145,7 +149,12 @@ test.describe("Wizard envia diagnóstico (mock API)", () => {
 
     await page.waitForURL("**/sucesso**", { timeout: 15_000 });
 
-    expect(headersCapturados.authorization || "").toContain("Bearer e2e-token-playwright");
+    const auth = headersCapturados.authorization || "";
+    const cookie = headersCapturados.cookie || "";
+    expect(
+      auth.includes("Bearer e2e-token-playwright") ||
+        cookie.includes("qdi_painel_access=e2e-token-playwright"),
+    ).toBe(true);
     expect(headersCapturados.idempotency || "").toMatch(/[0-9a-f-]{36}/i);
     expect(postJson).toContain(PID_TERNARIA);
     expect(postJson).toContain(PID_ESCALA);

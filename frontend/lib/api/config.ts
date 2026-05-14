@@ -1,3 +1,5 @@
+import { isPainelSessionFlagCookiePresent } from "@/lib/auth/session_cookie";
+
 /**
  * URL base da API QualiDiagIQ (rotas `/diagnosticos/...`, etc.).
  *
@@ -126,6 +128,7 @@ type PainelSessionStorageInput = {
   perfilConta: "gratuito" | "avancado";
 };
 
+/** Fluxo legado (JWT em `localStorage`); preferir BFF `/api/auth/login` e `/api/auth/cadastro` + `persistPainelSessionMetadataOnly`. */
 export function persistPainelSessionLocal(input: PainelSessionStorageInput): void {
   if (typeof window === "undefined") return;
   const expiresAt = jwtExpiresAtMs(input.token);
@@ -161,13 +164,14 @@ export function getAccessToken(): string | null {
  * O painel pode chamar a API com Bearer em `localStorage` (legado) **ou** só com cookie httpOnly
  * (`qdi_painel_access`), porque o proxy `/api-backend` injeta `Authorization` quando o header falta.
  *
- * Usamos `admin_perfil_conta` como indicador de login BFF (gravado por `persistPainelSessionMetadataOnly`;
- * o wizard não grava esta chave).
+ * Indicadores no cliente: JWT legado, metadados gravados pelo BFF (`admin_perfil_conta`) ou flag
+ * `qdi_admin_session=1` (definida após login/cadastro BFF).
  */
 export function temSessaoPainelParaApiCliente(): boolean {
   if (typeof window === "undefined") return false;
   if (getAccessToken()) return true;
-  return Boolean(window.localStorage.getItem(ADMIN_PERFIL_CONTA_STORAGE_KEY));
+  if (window.localStorage.getItem(ADMIN_PERFIL_CONTA_STORAGE_KEY)) return true;
+  return isPainelSessionFlagCookiePresent();
 }
 
 /**

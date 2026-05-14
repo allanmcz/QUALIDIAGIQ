@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
  * M1 — acessibilidade incremental: apenas violações `critical` em páginas críticas.
  * Não substitui auditoria manual; expandir regras gradualmente.
  */
-/** `/dashboard` exige JWT — páginas públicas + login cobrem o gate incremental M1. */
+/** `/dashboard` exige cookie de sessão painel — páginas públicas + login/cadastro cobrem o gate incremental M1. */
 const urls = ["/", "/wizard", "/metodologia", "/login", "/cadastro"];
 
 test.describe("Acessibilidade (axe — critical apenas)", () => {

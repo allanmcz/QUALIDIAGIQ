@@ -33,6 +33,7 @@ O wizard usa **`localStorage`** para rascunho de UX (`wizard_draft`), pendente l
 ## Sessão do painel (BFF + proxy)
 
 - **Login:** `POST /api/auth/login` (Route Handler) chama a FastAPI, define cookie `qdi_painel_access` (**HttpOnly**, `SameSite=Lax`, `Secure` em produção) e devolve JSON **sem** `access_token` no corpo.
+- **Cadastro:** `POST /api/auth/cadastro` — mesma política de cookie e corpo que o login.
 - **Logout:** `POST /api/auth/logout` limpa o cookie.
 - **Sessão (UX):** `GET /api/auth/session` expõe apenas dados não sensíveis.
 - **Chamadas à API:** com `NEXT_PUBLIC_API_URL=/api-backend`, o `app/api-backend/[[...slug]]/route.ts` faz proxy same-origin; se o `fetch` não enviar `Authorization`, o servidor injeta `Bearer` a partir do cookie. Use `credentials: "include"` nos `fetch` ao proxy.

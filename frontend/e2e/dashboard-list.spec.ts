@@ -1,24 +1,15 @@
 import { test, expect } from "@playwright/test";
 
+import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+
 /**
  * Plano ANALISE §G — smoke dashboard com GET /diagnosticos/ mockado (sem API real).
  */
 test.describe("Dashboard lista (mock API)", () => {
   test("carrega cards a partir da API mockada", async ({ page }) => {
-    await page.route("**/auth/login", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          access_token: "e2e-dashboard-token",
-          nome: "Consultor QA",
-          perfil_conta: "gratuito",
-        }),
-      });
+    await installMockBffPainelLogin(page, {
+      tokenParaUpstream: "e2e-dashboard-token",
+      nome: "Consultor QA",
     });
 
     await page.route("**/diagnosticos/**", async (route) => {

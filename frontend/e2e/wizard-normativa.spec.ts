@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+
 /**
  * P8 — painel “validar âncora” no passo 3 do wizard (NEXT_PUBLIC_WIZARD_NORMATIVA).
  * CI padrão não define PLAYWRIGHT_WIZARD_NORMATIVA — suite inteira ignorada.
@@ -18,20 +20,9 @@ const enabled = process.env.PLAYWRIGHT_WIZARD_NORMATIVA === "1";
     test.setTimeout(60_000);
     let normativaHits = 0;
 
-    await page.route("**/auth/login", async (route) => {
-      if (route.request().method() !== "POST") {
-        await route.continue();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          access_token: "e2e-token-normativa",
-          nome: "Usuário E2E",
-          perfil_conta: "gratuito",
-        }),
-      });
+    await installMockBffPainelLogin(page, {
+      tokenParaUpstream: "e2e-token-normativa",
+      nome: "Usuário E2E",
     });
 
     await page.route("**/normativa/validar-ancora", async (route) => {

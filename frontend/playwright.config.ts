@@ -31,6 +31,8 @@ export default defineConfig({
         timeout: 120_000,
         env: {
           ...process.env,
+          /** Same-origin `/api-backend` + cookie BFF — alinhado a `frontend/.env.local.example`. */
+          NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "/api-backend",
           /** Sem isto, o proxy `app/api-backend/...` não alcança a API e o painel falha em E2E. */
           API_PROXY_TARGET: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:60000",
           ...(wizardNormativaE2E ? { NEXT_PUBLIC_WIZARD_NORMATIVA: "true" } : {}),
