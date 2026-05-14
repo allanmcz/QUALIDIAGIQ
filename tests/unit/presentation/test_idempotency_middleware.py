@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -201,6 +202,40 @@ def test_post_diagnostico_chaves_idempotencia_distintas_executa_duas_vezes() -> 
     assert r1.headers.get("X-Idempotent-Replay") is None
     assert r2.headers.get("X-Idempotent-Replay") is None
     assert mock_uc.execute.call_count == 2
+
+
+def test_post_diagnostico_mesma_chave_corpo_json_diferente_replay_primeira_resposta() -> None:
+    """
+    Contrato actual (LC 214/2025 — previsibilidade): a chave composta não inclui digest do corpo.
+
+    O segundo POST com a mesma Idempotency-Key devolve a resposta cacheada da primeira chamada
+    e **não** reexecuta o caso de uso, mesmo que o JSON difira.
+    """
+    mock_uc = _mock_use_case_sucesso()
+    tid = uuid.uuid4()
+    uid = uuid.uuid4()
+    idem = "33333333-3333-3333-3333-333333333333"
+    payload_alt = copy.deepcopy(_PAYLOAD_BASE)
+    payload_alt["empresa"]["razao_social"] = "Corpo Divergente SA"
+
+    app.dependency_overrides[get_realizar_diagnostico_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    headers = {
+        **cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+        "Idempotency-Key": idem,
+    }
+
+    try:
+        r1 = client.post("/diagnosticos/", json=_PAYLOAD_BASE, headers=headers)
+        r2 = client.post("/diagnosticos/", json=payload_alt, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r1.status_code == 201
+    assert r2.status_code == 201
+    assert r2.headers.get("X-Idempotent-Replay") == "true"
+    assert r2.json() == r1.json()
+    assert mock_uc.execute.call_count == 1
 
 
 def test_post_diagnostico_idempotency_key_muito_longa_400() -> None:

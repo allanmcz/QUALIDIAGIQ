@@ -7,7 +7,7 @@
 
 **Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/login` + **`/api/auth/cadastro`**, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; E2E Playwright: `e2e/helpers/mock_bff_painel_auth.ts`, `NEXT_PUBLIC_API_URL=/api-backend` no `playwright.config.ts`; ver `frontend/.env.local.example` e `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
 
-**Última actualização (Fase 2 — incremento LLM router):** 2026-05-14 — ADR-021, `llm_router.py`, `LlmServicePort` ABC, `QDI_LLM_DEFAULT_TIER`, testes unitários.
+**Última actualização (Fase 3–4 — rastreio):** 2026-05-14 — contrato idempotência/WORM consolidado no plano; teste «mesma chave, corpo diferente»; Fase 4 marcada concluída. *(Fase 2 LLM router ADR-021 e Fase 5 E2E mobile em commits anteriores.)*
 
 ---
 
@@ -112,13 +112,15 @@
 
 ## Fase 3 — Tarefa 3: integração idempotência / replay / WORM
 
-- [ ] **3.1** Identificar contrato actual (`POST /diagnosticos/`, idempotency middleware, adapter Postgres)
-- [ ] **3.2** Teste: `Idempotency-Key=A` cria diagnóstico finalizado
-- [ ] **3.3** Teste: replay com mesma `A` → idempotente, sem mutação extra
-- [ ] **3.4** Teste: mesma carga com `Idempotency-Key=B` → novo recurso ou falha previsível (conforme contrato)
-- [ ] **3.5** Teste: update indevido em campos protegidos pós-finalização → bloqueado (WORM)
-- [ ] **3.6** Teste: campos permitidos por versão otimista continuam válidos (se no contrato)
-- [ ] **3.7** Se conflito UPSERT vs WORM: correcção **mínima** no adapter — **não** enfraquecer WORM só para passar teste
+*Contrato e rastreio — testes: `tests/unit/presentation/test_idempotency_middleware.py`, `tests/integration/test_worm_postgres.py`, `tests/integration/test_idempotency_cleanup_postgres.py`, `tests/unit/infrastructure/test_postgres_idempotency_backend.py`.*
+
+- [x] **3.1** Contrato: `IdempotencyMiddleware` (`src/presentation/api/middleware/idempotency.py`) + `idempotency_*` (`postgres_backend.py`) + WORM SQL (`0006`, `0012`, `0025`); POST `/diagnosticos/` exige header
+- [x] **3.2** `Idempotency-Key` + mock UC → 201 e corpo de diagnóstico finalizado (`test_idempotency_middleware`)
+- [x] **3.3** Replay mesma chave → `X-Idempotent-Replay: true`, UC 1× (`test_post_diagnostico_replay_retorna_header_e_nao_reexecuta_use_case`)
+- [x] **3.4** Chave B distinta → nova execução (`test_post_diagnostico_chaves_idempotencia_distintas_executa_duas_vezes`); mesma chave e **corpo JSON diferente** → replay da 1.ª resposta (`test_post_diagnostico_mesma_chave_corpo_json_diferente_replay_primeira_resposta`)
+- [x] **3.5** UPDATE score pós-finalizado bloqueado (`test_worm_postgres`); aceite LGPD imutável após finalizado
+- [x] **3.6** `relatorio_pdf_url` + `versao_otimista` + M12 permitidos com `WHERE versao_otimista` (`test_worm_bloqueia_mutacao_de_evidence_pos_finalizado`)
+- [ ] **3.7** Conflito UPSERT vs WORM em evolução futura do adapter — monitorizar; não reproduzido em 2026-05-14
 
 **Ficheiros candidatos:** `tests/integration/test_worm_postgres.py`, `tests/integration/test_mvp_gate_postgres.py`, `tests/unit/presentation/test_idempotency_middleware.py`
 
@@ -128,9 +130,9 @@
 
 ## Fase 4 — Tarefa 4: harmonizar env local do frontend
 
-- [ ] **4.1** Criar ou actualizar `frontend/.env.local.example` (sem segredos) — alinhar `NEXT_PUBLIC_API_URL=/api-backend`, `API_PROXY_TARGET` (ex. `60000`), DPO público conforme prompt
-- [ ] **4.2** Actualizar `frontend/README.md` — compose, host local, proxy `/api-backend`
-- [ ] **4.3** Validar que nenhum segredo entrou em ficheiro versionado
+- [x] **4.1** `frontend/.env.local.example` — `NEXT_PUBLIC_API_URL=/api-backend`, `API_PROXY_TARGET` (60000), DPO comentado
+- [x] **4.2** `frontend/README.md` — compose, proxy `/api-backend`, E2E mocks
+- [x] **4.3** Sem segredos em ficheiros versionados de exemplo *(revisão manual em PR)*
 
 **Gate após Fase 4:** `cd frontend && npm run build` (com env de exemplo documentado, não necessariamente com `.env.local` no repo).
 
