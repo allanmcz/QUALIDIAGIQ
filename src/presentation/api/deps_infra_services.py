@@ -8,13 +8,12 @@ Extraído de ``dependencies.py`` (Onda 2 — fatia infra/serviços externos).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from dataclasses import dataclass
+from typing import Annotated
 
 import structlog
 from fastapi import Depends, HTTPException, Query, Request, status
-
-if TYPE_CHECKING:
-    from supabase import Client
+from supabase import Client  # noqa: TC002 — runtime: geração OpenAPI/Pydantic com Depends
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
@@ -38,6 +37,7 @@ from src.domain.repositories.normativa_score_macro_repository import (
     NormativaScoreMacroRepository,
 )
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
+from src.domain.value_objects.score import PesoMacroNormativoVigente
 from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNormativaAdapter
 from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
 from src.infrastructure.adapters.cnpj_provedor_externo_http import CnpjProvedorExternoHttpAdapter
@@ -121,21 +121,36 @@ def get_calcular_score_use_case(
     return CalcularScoreUseCase(normativa_repo=normativa_repo)
 
 
-def pesos_macro_dimensao_iso_para_http(
+@dataclass(frozen=True, slots=True)
+class PesosMacroPublicacaoHttp:
+    """Snapshot público: valores numéricos + metadados de vigência por dimensão (domínio)."""
+
+    valores: dict[str, float]
+    metadados_por_dimensao: dict[str, PesoMacroNormativoVigente]
+
+
+def pesos_macro_publicacao_para_http(
     normativa_repo: Annotated[
         NormativaScoreMacroRepository,
         Depends(get_normativa_score_macro_repository),
     ],
-) -> dict[str, float]:
-    """Snapshot dos pesos macro na data UTC atual — alinhado ao cálculo do POST /diagnosticos/."""
+) -> PesosMacroPublicacaoHttp:
+    """
+    Pesos macro na data UTC corrente — **mesma** resolução que o POST ``/diagnosticos/``.
+
+    Expõe vigência para auditoria (LC 214/2025; ABNT NBR 17301:2026). O router converte para schema HTTP.
+    """
     from datetime import UTC, datetime
 
     from src.domain.value_objects.score import exigir_mapa_pesos_macro_completo
 
     ref = datetime.now(UTC).date()
-    bruto = normativa_repo.obter_pesos_macro_validos_na_data(ref)
+    meta = normativa_repo.obter_metadados_macro_validos_na_data(ref)
+    bruto = {d: m.peso for d, m in meta.items()}
     exigir_mapa_pesos_macro_completo(bruto)
-    return {d.value: float(w) for d, w in bruto.items()}
+    valores = {d.value: float(w) for d, w in bruto.items()}
+    metadados_iso = {d.value: m for d, m in meta.items()}
+    return PesosMacroPublicacaoHttp(valores=valores, metadados_por_dimensao=metadados_iso)
 
 
 def get_gerar_questionario_adaptativo_use_case() -> GerarQuestionarioAdaptativoUseCase:

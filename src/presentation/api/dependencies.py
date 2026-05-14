@@ -35,7 +35,8 @@ reset_ci_playwright_diagnostico_singleton = (
 # Infra / serviços externos (normativa, score, questionário, PDF, e-mail, LLM, CNPJ/CNAE, orquestrador).
 get_normativa_score_macro_repository = _deps_infra.get_normativa_score_macro_repository
 get_calcular_score_use_case = _deps_infra.get_calcular_score_use_case
-pesos_macro_dimensao_iso_para_http = _deps_infra.pesos_macro_dimensao_iso_para_http
+pesos_macro_publicacao_para_http = _deps_infra.pesos_macro_publicacao_para_http
+PesosMacroPublicacaoHttp = _deps_infra.PesosMacroPublicacaoHttp
 get_gerar_questionario_adaptativo_use_case = _deps_infra.get_gerar_questionario_adaptativo_use_case
 perfil_empresa_para_questionario = _deps_infra.perfil_empresa_para_questionario
 get_pdf_generator = _deps_infra.get_pdf_generator

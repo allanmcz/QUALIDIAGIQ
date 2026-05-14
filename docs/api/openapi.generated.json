@@ -3782,6 +3782,14 @@
             "type": "object",
             "title": "Pesos Macro Dimensao"
           },
+          "pesos_macro_dimensao_normativa": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PesoMacroNormativaItemSchema"
+            },
+            "type": "object",
+            "title": "Pesos Macro Dimensao Normativa",
+            "description": "Mesmos pesos que `pesos_macro_dimensao`, com `vigencia_inicio` / `vigencia_fim` e rótulo da linha normativa efetiva na data do pedido (auditoria M03)."
+          },
           "perguntas": {
             "items": {
               "$ref": "#/components/schemas/ManifestoPesoPerguntaSchema"
@@ -3794,6 +3802,7 @@
         "required": [
           "versao_catalogo",
           "pesos_macro_dimensao",
+          "pesos_macro_dimensao_normativa",
           "perguntas"
         ],
         "title": "ManifestoPesosResponse",
@@ -3814,6 +3823,13 @@
             "fiscal": 1.5,
             "tecnologica": 1.3
           },
+          "pesos_macro_dimensao_normativa": {
+            "fiscal": {
+              "peso": 1.5,
+              "rotulo_versao": "baseline-m03-qdi-2026",
+              "vigencia_inicio": "2026-01-01"
+            }
+          },
           "versao_catalogo": "v1-doc-05-full-37",
           "versao_manifesto": "2026-04-30"
         }
@@ -3833,6 +3849,14 @@
             "title": "Pesos Macro Dimensao Score Geral",
             "description": "Pesos que agregam as médias por dimensão no score geral 0-100 (ver domain)."
           },
+          "pesos_macro_dimensao_normativa": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PesoMacroNormativaItemSchema"
+            },
+            "type": "object",
+            "title": "Pesos Macro Dimensao Normativa",
+            "description": "Rasto de vigência por dimensão — mesma resolução que o motor na data UTC do pedido."
+          },
           "nota_metodologica": {
             "type": "string",
             "title": "Nota Metodologica",
@@ -3851,12 +3875,20 @@
         "required": [
           "versao_normativa",
           "pesos_macro_dimensao_score_geral",
+          "pesos_macro_dimensao_normativa",
           "nota_metodologica"
         ],
         "title": "MetodologiaResponse",
         "description": "Conteúdo de GET /diagnosticos/metodologia — alinhamento do motor com transparência (M03).\n\nPúblico, sem JWT. Complementa o manifesto de pesos.",
         "example": {
           "nota_metodologica": "Índice 0 a 100 por dimensões; agregação com pesos macro; catálogo público de perguntas.",
+          "pesos_macro_dimensao_normativa": {
+            "fiscal": {
+              "peso": 1.5,
+              "rotulo_versao": "baseline-m03-qdi-2026",
+              "vigencia_inicio": "2026-01-01"
+            }
+          },
           "pesos_macro_dimensao_score_geral": {
             "estrategica": 1.0,
             "fiscal": 1.5,
@@ -3991,6 +4023,54 @@
         "type": "object",
         "title": "PatchSubtarefaPlanoDiagnosticoRequest",
         "description": "Corpo do PATCH de subtarefa — todos os campos opcionais (parcial)."
+      },
+      "PesoMacroNormativaItemSchema": {
+        "properties": {
+          "peso": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Peso",
+            "description": "Peso macro aplicado na agregação do score geral."
+          },
+          "vigencia_inicio": {
+            "type": "string",
+            "format": "date",
+            "title": "Vigencia Inicio",
+            "description": "Início da vigência da linha normativa efetiva (inclusive)."
+          },
+          "vigencia_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vigencia Fim",
+            "description": "Fim da vigência (inclusive) ou null quando vigência aberta."
+          },
+          "rotulo_versao": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotulo Versao",
+            "description": "Rótulo editorial da versão (ex.: baseline-m03-qdi-2026)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "peso",
+          "vigencia_inicio"
+        ],
+        "title": "PesoMacroNormativaItemSchema",
+        "description": "Peso macro por dimensão com vigência resolvida na data UTC do pedido (M03).\n\nLC 214/2025 art. 5º — previsibilidade; em Postgres: linha efetiva de ``normativa_score_macro_dimensao``."
       },
       "PorteEmpresa": {
         "type": "string",

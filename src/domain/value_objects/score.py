@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping  # noqa: TC003
 from dataclasses import dataclass, field
+from datetime import date
 from enum import Enum
 from typing import Any, Final
 
@@ -42,6 +43,25 @@ PESOS_MACRO_DIMENSAO_SCORE_GERAL: Final[dict[Dimensao, float]] = {
     Dimensao.FINANCEIRA: 1.0,
     Dimensao.OPERACIONAL: 1.0,
 }
+
+# Baseline editorial alinhada à migração 0015 (fallback sem Postgres — mesmo “dia 1” do seed SQL).
+VIGENCIA_INICIO_PADRAO_PESO_MACRO: Final[date] = date(2026, 1, 1)
+ROTULO_VERSAO_MACRO_EMBUTIDO: Final[str] = "domain:PESOS_MACRO_DIMENSAO_SCORE_GERAL"
+
+
+@dataclass(frozen=True, slots=True)
+class PesoMacroNormativoVigente:
+    """
+    Peso macro por dimensão com rasto de vigência (M03 — auditável).
+
+    Base normativa: LC 214/2025 (previsibilidade ao contribuinte); ABNT NBR 17301:2026
+    (transparência metodológica). Em Postgres: linha efetiva de ``qdi.normativa_score_macro_dimensao``.
+    """
+
+    peso: float
+    vigencia_inicio: date
+    vigencia_fim: date | None
+    rotulo_versao: str | None
 
 
 def pesos_macro_dimensao_para_dict_iso() -> dict[str, float]:

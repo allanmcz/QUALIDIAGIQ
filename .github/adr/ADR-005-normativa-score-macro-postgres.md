@@ -15,7 +15,7 @@ Sem persistência versionada, mudanças de metodologia exigem deploy de código 
 1. Criar a tabela `qdi.normativa_score_macro_dimensao` com vigência e uma linha por dimensão por faixa de vigência.
 2. Resolver a vigência efetiva na **data de referência** do diagnóstico com `DISTINCT ON (dimensao) ... ORDER BY vigencia_inicio DESC` (Postgres).
 3. Manter **fallback embutido** (`EmbutidasNormativaScoreMacroRepository`) quando `DATABASE_URL` não está configurada (desenvolvimento / testes sem Postgres).
-4. Endpoints públicos de metodologia/manifesto usam a **mesma** resolução que o motor (`pesos_macro_dimensao_iso_para_http`), com data UTC corrente.
+4. Endpoints públicos de metodologia/manifesto usam a **mesma** resolução que o motor (`pesos_macro_publicacao_para_http`), com data UTC corrente, incluindo **rasto** `vigencia_inicio` / `vigencia_fim` / `rotulo_versao` por dimensão no JSON (`pesos_macro_dimensao_normativa`).
 
 ## Consequências
 

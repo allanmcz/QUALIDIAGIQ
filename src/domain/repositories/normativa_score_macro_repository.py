@@ -20,16 +20,18 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from datetime import date
 
-    from src.domain.value_objects.score import Dimensao
+    from src.domain.value_objects.score import Dimensao, PesoMacroNormativoVigente
 
 
 class NormativaScoreMacroRepository(ABC):
-    """Resolve pesos macro válidos na data de referência informada."""
+    """Resolve pesos macro válidos na data de referência informada (com rasto de vigência)."""
 
     @abstractmethod
-    def obter_pesos_macro_validos_na_data(self, data_referencia: date) -> dict[Dimensao, float]:
+    def obter_metadados_macro_validos_na_data(
+        self, data_referencia: date
+    ) -> dict[Dimensao, PesoMacroNormativoVigente]:
         """
-        Retorna mapa completo dimensão → peso (> 0) vigente em `data_referencia`.
+        Retorna mapa completo dimensão → metadado (peso + vigência) vigente em `data_referencia`.
 
         Args:
             data_referencia: Data-canônica para resolver sobreposição de vigências.
@@ -38,7 +40,21 @@ class NormativaScoreMacroRepository(ABC):
             Um valor por cada membro de `Dimensao`.
 
         Raises:
-            ValueError: vigência incompleta ou dados inválidos no backend configurado.
+            ValueError: vigência incompleta, dimensão desconhecida no backend ou peso inválido.
             RuntimeError: falha de infraestrutura (ex.: conexão PostgreSQL).
         """
         ...
+
+    def obter_pesos_macro_validos_na_data(self, data_referencia: date) -> dict[Dimensao, float]:
+        """
+        Mapa dimensão → peso (> 0) — atalho usado pelo motor de score.
+
+        Implementação padrão deriva de ``obter_metadados_macro_validos_na_data`` e valida
+        completude com ``exigir_mapa_pesos_macro_completo``.
+        """
+        from src.domain.value_objects.score import exigir_mapa_pesos_macro_completo
+
+        meta = self.obter_metadados_macro_validos_na_data(data_referencia)
+        pesos = {d: m.peso for d, m in meta.items()}
+        exigir_mapa_pesos_macro_completo(pesos)
+        return pesos

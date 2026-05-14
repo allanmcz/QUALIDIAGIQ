@@ -32,6 +32,13 @@ class TestOpenApiPublicEndpointShapes:
         assert isinstance(macros, dict)
         for _k, v in macros.items():
             assert isinstance(v, (int, float))
+        normativa = data["pesos_macro_dimensao_normativa"]
+        assert isinstance(normativa, dict)
+        for _k, item in normativa.items():
+            assert isinstance(item, dict)
+            assert "peso" in item and "vigencia_inicio" in item
+            assert isinstance(item["peso"], (int, float))
+            assert isinstance(item["vigencia_inicio"], str)
         assert isinstance(data["nota_metodologica"], str)
         assert isinstance(data["recomendacoes_gaps_criticos"], list)
         assert all(isinstance(x, str) for x in data["recomendacoes_gaps_criticos"])
@@ -48,6 +55,11 @@ class TestOpenApiPublicEndpointShapes:
         assert isinstance(pmd, dict)
         for _k, v in pmd.items():
             assert isinstance(v, (int, float))
+        pmd_norm = body["pesos_macro_dimensao_normativa"]
+        assert isinstance(pmd_norm, dict)
+        for _k, item in pmd_norm.items():
+            assert isinstance(item, dict)
+            assert "peso" in item and "vigencia_inicio" in item
         perguntas = body["perguntas"]
         assert isinstance(perguntas, list)
         assert len(perguntas) >= 1

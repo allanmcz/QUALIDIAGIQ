@@ -4,9 +4,17 @@
 
 import { getApiUrlForFetch } from "./config";
 
+export type PesoMacroNormativaItemPublic = {
+  peso: number;
+  vigencia_inicio: string;
+  vigencia_fim: string | null;
+  rotulo_versao: string | null;
+};
+
 export type MetodologiaPublic = {
   versao_normativa: string;
   pesos_macro_dimensao_score_geral: Record<string, number>;
+  pesos_macro_dimensao_normativa: Record<string, PesoMacroNormativaItemPublic>;
   nota_metodologica: string;
   recomendacoes_gaps_criticos: string[];
 };
@@ -25,6 +33,7 @@ export type ManifestoPesosPublic = {
   formula_score_geral: string;
   nota_calibracao_m02: string;
   pesos_macro_dimensao: Record<string, number>;
+  pesos_macro_dimensao_normativa: Record<string, PesoMacroNormativaItemPublic>;
   perguntas: ManifestoPesoPerguntaPublic[];
 };
 

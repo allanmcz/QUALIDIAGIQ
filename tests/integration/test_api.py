@@ -33,6 +33,9 @@ async def test_metodologia_endpoint(async_client):
     macros = data["pesos_macro_dimensao_score_geral"]
     assert macros["fiscal"] == 1.5
     assert macros["tecnologica"] == 1.3
+    norm = data["pesos_macro_dimensao_normativa"]["fiscal"]
+    assert norm["vigencia_inicio"] == "2026-01-01"
+    assert norm["rotulo_versao"] == "domain:PESOS_MACRO_DIMENSAO_SCORE_GERAL"
 
 
 @pytest.mark.asyncio
@@ -44,6 +47,9 @@ async def test_manifesto_pesos_publico(async_client):
     assert body["versao_catalogo"]
     assert len(body["perguntas"]) >= 1
     assert body["pesos_macro_dimensao"]["fiscal"] == 1.5
+    assert body["pesos_macro_dimensao_normativa"]["fiscal"]["rotulo_versao"] == (
+        "domain:PESOS_MACRO_DIMENSAO_SCORE_GERAL"
+    )
     assert body["perguntas"][0]["codigo"]
     nota_cal = body.get("nota_calibracao_m02", "")
     assert "determinística" in nota_cal

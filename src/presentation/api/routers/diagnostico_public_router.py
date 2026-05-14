@@ -15,24 +15,42 @@ from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
 from src.domain.entities.diagnostico import EmpresaInfo
+from src.domain.value_objects.score import PesoMacroNormativoVigente
 from src.infrastructure.questionario.banco_cache import (
     get_banco_perguntas_cached,
     versao_catalogo_lida,
 )
 from src.presentation.api.dependencies import (
+    PesosMacroPublicacaoHttp,
     get_gerar_questionario_adaptativo_use_case,
     perfil_empresa_para_questionario,
-    pesos_macro_dimensao_iso_para_http,
+    pesos_macro_publicacao_para_http,
 )
 from src.presentation.api.schemas import (
     ManifestoPesoPerguntaSchema,
     ManifestoPesosResponse,
     MetodologiaResponse,
+    PesoMacroNormativaItemSchema,
     QuestionarioDisponivelResponse,
     QuestionarioPerguntaItemSchema,
 )
 
 router = APIRouter()
+
+
+def _pesos_macro_normativa_para_schema(
+    metadados: dict[str, PesoMacroNormativoVigente],
+) -> dict[str, PesoMacroNormativaItemSchema]:
+    """Converte value objects de domínio em DTOs HTTP (evita import cruzado deps → schemas)."""
+    return {
+        k: PesoMacroNormativaItemSchema(
+            peso=float(v.peso),
+            vigencia_inicio=v.vigencia_inicio,
+            vigencia_fim=v.vigencia_fim,
+            rotulo_versao=v.rotulo_versao,
+        )
+        for k, v in metadados.items()
+    }
 
 
 @router.get(
@@ -46,12 +64,15 @@ router = APIRouter()
     ),
 )
 async def obter_metodologia(
-    pesos_macro_iso: Annotated[dict[str, float], Depends(pesos_macro_dimensao_iso_para_http)],
+    macro_pub: Annotated[PesosMacroPublicacaoHttp, Depends(pesos_macro_publicacao_para_http)],
 ) -> MetodologiaResponse:
     """Retorna os pesos macro e a metodologia do motor de cálculo (transparência M03)."""
     return MetodologiaResponse(
         versao_normativa="ABNT NBR 17301:2026",
-        pesos_macro_dimensao_score_geral=pesos_macro_iso,
+        pesos_macro_dimensao_score_geral=macro_pub.valores,
+        pesos_macro_dimensao_normativa=_pesos_macro_normativa_para_schema(
+            macro_pub.metadados_por_dimensao
+        ),
         nota_metodologica=(
             "O QualiDiagIQ produz um índice único de 0 a 100 — maturidade tributária frente à Reforma "
             "do Consumo (EC 132/2023, LC 214/2025), com âncora metodológica na ABNT NBR 17301:2026. "
@@ -84,7 +105,7 @@ async def obter_metodologia(
     ),
 )
 async def obter_manifesto_pesos(
-    pesos_macro_iso: Annotated[dict[str, float], Depends(pesos_macro_dimensao_iso_para_http)],
+    macro_pub: Annotated[PesosMacroPublicacaoHttp, Depends(pesos_macro_publicacao_para_http)],
 ) -> ManifestoPesosResponse:
     """
     Manifesto público de pesos (M03) — catálogo completo + macrodimensões do score geral.
@@ -105,7 +126,10 @@ async def obter_manifesto_pesos(
     ]
     return ManifestoPesosResponse(
         versao_catalogo=versao_catalogo_lida(),
-        pesos_macro_dimensao=pesos_macro_iso,
+        pesos_macro_dimensao=macro_pub.valores,
+        pesos_macro_dimensao_normativa=_pesos_macro_normativa_para_schema(
+            macro_pub.metadados_por_dimensao
+        ),
         perguntas=itens,
     )
 

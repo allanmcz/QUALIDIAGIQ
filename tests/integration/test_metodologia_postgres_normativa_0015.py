@@ -74,8 +74,15 @@ async def test_metodologia_manifesto_pesos_macros_coerentes_com_seed_0015(
     for k, v in SEED_MACRO_0015.items():
         assert pytest.approx(float(macros[k]), rel=0, abs=0.001) == v
 
+    norm = body["pesos_macro_dimensao_normativa"]["fiscal"]
+    assert norm["vigencia_inicio"] == "2026-01-01"
+    assert norm["rotulo_versao"] == "baseline-m03-qdi-2026"
+    assert norm["vigencia_fim"] is None
+
     r2 = await async_client.get("/diagnosticos/manifesto-pesos")
     assert r2.status_code == 200
     man = r2.json()["pesos_macro_dimensao"]
     for k, v in SEED_MACRO_0015.items():
         assert pytest.approx(float(man[k]), rel=0, abs=0.001) == v
+    man_norm = r2.json()["pesos_macro_dimensao_normativa"]["fiscal"]
+    assert man_norm["vigencia_inicio"] == "2026-01-01"

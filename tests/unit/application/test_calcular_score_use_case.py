@@ -6,7 +6,7 @@ import pytest
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.domain.entities.questionario import Pergunta, Resposta, TipoPergunta
 from src.domain.repositories.normativa_score_macro_repository import NormativaScoreMacroRepository
-from src.domain.value_objects.score import Dimensao
+from src.domain.value_objects.score import Dimensao, PesoMacroNormativoVigente
 from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
     EmbutidasNormativaScoreMacroRepository,
 )
@@ -39,9 +39,18 @@ def perguntas_mock():
 
 
 class _RepoMacroIncompleto(NormativaScoreMacroRepository):
-    def obter_pesos_macro_validos_na_data(self, data_referencia: date) -> dict[Dimensao, float]:
+    def obter_metadados_macro_validos_na_data(
+        self, data_referencia: date
+    ) -> dict[Dimensao, PesoMacroNormativoVigente]:
         _ = data_referencia
-        return {Dimensao.FISCAL: 1.5}
+        return {
+            Dimensao.FISCAL: PesoMacroNormativoVigente(
+                peso=1.5,
+                vigencia_inicio=date(2026, 1, 1),
+                vigencia_fim=None,
+                rotulo_versao="stub-incompleto",
+            )
+        }
 
 
 class TestCalcularScoreUseCase:

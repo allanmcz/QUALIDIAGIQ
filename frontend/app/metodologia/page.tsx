@@ -9,6 +9,7 @@ import {
   fetchMetodologiaPublic,
   type ManifestoPesosPublic,
   type MetodologiaPublic,
+  type PesoMacroNormativaItemPublic,
 } from "@/lib/api/metodologia_public";
 
 /** Itens por página na tabela do catálogo (evita ~30 linhas de uma vez só). */
@@ -47,6 +48,48 @@ function TabelaPesosMacro({ titulo, pesos }: { titulo: string; pesos: Record<str
               <tr key={dim} className="border-t">
                 <td className="p-3 text-sm">{rotuloDimensao(dim)}</td>
                 <td className="p-3 text-right tabular-nums">{peso}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TabelaPesosMacroVigencia({
+  titulo,
+  normativa,
+}: {
+  titulo: string;
+  normativa: Record<string, PesoMacroNormativaItemPublic>;
+}) {
+  const linhas = Object.entries(normativa).sort(([a], [b]) => a.localeCompare(b));
+  return (
+    <div className="space-y-2">
+      <h3 className="text-lg font-semibold">{titulo}</h3>
+      <p className="text-xs text-muted-foreground">
+        LC 214/2025 (previsibilidade) — linha normativa efetiva na data do pedido à API (UTC).
+      </p>
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="text-left p-3 font-medium">Dimensão</th>
+              <th className="text-right p-3 font-medium">Peso</th>
+              <th className="text-left p-3 font-medium">Início vigência</th>
+              <th className="text-left p-3 font-medium">Fim vigência</th>
+              <th className="text-left p-3 font-medium">Rótulo versão</th>
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map(([dim, row]) => (
+              <tr key={dim} className="border-t">
+                <td className="p-3 text-sm">{rotuloDimensao(dim)}</td>
+                <td className="p-3 text-right tabular-nums">{row.peso}</td>
+                <td className="p-3 text-xs tabular-nums whitespace-nowrap">{row.vigencia_inicio}</td>
+                <td className="p-3 text-xs tabular-nums whitespace-nowrap">{row.vigencia_fim ?? "—"}</td>
+                <td className="p-3 text-xs text-muted-foreground">{row.rotulo_versao ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -173,6 +216,10 @@ export default function MetodologiaPage() {
             titulo="Importância relativa de cada dimensão no índice final (0 a 100)"
             pesos={meta.pesos_macro_dimensao_score_geral}
           />
+          <TabelaPesosMacroVigencia
+            titulo="Vigência da normativa macro (rasto auditável)"
+            normativa={meta.pesos_macro_dimensao_normativa}
+          />
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">Leitura executiva do modelo</h3>
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{meta.nota_metodologica}</p>
@@ -214,6 +261,10 @@ export default function MetodologiaPage() {
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{manifesto.nota_calibracao_m02}</p>
           </div>
           <TabelaPesosMacro titulo="Pesos por dimensão (detalhamento)" pesos={manifesto.pesos_macro_dimensao} />
+          <TabelaPesosMacroVigencia
+            titulo="Vigência aplicada aos pesos macro (mesmo critério da API)"
+            normativa={manifesto.pesos_macro_dimensao_normativa}
+          />
           <div className="space-y-3">
             <h3 className="text-lg font-semibold">
               Catálogo completo ({manifesto.perguntas.length}{" "}

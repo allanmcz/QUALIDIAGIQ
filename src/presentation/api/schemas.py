@@ -578,6 +578,28 @@ class QuestionarioDisponivelResponse(BaseModel):
     perguntas: list[QuestionarioPerguntaItemSchema]
 
 
+class PesoMacroNormativaItemSchema(BaseModel):
+    """
+    Peso macro por dimensão com vigência resolvida na data UTC do pedido (M03).
+
+    LC 214/2025 art. 5º — previsibilidade; em Postgres: linha efetiva de ``normativa_score_macro_dimensao``.
+    """
+
+    peso: float = Field(..., gt=0, description="Peso macro aplicado na agregação do score geral.")
+    vigencia_inicio: date = Field(
+        ...,
+        description="Início da vigência da linha normativa efetiva (inclusive).",
+    )
+    vigencia_fim: date | None = Field(
+        default=None,
+        description="Fim da vigência (inclusive) ou null quando vigência aberta.",
+    )
+    rotulo_versao: str | None = Field(
+        default=None,
+        description="Rótulo editorial da versão (ex.: baseline-m03-qdi-2026).",
+    )
+
+
 class ManifestoPesoPerguntaSchema(BaseModel):
     """Um item do catálogo com peso explícito (transparência M03)."""
 
@@ -617,6 +639,14 @@ class ManifestoPesosResponse(BaseModel):
                     "Pesos e faixas determinísticos; versão do manifesto identifica o critério aplicado."
                 ),
                 "pesos_macro_dimensao": {"fiscal": 1.5, "tecnologica": 1.3},
+                "pesos_macro_dimensao_normativa": {
+                    "fiscal": {
+                        "peso": 1.5,
+                        "vigencia_inicio": "2026-01-01",
+                        "vigencia_fim": None,
+                        "rotulo_versao": "baseline-m03-qdi-2026",
+                    },
+                },
                 "perguntas": [
                     {
                         "codigo": "Q-EST-001",
@@ -646,6 +676,13 @@ class ManifestoPesosResponse(BaseModel):
         "organização sabe exatamente qual critério fundamentou o relatório recebido."
     )
     pesos_macro_dimensao: dict[str, float]
+    pesos_macro_dimensao_normativa: dict[str, PesoMacroNormativaItemSchema] = Field(
+        ...,
+        description=(
+            "Mesmos pesos que `pesos_macro_dimensao`, com `vigencia_inicio` / `vigencia_fim` e rótulo "
+            "da linha normativa efetiva na data do pedido (auditoria M03)."
+        ),
+    )
     perguntas: list[ManifestoPesoPerguntaSchema]
 
 
@@ -665,6 +702,14 @@ class MetodologiaResponse(BaseModel):
                     "estrategica": 1.0,
                     "tecnologica": 1.3,
                 },
+                "pesos_macro_dimensao_normativa": {
+                    "fiscal": {
+                        "peso": 1.5,
+                        "vigencia_inicio": "2026-01-01",
+                        "vigencia_fim": None,
+                        "rotulo_versao": "baseline-m03-qdi-2026",
+                    },
+                },
                 "nota_metodologica": (
                     "Índice 0 a 100 por dimensões; agregação com pesos macro; catálogo público de perguntas."
                 ),
@@ -682,6 +727,10 @@ class MetodologiaResponse(BaseModel):
     pesos_macro_dimensao_score_geral: dict[str, float] = Field(
         ...,
         description="Pesos que agregam as médias por dimensão no score geral 0-100 (ver domain).",
+    )
+    pesos_macro_dimensao_normativa: dict[str, PesoMacroNormativaItemSchema] = Field(
+        ...,
+        description="Rasto de vigência por dimensão — mesma resolução que o motor na data UTC do pedido.",
     )
     nota_metodologica: str = Field(
         ...,

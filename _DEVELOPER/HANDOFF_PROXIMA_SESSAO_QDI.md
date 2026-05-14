@@ -217,7 +217,7 @@ PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e   # só se já houver app no PLAYWR
 - **P5 + M04:** Homologação PDF + paginação/impressão; ajustes técnicos Ciclo Q registados em `PDF_HOMOLOGACAO_CHECKLIST_B1.md`.  
 - **P6:** OTEL prod; OpenAPI **P1 feito**; RLS prod pendente — **gap analysis:** `_DEVELOPER/analises/GAP_ANALYSIS_RLS_P6_2026-05-02.md` (G2 fechado: **`make verify-schema-mvp-strict`** + SQL MVP).  
 - **CNAE:** migrações **`0013`/`0014`** + `init.sql`; ambientes já criados: rodar **`make migrate`**.  
-- Versionamento normativo DB (`vigencia_*`) nas regras de score — não implementado (CNAE já tem vigência nas tabelas de referência).  
+- **Pesos macro (agregação score geral):** vigência **`vigencia_inicio` / `vigencia_fim`** em **`qdi.normativa_score_macro_dimensao`** (0015); API pública **`pesos_macro_dimensao_normativa`** em **`GET /diagnosticos/metodologia`** e **`GET /diagnosticos/manifesto-pesos`**; port **`obter_metadados_macro_validos_na_data`** + VO **`PesoMacroNormativoVigente`** (2026-05-13). **Pesos por pergunta** seguem no JSON do catálogo — tabela versionada por pergunta = roadmap.  
 - **Bases antigas:** garantir migrações até **`0012`** mínimo; para CNAE, até **`0014`**.
 
 ---
