@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-import { getDpoPublicContact, getPoliticaPublicMeta } from "@/lib/legal/dpoPublic";
+import {
+  getDpoPublicContact,
+  getPoliticaPublicMeta,
+  getRetencaoResumoPublicacao,
+} from "@/lib/legal/dpoPublic";
 import { LGPD_PRAZO_RESPOSTA_ART18_DIAS_UTEIS } from "@/lib/legal/lgpdOperacao";
 
 export const metadata = {
@@ -10,6 +14,7 @@ export const metadata = {
 export default function PrivacidadePage() {
   const dpo = getDpoPublicContact();
   const politicaMeta = getPoliticaPublicMeta();
+  const retencaoResumo = getRetencaoResumoPublicacao();
 
   return (
     <div className="container max-w-3xl py-12 space-y-6">
@@ -58,6 +63,24 @@ export default function PrivacidadePage() {
           </p>
         )}
       </section>
+
+      {retencaoResumo ? (
+        <section
+          id="retencao-resumo-controlador"
+          className="scroll-mt-24 rounded-md border border-primary/15 bg-primary/5 px-4 py-3 text-sm leading-relaxed"
+          aria-labelledby="retencao-resumo-heading"
+        >
+          <h2 id="retencao-resumo-heading" className="text-base font-semibold tracking-tight">
+            Retenção — resumo publicado pelo controlador
+          </h2>
+          <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{retencaoResumo}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Texto injetado em build via{" "}
+            <code className="rounded bg-muted px-1">NEXT_PUBLIC_LGPD_RETENCAO_RESUMO</code> (decisão pós-workshop LGPD
+            / ADR-012). Ajuste no host quando a política de retenção for actualizada.
+          </p>
+        </section>
+      ) : null}
 
       <section
         id="retencao-telefone"

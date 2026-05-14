@@ -76,6 +76,10 @@ _STR_PT_BR: dict[str, str] = {
     "ai_box_disclaimer": (
         "Texto complementar — validar sempre com base legal versionada (Lexiq) e parecer profissional."
     ),
+    "ai_box_guardrail_note": (
+        "Conteúdo acima sujeito ao gate Lexiq (RAG-light + âncoras normativas reconhecíveis) antes da "
+        "inclusão no PDF — princípio Tributiq: sem evidência citável, a recomendação não é publicada."
+    ),
     "schedule_title": "Cronograma em cinco horizontes (transição LC 214/2025)",
     "schedule_intro": (
         "Referência temporal para governança e projetos — alinhado ao pipeline de implantação CBS/IBS."
@@ -169,6 +173,10 @@ _STR_EN: dict[str, str] = {
     "ai_box_title": "AI-assisted advisory",
     "ai_box_disclaimer": (
         "Complementary text — always validate against versioned legal sources (Lexiq) and professional judgment."
+    ),
+    "ai_box_guardrail_note": (
+        "The content above is subject to the Lexiq gate (RAG-light + recognizable normative anchors) before "
+        "inclusion in this PDF — Tributiq principle: without citable evidence, the recommendation is not published."
     ),
     "schedule_title": "Five-horizon roadmap (LC 214/2025 transition)",
     "schedule_intro": "Timeline reference for governance and CBS/IBS deployment.",

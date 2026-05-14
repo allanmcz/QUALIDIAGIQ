@@ -8,7 +8,7 @@ PIP := $(VENV)/bin/pip
 UV := $(shell command -v uv 2>/dev/null || echo $(VENV)/bin/uv)
 
 help: ## Mostra esta ajuda
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_][a-zA-Z0-9._-]*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 install: ## Cria .venv e instala dependências
 	$(PYTHON) -m venv $(VENV)

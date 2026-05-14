@@ -112,8 +112,11 @@ const nextConfig = {
 };
 
 /**
- * PWA B2 (Workbox) — ADR-011: sem SW em `CI=true` (Playwright/build Actions) para evitar flakiness;
- * builds locais `npm run build && npm start` geram `sw.js` com exclusões de API.
+ * PWA B2 (Workbox) — ADR-011 Onda 1: SW em produção com exclusões estritas.
+ * - Sem SW em `development` ou `CI=true` (Playwright / Actions) — evita flakiness.
+ * - ``/api/*``, ``/api-backend/*`` e área autenticada ``/dashboard/*``: **NetworkOnly** (todos os métodos),
+ *   para não servir respostas API nem shell do painel a partir de cache offline.
+ * - ``navigateFallbackDenylist``: o fallback de documento ``/offline`` não cobre API nem dashboard.
  */
 const withPWA = withPWAInit({
   dest: "public",
@@ -128,9 +131,14 @@ const withPWA = withPWAInit({
     navigateFallbackDenylist: [
       /^\/api\//,
       /^\/api-backend(\/|$)/,
+      /^\/dashboard(\/|$)/,
       /^\/_next\/image/,
     ],
     runtimeCaching: [
+      {
+        urlPattern: ({ url }) => url.pathname.startsWith("/dashboard"),
+        handler: "NetworkOnly",
+      },
       {
         urlPattern: ({ url }) => {
           const p = url.pathname;
@@ -141,7 +149,6 @@ const withPWA = withPWAInit({
           );
         },
         handler: "NetworkOnly",
-        method: "GET",
       },
     ],
   },

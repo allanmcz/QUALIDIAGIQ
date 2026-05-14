@@ -106,3 +106,46 @@ def test_template_relatorio_contem_secoes_m04_e_normativo() -> None:
     assert t["schedule_title"] in html
     assert t["th_legal_ref"] in html
     assert t["matrix_title"] in html
+
+
+def test_template_relatorio_ia_inclui_nota_lexiq_guardrail() -> None:
+    """Bloco de recomendação IA inclui nota Lexiq (PDF / go-live)."""
+    root = Path(__file__).resolve().parents[3]
+    templates_dir = root / "src" / "infrastructure" / "templates"
+    env = Environment(loader=FileSystemLoader(templates_dir), autoescape=True)
+    template = env.get_template("relatorio_diagnostico.html")
+
+    from src.application.services.consultoria_service import ConsultoriaService
+
+    diagnostico = _diag_minimo()
+    score = _score_minimo()
+    locale_pdf = "pt-BR"
+    t = obter_textos_pdf(locale_pdf)
+    nivel_mapping = nivel_score_labels(locale_pdf)
+    nivel_geral = nivel_mapping.get(score.score_geral.nivel.name, "N/A")
+    telefone_lead = formatar_telefone_exibicao_br(diagnostico.respondente.telefone)
+    data_geracao = formatar_data_geracao_pdf(locale_pdf, datetime.now(UTC))
+    checklist = ConsultoriaService.gerar_checklist(diagnostico, score)
+    matriz = ConsultoriaService.gerar_matriz_impacto(diagnostico)
+    cronograma = ConsultoriaService.gerar_cronograma_cinco_fases()
+    piores = sorted(score.score_por_dimensao.items(), key=lambda kv: kv[1].valor)[:3]
+    piores_template = [{"codigo": dim.value, "valor": sn.valor} for dim, sn in piores]
+
+    html = template.render(
+        diagnostico=diagnostico,
+        t=t,
+        html_lang="pt-BR",
+        telefone_lead_exibicao=telefone_lead,
+        score_geral=score.score_geral,
+        nivel_geral=nivel_geral,
+        dimensoes=score.score_por_dimensao,
+        data_geracao=data_geracao,
+        recomendacao_ia="Avaliar LC 214/2025 art. 5º.",
+        checklist=checklist,
+        matriz_impacto=matriz,
+        cronograma=cronograma,
+        piores_dimensoes=piores_template,
+    )
+
+    assert "Avaliar LC 214/2025" in html
+    assert t["ai_box_guardrail_note"][:40] in html

@@ -26,3 +26,12 @@ export function getPoliticaPublicMeta(): { versao: string; vigenciaIso: string }
     vigenciaIso: vigencia || "—",
   };
 }
+
+/**
+ * Resumo operacional de retenção (pós-workshop / decisão de controlador), opcional.
+ * Definir no deploy quando a ata ADR-012 / política interna estiver fechada — evita hardcode legal no código.
+ */
+export function getRetencaoResumoPublicacao(): string | null {
+  const raw = process.env.NEXT_PUBLIC_LGPD_RETENCAO_RESUMO?.trim();
+  return raw || null;
+}

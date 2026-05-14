@@ -94,6 +94,9 @@
         <div>
             {{ recomendacao_ia | replace('\n', '<br>') | safe }}
         </div>
+        <p style="font-size: 9pt; color: #444; margin-top: 10px; line-height: 1.35;">
+            <strong>Lexiq / Tributiq:</strong> {{ t.ai_box_guardrail_note }}
+        </p>
     </div>
     {% endif %}
 

@@ -4,9 +4,9 @@
 
 ## PWA — Onda 1 (ADR-011)
 
-- **B1 (actual):** `public/manifest.json` + `metadata.manifest` + `viewport.themeColor` em `app/layout.tsx` — sem service worker.  
-- **B2 (planeado):** SW com política explícita (**não** cachear `/api-backend`, `/api/*`, rotas autenticadas); branch sugerida `feat/qdi-front-pwa-onda1`.  
-- Após alterações PWA: `npm run build` + smoke manual login → dashboard → `/wizard`.
+- **B1:** `public/manifest.json` + `metadata.manifest` + `viewport.themeColor` em `app/layout.tsx`.
+- **B2 (produção):** `@ducanh2912/next-pwa` em `next.config.mjs` — `sw.js` com **NetworkOnly** para `/api/*`, `/api-backend/*` e `/dashboard/*`; `navigateFallbackDenylist` evita fallback de documento `/offline` nessas rotas. **Sem SW** em `development` ou `CI=true` (E2E / Actions).
+- Após alterações PWA: `npm run build` + smoke manual login → dashboard → `/wizard` (validar que API não fica «presa» em cache offline).
 
 ## E2E com mocks do painel (BFF + `/api-backend`)
 
