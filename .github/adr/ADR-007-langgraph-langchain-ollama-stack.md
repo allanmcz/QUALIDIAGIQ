@@ -12,7 +12,7 @@ O QDI precisa de uma stack IA **extensível** (grafos multi-passo, RAG futuro, f
 
 1. **Runtime default da API:** ``LangGraphOllamaLlmAdapter`` — grafo LangGraph com nó que invoca **LangChain ``ChatOllama``** contra o endpoint configurado (**``OLLAMA_BASE_URL``**, **``OLLAMA_MODEL``**, **``OLLAMA_TIMEOUT_SECONDS``**).
 2. **Fallback operacional:** ``QDI_LLM_BACKEND=http_ollama`` usa ``OllamaLlmAdapter`` (REST **httpx**, legado).
-3. **Port unchanged:** ``LlmServicePort`` — domínio/casos de uso não dependem de LangChain.
+3. **Port unchanged:** ``LlmServicePort`` (ABC) — domínio/casos de uso não dependem de LangChain.
 
 ## Consequências
 

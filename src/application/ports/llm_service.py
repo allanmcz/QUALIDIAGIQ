@@ -1,15 +1,21 @@
-from typing import Protocol
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
 
 
-class LlmServicePort(Protocol):
+class LlmServicePort(ABC):
     """
-    Port (Interface) para o serviço de Large Language Models.
-    Responsabilidade: Isolar a camada de aplicação de SDKs específicos (Ollama, OpenAI, Anthropic).
+    Port (interface) para o serviço de Large Language Models.
+
+    Responsabilidade: isolar a camada de aplicação de SDKs específicos (Ollama, Anthropic).
+
+    Implementações: ``src/infrastructure/adapters/llm_*.py`` — selecção central em **ADR-021**
+    (``build_llm_adapter_from_settings``).
     """
 
+    @abstractmethod
     async def gerar_recomendacao(self, contexto_empresa: str, base_normativa: str) -> str:
         """
         Recebe o contexto da empresa (respostas, pontuações) e a base normativa
         e devolve um parágrafo/texto em markdown com a recomendação da IA.
         """
-        ...  # pragma: no cover

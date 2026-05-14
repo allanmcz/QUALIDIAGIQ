@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from supabase import Client
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
+from src.application.ports.llm_service import LlmServicePort
 from src.application.services.cnpj_consulta_service import CnpjConsultaService, CnpjTtlSegundos
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
@@ -41,9 +42,7 @@ from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNorm
 from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
 from src.infrastructure.adapters.cnpj_provedor_externo_http import CnpjProvedorExternoHttpAdapter
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
-from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
-from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
-from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
+from src.infrastructure.adapters.llm_router import build_llm_adapter_from_settings
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
@@ -255,53 +254,17 @@ def get_base_normativa_port_dependency() -> BaseNormativaPort:
     return build_base_normativa_port()
 
 
-def get_llm_service() -> LangGraphOllamaLlmAdapter | OllamaLlmAdapter | AnthropicLlmAdapter:
+def get_llm_service() -> LlmServicePort:
     """
-    Injeta LLM — default **LangGraph + LangChain ChatOllama** (Ollama local).
+    Injeta LLM — delega em ``build_llm_adapter_from_settings`` (**ADR-021**).
 
-    ``http_ollama``: REST direta. ``anthropic``: Claude com ``ANTHROPIC_API_KEY``.
-    Sem chave Anthropic em modo ``anthropic`` → fallback para LangGraph/Ollama (log).
-    Ver **ADR-007** e ADR-003.
+    Default: **LangGraph + LangChain ChatOllama** (Ollama local). Ver **ADR-007** e ADR-003.
     """
     settings = get_settings()
     norm = build_base_normativa_port()
     thr = float(settings.qdi_rag_similarity_threshold)
-    url = settings.ollama_base_url.strip()
-    model = settings.ollama_model.strip()
-    timeout = float(settings.ollama_timeout_seconds)
-
-    if settings.llm_backend == "anthropic":
-        ak = (
-            settings.anthropic_api_key.get_secret_value().strip()
-            if settings.anthropic_api_key
-            else ""
-        )
-        if ak:
-            return AnthropicLlmAdapter(
-                api_key=ak,
-                model=settings.anthropic_model.strip(),
-                base_normativa_port=norm,
-                rag_similarity_threshold=thr,
-            )
-        logger.warning(
-            "llm_backend_anthropic_sem_api_key",
-            fallback="langgraph_ollama",
-            llm_backend_solicitado="anthropic",
-            evento="llm_plano_fallback_backend",
-        )
-
-    if settings.llm_backend == "http_ollama":
-        return OllamaLlmAdapter(
-            ollama_url=url,
-            model=model,
-            timeout_seconds=timeout,
-            base_normativa_port=norm,
-            rag_similarity_threshold=thr,
-        )
-    return LangGraphOllamaLlmAdapter(
-        ollama_url=url,
-        model=model,
-        timeout_seconds=timeout,
+    return build_llm_adapter_from_settings(
+        settings,
         base_normativa_port=norm,
         rag_similarity_threshold=thr,
     )
@@ -364,10 +327,7 @@ def get_realizar_diagnostico_use_case(
     pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
     storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],
     email_service: Annotated[SmtpEmailAdapter, Depends(get_email_service)],
-    llm_service: Annotated[
-        LangGraphOllamaLlmAdapter | OllamaLlmAdapter | AnthropicLlmAdapter,
-        Depends(get_llm_service),
-    ],
+    llm_service: Annotated[LlmServicePort, Depends(get_llm_service)],
     base_normativa_port: Annotated[
         BaseNormativaPort,
         Depends(get_base_normativa_port_dependency),

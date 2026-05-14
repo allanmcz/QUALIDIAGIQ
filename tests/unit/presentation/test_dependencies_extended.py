@@ -102,6 +102,7 @@ def test_build_base_normativa_pgvector_quando_dsn_e_openai(
 
 def test_get_llm_http_ollama_adapter() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_default_tier = "local"
     mock_s.llm_backend = "http_ollama"
     fk = MagicMock()
     fk.get_secret_value.return_value = ""
@@ -125,6 +126,7 @@ def test_get_llm_http_ollama_adapter() -> None:
 
 def test_get_llm_anthropic_com_chave_adapter() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_default_tier = "premium"
     mock_s.llm_backend = "anthropic"
     fk = MagicMock()
     fk.get_secret_value.return_value = "sk-ant-chave-real"
@@ -148,6 +150,7 @@ def test_get_llm_anthropic_com_chave_adapter() -> None:
 
 def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     mock_s = MagicMock()
+    mock_s.qdi_llm_default_tier = "standard"
     mock_s.llm_backend = "anthropic"
     fk = MagicMock()
     fk.get_secret_value.return_value = "   "
@@ -163,7 +166,7 @@ def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     with (
         patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
-        patch("src.presentation.api.deps_infra_services.logger") as log,
+        patch("src.infrastructure.adapters.llm_router.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service()
@@ -172,6 +175,7 @@ def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     kwa = log.warning.call_args.kwargs
     assert kwa.get("llm_backend_solicitado") == "anthropic"
     assert kwa.get("evento") == "llm_plano_fallback_backend"
+    assert kwa.get("tier") == "standard"
 
 
 def test_perfil_empresa_questionario_rejeita_uf_invalida() -> None:

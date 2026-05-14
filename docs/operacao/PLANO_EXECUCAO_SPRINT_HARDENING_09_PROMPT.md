@@ -7,7 +7,7 @@
 
 **Última actualização (Fase 1 — código):** 2026-05-13 — BFF `app/api/auth/login` + **`/api/auth/cadastro`**, proxy `/api-backend` com Bearer a partir de cookie `qdi_painel_access`, `middleware` + clientes do painel com `temSessaoPainelParaApiCliente` / `cabecalhosAuthPainelOpcional` / `credentials: "include"`; E2E Playwright: `e2e/helpers/mock_bff_painel_auth.ts`, `NEXT_PUBLIC_API_URL=/api-backend` no `playwright.config.ts`; ver `frontend/.env.local.example` e `frontend/README.md`. Fase 0 (baseline completo) e smoke manual pós-login ficam para confirmação humana.
 
-**Última actualização (Fase 5 — E2E mobile):** 2026-05-14 — projectos Playwright desktop/mobile, `e2e/mobile-smoke.spec.ts`, script `npm run test:e2e:mobile`.
+**Última actualização (Fase 2 — incremento LLM router):** 2026-05-14 — ADR-021, `llm_router.py`, `LlmServicePort` ABC, `QDI_LLM_DEFAULT_TIER`, testes unitários.
 
 ---
 
@@ -67,44 +67,44 @@
 
 ### 2.1 ADR e port (application)
 
-- [ ] **2.1.1** Criar `docs/refs/ADR-00X_LLM_ROUTER_MULTI_PROVIDER.md` (substituir `00X` pelo número real) — contexto, decisão, matriz, consequências, compatibilidade com ADRs de IA/LLM existentes
-- [ ] **2.1.2** Port `LLMService` em `src/application/ports/llm_service.py` — sem SDK externo, sem imports de infraestrutura
-- [ ] **2.1.3** Garantir que o **domínio** não importa OpenAI, Anthropic, Ollama nem LangGraph
+- [x] **2.1.1** ADR-021 em `.github/adr/ADR-021-llm-router-multi-tier.md` — router, tier observável, cruzamento ADR-003/007
+- [x] **2.1.2** Port `LlmServicePort` em `src/application/ports/llm_service.py` — **ABC** + `@abstractmethod` (sem SDK)
+- [x] **2.1.3** Garantir que o **domínio** não importa OpenAI, Anthropic, Ollama nem LangGraph *(inalterado)*
 
 ### 2.2 Infraestrutura
 
-- [ ] **2.2.1** `src/infrastructure/adapters/llm_router.py` — selecção por config + tier/criticidade
+- [x] **2.2.1** `src/infrastructure/adapters/llm_router.py` — fábrica por `QDI_LLM_BACKEND` + log `tier` (`QDI_LLM_DEFAULT_TIER`)
 - [ ] **2.2.2** Adapters isolados: OpenAI e Anthropic (falha clara se key/modelo em falta quando o tier exigir)
-- [ ] **2.2.3** Integrar Ollama existente (`llm_langgraph_ollama`, `llm_ollama`) no router
-- [ ] **2.2.4** `settings.py` + `.env.example` — variáveis do prompt (providers, tier default, flags `QDI_LLM_ALLOW_*`, Ollama URL/modelo, OpenAI, Anthropic); nomes alinhados ao padrão do projecto
-- [ ] **2.2.5** Documentar Docker `OLLAMA_BASE_URL=http://host.docker.internal:11434` vs host `http://127.0.0.1:11434` (README operacional)
+- [x] **2.2.3** Integrar Ollama existente (`llm_langgraph_ollama`, `llm_ollama`) no router
+- [x] **2.2.4** `settings.py` + `.env.example` — `QDI_LLM_DEFAULT_TIER` (sem flags `QDI_LLM_ALLOW_*` neste incremento)
+- [x] **2.2.5** ADR-021 + `.env.example` (Ollama host vs Docker) — README raiz já documenta compose
 
 ### 2.3 Política de roteamento
 
-- [ ] **2.3.1** Implementar precedência de tier: use case → tenant/plano → `QDI_LLM_DEFAULT_TIER` → fallback (`local` dev/test, `standard` prod)
+- [ ] **2.3.1** Implementar precedência de tier: use case → tenant/plano → `QDI_LLM_DEFAULT_TIER` → fallback (`local` dev/test, `standard` prod) *(tier só em log; não sobrescreve `QDI_LLM_BACKEND` — ADR-021)*
 - [ ] **2.3.2** **Não** usar header HTTP público como fonte directa de tier premium (restrito a dev/test documentado se existir)
-- [ ] **2.3.3** Matriz ambiente × tier (tabela do prompt) implementada **ou** coberta por testes unitários do router
+- [x] **2.3.3** Router coberto por `tests/unit/infrastructure/test_llm_router.py` (matriz mínima anthropic / http_ollama / langgraph)
 - [ ] **2.3.4** Ollama indisponível (local): mensagem estável; POST diagnóstico não “morte” silenciosa indevida
 - [ ] **2.3.5** Produção: OpenAI indisponível + Anthropic configurada + política → fallback premium permitido
-- [ ] **2.3.6** Logs estruturados: `provider`, `model`, `tier`, `trace_id`, motivo de fallback — sem prompt sensível nem API keys
+- [x] **2.3.6** Logs estruturados: `llm_router_resolvido` + `llm_backend_anthropic_sem_api_key` com `tier`, `adapter`, modelos, `ollama_host` — sem prompt nem keys
 - [ ] **2.3.7** Guardrail Lexiq mantido (resposta sem âncora normativa → rejeição conforme desenho actual)
 
 ### 2.4 Presentation
 
-- [ ] **2.4.1** `deps_infra_services.get_llm_service` entrega `LLMRouter` ou composição acordada, de forma previsível
+- [x] **2.4.1** `deps_infra_services.get_llm_service` delega em `build_llm_adapter_from_settings` (router)
 
 ### 2.5 Testes
 
-- [ ] **2.5.1** `tests/unit/infrastructure/test_llm_router.py` (+ adapters OpenAI/Anthropic conforme ficheiros do prompt)
-- [ ] **2.5.2** Ajustar `test_dependencies_extended.py` e testes Ollama existentes
-- [ ] **2.5.3** Suíte local **sem** exigir `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` reais (mocks/fakes)
+- [x] **2.5.1** `tests/unit/infrastructure/test_llm_router.py`
+- [x] **2.5.2** `test_dependencies_extended.py` (patch logger em `llm_router`)
+- [x] **2.5.3** Suíte local **sem** keys reais *(mocks existentes)*
 
 **Critérios de aceite (resumo):**
 
-- [ ] **A5** `get_llm_service` previsível com router/port
-- [ ] **A6** ADR publicado com matriz
-- [ ] **A7** Local: Ollama caminho recomendado; prod: OpenAI/Anthropic configuráveis sem mudar domínio
-- [ ] **A8** Testes cobrem tiers, fallback e indisponibilidade
+- [x] **A5** `get_llm_service` delega no router (`build_llm_adapter_from_settings`)
+- [x] **A6** ADR-021 publicado (`.github/adr/`)
+- [x] **A7** Local: Ollama inalterado; prod: Anthropic via `QDI_LLM_BACKEND` *(OpenAI chat fora deste incremento)*
+- [x] **A8** Testes do router + regressão `get_llm_service` *(fallback anthropic sem chave)*
 
 **Gate após Fase 2:** `make test` + `make type-check` com novos módulos.
 

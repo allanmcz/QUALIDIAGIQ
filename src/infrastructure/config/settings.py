@@ -192,6 +192,15 @@ class Settings(BaseSettings):
         ),
     )
 
+    qdi_llm_default_tier: Literal["local", "standard", "premium"] = Field(
+        default="local",
+        validation_alias=AliasChoices("QDI_LLM_DEFAULT_TIER"),
+        description=(
+            "Tier de roteamento LLM (observabilidade + roadmap plano/tenant). "
+            "Não substitui ``QDI_LLM_BACKEND`` na versão actual — ver ADR-021."
+        ),
+    )
+
     anthropic_api_key: SecretStr | None = Field(
         default=None,
         validation_alias=AliasChoices("ANTHROPIC_API_KEY"),
