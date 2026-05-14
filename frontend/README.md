@@ -23,6 +23,13 @@ Variáveis típicas no mesmo shell antes de subir Next + Playwright:
 
 Script auxiliar: `npm run test:e2e:integrado` (ajuste env conforme o host; requer API com `QDI_CI_PLAYWRIGHT_INTEGRATED=1` e Postgres migrado + seed `0005`).
 
+**Ver o browser durante o teste integrado** (Next e API já no ar, com `NEXT_PUBLIC_API_URL` e `PLAYWRIGHT_BASE_URL` definidos no mesmo shell que o Next):
+
+- **Modo UI** (timeline, passo a passo, inspeccionar locators): `npm run test:e2e:integrado:ui`
+- **Chromium visível** (sem painel do Playwright): `npm run test:e2e:integrado:headed`
+- **Suíte com mocks** — UI: `npm run test:e2e:ui` · só browser: `npm run test:e2e:headed`
+- **Relatório após gravação** (`test:e2e:record-eval`): `npx playwright show-report playwright-report-eval`
+
 ## Armazenamento local (MVP)
 
 O wizard usa **`localStorage`** para rascunho de UX (`wizard_draft`), pendente legado pós-login (`pending_diagnostico`) e token de resgate OAuth (`rascunho_resgate_token`), conforme `lib/wizard/*` e `.cursor/rules/qdi-storage-policy.mdc`. **Não** usar `sessionStorage` em fluxo novo (há migração única session→local onde ainda existir legado). Diagnóstico concluído self-service: dados na **BD** + **GET** `/diagnosticos/self-service/conclusao-visualizacao` (query `diagnostico_id` + `leitura_token`). Roadmap: autosave do wizard na API e cookies httpOnly (**ADR-004**). Não colocar JWT ou segredos em chaves de rascunho.
