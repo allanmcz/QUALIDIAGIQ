@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from src.application.ports.lead_diagnostico_vinculo_port import (
     NopLeadDiagnosticoVinculoAdapter,
@@ -27,6 +27,25 @@ from src.infrastructure.repositories.supabase_diagnostico_repository import (
 )
 from src.presentation.api import dependencies as deps
 from src.presentation.api import deps_auth_supabase
+
+
+def _http_request_vazio() -> Request:
+    """Request ASGI mínimo para ``Depends(get_llm_service)`` em testes unitários."""
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "GET",
+        "path": "/",
+        "raw_path": b"/",
+        "root_path": "",
+        "scheme": "http",
+        "query_string": b"",
+        "headers": [],
+        "client": ("testclient", 50000),
+        "server": ("test", 80),
+    }
+    return Request(scope)
 
 
 @pytest.fixture(autouse=True)
@@ -121,7 +140,7 @@ def test_get_llm_http_ollama_adapter() -> None:
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
     ):
         mock_bn.return_value = MagicMock()
-        svc = deps.get_llm_service()
+        svc = deps.get_llm_service(_http_request_vazio())
     assert type(svc).__name__ == "OllamaLlmAdapter"
 
 
@@ -146,7 +165,7 @@ def test_get_llm_anthropic_com_chave_adapter() -> None:
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
     ):
         mock_bn.return_value = MagicMock()
-        svc = deps.get_llm_service()
+        svc = deps.get_llm_service(_http_request_vazio())
     assert type(svc).__name__ == "AnthropicLlmAdapter"
 
 
@@ -172,7 +191,7 @@ def test_get_llm_openai_com_chave_adapter() -> None:
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
     ):
         mock_bn.return_value = MagicMock()
-        svc = deps.get_llm_service()
+        svc = deps.get_llm_service(_http_request_vazio())
     assert type(svc).__name__ == "OpenAiChatLlmAdapter"
 
 
@@ -199,7 +218,7 @@ def test_get_llm_openai_sem_chave_fallback_langgraph() -> None:
         patch("src.infrastructure.adapters.llm_router.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
-        svc = deps.get_llm_service()
+        svc = deps.get_llm_service(_http_request_vazio())
     assert type(svc).__name__ == "LangGraphOllamaLlmAdapter"
     log.warning.assert_called_once()
     kwa = log.warning.call_args.kwargs
@@ -229,7 +248,7 @@ def test_get_llm_openai_sem_chave_politica_anthropic_adapter() -> None:
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
     ):
         mock_bn.return_value = MagicMock()
-        svc = deps.get_llm_service()
+        svc = deps.get_llm_service(_http_request_vazio())
     assert type(svc).__name__ == "AnthropicLlmAdapter"
 
 
@@ -255,7 +274,7 @@ def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
         patch("src.infrastructure.adapters.llm_router.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
-        svc = deps.get_llm_service()
+        svc = deps.get_llm_service(_http_request_vazio())
     assert type(svc).__name__ == "LangGraphOllamaLlmAdapter"
     log.warning.assert_called_once()
     kwa = log.warning.call_args.kwargs

@@ -81,7 +81,7 @@
 
 ### 2.3 Política de roteamento
 
-- [ ] **2.3.1** Implementar precedência de tier: use case → tenant/plano → `QDI_LLM_DEFAULT_TIER` → fallback (`local` dev/test, `standard` prod) *(tier só em log; não sobrescreve `QDI_LLM_BACKEND` — ADR-021)*
+- [x] **2.3.1** Implementar precedência de tier (observabilidade): use case (parâmetro router + log plano em `RealizarDiagnostico`) → JWT (`qdi_llm_tier` / `perfil_conta`) → `QDI_LLM_DEFAULT_TIER` → fallback `APP_ENV` — **sem** alterar `QDI_LLM_BACKEND` (ADR-021)
 - [x] **2.3.2** **Não** usar header HTTP público como fonte directa de tier premium (restrito a dev/test documentado se existir) — ver ADR-021 § decisão (4)
 - [x] **2.3.3** Router coberto por `tests/unit/infrastructure/test_llm_router.py` (matriz mínima openai / anthropic / http_ollama / langgraph)
 - [x] **2.3.4** Falha de LLM (incl. excepção não tratada no adapter): mensagem estável; POST diagnóstico não aborta — `RealizarDiagnostico` + adapters (Ollama/Anthropic/OpenAI devolvem mensagem em erro HTTP)

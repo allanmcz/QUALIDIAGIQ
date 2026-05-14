@@ -17,6 +17,7 @@ def create_access_token(
     tenant_id: UUID,
     perfil_conta: str = "gratuito",
     expires_delta: timedelta | None = None,
+    qdi_llm_tier: str | None = None,
 ) -> str:
     """Gera JWT com `sub` (id do admin), `tenant_id` e `perfil_conta` (conta na plataforma)."""
     settings = deps.get_settings()
@@ -32,6 +33,8 @@ def create_access_token(
         "perfil_conta": perfil,
         "exp": expire,
     }
+    if qdi_llm_tier is not None and str(qdi_llm_tier).strip():
+        payload["qdi_llm_tier"] = str(qdi_llm_tier).strip().lower()
     return deps.jwt.encode(
         payload, settings.jwt_secret_key.get_secret_value(), algorithm=settings.jwt_algorithm
     )

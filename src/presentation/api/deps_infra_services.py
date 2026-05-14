@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated
 
 import structlog
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, Request, status
 
 if TYPE_CHECKING:
     from supabase import Client
@@ -61,6 +61,7 @@ from src.infrastructure.repositories.postgres_normativa_score_macro_repository i
 )
 from src.presentation.api.deps_auth_supabase import get_supabase_client
 from src.presentation.api.deps_repositories_core import get_diagnostico_repository
+from src.presentation.api.jwt_llm_tier_context import llm_tier_context_from_authorization
 
 logger = structlog.get_logger(__name__)
 
@@ -254,19 +255,28 @@ def get_base_normativa_port_dependency() -> BaseNormativaPort:
     return build_base_normativa_port()
 
 
-def get_llm_service() -> LlmServicePort:
+def get_llm_service(request: Request) -> LlmServicePort:
     """
     Injeta LLM — delega em ``build_llm_adapter_from_settings`` (**ADR-021**).
 
     Default: **LangGraph + LangChain ChatOllama** (Ollama local). Ver **ADR-007** e ADR-003.
+    Tier de observabilidade: JWT assinado (``qdi_llm_tier`` / ``perfil_conta``) + Settings (**2.3.1**).
     """
     settings = get_settings()
     norm = build_base_normativa_port()
     thr = float(settings.qdi_rag_similarity_threshold)
+    auth = request.headers.get("Authorization")
+    claim_tier, perfil = llm_tier_context_from_authorization(
+        auth,
+        jwt_secret=settings.jwt_secret_key.get_secret_value(),
+        algorithms=[settings.jwt_algorithm],
+    )
     return build_llm_adapter_from_settings(
         settings,
         base_normativa_port=norm,
         rag_similarity_threshold=thr,
+        tier_jwt_claim=claim_tier,
+        perfil_conta_jwt=perfil,
     )
 
 

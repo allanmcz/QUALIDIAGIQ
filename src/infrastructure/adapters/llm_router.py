@@ -15,6 +15,7 @@ import structlog
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
+from src.application.services.llm_tier_observabilidade import resolver_tier_efetivo_observabilidade
 from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
 from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
@@ -50,18 +51,28 @@ def build_llm_adapter_from_settings(
     *,
     base_normativa_port: BaseNormativaPort,
     rag_similarity_threshold: float,
+    tier_use_case: str | None = None,
+    tier_jwt_claim: str | None = None,
+    perfil_conta_jwt: str | None = None,
 ) -> LlmServicePort:
     """
     Constrói o adapter LLM activo conforme ``QDI_LLM_BACKEND`` e segredos disponíveis.
 
-    O tier ``QDI_LLM_DEFAULT_TIER`` é registado em log para observabilidade; a selecção
-    efectiva continua governada por ``llm_backend`` até política tenant/plano (roadmap).
+    O tier efectivo para log segue **ADR-021 / plano 2.3.1** (``resolver_tier_efetivo_observabilidade``);
+    a selecção do adapter continua governada por ``llm_backend`` + segredos.
     """
     thr = float(rag_similarity_threshold)
     url = settings.ollama_base_url.strip()
     model = settings.ollama_model.strip()
     timeout = float(settings.ollama_timeout_seconds)
-    tier = settings.qdi_llm_default_tier
+    tier_efetivo, tier_fonte = resolver_tier_efetivo_observabilidade(
+        tier_use_case=tier_use_case,
+        tier_jwt_claim=tier_jwt_claim,
+        perfil_conta_jwt=perfil_conta_jwt,
+        settings_default_tier=str(settings.qdi_llm_default_tier),
+        app_env=str(settings.app_env or "development"),
+    )
+    tier_settings_default = str(settings.qdi_llm_default_tier)
 
     resolved_label: str
     adapter: LlmServicePort
@@ -85,7 +96,9 @@ def build_llm_adapter_from_settings(
             logger.info(
                 "llm_openai_indisponivel_fallback_anthropic",
                 evento="llm_plano_fallback_backend",
-                tier=tier,
+                tier=tier_efetivo,
+                tier_fonte=tier_fonte,
+                tier_settings_default=tier_settings_default,
                 llm_backend_solicitado="openai",
                 fallback="anthropic",
             )
@@ -102,7 +115,9 @@ def build_llm_adapter_from_settings(
                 fallback="langgraph_ollama",
                 llm_backend_solicitado="openai",
                 evento="llm_plano_fallback_backend",
-                tier=tier,
+                tier=tier_efetivo,
+                tier_fonte=tier_fonte,
+                tier_settings_default=tier_settings_default,
             )
             resolved_label = "langgraph_ollama"
             adapter = _ollama_stack(
@@ -128,7 +143,9 @@ def build_llm_adapter_from_settings(
                 fallback="langgraph_ollama",
                 llm_backend_solicitado="anthropic",
                 evento="llm_plano_fallback_backend",
-                tier=tier,
+                tier=tier_efetivo,
+                tier_fonte=tier_fonte,
+                tier_settings_default=tier_settings_default,
             )
             resolved_label = "langgraph_ollama"
             adapter = _ollama_stack(
@@ -152,7 +169,9 @@ def build_llm_adapter_from_settings(
     logger.info(
         "llm_router_resolvido",
         evento="llm_router_resolvido",
-        tier=tier,
+        tier=tier_efetivo,
+        tier_fonte=tier_fonte,
+        tier_settings_default=tier_settings_default,
         llm_backend=settings.llm_backend,
         adapter=resolved_label,
         modelo_ollama=model if resolved_label not in ("anthropic", "openai_chat") else None,

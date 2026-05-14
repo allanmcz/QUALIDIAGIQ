@@ -27,6 +27,7 @@ import structlog
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.services.cnpj_consulta_mapeamento import mesclar_empresa_com_sugestao_cnpj
 from src.application.services.cnpj_consulta_service import CnpjConsultaService
+from src.application.services.llm_tier_observabilidade import tier_observabilidade_de_plano_str
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
@@ -191,6 +192,14 @@ class RealizarDiagnostico:
         # 4. Geração de Recomendações por IA (LLM) liberada temporariamente para todos
         recomendacao_ia = None
         if self.llm_service:
+            tier_plano = tier_observabilidade_de_plano_str(comando.plano)
+            logger.info(
+                "diagnostico_llm_tier_plano_observabilidade",
+                evento="diagnostico_llm_tier_plano_observabilidade",
+                tier_plano=tier_plano,
+                plano=comando.plano,
+                trace_id=comando.trace_id,
+            )
             contexto_empresa = (
                 f"Empresa: {diagnostico.empresa.razao_social}\n"
                 f"Porte: {diagnostico.empresa.porte.value}\n"

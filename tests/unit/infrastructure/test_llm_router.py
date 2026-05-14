@@ -16,6 +16,7 @@ class TestBuildLlmAdapterFromSettings:
 
     def test_http_ollama(self) -> None:
         mock_s = MagicMock()
+        mock_s.app_env = "development"
         mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "local"
         mock_s.llm_backend = "http_ollama"
@@ -38,9 +39,11 @@ class TestBuildLlmAdapterFromSettings:
         assert info_kw.get("evento") == "llm_router_resolvido"
         assert info_kw.get("adapter") == "http_ollama"
         assert info_kw.get("tier") == "local"
+        assert info_kw.get("tier_fonte") == "settings_qdi_llm_default_tier"
 
     def test_openai_com_chave(self) -> None:
         mock_s = MagicMock()
+        mock_s.app_env = "development"
         mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "standard"
         mock_s.llm_backend = "openai"
@@ -66,10 +69,12 @@ class TestBuildLlmAdapterFromSettings:
         kwa = log.info.call_args.kwargs
         assert kwa.get("adapter") == "openai_chat"
         assert kwa.get("tier") == "standard"
+        assert kwa.get("tier_fonte") == "settings_qdi_llm_default_tier"
         assert kwa.get("modelo_openai") == "gpt-4o-mini"
 
     def test_openai_sem_chave_cai_langgraph(self) -> None:
         mock_s = MagicMock()
+        mock_s.app_env = "development"
         mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "local"
         mock_s.llm_backend = "openai"
@@ -95,9 +100,11 @@ class TestBuildLlmAdapterFromSettings:
         assert wkw.get("llm_backend_solicitado") == "openai"
         log.info.assert_called_once()
         assert log.info.call_args.kwargs.get("adapter") == "langgraph_ollama"
+        assert log.info.call_args.kwargs.get("tier_fonte") == "settings_qdi_llm_default_tier"
 
     def test_openai_sem_chave_politica_anthropic_usa_claude(self) -> None:
         mock_s = MagicMock()
+        mock_s.app_env = "development"
         mock_s.qdi_llm_openai_fallback_anthropic = True
         mock_s.qdi_llm_default_tier = "premium"
         mock_s.llm_backend = "openai"
@@ -125,9 +132,11 @@ class TestBuildLlmAdapterFromSettings:
         assert router_kw.get("evento") == "llm_router_resolvido"
         assert router_kw.get("adapter") == "anthropic"
         assert router_kw.get("openai_politica_fallback_anthropic") is True
+        assert router_kw.get("tier_fonte") == "settings_qdi_llm_default_tier"
 
     def test_anthropic_com_chave(self) -> None:
         mock_s = MagicMock()
+        mock_s.app_env = "development"
         mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "premium"
         mock_s.llm_backend = "anthropic"
@@ -150,9 +159,11 @@ class TestBuildLlmAdapterFromSettings:
         log.info.assert_called_once()
         assert log.info.call_args.kwargs.get("adapter") == "anthropic"
         assert log.info.call_args.kwargs.get("tier") == "premium"
+        assert log.info.call_args.kwargs.get("tier_fonte") == "settings_qdi_llm_default_tier"
 
     def test_default_langgraph(self) -> None:
         mock_s = MagicMock()
+        mock_s.app_env = "development"
         mock_s.qdi_llm_openai_fallback_anthropic = False
         mock_s.qdi_llm_default_tier = "local"
         mock_s.llm_backend = "langgraph_ollama"
@@ -174,3 +185,29 @@ class TestBuildLlmAdapterFromSettings:
         kwa = log.info.call_args.kwargs
         assert kwa.get("adapter") == "langgraph_ollama"
         assert kwa.get("ollama_host") == "host.docker.internal"
+        assert kwa.get("tier_fonte") == "settings_qdi_llm_default_tier"
+
+    def test_tier_use_case_parametro_sobrescreve_settings_no_log(self) -> None:
+        mock_s = MagicMock()
+        mock_s.app_env = "development"
+        mock_s.qdi_llm_openai_fallback_anthropic = False
+        mock_s.qdi_llm_default_tier = "local"
+        mock_s.llm_backend = "http_ollama"
+        mock_s.anthropic_api_key = None
+        mock_s.ollama_base_url = "http://localhost:11434"
+        mock_s.ollama_model = "mistral"
+        mock_s.ollama_timeout_seconds = 11.0
+        mock_s.anthropic_model = "ignored"
+
+        norm = MagicMock()
+        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+            build_llm_adapter_from_settings(
+                mock_s,
+                base_normativa_port=norm,
+                rag_similarity_threshold=0.4,
+                tier_use_case="premium",
+            )
+        kwa = log.info.call_args.kwargs
+        assert kwa.get("tier") == "premium"
+        assert kwa.get("tier_fonte") == "use_case"
+        assert kwa.get("tier_settings_default") == "local"
