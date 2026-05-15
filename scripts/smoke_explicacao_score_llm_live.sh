@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Smoke manual/local — explicação score LLM (ADR-022 Fase 4).
-# Pré-requisito: `make dev` + `make migrate`.
+# Pré-requisito: `make smoke-explicacao-llm-prepare` (Ollama + router + admin CI avançado).
 set -euo pipefail
 
 API="${QDI_API_BASE_URL:-http://127.0.0.1:60000}"
@@ -8,7 +8,14 @@ EMAIL="${QDI_SMOKE_ADMIN_EMAIL:-ci-dashboard@qualidiagiq.test}"
 PASS="${QDI_SMOKE_ADMIN_PASSWORD:-secret}"
 
 echo "→ GET /health/llm"
-curl -sS "${API}/health/llm" | python3 -m json.tool
+HEALTH_LLM=$(curl -sS "${API}/health/llm")
+echo "$HEALTH_LLM" | python3 -m json.tool
+if echo "$HEALTH_LLM" | python3 -c "import sys,json; s=json.load(sys.stdin).get('status'); sys.exit(0 if s!='disabled' else 1)"; then
+  :
+else
+  echo "⚠️  Router LLM desligado — rode: make smoke-explicacao-llm-prepare" >&2
+  exit 1
+fi
 
 echo "→ POST /auth/login"
 TOKEN=$(curl -sS -X POST "${API}/auth/login" \

@@ -59,7 +59,7 @@ Ver também [`docs/operacao/RUNBOOK_SEGREDO_VAZADO.md`](docs/operacao/RUNBOOK_SE
 
 1. `make dev` — sobe db, mailpit, **ollama**, api e web.
 2. `make ollama-pull` — baixa o modelo (`OLLAMA_MODEL`, default `llama3`) antes do primeiro smoke (evita timeout na 1.ª inferência).
-3. Smoke LLM: `bash scripts/smoke_explicacao_score_llm_live.sh`
+3. Smoke LLM (1.ª vez: pull Ollama ~3GB): `make smoke-explicacao-llm` ou `make smoke-explicacao-llm-prepare` + `bash scripts/smoke_explicacao_score_llm_live.sh`
 
 **Alternativa — Ollama só no Mac:** instale [Ollama](https://ollama.com), `ollama pull llama3`, e no `.env` ou compose override use `OLLAMA_BASE_URL=http://host.docker.internal:11434`.
 

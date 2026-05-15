@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs ollama-up ollama-pull test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci fe-playwright-record-eval fe-playwright-integrado-ui qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
+.PHONY: help install install-hooks dev down logs ollama-up ollama-pull smoke-explicacao-llm-prepare smoke-explicacao-llm test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci fe-playwright-record-eval fe-playwright-integrado-ui qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -30,6 +30,12 @@ ollama-up: ## Sobe só o Ollama no compose (pull da imagem ~3GB na 1.ª vez)
 
 ollama-pull: ## Baixa OLLAMA_MODEL no serviço ollama do compose (recomendado antes do 1.º smoke LLM)
 	docker compose exec -T ollama ollama pull $${OLLAMA_MODEL:-llama3}
+
+smoke-explicacao-llm-prepare: ## Ollama + recreate API (router) + perfil CI avançado — 1.ª vez ~3GB pull
+	bash scripts/smoke_explicacao_score_llm_prepare.sh
+
+smoke-explicacao-llm: smoke-explicacao-llm-prepare ## Smoke ponta-a-ponta POST explicacao-score-llm + GET historico
+	bash scripts/smoke_explicacao_score_llm_live.sh
 
 dev: ## Sobe ambiente de dev (db + api + web + ollama); --build alinha deps do pyproject na imagem da API
 	docker compose up -d --build --remove-orphans

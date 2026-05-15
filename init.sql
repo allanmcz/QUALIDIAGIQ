@@ -47,4 +47,5 @@
 \i /docker-entrypoint-initdb.d/migrations/0043_explicacao_score_llm.sql
 \i /docker-entrypoint-initdb.d/migrations/0044_diagnostico_explicacao_score_llm_historico.sql
 \i /docker-entrypoint-initdb.d/migrations/0045_llm_tenant_usage_ledger.sql
+\i /docker-entrypoint-initdb.d/migrations/0046_ci_dashboard_perfil_avancado_smoke.sql
 \echo 'QualiDiagIQ: migrações concluídas.'
