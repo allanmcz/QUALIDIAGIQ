@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, RefreshCw } from "lucide-react";
 
@@ -55,9 +55,28 @@ export default function EmpresaDiagnosticosClient({
   const [erro, setErro] = useState<string | null>(null);
   /** Cache GET /diagnosticos/{id} para ranking global + evitar novo GET ao expandir. */
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DiagnosticoDetalheApi>>({});
   const [prefetchErro, setPrefetchErro] = useState<string | null>(null);
   const [linhaAbertaId, setLinhaAbertaId] = useState<string | null>(null);
+
+  /** Deep link `?expand=<uuid>` — abre a linha ao vir da ficha (M05/M12 só na expansão). */
+  useEffect(() => {
+    const expandId = searchParams.get("expand")?.trim();
+    if (!expandId || !diagnosticos?.some((d) => d.id === expandId)) return;
+    setLinhaAbertaId(expandId);
+  }, [searchParams, diagnosticos]);
+
+  /** Após expandir, rola até âncora (#empresa-m12-autoconf, etc.). */
+  useEffect(() => {
+    if (!linhaAbertaId || typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "").trim();
+    if (!hash) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [linhaAbertaId]);
 
   useEffect(() => {
     let cancel = false;
@@ -342,6 +361,7 @@ export default function EmpresaDiagnosticosClient({
                           diagnosticoId={diag.id}
                           detalhePrecarregado={detalhesPorId[diag.id] ?? null}
                           detalhesEmpresaParaAgregado={detalhesListaAgregacao}
+                          resumosEmpresa={daEmpresa}
                           onDetalheAtualizado={aoAtualizarDetalhe}
                         />
                       </div>

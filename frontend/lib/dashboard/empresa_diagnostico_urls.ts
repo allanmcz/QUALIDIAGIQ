@@ -19,11 +19,31 @@ export function buildWizardUrlNovaDiagnosticoEmpresa(cnpj14: string, razaoSocial
   return `/wizard?${q.toString()}`;
 }
 
+type EmpresaDiagnosticosHrefOpts = {
+  /** Abre a linha expandida na grelha (M05, M12, etc.). */
+  expandDiagnosticoId?: string;
+  /** Âncora no painel expandido (ex.: `empresa-m12-autoconf`). */
+  hash?: string;
+};
+
 /** Path da grelha de diagnósticos da empresa (CNPJ só dígitos). */
-export function buildEmpresaDiagnosticosHref(cnpj14: string, razaoSocial: string): string {
+export function buildEmpresaDiagnosticosHref(
+  cnpj14: string,
+  razaoSocial: string,
+  opts?: EmpresaDiagnosticosHrefOpts,
+): string {
   const c = cnpj14.replace(/\D/g, "");
   const base = `/dashboard/empresas/${c}`;
+  const q = new URLSearchParams();
   const r = razaoSocial.trim();
-  if (r.length < 3) return base;
-  return `${base}?razao_social=${encodeURIComponent(r)}`;
+  if (r.length >= 3) {
+    q.set("razao_social", r);
+  }
+  if (opts?.expandDiagnosticoId) {
+    q.set("expand", opts.expandDiagnosticoId);
+  }
+  const qs = q.toString();
+  const path = qs ? `${base}?${qs}` : base;
+  const hash = opts?.hash?.replace(/^#/, "").trim();
+  return hash ? `${path}#${hash}` : path;
 }

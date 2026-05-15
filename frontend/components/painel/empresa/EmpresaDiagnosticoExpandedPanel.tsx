@@ -54,7 +54,12 @@ import {
   normalizarM12DoApi,
   rotuloLikertM12,
 } from "@/lib/painel/m12_autoconf_utils";
+import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
+import { quadroImplantacaoEditavel } from "@/lib/painel/diagnostico_empresa_ordem";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
+
+import { MatrizImpactoDepartamentoCard } from "./MatrizImpactoDepartamentoCard";
+import { QuadroImplantacaoGrid } from "./QuadroImplantacaoGrid";
 
 type Props = {
   diagnosticoId: string;
@@ -62,6 +67,8 @@ type Props = {
   detalhePrecarregado: DiagnosticoDetalheApi | null;
   /** Todos os detalhes com score — para bloco «global empresa». */
   detalhesEmpresaParaAgregado: DiagnosticoDetalheApi[];
+  /** Resumos da PJ — define qual linha pode editar o quadro (primeiro diagnóstico). */
+  resumosEmpresa: DiagnosticoResumoApi[];
   onDetalheAtualizado?: (d: DiagnosticoDetalheApi) => void;
 };
 
@@ -69,6 +76,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
   diagnosticoId,
   detalhePrecarregado,
   detalhesEmpresaParaAgregado,
+  resumosEmpresa,
   onDetalheAtualizado,
 }: Props) {
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(detalhePrecarregado);
@@ -251,6 +259,8 @@ export default function EmpresaDiagnosticoExpandedPanel({
     );
   }
 
+  const quadroEditavel = quadroImplantacaoEditavel(diagnosticoId, resumosEmpresa, data.status);
+
   return (
     <div className="rounded-xl border bg-card/50 p-4 sm:p-6 space-y-8 mt-4 motion-reduce:transition-none">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -306,6 +316,24 @@ export default function EmpresaDiagnosticoExpandedPanel({
           </ol>
         </section>
       )}
+
+      <MatrizImpactoDepartamentoCard
+        matriz={data.matriz_impacto}
+        id="empresa-matriz-impacto"
+        className="scroll-mt-24"
+      />
+
+      <QuadroImplantacaoGrid
+        diagnosticoId={diagnosticoId}
+        data={data}
+        editavel={quadroEditavel}
+        avisoSomenteLeitura={
+          !quadroEditavel && data.status === "finalizado"
+            ? "Este não é o primeiro diagnóstico desta empresa no tenant — o quadro de implantação fica imutável (consulta apenas)."
+            : undefined
+        }
+        onDataAtualizado={onDetalheAtualizado}
+      />
 
       {rankingEsteDiag.length > 0 && (
         <div className="space-y-6">
@@ -416,12 +444,26 @@ export default function EmpresaDiagnosticoExpandedPanel({
       )}
 
       {frenteAbnt10 && frenteAbnt10.acoes.length > 0 && (
-        <Card>
+        <Card id="empresa-m12-autoconf" className="scroll-mt-24">
           <CardHeader>
             <CardTitle className="text-base">Autoconferência ABNT — 10 controles (M12)</CardTitle>
             <p className="text-sm font-normal text-muted-foreground">
-              Escala Likert 1 a 5; gravar na API com versão otimista (If-Match). Igual à ficha completa.
+              Escala Likert 1 (mínimo) a 5 (máximo) por controle — espelho do checklist do relatório PDF.{" "}
+              <strong className="font-medium text-foreground">Alterar</strong> aplica o nível apenas neste controle.
+              Depois de <strong className="font-medium text-foreground">10/10 assinalados</strong>, use{" "}
+              <strong className="font-medium text-foreground">Gravar autoconf na API</strong> (
+              <code className="text-xs">If-Match</code> / <code className="text-xs">versao_otimista</code>) — ABNT NBR
+              17301:2026.
             </p>
+            {data.status === "finalizado" ? (
+              <p
+                className="text-sm leading-snug border rounded-md p-3 mt-3 bg-muted/25 text-muted-foreground"
+                role="note"
+              >
+                <strong className="text-foreground">Independente do assistente:</strong> estas notas não são copiadas
+                do questionário («Inexistente», «Incipiente», etc.). Cada controle tem de ser escolhido aqui.
+              </p>
+            ) : null}
             {data.status === "finalizado" ? (
               <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <p className="text-sm font-medium tabular-nums">
