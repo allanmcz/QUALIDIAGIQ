@@ -1,19 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 
 import EmpresaDiagnosticoExpandedPanel from "@/components/painel/empresa/EmpresaDiagnosticoExpandedPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import {
+  DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX,
+  fetchDiagnosticosResumo,
   fetchDiagnosticosResumoTodasPaginasPorEmpresa,
   type DiagnosticoResumoApi,
 } from "@/lib/api/lista_diagnosticos";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
+import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 function mascaraCnpj14(d: string): string {
@@ -35,6 +39,10 @@ function pickLatestDiagnosticId(rows: DiagnosticoResumoApi[]): string | null {
 
 const PREFETCH_CONCORRENCIA = 4;
 
+/** Colunas da grelha: empresa, score, estado, data, ações (Expandir + Refazer). */
+const GRID_COLS_EMPRESA =
+  "sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_minmax(9rem,11rem)]";
+
 export default function EmpresaDiagnosticosClient({
   cnpjNormalizado,
   razaoSocialHint,
@@ -46,6 +54,7 @@ export default function EmpresaDiagnosticosClient({
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   /** Cache GET /diagnosticos/{id} para ranking global + evitar novo GET ao expandir. */
+  const router = useRouter();
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DiagnosticoDetalheApi>>({});
   const [prefetchErro, setPrefetchErro] = useState<string | null>(null);
   const [linhaAbertaId, setLinhaAbertaId] = useState<string | null>(null);
@@ -60,7 +69,14 @@ export default function EmpresaDiagnosticosClient({
       setCarregando(true);
       setErro(null);
       try {
-        const rows = await fetchDiagnosticosResumoTodasPaginasPorEmpresa(cnpjNormalizado);
+        let rows = await fetchDiagnosticosResumoTodasPaginasPorEmpresa(cnpjNormalizado);
+        if (rows.length === 0) {
+          /** Fallback: filtro server-side pode falhar (DV/CNPJ legado) — alinha na grelha por PJ. */
+          const todos = await fetchDiagnosticosResumo(DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX, 0);
+          rows = todos.filter(
+            (d) => (d.empresa_cnpj ?? "").replace(/\D/g, "") === cnpjNormalizado,
+          );
+        }
         if (!cancel) setDiagnosticos(rows);
       } catch (e) {
         if (!cancel) setErro(e instanceof Error ? e.message : "Falha ao carregar diagnósticos.");
@@ -128,6 +144,16 @@ export default function EmpresaDiagnosticosClient({
   const aoAtualizarDetalhe = useCallback((d: DiagnosticoDetalheApi) => {
     setDetalhesPorId((prev) => ({ ...prev, [d.id]: d }));
   }, []);
+
+  const aoRefazerDiagnostico = useCallback(
+    (razaoSocial: string) => {
+      navegarRefazerDiagnosticoPainel(
+        router,
+        buildWizardUrlNovaDiagnosticoEmpresa(cnpjNormalizado, razaoSocial),
+      );
+    },
+    [router, cnpjNormalizado],
+  );
 
   const daEmpresa = diagnosticos ?? [];
   const semSessao = !temSessaoPainelParaApiCliente();
@@ -227,14 +253,16 @@ export default function EmpresaDiagnosticosClient({
 
         {!semSessao && !carregando && daEmpresa.length > 0 && (
           <div className="rounded-xl border bg-card/40 overflow-hidden">
-            <div className="hidden md:grid md:grid-cols-[1fr_auto_auto_auto_auto] md:gap-3 md:items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+            <div
+              className={`hidden sm:grid ${GRID_COLS_EMPRESA} sm:gap-3 sm:items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/30`}
+            >
               <span>Empresa / ciclo</span>
               <span className="text-center">Score</span>
               <span className="text-center">Estado</span>
               <span className="text-center">Data</span>
-              <span className="sr-only">Expandir</span>
+              <span className="text-center">Ações</span>
             </div>
-            <ul className="divide-y">
+            <ul className="divide-y" aria-label="Diagnósticos desta empresa">
               {daEmpresa.map((diag) => {
                 const score = diag.score_geral;
                 const pct = score != null ? Math.min(100, Math.max(0, score)) : null;
@@ -248,8 +276,10 @@ export default function EmpresaDiagnosticosClient({
 
                 return (
                   <li key={diag.id}>
-                    <div className="flex flex-col md:grid md:grid-cols-[1fr_auto_auto_auto_auto] md:gap-3 md:items-center px-3 py-4 sm:px-4">
-                      <div className="min-w-0 mb-2 md:mb-0">
+                    <div
+                      className={`px-3 py-4 sm:px-4 space-y-3 sm:space-y-0 sm:grid ${GRID_COLS_EMPRESA} sm:gap-3 sm:items-center`}
+                    >
+                      <div className="min-w-0">
                         <Link
                           href={detailHref}
                           className="font-medium text-foreground hover:text-primary hover:underline line-clamp-2"
@@ -260,44 +290,61 @@ export default function EmpresaDiagnosticosClient({
                           ID {diag.id}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 md:contents">
-                        <div className="tabular-nums text-sm md:text-center md:min-w-[4rem]">
-                          {pct != null ? `${pct.toFixed(1)}` : "—"}
-                        </div>
-                        <div className="md:flex md:justify-center">
-                          <Badge variant={diag.plano === "avancado" ? "default" : "secondary"}>
-                            {diag.status === "finalizado" ? "Finalizado" : diag.status}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground md:text-center md:min-w-[5.5rem]">
-                          {quando}
-                        </div>
-                        <div className="md:flex md:justify-end">
+                      <div className="flex items-center justify-between gap-2 sm:block sm:text-center tabular-nums text-sm">
+                        <span className="text-xs text-muted-foreground sm:hidden">Score</span>
+                        <span>{pct != null ? `${pct.toFixed(1)}` : "—"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 sm:flex sm:justify-center">
+                        <span className="text-xs text-muted-foreground sm:hidden">Estado</span>
+                        <Badge variant={diag.plano === "avancado" ? "default" : "secondary"}>
+                          {diag.status === "finalizado" ? "Finalizado" : diag.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 sm:block sm:text-center text-sm text-muted-foreground">
+                        <span className="text-xs sm:hidden">Data</span>
+                        <span>{quando}</span>
+                      </div>
+                      <div className="flex flex-col gap-1.5 w-full sm:items-end">
+                        {diag.plano === "avancado" ? (
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            className="gap-1.5 w-full md:w-auto mt-2 md:mt-0"
-                            aria-expanded={aberto}
-                            onClick={() => setLinhaAbertaId((id) => (id === diag.id ? null : diag.id))}
+                            className="gap-1.5 w-full sm:w-auto h-8 text-xs"
+                            title="Novo ciclo no assistente (sem rascunho local)"
+                            onClick={() => aoRefazerDiagnostico(diag.empresa_razao_social)}
                           >
-                            <ChevronDown
-                              className={`h-4 w-4 shrink-0 transition-transform ${aberto ? "rotate-180" : ""}`}
-                              aria-hidden
-                            />
-                            {aberto ? "Fechar" : "Expandir"}
+                            <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Refazer
                           </Button>
-                        </div>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant={aberto ? "secondary" : "outline"}
+                          size="sm"
+                          className="gap-1.5 w-full sm:w-auto"
+                          aria-expanded={aberto}
+                          aria-controls={`empresa-expand-${diag.id}`}
+                          onClick={() => setLinhaAbertaId((id) => (id === diag.id ? null : diag.id))}
+                        >
+                          <ChevronDown
+                            className={`h-4 w-4 shrink-0 transition-transform ${aberto ? "rotate-180" : ""}`}
+                            aria-hidden
+                          />
+                          {aberto ? "Fechar" : "Expandir"}
+                        </Button>
                       </div>
                     </div>
 
                     {aberto ? (
-                      <EmpresaDiagnosticoExpandedPanel
-                        diagnosticoId={diag.id}
-                        detalhePrecarregado={detalhesPorId[diag.id] ?? null}
-                        detalhesEmpresaParaAgregado={detalhesListaAgregacao}
-                        onDetalheAtualizado={aoAtualizarDetalhe}
-                      />
+                      <div id={`empresa-expand-${diag.id}`} className="border-t bg-muted/10">
+                        <EmpresaDiagnosticoExpandedPanel
+                          diagnosticoId={diag.id}
+                          detalhePrecarregado={detalhesPorId[diag.id] ?? null}
+                          detalhesEmpresaParaAgregado={detalhesListaAgregacao}
+                          onDetalheAtualizado={aoAtualizarDetalhe}
+                        />
+                      </div>
                     ) : null}
                   </li>
                 );

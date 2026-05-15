@@ -69,7 +69,6 @@ export async function fetchDiagnosticosResumo(
   }
   const base = getApiUrlForFetch().replace(/\/$/, "");
   /** Não usar `new URL(relativo)` — com base `/api-backend` o browser lança «Invalid URL». */
-  const path = `${base}/diagnosticos/`;
   const params = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
@@ -79,7 +78,8 @@ export async function fetchDiagnosticosResumo(
     params.set("empresa_cnpj", cnpj);
   }
   const qs = params.toString();
-  const url = `${path}?${qs}`;
+  /** Sem barra final no path do browser — Next faz 308; o proxy normaliza para `/diagnosticos/` no upstream. */
+  const url = `${base}/diagnosticos?${qs}`;
 
   try {
     const res = await fetch(url, {

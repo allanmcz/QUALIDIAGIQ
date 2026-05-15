@@ -28,7 +28,7 @@ export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
   const base = getApiUrlForFetch().replace(/\/$/, "");
 
   try {
-    const res = await fetch(`${base}/diagnosticos/`, {
+    const res = await fetch(`${base}/diagnosticos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

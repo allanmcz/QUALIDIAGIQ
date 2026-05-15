@@ -37,6 +37,11 @@ smoke-explicacao-llm-prepare: ## Ollama + recreate API (router) + perfil CI avan
 smoke-explicacao-llm: smoke-explicacao-llm-prepare ## Smoke ponta-a-ponta POST explicacao-score-llm + GET historico
 	bash scripts/smoke_explicacao_score_llm_live.sh
 
+regenerar-pdf-dev: ## Regenera PDF mock para DIAG_ID (ex.: make regenerar-pdf-dev DIAG_ID=uuid)
+	@test -n "$(DIAG_ID)" || (echo "Defina DIAG_ID=..." && exit 1)
+	docker compose cp scripts/regenerar_pdf_diagnostico_dev.py api:/tmp/regenerar_pdf_diagnostico_dev.py
+	docker compose exec -T api env PYTHONPATH=/app python /tmp/regenerar_pdf_diagnostico_dev.py "$(DIAG_ID)"
+
 dev: ## Sobe ambiente de dev (db + api + web + ollama); --build alinha deps do pyproject na imagem da API
 	docker compose up -d --build --remove-orphans
 	@bash -ec 'source INICIAR_APP/lib/qdi-env.sh && qdi_cd_root "$(CURDIR)/INICIAR_APP" && if qdi_wait_api_health 25; then echo "✓ API /health OK."; else echo "⚠ API ainda não respondeu — docker compose logs api"; fi'

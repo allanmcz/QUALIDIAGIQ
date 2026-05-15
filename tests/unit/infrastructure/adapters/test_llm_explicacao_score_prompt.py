@@ -27,3 +27,22 @@ class TestMontarPromptExplicacaoScore:
         assert "fiscal" in prompt
         assert "NÃO recalcule o score" in prompt
         assert "LC 214/2025" in prompt
+
+    def test_inclui_pesos_e_base_normativa(self) -> None:
+        req = LlmGatewayRequest(
+            tenant_id="t1",
+            trace_id="tr",
+            task_type=LlmTaskType.EXPLICACAO_SCORE,
+            prompt_key="explicacao_score",
+            input_data={
+                "score_geral": 60.0,
+                "score_por_dimensao": {},
+                "pesos_por_dimensao": {"fiscal": 1.5},
+                "base_normativa": "LC 214/2025 art. 9º",
+            },
+        )
+        prompt = montar_prompt_explicacao_score(req)
+        assert "Pesos aplicados por dimensão" in prompt
+        assert "peso 1.5" in prompt
+        assert "Referências normativas" in prompt
+        assert "LC 214/2025 art. 9º" in prompt

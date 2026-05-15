@@ -39,6 +39,19 @@ function montarCaminhoUpstream(segments: string[] | undefined): string {
   return `/${joined}`;
 }
 
+/**
+ * FastAPI exige barra final em algumas coleções (`POST /diagnosticos/`).
+ * O browser costuma chamar `/api-backend/diagnosticos` (sem barra) após 308 do Next.
+ * Seguir 307/308 com corpo no `fetch` do Node (Undici) falha → «fetch failed».
+ */
+function normalizarCaminhoUpstreamFastApi(pathSuffix: string, method: string): string {
+  /** FastAPI monta `GET/POST` em `/diagnosticos/` — evita 307/308 no proxy Node. */
+  if (pathSuffix === "/diagnosticos") {
+    return "/diagnosticos/";
+  }
+  return pathSuffix;
+}
+
 function montarCabecalhos(request: NextRequest): Headers {
   const h = new Headers();
   for (const nome of CABECALHOS_REPASSE) {
@@ -116,6 +129,7 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
     } catch {
       return NextResponse.json({ detail: "Caminho de proxy inválido" }, { status: 400 });
     }
+    pathSuffix = normalizarCaminhoUpstreamFastApi(pathSuffix, request.method);
 
     const alvo = `${base}${pathSuffix}${request.nextUrl.search}`;
     const headers = montarCabecalhos(request);
