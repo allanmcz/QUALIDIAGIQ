@@ -922,6 +922,15 @@ class ExplicarScoreLlmHttpResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
 
+class ExplicacaoScoreLlmPersistidaSchema(ExplicarScoreLlmHttpResponse):
+    """Snapshot gravado em ``diagnosticos.explicacao_score_llm`` (última geração do painel)."""
+
+    gerado_em: datetime | None = None
+    trace_id: str | None = None
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class DiagnosticoResumoSchema(BaseModel):
     """Item resumido para listagem do tenant (P7 — painel)."""
 
@@ -970,6 +979,10 @@ class DiagnosticoResponse(BaseModel):
     )
     score: ScoreCompletoSchema | None = None
     relatorio_pdf_url: str | None = None
+    explicacao_score_llm: ExplicacaoScoreLlmPersistidaSchema | None = Field(
+        default=None,
+        description="Última narrativa LLM do score (POST explicacao-score-llm), persistida em JSONB.",
+    )
     recomendacao_ia: str | None = None
     checklist: list[dict[str, Any]] | None = None
     matriz_impacto: list[dict[str, Any]] | None = None

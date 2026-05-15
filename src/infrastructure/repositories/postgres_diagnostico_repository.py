@@ -72,6 +72,12 @@ def _quadro_anotacoes_de_row(row: dict[str, Any]) -> dict[str, dict[str, str | l
     return out or None
 
 
+def _explicacao_score_llm_de_row(row: dict[str, Any]) -> dict[str, Any] | None:
+    """Lê JSONB ``explicacao_score_llm`` (última narrativa LLM do painel)."""
+    raw = row.get("explicacao_score_llm")
+    return cast("dict[str, Any]", raw) if isinstance(raw, dict) else None
+
+
 def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
     """Converte uma linha ``RealDict`` em entidade de domínio (paridade com Supabase)."""
     raw_created = row.get("criado_em")
@@ -149,6 +155,7 @@ def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
         aceite_termos_privacidade_em=aceite_em,
         locale_relatorio=locale_relatorio,
         versao_plano=int(row.get("versao_plano") or 1),
+        explicacao_score_llm=_explicacao_score_llm_de_row(row),
     )
 
 
@@ -512,6 +519,33 @@ def _patch_m12_sync(
         conn.close()
 
 
+def _patch_explicacao_score_llm_sync(
+    dsn: str,
+    diagnostico_id: UUID,
+    tenant_id: UUID,
+    snapshot: dict[str, Any],
+) -> None:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE diagnosticos
+                SET explicacao_score_llm = %s
+                WHERE id = %s AND tenant_id = %s
+                """,
+                (Json(snapshot), str(diagnostico_id), str(tenant_id)),
+            )
+            if cur.rowcount == 0:
+                raise ValueError("Diagnóstico não encontrado para persistir explicação LLM")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 class PostgresDiagnosticoRepository(DiagnosticoRepository):
     """Adapter Postgres síncrono por baixo de ``asyncio.to_thread``."""
 
@@ -656,4 +690,18 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
             tenant_id,
             quadro_implantacao_anotacoes,
             versao_esperada,
+        )
+
+    async def atualizar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+    ) -> None:
+        await asyncio.to_thread(
+            _patch_explicacao_score_llm_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
+            snapshot,
         )

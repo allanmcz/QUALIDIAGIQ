@@ -48,6 +48,7 @@ const detalheBody = {
       tecnologica: { valor: 62, peso_total_aplicado: 1.3 },
     },
   },
+  explicacao_score_llm: null,
   checklist: [
     {
       nome: "ABNT NBR 17301 — 10 controlos M12",

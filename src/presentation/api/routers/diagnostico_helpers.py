@@ -37,6 +37,7 @@ from src.presentation.api.schemas import (
     DiagnosticoConclusaoSelfServicePublicoResponse,
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
+    ExplicacaoScoreLlmPersistidaSchema,
     IniciarDiagnosticoRequest,
     ScoreCompletoSchema,
     ScoreDimensaoSchema,
@@ -264,6 +265,7 @@ async def _montar_diagnostico_response(
         locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
+        explicacao_score_llm=_explicacao_score_llm_para_http(diagnostico),
         recomendacao_ia=recomendacao_ia,
         checklist=checklist_data,
         matriz_impacto=matriz_data,
@@ -275,6 +277,37 @@ async def _montar_diagnostico_response(
         versao_otimista=v_aud,
         versao_plano=versao_plano,
     )
+
+
+def _explicacao_score_llm_para_http(
+    diagnostico: Diagnostico,
+) -> ExplicacaoScoreLlmPersistidaSchema | None:
+    """Mapeia JSONB persistido para schema HTTP (GET /diagnosticos/{id})."""
+    raw = getattr(diagnostico, "explicacao_score_llm", None)
+    if not isinstance(raw, dict):
+        return None
+    try:
+        gerado_raw = raw.get("gerado_em")
+        gerado_em: datetime | None = None
+        if gerado_raw is not None:
+            gerado_em = datetime.fromisoformat(str(gerado_raw).replace("Z", "+00:00"))
+        return ExplicacaoScoreLlmPersistidaSchema(
+            text=str(raw.get("text", "")),
+            provider=str(raw.get("provider", "")),
+            model=str(raw.get("model", "")),
+            policy_version=str(raw.get("policy_version", "")),
+            input_tokens=int(raw.get("input_tokens") or 0),
+            output_tokens=int(raw.get("output_tokens") or 0),
+            estimated_cost_usd=float(raw.get("estimated_cost_usd") or 0.0),
+            latency_ms=int(raw.get("latency_ms") or 0),
+            blocked_by_guardrail=bool(raw.get("blocked_by_guardrail")),
+            guardrail_reason=raw.get("guardrail_reason"),
+            guardrail_status=str(raw.get("guardrail_status") or "ok"),
+            gerado_em=gerado_em,
+            trace_id=str(raw["trace_id"]) if raw.get("trace_id") else None,
+        )
+    except (TypeError, ValueError):
+        return None
 
 
 def _score_completo_para_http(diagnostico: Diagnostico) -> ScoreCompletoSchema | None:

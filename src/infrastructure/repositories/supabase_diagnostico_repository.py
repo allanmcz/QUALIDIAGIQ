@@ -203,6 +203,27 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             return None
         return self._para_entity(data[0])
 
+    async def atualizar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+    ) -> None:
+        sid, stid = str(diagnostico_id), str(tenant_id)
+
+        def _update() -> Any:
+            return (
+                self._client.table("diagnosticos")
+                .update({"explicacao_score_llm": snapshot})
+                .eq("id", sid)
+                .eq("tenant_id", stid)
+                .execute()
+            )
+
+        response = await asyncio.to_thread(_update)
+        if not response.data:
+            raise ValueError("Diagnóstico não encontrado para persistir explicação LLM")
+
     def _salvar_e_materializar_thread(
         self, diagnostico: Diagnostico, score_completo: ScoreCompleto
     ) -> PlanoPainelSerializado:
@@ -369,6 +390,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             ),
             "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
             "versao_plano": int(getattr(d, "versao_plano", 1) or 1),
+            "explicacao_score_llm": getattr(d, "explicacao_score_llm", None),
         }
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
@@ -438,6 +460,9 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                     tmp[str(k)] = item_sq
             quadro = tmp if tmp else None
 
+        expl_raw = row.get("explicacao_score_llm")
+        explicacao_score_llm = expl_raw if isinstance(expl_raw, dict) else None
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -472,4 +497,5 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             aceite_termos_privacidade_em=aceite_em,
             locale_relatorio=locale_relatorio,
             versao_plano=int(row.get("versao_plano") or 1),
+            explicacao_score_llm=explicacao_score_llm,
         )

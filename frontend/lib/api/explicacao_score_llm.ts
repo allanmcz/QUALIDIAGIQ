@@ -9,7 +9,7 @@ import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
 import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
 
-/** Espelha `ExplicarScoreLlmHttpResponse` da API FastAPI. */
+/** Espelha `ExplicarScoreLlmHttpResponse` / `ExplicacaoScoreLlmPersistidaSchema` da API. */
 export type ExplicacaoScoreLlmHttp = {
   text: string;
   provider: string;
@@ -22,6 +22,8 @@ export type ExplicacaoScoreLlmHttp = {
   blocked_by_guardrail: boolean;
   guardrail_reason: string | null;
   guardrail_status: string;
+  gerado_em?: string | null;
+  trace_id?: string | null;
 };
 
 function base(): string {

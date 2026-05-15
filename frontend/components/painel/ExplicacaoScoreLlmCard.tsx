@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,18 @@ type Props = {
   diagnosticoStatus: string;
   /** Score geral 0–100 já persistido (GET); null = botão desativado. */
   scoreGeral: number | null;
-  /** Classe extra no Card (ex.: margem no painel expandido). */
+  /** Snapshot da BD (GET) — hidratação sem novo POST. */
+  inicial?: ExplicacaoScoreLlmHttp | null;
   className?: string;
 };
+
+function formatarGeradoEmPtBr(iso: string | null | undefined): string | null {
+  const s = (iso || "").trim();
+  if (!s) return null;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
 
 /**
  * Bloco painel — explicação IA do score via gateway governado (ADR-022).
@@ -25,11 +34,16 @@ export function ExplicacaoScoreLlmCard({
   diagnosticoId,
   diagnosticoStatus,
   scoreGeral,
+  inicial = null,
   className,
 }: Props) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [resposta, setResposta] = useState<ExplicacaoScoreLlmHttp | null>(null);
+  const [resposta, setResposta] = useState<ExplicacaoScoreLlmHttp | null>(inicial);
+
+  useEffect(() => {
+    setResposta(inicial);
+  }, [inicial]);
 
   const podeGerar =
     diagnosticoStatus === "finalizado" && scoreGeral != null && Number.isFinite(scoreGeral);
@@ -53,6 +67,8 @@ export function ExplicacaoScoreLlmCard({
       ? resposta.guardrail_reason
       : resposta?.text ?? "";
 
+  const rotuloGerado = formatarGeradoEmPtBr(resposta?.gerado_em);
+
   return (
     <Card id="diag-explicacao-score-llm" className={className ?? "mb-10 scroll-mt-24"}>
       <CardHeader>
@@ -62,7 +78,8 @@ export function ExplicacaoScoreLlmCard({
         </CardTitle>
         <CardDescription>
           Narrativa sobre o score geral já calculado pelo motor auditável (0–100). Com guardrails e
-          política de roteamento LLM (ADR-022); não altera o valor numérico.
+          política de roteamento LLM (ADR-022); não altera o valor numérico. Não substitui a
+          recomendação gerada na finalização do diagnóstico.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -101,6 +118,9 @@ export function ExplicacaoScoreLlmCard({
             ) : (
               <Badge variant="secondary">Resposta gerada</Badge>
             )}
+            {rotuloGerado ? (
+              <p className="text-xs text-muted-foreground">Última geração: {rotuloGerado}</p>
+            ) : null}
             <div
               className="text-sm leading-relaxed whitespace-pre-wrap text-foreground"
               role="region"

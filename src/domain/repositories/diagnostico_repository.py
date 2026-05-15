@@ -115,6 +115,16 @@ class DiagnosticoRepository(ABC):
         ...
 
     @abstractmethod
+    async def atualizar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+    ) -> None:
+        """Grava última narrativa LLM (JSONB ``explicacao_score_llm``). Diagnóstico deve existir no tenant."""
+        ...
+
+    @abstractmethod
     async def salvar_e_materializar_plano_painel(
         self,
         diagnostico: Diagnostico,

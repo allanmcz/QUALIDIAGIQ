@@ -11,6 +11,7 @@ import pytest
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
+    FaixaFaturamentoDeclarada,
     PlanoDiagnostico,
     PorteEmpresa,
     RegimeTributario,
@@ -22,8 +23,10 @@ from src.domain.value_objects.plano_painel_serializado import PlanoPainelSeriali
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.infrastructure.repositories.postgres_diagnostico_repository import (
     PostgresDiagnosticoRepository,
+    _explicacao_score_llm_de_row,
     _inserir_historico_cnpj_cur,
     _materializar_plano_backfill_sync,
+    _patch_explicacao_score_llm_sync,
     _patch_m12_sync,
     _patch_quadro_sync,
     _patch_relatorio_sync,
@@ -125,6 +128,16 @@ class TestPostgresDiagnosticoRepository:
             repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
             await repo.salvar(_diag_minimo())
         mock_conn.rollback.assert_called_once()
+
+    async def test_atualizar_explicacao_score_llm_async(self) -> None:
+        did, tid = uuid4(), uuid4()
+        snap = {"text": "async"}
+        with patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository._patch_explicacao_score_llm_sync"
+        ) as mock_patch:
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            await repo.atualizar_explicacao_score_llm(did, tid, snap)
+        mock_patch.assert_called_once_with("postgresql://u:p@localhost:1/db", did, tid, snap)
 
     async def test_buscar_por_id_retorna_entidade(self) -> None:
         did, tid = uuid4(), uuid4()
@@ -544,6 +557,12 @@ def test_inserir_historico_cnpj_cur_grava_linhas() -> None:
     assert args[2] == str(cq)
 
 
+def test_explicacao_score_llm_de_row_dict_ou_none() -> None:
+    assert _explicacao_score_llm_de_row({"explicacao_score_llm": {"text": "ok"}}) == {"text": "ok"}
+    assert _explicacao_score_llm_de_row({"explicacao_score_llm": "nao-dict"}) is None
+    assert _explicacao_score_llm_de_row({}) is None
+
+
 def test_quadro_anotacoes_de_row_limpeza_e_legado() -> None:
     row = {
         "quadro_implantacao_anotacoes": {
@@ -569,18 +588,64 @@ def test_row_dict_para_entity_com_defaults_defensivos() -> None:
     did, tid = uuid4(), uuid4()
     row = _row_minima(did, tid)
     row["score_completo"] = {"bad": "shape"}
+    row_valid_sc = _row_minima(uuid4(), uuid4())
+    row_valid_sc["score_completo"] = {
+        "score_geral": {"valor": 70.0, "peso_total_aplicado": 1.0},
+        "score_por_dimensao": {
+            "fiscal": {"valor": 70.0, "peso_total_aplicado": 1.0},
+        },
+    }
+    row_valid_sc["empresa_faixa_faturamento"] = "ate_360_mil"
+    ent_sc = _row_dict_para_entity(row_valid_sc)
+    assert ent_sc.score_completo_snapshot is not None
+    assert ent_sc.empresa.faixa_faturamento == FaixaFaturamentoDeclarada.ATE_360_MIL
+
     row["respondente_email"] = None
     row["empresa_faixa_faturamento"] = "invalida"
     row["empresa_cnae"] = "   "
     row["checklist_m12_estado"] = ["x"] * 10
     row["aceite_termos_privacidade_em"] = "2026-05-09T10:00:00Z"
     row["quadro_implantacao_anotacoes"] = {"k": {"comentario": "ok"}}
+    row["explicacao_score_llm"] = {
+        "text": "persistida",
+        "provider": "p",
+        "model": "m",
+        "policy_version": "v",
+    }
     entity = _row_dict_para_entity(row)
+    assert entity.explicacao_score_llm is not None
+    assert entity.explicacao_score_llm["text"] == "persistida"
     assert entity.respondente.email == "nao-informado@placeholder.qdi"
     assert entity.empresa.faixa_faturamento is None
     assert entity.empresa.cnae_principal == "6201500"
     assert entity.checklist_m12_estado is None
     assert entity.aceite_termos_privacidade_em is not None
+
+
+def test_patch_explicacao_score_llm_sync_sucesso_e_nao_encontrado() -> None:
+    did, tid = uuid4(), uuid4()
+    snap = {"text": "ok", "provider": "p", "model": "m", "policy_version": "v"}
+    mock_cursor = MagicMock()
+    mock_cursor.rowcount = 1
+    mock_conn = _mock_conn_cursor(mock_cursor)
+    with patch(
+        "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+        return_value=mock_conn,
+    ):
+        _patch_explicacao_score_llm_sync("postgresql://u:p@localhost:1/db", did, tid, snap)
+    mock_conn.commit.assert_called_once()
+
+    mock_cursor2 = MagicMock()
+    mock_cursor2.rowcount = 0
+    mock_conn2 = _mock_conn_cursor(mock_cursor2)
+    with (
+        patch(
+            "src.infrastructure.repositories.postgres_diagnostico_repository.psycopg2.connect",
+            return_value=mock_conn2,
+        ),
+        pytest.raises(ValueError, match="não encontrado"),
+    ):
+        _patch_explicacao_score_llm_sync("postgresql://u:p@localhost:1/db", did, tid, snap)
 
 
 @pytest.mark.parametrize(
@@ -589,6 +654,7 @@ def test_row_dict_para_entity_com_defaults_defensivos() -> None:
         (_patch_relatorio_sync, ("http://x.pdf", 1)),
         (_patch_quadro_sync, ({"f0_a0": {"comentarios": [], "prazo_meta": ""}}, 1)),
         (_patch_m12_sync, ([1] * 10, 1)),
+        (_patch_explicacao_score_llm_sync, ({"text": "x"},)),
     ],
 )
 def test_patch_sync_rollback_em_excecao(fn, args) -> None:

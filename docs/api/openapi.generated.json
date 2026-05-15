@@ -419,6 +419,64 @@
         }
       }
     },
+    "/diagnosticos/{diagnostico_id}/explicacao-score-llm": {
+      "post": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Explicar score via LLM (painel)",
+        "description": "Gera narrativa sobre o **score geral já calculado** (motor determinístico). Exige diagnóstico **finalizado** com ``score_geral`` persistido. **Idempotency-Key** obrigatório (middleware — replay de resposta 2xx).",
+        "operationId": "explicar_score_llm_painel_diagnosticos__diagnostico_id__explicacao_score_llm_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplicacaoScoreLlmPersistidaSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/diagnosticos/{diagnostico_id}/plano-acoes/{plano_acao_id}/subtarefas": {
       "post": {
         "tags": [
@@ -2945,6 +3003,17 @@
             ],
             "title": "Relatorio Pdf Url"
           },
+          "explicacao_score_llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExplicacaoScoreLlmPersistidaSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Última narrativa LLM do score (POST explicacao-score-llm), persistida em JSONB."
+          },
           "recomendacao_ia": {
             "anyOf": [
               {
@@ -3404,6 +3473,99 @@
           "setor_macro"
         ],
         "title": "EmpresaSchema"
+      },
+      "ExplicacaoScoreLlmPersistidaSchema": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens",
+            "default": 0
+          },
+          "estimated_cost_usd": {
+            "type": "number",
+            "title": "Estimated Cost Usd",
+            "default": 0.0
+          },
+          "latency_ms": {
+            "type": "integer",
+            "title": "Latency Ms",
+            "default": 0
+          },
+          "blocked_by_guardrail": {
+            "type": "boolean",
+            "title": "Blocked By Guardrail",
+            "default": false
+          },
+          "guardrail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardrail Reason"
+          },
+          "guardrail_status": {
+            "type": "string",
+            "title": "Guardrail Status",
+            "default": "ok"
+          },
+          "gerado_em": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gerado Em"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "provider",
+          "model",
+          "policy_version"
+        ],
+        "title": "ExplicacaoScoreLlmPersistidaSchema",
+        "description": "Snapshot gravado em ``diagnosticos.explicacao_score_llm`` (última geração do painel)."
       },
       "FaixaFaturamentoDeclarada": {
         "type": "string",

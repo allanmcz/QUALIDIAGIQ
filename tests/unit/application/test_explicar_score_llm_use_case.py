@@ -65,3 +65,32 @@ class TestExplicarScoreLlmUseCase:
         )
         req = gw.complete.call_args[0][0]
         assert req.idempotency_key == "chave-http-1"
+
+    @pytest.mark.asyncio
+    async def test_campos_extras_mesclados_em_input_data(self) -> None:
+        gw = AsyncMock()
+        gw.complete = AsyncMock(
+            return_value=LlmGatewayResponse(
+                text="x",
+                provider="fake",
+                model="m",
+                policy_version="v",
+            )
+        )
+        uc = ExplicarScoreLlmUseCase(gateway=gw)
+        tid = uuid4()
+        await uc.execute(
+            ComandoExplicarScoreLlm(
+                tenant_id=tid,
+                trace_id="tr-3",
+                score_geral=55.0,
+                campos_extras={
+                    "score_por_dimensao": {"fiscal": 40.0},
+                    "empresa_uf": "SP",
+                },
+            )
+        )
+        req = gw.complete.call_args[0][0]
+        assert req.input_data["score_geral"] == 55.0
+        assert req.input_data["score_por_dimensao"] == {"fiscal": 40.0}
+        assert req.input_data["empresa_uf"] == "SP"

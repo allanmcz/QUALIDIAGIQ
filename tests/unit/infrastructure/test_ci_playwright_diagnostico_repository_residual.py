@@ -147,6 +147,20 @@ class TestCiPlaywrightDiagnosticoRepositoryMutacoesVersao:
         assert out is not None
         assert out.quadro_implantacao_anotacoes is not None
 
+    async def test_atualizar_explicacao_score_llm_sucesso_e_nao_encontrado(self) -> None:
+        repo = CiPlaywrightDiagnosticoRepository()
+        did = uuid4()
+        with pytest.raises(ValueError, match="não encontrado"):
+            await repo.atualizar_explicacao_score_llm(did, _TENANT_PADRAO_CI, {"text": "x"})
+
+        d = _diag_finalizado()
+        d.tenant_id = _TENANT_PADRAO_CI
+        await repo.salvar(d)
+        await repo.atualizar_explicacao_score_llm(d.id, _TENANT_PADRAO_CI, {"text": "gravado"})
+        row = await repo.buscar_por_id(d.id, _TENANT_PADRAO_CI)
+        assert row is not None
+        assert row.explicacao_score_llm == {"text": "gravado"}
+
 
 @pytest.mark.asyncio
 class TestCiPlaywrightDiagnosticoRepositoryPlano:

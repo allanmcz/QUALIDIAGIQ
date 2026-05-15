@@ -132,6 +132,17 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         row.versao_otimista += 1
         return row
 
+    async def atualizar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+    ) -> None:
+        row = await self.buscar_por_id(diagnostico_id, tenant_id)
+        if row is None:
+            raise ValueError("Diagnóstico não encontrado para persistir explicação LLM")
+        row.explicacao_score_llm = snapshot
+
     def _merge_subtarefas_no_plano(
         self, plano: PlanoPainelSerializado, did: UUID, tid: UUID
     ) -> PlanoPainelSerializado:

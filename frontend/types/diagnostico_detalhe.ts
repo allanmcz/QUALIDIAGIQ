@@ -2,6 +2,8 @@
  * Contrato alinhado a GET /diagnosticos/{id} — usado no detalhe e na expansão da grelha por empresa.
  */
 
+import type { ExplicacaoScoreLlmHttp } from "@/lib/api/explicacao_score_llm";
+
 export type AcaoChecklistDetalhe = {
   descricao: string;
   responsavel: string;
@@ -59,4 +61,6 @@ export type DiagnosticoDetalheApi = {
     score_geral: { valor: number };
     score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;
   } | null;
+  /** Última narrativa POST explicacao-score-llm (JSONB). */
+  explicacao_score_llm?: ExplicacaoScoreLlmHttp | null;
 };

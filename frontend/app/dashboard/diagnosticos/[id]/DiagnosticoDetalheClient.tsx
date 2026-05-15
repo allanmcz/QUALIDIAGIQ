@@ -669,6 +669,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
         diagnosticoId={data.id}
         diagnosticoStatus={data.status}
         scoreGeral={data.score?.score_geral?.valor ?? null}
+        inicial={data.explicacao_score_llm ?? null}
       />
 
       {radarData && radarData.length > 0 && (

@@ -193,6 +193,8 @@ class Diagnostico:
     locale_relatorio: str = "pt-BR"
     # Versão do plano de ação materializado (snapshot checklist/matriz/cronograma — D3).
     versao_plano: int = 1
+    # Última narrativa POST explicacao-score-llm (JSONB); mutável pós-finalizado — fora do hash WORM.
+    explicacao_score_llm: dict[str, Any] | None = None
 
     def finalizar(self, score_geral: float) -> None:
         """

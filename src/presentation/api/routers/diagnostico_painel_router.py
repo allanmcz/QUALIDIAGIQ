@@ -7,12 +7,17 @@ Responsabilidade: M12, quadro de implantação, subtarefas do plano, explicaçã
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
+from src.application.services.explicacao_score_contexto import (
+    montar_campos_extras_explicacao_score,
+    snapshot_explicacao_score_llm_de_resposta,
+)
 from src.application.use_cases.anexar_relatorio_otimista import (
     AnexarRelatorioOtimista,
     ComandoAnexarRelatorioOtimista,
@@ -51,7 +56,7 @@ from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
     CriarSubtarefaPlanoDiagnosticoRequest,
     DiagnosticoResponse,
-    ExplicarScoreLlmHttpResponse,
+    ExplicacaoScoreLlmPersistidaSchema,
     PatchChecklistM12AutoconfRequest,
     PatchQuadroImplantacaoRequest,
     PatchRelatorioPdfRequest,
@@ -173,7 +178,7 @@ async def atualizar_quadro_implantacao_anotacoes(
 
 @router.post(
     "/{diagnostico_id}/explicacao-score-llm",
-    response_model=ExplicarScoreLlmHttpResponse,
+    response_model=ExplicacaoScoreLlmPersistidaSchema,
     summary="Explicar score via LLM (painel)",
     description=(
         "Gera narrativa sobre o **score geral já calculado** (motor determinístico). "
@@ -188,8 +193,8 @@ async def explicar_score_llm_painel(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     use_case: Annotated[ExplicarScoreLlmUseCase, Depends(get_explicar_score_llm_use_case)],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
-) -> ExplicarScoreLlmHttpResponse:
-    """POST painel — delega a ``ExplicarScoreLlmUseCase`` (LC 214/2025 — previsibilidade operacional)."""
+) -> ExplicacaoScoreLlmPersistidaSchema:
+    """POST painel — delega a ``ExplicarScoreLlmUseCase`` e persiste snapshot JSONB."""
     _, tenant_id, _ = current
     raw_key = (idempotency_key or "").strip()
     d = await repo.buscar_por_id(diagnostico_id, tenant_id)
@@ -206,6 +211,7 @@ async def explicar_score_llm_painel(
         tenant_id=tenant_id,
         trace_id=trace_log,
         score_geral=float(d.score_geral),
+        campos_extras=montar_campos_extras_explicacao_score(d),
         idempotency_key=raw_key[:128] if raw_key else None,
     )
     try:
@@ -214,19 +220,15 @@ async def explicar_score_llm_painel(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return ExplicarScoreLlmHttpResponse(
-        text=out.text,
-        provider=out.provider,
-        model=out.model,
-        policy_version=out.policy_version,
-        input_tokens=out.input_tokens,
-        output_tokens=out.output_tokens,
-        estimated_cost_usd=out.estimated_cost_usd,
-        latency_ms=out.latency_ms,
-        blocked_by_guardrail=out.blocked_by_guardrail,
-        guardrail_reason=out.guardrail_reason,
-        guardrail_status=out.guardrail_status,
+    gerado_em = datetime.now(UTC)
+    snapshot = snapshot_explicacao_score_llm_de_resposta(
+        out, trace_id=trace_log, gerado_em_iso=gerado_em.isoformat()
     )
+    try:
+        await repo.atualizar_explicacao_score_llm(diagnostico_id, tenant_id, snapshot)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return ExplicacaoScoreLlmPersistidaSchema.model_validate(snapshot)
 
 
 @router.post(

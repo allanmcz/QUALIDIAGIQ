@@ -139,6 +139,93 @@ async def test_worm_bloqueia_mutacao_de_evidence_pos_finalizado(pg_conn):
     await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)
 
 
+def _migrations_worm_base() -> list[Path]:
+    root = Path(__file__).resolve().parents[2] / "src/infrastructure/db/migrations"
+    paths = [
+        root / "0006_worm_column_granular.sql",
+        root / "0011_checklist_m12_autoconf.sql",
+        root / "0012_aceite_lgpd_e_worm.sql",
+        root / "0025_worm_permite_reatribuir_tenant_vinculo_lead.sql",
+    ]
+    return [p for p in paths if p.exists()]
+
+
+async def _aplicar_migrations_worm(pg_conn: asyncpg.Connection) -> None:
+    for mig in _migrations_worm_base():
+        await pg_conn.execute(mig.read_text(encoding="utf-8"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.postgres
+async def test_worm_permite_atualizar_explicacao_score_llm_pos_finalizado(pg_conn):
+    """JSONB de narrativa LLM é mutável após finalizado (fora do hash WORM — migração 0043)."""
+    await _aplicar_migrations_worm(pg_conn)
+    mig_0043 = (
+        Path(__file__).resolve().parents[2]
+        / "src/infrastructure/db/migrations/0043_explicacao_score_llm.sql"
+    )
+    if mig_0043.exists():
+        await pg_conn.execute(mig_0043.read_text(encoding="utf-8"))
+
+    tid = uuid.uuid4()
+    did = uuid.uuid4()
+    await pg_conn.execute(
+        """
+        INSERT INTO diagnosticos (
+          id, tenant_id, respondente_email,
+          empresa_cnpj, empresa_razao_social, empresa_porte, empresa_regime,
+          empresa_cnae, empresa_uf, empresa_setor_macro,
+          status, plano, score_geral, criado_em, finalizado_em,
+          versao_otimista
+        ) VALUES (
+          $1, $2, 'explic-llm@teste.com',
+          '12345678000195', 'EXPLIC LLM LTDA', 'micro', 'simples_nacional',
+          '1234567', 'SP', 'comercio',
+          'finalizado', 'gratuito', 52.0, now(), now(),
+          1
+        )
+        """,
+        did,
+        tid,
+    )
+
+    snap = {
+        "text": "Priorize a dimensão fiscal.",
+        "provider": "fake",
+        "model": "fake-llm",
+        "policy_version": "2026-05-15-v1",
+        "gerado_em": "2026-05-15T12:00:00+00:00",
+        "trace_id": "worm-explic-1",
+    }
+    await pg_conn.execute(
+        """
+        UPDATE diagnosticos
+        SET explicacao_score_llm = $2::jsonb
+        WHERE id = $1
+        """,
+        did,
+        json.dumps(snap),
+    )
+    row = await pg_conn.fetchrow(
+        "SELECT explicacao_score_llm, score_geral FROM diagnosticos WHERE id = $1",
+        did,
+    )
+    assert row is not None
+    assert float(row["score_geral"]) == 52.0
+    raw = row["explicacao_score_llm"]
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+    assert raw["text"] == snap["text"]
+
+    with pytest.raises(asyncpg.PostgresError):
+        await pg_conn.execute(
+            "UPDATE diagnosticos SET score_geral = 99.0 WHERE id = $1",
+            did,
+        )
+
+    await pg_conn.execute("DELETE FROM diagnosticos WHERE id = $1", did)
+
+
 @pytest.mark.asyncio
 @pytest.mark.postgres
 async def test_worm_bloqueia_upsert_que_tenta_mutar_evidencia_pos_finalizado(pg_conn):

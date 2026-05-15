@@ -316,6 +316,51 @@ async def test_inserir_e_atualizar_subtarefa_plano(diagnostico_mock: Diagnostico
     upd.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_atualizar_explicacao_score_llm_sucesso_e_nao_encontrado(
+    diagnostico_mock: Diagnostico,
+) -> None:
+    mock_client = MagicMock()
+    mock_table = MagicMock()
+    mock_update = MagicMock()
+    mock_eq_id = MagicMock()
+    mock_eq_tenant = MagicMock()
+    mock_client.table.return_value = mock_table
+    mock_table.update.return_value = mock_update
+    mock_update.eq.return_value = mock_eq_id
+    mock_eq_id.eq.return_value = mock_eq_tenant
+    repo = SupabaseDiagnosticoRepository(mock_client)
+    snap = {"text": "ok"}
+
+    mock_resp = MagicMock()
+    mock_resp.data = [{"id": str(diagnostico_mock.id)}]
+    mock_eq_tenant.execute = MagicMock(return_value=mock_resp)
+
+    with patch(
+        "src.infrastructure.repositories.supabase_diagnostico_repository.asyncio.to_thread",
+        side_effect=lambda fn: fn(),
+    ):
+        await repo.atualizar_explicacao_score_llm(
+            diagnostico_mock.id, diagnostico_mock.tenant_id, snap
+        )
+
+    mock_table.update.assert_called_once_with({"explicacao_score_llm": snap})
+
+    mock_resp_vazio = MagicMock()
+    mock_resp_vazio.data = []
+    mock_eq_tenant.execute = MagicMock(return_value=mock_resp_vazio)
+    with (
+        patch(
+            "src.infrastructure.repositories.supabase_diagnostico_repository.asyncio.to_thread",
+            side_effect=lambda fn: fn(),
+        ),
+        pytest.raises(ValueError, match="não encontrado"),
+    ):
+        await repo.atualizar_explicacao_score_llm(
+            diagnostico_mock.id, diagnostico_mock.tenant_id, snap
+        )
+
+
 def test_para_entity_score_completo_malformado_fica_none(diagnostico_mock: Diagnostico) -> None:
     repo = SupabaseDiagnosticoRepository(MagicMock())
     base = repo._para_dict(diagnostico_mock)
