@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +23,12 @@ import {
   historicoAnterioresAExibicao,
   textoExibicaoExplicacao,
 } from "@/lib/api/explicacao_score_llm_historico";
+
+/** API imperativa para o atalho «Explicação IA» na barra da ficha (scroll + POST). */
+export type ExplicacaoScoreLlmCardHandle = {
+  scrollParaSecao: () => void;
+  solicitarGeracao: () => void;
+};
 
 type Props = {
   diagnosticoId: string;
@@ -47,14 +60,18 @@ function formatarGeradoEmPtBr(iso: string | null | undefined): string | null {
  * Bloco painel — explicação IA do score via gateway governado (ADR-022).
  * Não substitui o motor determinístico; apenas narrativa sobre o valor já calculado.
  */
-export function ExplicacaoScoreLlmCard({
-  diagnosticoId,
-  diagnosticoStatus,
-  planoDiagnostico = null,
-  scoreGeral,
-  inicial = null,
-  className,
-}: Props) {
+export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, Props>(
+  function ExplicacaoScoreLlmCard(
+    {
+      diagnosticoId,
+      diagnosticoStatus,
+      planoDiagnostico = null,
+      scoreGeral,
+      inicial = null,
+      className,
+    },
+    ref,
+  ) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resposta, setResposta] = useState<ExplicacaoScoreLlmHttp | null>(inicial);
@@ -112,6 +129,25 @@ export function ExplicacaoScoreLlmCard({
       setCarregando(false);
     }
   }, [carregarHistorico, diagnosticoId, podeGerar]);
+
+  const scrollParaSecao = useCallback(() => {
+    if (typeof document === "undefined") return;
+    document.getElementById("diag-explicacao-score-llm")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollParaSecao,
+      solicitarGeracao: () => {
+        void gerar();
+      },
+    }),
+    [gerar, scrollParaSecao],
+  );
 
   const anteriores = useMemo(
     () => historicoAnterioresAExibicao(historico, resposta),
@@ -252,4 +288,7 @@ export function ExplicacaoScoreLlmCard({
       </CardContent>
     </Card>
   );
-}
+  },
+);
+
+ExplicacaoScoreLlmCard.displayName = "ExplicacaoScoreLlmCard";

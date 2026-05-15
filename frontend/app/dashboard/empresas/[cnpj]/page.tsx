@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import EmpresaDiagnosticosClient from "./EmpresaDiagnosticosClient";
@@ -26,9 +27,15 @@ export default async function EmpresaDiagnosticosPage({
   if (!cnpjNorm) {
     notFound();
   }
-  const razaoSocialHint = decodeRazaoSocialHint(sp.razao_social);
+  const razaoSocialHint = decodeRazaoSocialHint(sp?.razao_social);
 
   return (
-    <EmpresaDiagnosticosClient cnpjNormalizado={cnpjNorm} razaoSocialHint={razaoSocialHint} />
+    <Suspense
+      fallback={
+        <div className="container py-10 text-muted-foreground">A carregar empresa…</div>
+      }
+    >
+      <EmpresaDiagnosticosClient cnpjNormalizado={cnpjNorm} razaoSocialHint={razaoSocialHint} />
+    </Suspense>
   );
 }

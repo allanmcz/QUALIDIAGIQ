@@ -38,7 +38,7 @@ type Props = {
 };
 
 /**
- * Solicitações LGPD ligadas a este diagnóstico + atalho para executar anonimização após deferimento.
+ * Solicitações LGPD ligadas ao diagnóstico + atalho para executar anonimização após deferimento.
  */
 export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }: Props) {
   const [linhas, setLinhas] = useState<SolicitacaoTitularLgpd[]>([]);
@@ -121,7 +121,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
     return (
       <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
         <CardHeader>
-          <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
+          <CardTitle className="text-lg">Privacidade LGPD</CardTitle>
           <CardDescription>A carregar solicitações…</CardDescription>
         </CardHeader>
       </Card>
@@ -132,9 +132,9 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
     return (
       <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
         <CardHeader>
-          <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
+          <CardTitle className="text-lg">Privacidade LGPD</CardTitle>
           <CardDescription>
-            Nenhuma solicitação do titular ligada a este diagnóstico. Use o painel{" "}
+            Nenhuma solicitação do titular ligada a este registo. Use o painel{" "}
             <Link href="/dashboard/privacidade" className="text-primary underline">
               Privacidade LGPD
             </Link>{" "}
@@ -148,13 +148,13 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
   return (
     <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
       <CardHeader>
-        <CardTitle className="text-lg">Privacidade LGPD (este diagnóstico)</CardTitle>
+        <CardTitle className="text-lg">Privacidade LGPD</CardTitle>
         <CardDescription>
-          Pedidos do titular vinculados a este ID.{" "}
+          Pedidos do titular vinculados a este registo.{" "}
           <strong className="font-medium text-foreground">Portabilidade deferida</strong>: descarregar JSON ou PDF com
           anexo JSON (LGPD art. 18, V).{" "}
           <strong className="font-medium text-foreground">Anonimização deferida</strong>: executar troca técnica do
-          respondente (trilha WORM + <code className="text-xs">lgpd_anonimizacao_log</code>).
+          respondente (trilha auditável no servidor).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -185,7 +185,6 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
                   <p className="text-sm text-muted-foreground truncate" title={s.solicitante_email}>
                     Titular: {s.solicitante_email}
                   </p>
-                  <p className="text-xs text-muted-foreground font-mono break-all">ID: {s.id}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
                   {podeExportPort ? (

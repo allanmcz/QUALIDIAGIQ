@@ -56,6 +56,7 @@ def _seed_diagnostico_demo() -> Diagnostico:
         finalizado_em=datetime(2026, 5, 5, 12, 5, tzinfo=UTC),
         score_geral=68.5,
         relatorio_pdf_url=None,
+        numero_interno_grupo=1,
     )
 
 

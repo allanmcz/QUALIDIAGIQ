@@ -85,7 +85,7 @@ export default function PainelDiagnosticosPage() {
               <div className="flex w-full max-w-xl flex-col gap-3 sm:max-w-none sm:items-end">
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <Button asChild variant="default">
-                    <Link href="/wizard">Novo diagnóstico</Link>
+                    <Link href="/wizard">Nova Empresa/Novo Diag</Link>
                   </Button>
                   <Button
                     type="button"
@@ -107,7 +107,7 @@ export default function PainelDiagnosticosPage() {
                   Use apenas se você concluiu o assistente <strong className="font-medium text-foreground">sem</strong>{" "}
                   conta na plataforma: código no e-mail → gravação no ambiente self-service. A API só traz linhas em que o
                   e-mail do respondente é o <strong className="font-medium text-foreground">mesmo</strong> do seu
-                  login atual e o plano é gratuito. Se você já estava com sessão iniciada e usou «Novo diagnóstico», os
+                  login atual e o plano é gratuito. Se você já estava com sessão iniciada e usou «Nova Empresa/Novo Diag», os
                   itens já aparecem na lista abaixo — não precisam de importação.
                 </p>
               </div>
@@ -156,7 +156,8 @@ export default function PainelDiagnosticosPage() {
             role="status"
             aria-live="polite"
           >
-            Nenhum diagnóstico neste painel ainda. Use <strong className="text-foreground">Novo diagnóstico</strong>{" "}
+            Nenhum diagnóstico neste painel ainda. Use{" "}
+            <strong className="text-foreground">Nova Empresa/Novo Diag</strong>{" "}
             acima ou inicie em{" "}
             <Link href="/wizard" className="text-primary underline font-medium">
               /wizard
@@ -206,7 +207,7 @@ export default function PainelDiagnosticosPage() {
                         href={buildEmpresaDiagnosticosHref(cnpj14, diag.empresa_razao_social)}
                         className="text-xs font-medium text-primary hover:underline inline-block w-fit"
                       >
-                        Ver grelha por empresa (todos os ciclos)
+                        Ver todos os ciclos da empresa
                       </Link>
                     ) : null}
                     <CardDescription>

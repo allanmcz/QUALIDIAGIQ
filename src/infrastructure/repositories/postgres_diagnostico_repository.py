@@ -156,6 +156,11 @@ def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
         locale_relatorio=locale_relatorio,
         versao_plano=int(row.get("versao_plano") or 1),
         explicacao_score_llm=_explicacao_score_llm_de_row(row),
+        numero_interno_grupo=(
+            int(raw_nim)
+            if (raw_nim := row.get("numero_interno_grupo")) is not None
+            else None
+        ),
     )
 
 

@@ -10,8 +10,10 @@ import asyncio
 from typing import TYPE_CHECKING, Any, cast
 
 import psycopg2
+import structlog
 from psycopg2.extras import Json, RealDictCursor
 
+from src.application.errors import ErroPersistenciaLgpdError
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     LgpdTitularSolicitacaoPort,
@@ -22,6 +24,8 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+logger = structlog.get_logger(__name__)
 
 
 def _from_row(row: dict[str, Any]) -> SolicitacaoTitular:
@@ -241,13 +245,20 @@ class PostgresLgpdTitularSolicitacaoAdapter(LgpdTitularSolicitacaoPort):
         status: StatusSolicitacaoTitular | None,
         limit: int,
     ) -> list[SolicitacaoTitular]:
-        return await asyncio.to_thread(
-            _listar_sync,
-            self._dsn,
-            tenant_id=tenant_id,
-            status=status.value if status is not None else None,
-            limit=limit,
-        )
+        try:
+            return await asyncio.to_thread(
+                _listar_sync,
+                self._dsn,
+                tenant_id=tenant_id,
+                status=status.value if status is not None else None,
+                limit=limit,
+            )
+        except psycopg2.Error as exc:
+            logger.error("lgpd_listar_por_tenant_falhou", erro=str(exc), exc_info=True)
+            raise ErroPersistenciaLgpdError(
+                "Não foi possível listar pedidos LGPD. Verifique migração 0028 (tabela lgpd_titular_solicitacao) "
+                "e DATABASE_URL síncrono."
+            ) from exc
 
     async def atualizar_status(
         self,

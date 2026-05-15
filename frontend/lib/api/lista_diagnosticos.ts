@@ -19,6 +19,8 @@ export type DiagnosticoResumoApi = {
   criado_em: string;
   finalizado_em: string | null;
   relatorio_pdf_url: string | null;
+  /** Sequencial interno por CNPJ (ou por e-mail do respondente se CNPJ vazio). */
+  numero_interno_grupo?: number | null;
 };
 
 export type FetchDiagnosticosResumoOpts = {

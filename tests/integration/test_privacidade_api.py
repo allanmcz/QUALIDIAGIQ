@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError
+from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError, ErroPersistenciaLgpdError
 from src.application.ports.lgpd_anonimizacao_executor_port import (
     LgpdAnonimizacaoExecutorPort,
 )
@@ -36,6 +36,7 @@ from src.presentation.api.dependencies import (
     get_executar_anonimizacao_respondente_lgpd_use_case,
     get_executar_eliminacao_diagnostico_lgpd_use_case,
     get_gerar_export_portabilidade_diagnostico_use_case,
+    get_listar_solicitacao_titular_lgpd_use_case,
     get_lgpd_titular_solicitacao_port,
 )
 from src.presentation.api.main import app
@@ -202,6 +203,22 @@ async def async_client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
+
+
+@pytest.mark.asyncio
+async def test_get_privacidade_solicitacoes_503_erro_persistencia(async_client: AsyncClient) -> None:
+    """Persistência LGPD falha → 503 JSON (evitar 500 genérico ao browser)."""
+    uc = AsyncMock()
+    uc.execute.side_effect = ErroPersistenciaLgpdError("Base LGPD indisponível.")
+
+    app.dependency_overrides[get_listar_solicitacao_titular_lgpd_use_case] = lambda: uc
+    try:
+        headers = cabecalho_auth_bearer(usuario_id=uuid4(), tenant_id=uuid4())
+        response = await async_client.get("/privacidade/solicitacoes", headers=headers)
+        assert response.status_code == 503
+        assert response.json()["detail"] == "Base LGPD indisponível."
+    finally:
+        app.dependency_overrides.pop(get_listar_solicitacao_titular_lgpd_use_case, None)
 
 
 @pytest.mark.asyncio

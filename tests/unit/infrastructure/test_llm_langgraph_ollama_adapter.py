@@ -81,3 +81,26 @@ async def test_langgraph_ollama_modo_texto_livre_usa_contexto_sem_template() -> 
         assert "LC 214/2025" in out
         sent = mock_llm.ainvoke.call_args[0][0][0].content
         assert sent == prompt_completo
+
+
+@pytest.mark.asyncio
+async def test_langgraph_ollama_excecao_inesperada_devolve_fallback_amigavel() -> None:
+    """Falha na orquestração — regista métrica e devolve mensagem segura (sem stacktrace ao utilizador)."""
+    with patch(
+        "src.infrastructure.adapters.llm_langgraph_ollama.ChatOllama",
+    ) as mock_cls:
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="LC 214/2025"))
+        mock_cls.return_value = mock_llm
+
+        adapter = LangGraphOllamaLlmAdapter(
+            ollama_url="http://127.0.0.1:11434",
+            model="llama3",
+        )
+        grafo = MagicMock()
+        grafo.ainvoke = AsyncMock(side_effect=RuntimeError("falha simulada"))
+        adapter._graph = grafo
+
+        out = await adapter.gerar_recomendacao("Ctx", "Base")
+
+        assert "indisponibilidade temporária" in out.lower()

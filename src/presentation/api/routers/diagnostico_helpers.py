@@ -206,6 +206,7 @@ def _aceite_lgpd_para_http(diagnostico: Diagnostico) -> datetime | None:
 
 def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
     """Monta linha da listagem do painel (P7 — sem recomputar checklist/matriz)."""
+    nim = getattr(diagnostico, "numero_interno_grupo", None)
     return DiagnosticoResumoSchema(
         id=diagnostico.id,
         empresa_razao_social=diagnostico.empresa.razao_social,
@@ -216,6 +217,7 @@ def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
         criado_em=diagnostico.criado_em,
         finalizado_em=diagnostico.finalizado_em,
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
+        numero_interno_grupo=nim if isinstance(nim, int) else None,
     )
 
 

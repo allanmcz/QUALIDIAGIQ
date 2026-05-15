@@ -6,9 +6,10 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+import psycopg2
 import pytest
 
-from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError
+from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError, ErroPersistenciaLgpdError
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     StatusSolicitacaoTitular,
@@ -392,6 +393,22 @@ class TestPostgresLgpdTitularSolicitacaoAdapterAsync:
             )
         assert len(lst) == 1
         assert lst[0].canal == CanalSolicitacaoTitular.PLATAFORMA
+
+    async def test_adapter_listar_converte_erro_psycopg2(self) -> None:
+        """Falha na listagem deve mapear para ErroPersistenciaLgpdError (503 na camada HTTP)."""
+
+        async def falha(_fn: object, /, *_a: object, **_kw: object) -> object:
+            raise psycopg2.OperationalError("connection refused")
+
+        adapter = PostgresLgpdTitularSolicitacaoAdapter("postgresql://lgpd")
+        with (
+            patch(
+                "src.infrastructure.adapters.postgres_lgpd_titular_solicitacao_adapter.asyncio.to_thread",
+                side_effect=falha,
+            ),
+            pytest.raises(ErroPersistenciaLgpdError, match="listar pedidos LGPD"),
+        ):
+            await adapter.listar_por_tenant(tenant_id=uuid4(), status=None, limit=10)
 
 
 class TestPostgresLgpdAnonimizacaoExecutorSync:

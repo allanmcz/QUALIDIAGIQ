@@ -3324,6 +3324,18 @@
             ],
             "title": "Relatorio Pdf Url",
             "description": "URL do PDF quando gerado e anexado ao diagnóstico."
+          },
+          "numero_interno_grupo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Interno Grupo",
+            "description": "Número sequencial interno por grupo (CNPJ da empresa ou e-mail quando CNPJ vazio) no tenant."
           }
         },
         "type": "object",

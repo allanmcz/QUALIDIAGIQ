@@ -62,6 +62,10 @@ services:
       dockerfile: Dockerfile
     container_name: qdi-api
     restart: unless-stopped
+    # Dockerfile usa USER qdiapp; o volume nomeado monta `/tmp/qdi-mock-pdf` como root.
+    # Sem root, `chmod 1777` no command falha (Operation not permitted) e o uvicorn não arranca.
+    # Em desenvolvimento local isto é aceitável — produção deve usar permissões/imagem adequadas.
+    user: "0:0"
     # Ollama no host (Mac/Windows/Linux): o container alcança via host.docker.internal
     extra_hosts:
       - "host.docker.internal:host-gateway"

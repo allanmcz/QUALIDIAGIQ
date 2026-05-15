@@ -13,7 +13,10 @@ from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import Response
 
-from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError
+from src.application.errors import (
+    EliminacaoDiagnosticoFinalizadoWormError,
+    ErroPersistenciaLgpdError,
+)
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     StatusSolicitacaoTitular,
@@ -174,13 +177,19 @@ async def listar_solicitacoes_lgpd(
     """GET paginado de solicitações LGPD no tenant do JWT."""
     _, tenant_id, _ = current
     status_enum = _parse_status(status_filter) if status_filter else None
-    rows = await use_case.execute(
-        ComandoListarSolicitacaoTitularLgpd(
-            tenant_id=tenant_id,
-            status=status_enum,
-            limit=limit,
+    try:
+        rows = await use_case.execute(
+            ComandoListarSolicitacaoTitularLgpd(
+                tenant_id=tenant_id,
+                status=status_enum,
+                limit=limit,
+            )
         )
-    )
+    except ErroPersistenciaLgpdError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     return [_to_response(row) for row in rows]
 
 

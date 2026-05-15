@@ -960,6 +960,10 @@ class DiagnosticoResumoSchema(BaseModel):
     relatorio_pdf_url: str | None = Field(
         default=None, description="URL do PDF quando gerado e anexado ao diagnóstico."
     )
+    numero_interno_grupo: int | None = Field(
+        default=None,
+        description="Número sequencial interno por grupo (CNPJ da empresa ou e-mail quando CNPJ vazio) no tenant.",
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

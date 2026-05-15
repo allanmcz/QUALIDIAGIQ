@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   fetchRetificacoesDiagnostico,
@@ -76,12 +76,8 @@ export function RetificacaoDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
 
   return (
     <Card id="diag-retificacoes" className="mb-10 scroll-mt-24">
-      <CardHeader>
+        <CardHeader>
         <CardTitle className="text-lg">Retificações (compliance / LGPD)</CardTitle>
-        <CardDescription>
-          Modelo tipo CC-e (ADR-012 §5): nova linha com hash do original — sem alterar o diagnóstico
-          finalizado na tabela principal. Exige evidência WORM (hash) no servidor.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {erro ? (

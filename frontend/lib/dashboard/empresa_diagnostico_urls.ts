@@ -4,7 +4,14 @@
 
 /** Extrai 14 dígitos do segmento de URL `/dashboard/empresas/[cnpj]`. */
 export function parseCnpjFromRouteSegment(segment: string): string | null {
-  const decoded = decodeURIComponent(segment).replace(/\D/g, "");
+  let raw = segment;
+  try {
+    raw = decodeURIComponent(segment);
+  } catch {
+    /* Segmento com sequência % inválida — evita URIError → 500 no Server Component */
+    raw = segment;
+  }
+  const decoded = raw.replace(/\D/g, "");
   return decoded.length === 14 ? decoded : null;
 }
 

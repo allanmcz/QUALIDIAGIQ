@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
-import { ExplicacaoScoreLlmCard } from "@/components/painel/ExplicacaoScoreLlmCard";
+import {
+  ExplicacaoScoreLlmCard,
+  type ExplicacaoScoreLlmCardHandle,
+} from "@/components/painel/ExplicacaoScoreLlmCard";
+import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { PrivacidadeDiagnosticoCard } from "@/components/painel/PrivacidadeDiagnosticoCard";
 import { RetificacaoDiagnosticoCard } from "@/components/painel/RetificacaoDiagnosticoCard";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +22,6 @@ import {
 } from "@/lib/api/config";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import {
-  buildEmpresaDiagnosticosHref,
   buildWizardUrlNovaDiagnosticoEmpresa,
 } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { clearPendingDiagnosticoFromStorage } from "@/lib/wizard/pending_diagnostico";
@@ -82,6 +85,7 @@ function mockDiagnostico(id: string): DiagnosticoDetalheApi {
 
 export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const router = useRouter();
+  const explicacaoScoreRef = useRef<ExplicacaoScoreLlmCardHandle>(null);
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -122,13 +126,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     };
   }, [id]);
 
-  /** Plano avançado: novo fluxo no assistente sem herdar rascunho local nem pendência de gravação. */
-  const irRefazerDiagnostico = useCallback(() => {
-    clearWizardDraft();
-    clearPendingDiagnosticoFromStorage();
-    router.push("/wizard");
-  }, [router]);
-
   if (!data) {
     return (
       <div className="container py-10 text-muted-foreground">
@@ -136,6 +133,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       </div>
     );
   }
+
+  const cnpjDigits = (data.empresa_cnpj ?? "").replace(/\D/g, "");
+  const temCnpj14 = cnpjDigits.length === 14;
 
   return (
     <div className="container py-10">
@@ -159,14 +159,21 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <Button variant="outline" size="sm" asChild>
             <Link href="#diag-retificacoes">Retificações</Link>
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="#diag-explicacao-score-llm">Explicação IA</Link>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => {
+              explicacaoScoreRef.current?.scrollParaSecao();
+              explicacaoScoreRef.current?.solicitarGeracao();
+            }}
+          >
+            Explicação IA
           </Button>
         </nav>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold">{data.empresa_razao_social}</h1>
-            <p className="text-muted-foreground">ID do Diagnóstico: {data.id}</p>
             {error && (
               <p className="text-sm text-amber-600 mt-2">
                 {error} — dados podem ser mock locais.
@@ -177,28 +184,16 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             <Badge variant={data.plano === "gratuito" ? "secondary" : "default"} className="text-sm px-4 py-1">
               PLANO {data.plano.toUpperCase()}
             </Badge>
-            {data.empresa_cnpj && data.empresa_cnpj.replace(/\D/g, "").length === 14 ? (
-              <>
-                <Button variant="secondary" size="sm" asChild className="gap-2">
-                  <Link
-                    href={buildEmpresaDiagnosticosHref(data.empresa_cnpj, data.empresa_razao_social)}
-                  >
-                    Grelha da empresa
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild className="gap-2">
-                  <Link href={buildWizardUrlNovaDiagnosticoEmpresa(data.empresa_cnpj, data.empresa_razao_social)}>
-                    Novo diagnóstico (mesma empresa)
-                  </Link>
-                </Button>
-              </>
-            ) : null}
-            {data.plano === "avancado" ? (
+            {data.plano === "avancado" && !temCnpj14 ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={irRefazerDiagnostico}
+                onClick={() => {
+                  clearWizardDraft();
+                  clearPendingDiagnosticoFromStorage();
+                  router.push("/wizard");
+                }}
                 className="gap-2"
               >
                 <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
@@ -225,6 +220,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       <RetificacaoDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
 
       <ExplicacaoScoreLlmCard
+        ref={explicacaoScoreRef}
         diagnosticoId={data.id}
         diagnosticoStatus={data.status}
         planoDiagnostico={data.plano}
@@ -232,59 +228,31 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
         inicial={data.explicacao_score_llm ?? null}
       />
 
-      {data.empresa_cnpj && data.empresa_cnpj.replace(/\D/g, "").length === 14 ? (
-        <Card className="mb-10" id="diag-analise-grelha-expansao">
-          <CardHeader>
-            <CardTitle>Análise M05, matriz de impacto, quadro e M12</CardTitle>
+      {temCnpj14 ? (
+        <Card className="mb-10" id="painel-ciclos-mesma-empresa">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Todos os ciclos desta empresa neste tenant</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Heatmap, radar, ranking (M05), matriz por departamento, quadro de implantação em grelha e autoconferência
-              ABNT (M12) estão na <strong className="font-medium text-foreground">grelha da empresa</strong> — expanda
-              este diagnóstico na linha (botão Expandir). O quadro editável aplica-se ao{" "}
-              <strong className="font-medium text-foreground">primeiro</strong> diagnóstico da empresa no tenant.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" asChild>
-                <Link
-                  href={buildEmpresaDiagnosticosHref(data.empresa_cnpj, data.empresa_razao_social, {
-                    expandDiagnosticoId: data.id,
-                  })}
-                >
-                  Ver análise M05 (expandir linha)
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link
-                  href={buildEmpresaDiagnosticosHref(data.empresa_cnpj, data.empresa_razao_social, {
-                    expandDiagnosticoId: data.id,
-                    hash: "empresa-matriz-impacto",
-                  })}
-                >
-                  Matriz de impacto (expandir linha)
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link
-                  href={buildEmpresaDiagnosticosHref(data.empresa_cnpj, data.empresa_razao_social, {
-                    expandDiagnosticoId: data.id,
-                    hash: "empresa-quadro-implantacao",
-                  })}
-                >
-                  Quadro de implantação (expandir linha)
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link
-                  href={buildEmpresaDiagnosticosHref(data.empresa_cnpj, data.empresa_razao_social, {
-                    expandDiagnosticoId: data.id,
-                    hash: "empresa-m12-autoconf",
-                  })}
-                >
-                  Autoconferência M12 (expandir linha)
+          <CardContent>
+            <div className="mb-4">
+              <Button asChild variant="default" size="sm">
+                <Link href={buildWizardUrlNovaDiagnosticoEmpresa(cnpjDigits, data.empresa_razao_social)}>
+                  Novo Diagnóstico
                 </Link>
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+              Análise por dimensão (M05), matriz de impacto, quadro de implantação e autoconferência ABNT (M12).
+              O quadro editável aplica-se ao <strong className="font-medium text-foreground">primeiro</strong>{" "}
+              diagnóstico finalizado da empresa. Use <strong className="font-medium text-foreground">Expandir</strong>{" "}
+              na linha.
+            </p>
+            <EmpresaDiagnosticosListaPainel
+              cnpjNormalizado={cnpjDigits}
+              expandirDiagnosticoId={data.id}
+              diagnosticoSemeado={data}
+              usarExpandNaQuery={false}
+            />
           </CardContent>
         </Card>
       ) : null}

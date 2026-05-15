@@ -13,6 +13,10 @@ class ConflitoVersaoOtimistaError(Exception):
     """Header If-Match (versão otimista) não coincide com o estado persistido."""
 
 
+class ErroPersistenciaLgpdError(Exception):
+    """Falha ao aceder à tabela LGPD (infraestrutura Postgres, migração ou ligação)."""
+
+
 class EliminacaoDiagnosticoFinalizadoWormError(Exception):
     """
     Pedido de eliminação física sobre diagnóstico já finalizado (evidência WORM).

@@ -195,6 +195,8 @@ class Diagnostico:
     versao_plano: int = 1
     # Última narrativa POST explicacao-score-llm (JSONB); mutável pós-finalizado — fora do hash WORM.
     explicacao_score_llm: dict[str, Any] | None = None
+    # Sequencial por tenant + CNPJ (ou e-mail do respondente quando CNPJ vazio) — apenas para listagens do painel.
+    numero_interno_grupo: int | None = None
 
     def finalizar(self, score_geral: float) -> None:
         """
