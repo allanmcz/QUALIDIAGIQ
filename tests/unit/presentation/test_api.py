@@ -15,7 +15,9 @@ from src.domain.entities.diagnostico import (
     RegimeTributario,
     Respondente,
     SetorMacro,
+    StatusDiagnostico,
 )
+from src.domain.ports.llm_gateway import LlmGatewayResponse
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
@@ -25,6 +27,7 @@ from src.presentation.api.dependencies import (
     get_criar_subtarefa_plano_diagnostico_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
+    get_explicar_score_llm_use_case,
     get_realizar_diagnostico_use_case,
 )
 from src.presentation.api.main import app
@@ -64,6 +67,15 @@ def _diag_finalizado_micro() -> Diagnostico:
         respondente=Respondente(email="patch@teste.com"),
     )
     d.finalizar(62.0)
+    return d
+
+
+def _diag_em_andamento_micro() -> Diagnostico:
+    """Mesmo snapshot que o finalizado, mas reaberto para cenário 422 (não persistível na BD real)."""
+    d = copy.deepcopy(_diag_finalizado_micro())
+    d.status = StatusDiagnostico.EM_ANDAMENTO
+    d.score_geral = None
+    d.finalizado_em = None
     return d
 
 
@@ -1204,3 +1216,175 @@ def test_patch_subtarefa_plano_sucesso_200():
     assert response.status_code == 200
     assert response.json()["id"] == str(d_snap.id)
     mock_uc.execute.assert_awaited_once()
+
+
+def test_post_explicacao_score_llm_sucesso_200() -> None:
+    """Painel: POST com JWT + Idempotency-Key devolve narrativa do gateway."""
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="Resumo do score.",
+            provider="fake",
+            model="fake-llm",
+            policy_version="2026-05-15-v1",
+            input_tokens=10,
+            output_tokens=20,
+            latency_ms=50,
+        )
+    )
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.post(
+        f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
+        headers=cabecalho_post_diagnostico(
+            usuario_id=uid, tenant_id=tid, idempotency_key="idem-explic-1"
+        ),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text"] == "Resumo do score."
+    assert body["provider"] == "fake"
+    mock_uc.execute.assert_awaited_once()
+    cmd = mock_uc.execute.await_args.args[0]
+    assert cmd.score_geral == 62.0
+    assert cmd.idempotency_key == "idem-explic-1"
+
+
+def test_post_explicacao_score_llm_diagnostico_nao_encontrado_404() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_uc = AsyncMock()
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    did = uuid.uuid4()
+    response = client.post(
+        f"/diagnosticos/{did}/explicacao-score-llm",
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    mock_uc.execute.assert_not_called()
+
+
+def test_post_explicacao_score_llm_nao_finalizado_422() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_aberto = _diag_em_andamento_micro()
+    d_aberto.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_aberto)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.post(
+        f"/diagnosticos/{d_aberto.id}/explicacao-score-llm",
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+    mock_uc.execute.assert_not_called()
+
+
+def test_post_explicacao_score_llm_use_case_value_error_400() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(side_effect=ValueError("gateway recusou"))
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.post(
+        f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "gateway recusou" in response.json()["detail"]
+
+
+def test_post_explicacao_score_llm_runtime_error_500() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_uc.execute = AsyncMock(side_effect=RuntimeError("indisponível"))
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.post(
+        f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 500
+    assert "indisponível" in response.json()["detail"]
+
+
+def test_post_explicacao_score_llm_sem_idempotency_key_400() -> None:
+    """Middleware exige Idempotency-Key neste POST (lista branca)."""
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.post(
+        f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    assert "Idempotency-Key" in response.json()["detail"]
+    mock_uc.execute.assert_not_called()

@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { Pencil } from "lucide-react";
 
+import { ExplicacaoScoreLlmCard } from "@/components/painel/ExplicacaoScoreLlmCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -270,6 +271,11 @@ export default function EmpresaDiagnosticoExpandedPanel({
             <Link href={`${fichaCompletaHref}#diag-privacidade-lgpd`}>LGPD deste diagnóstico</Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
+            <Link href={`${fichaCompletaHref}#diag-explicacao-score-llm`}>
+              Explicação IA (este diagnóstico)
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link href={fichaCompletaHref}>Ficha completa do diagnóstico</Link>
           </Button>
         </div>
@@ -349,6 +355,13 @@ export default function EmpresaDiagnosticoExpandedPanel({
               </CardContent>
             </Card>
           )}
+
+          <ExplicacaoScoreLlmCard
+            diagnosticoId={diagnosticoId}
+            diagnosticoStatus={data.status}
+            scoreGeral={data.score?.score_geral?.valor ?? null}
+            className="mb-0 scroll-mt-0"
+          />
 
           <div className="grid md:grid-cols-2 gap-6">
             <Card>

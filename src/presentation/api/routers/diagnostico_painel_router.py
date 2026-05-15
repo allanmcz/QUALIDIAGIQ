@@ -2,15 +2,15 @@
 Rotas HTTP autenticadas — mutações do painel sobre diagnóstico finalizado.
 
 Camada: Presentation
-Responsabilidade: M12, quadro de implantação, subtarefas do plano e anexo de PDF (lock otimista).
+Responsabilidade: M12, quadro de implantação, subtarefas do plano, explicação LLM do score e anexo de PDF (lock otimista).
 """
 
 from __future__ import annotations
 
 from typing import Annotated, Any
-from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime)
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
 from src.application.use_cases.anexar_relatorio_otimista import (
@@ -25,12 +25,17 @@ from src.application.use_cases.atualizar_quadro_implantacao import (
     AtualizarQuadroImplantacao,
     ComandoAtualizarQuadroImplantacao,
 )
+from src.application.use_cases.explicar_score_llm_use_case import (
+    ComandoExplicarScoreLlm,
+    ExplicarScoreLlmUseCase,
+)
 from src.application.use_cases.plano_painel_subtarefa import (
     AtualizarSubtarefaPlanoDiagnostico,
     ComandoAtualizarSubtarefaPlanoDiagnostico,
     ComandoCriarSubtarefaPlanoDiagnostico,
     CriarSubtarefaPlanoDiagnostico,
 )
+from src.domain.entities.diagnostico import StatusDiagnostico
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
@@ -40,11 +45,13 @@ from src.presentation.api.dependencies import (
     get_criar_subtarefa_plano_diagnostico_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
+    get_explicar_score_llm_use_case,
 )
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
     CriarSubtarefaPlanoDiagnosticoRequest,
     DiagnosticoResponse,
+    ExplicarScoreLlmHttpResponse,
     PatchChecklistM12AutoconfRequest,
     PatchQuadroImplantacaoRequest,
     PatchRelatorioPdfRequest,
@@ -162,6 +169,64 @@ async def atualizar_quadro_implantacao_anotacoes(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return await diagnostico_helpers._montar_diagnostico_response(repo, atualizado)
+
+
+@router.post(
+    "/{diagnostico_id}/explicacao-score-llm",
+    response_model=ExplicarScoreLlmHttpResponse,
+    summary="Explicar score via LLM (painel)",
+    description=(
+        "Gera narrativa sobre o **score geral já calculado** (motor determinístico). "
+        "Exige diagnóstico **finalizado** com ``score_geral`` persistido. "
+        "**Idempotency-Key** obrigatório (middleware — replay de resposta 2xx)."
+    ),
+)
+async def explicar_score_llm_painel(
+    diagnostico_id: UUID,
+    request: Request,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    use_case: Annotated[ExplicarScoreLlmUseCase, Depends(get_explicar_score_llm_use_case)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> ExplicarScoreLlmHttpResponse:
+    """POST painel — delega a ``ExplicarScoreLlmUseCase`` (LC 214/2025 — previsibilidade operacional)."""
+    _, tenant_id, _ = current
+    raw_key = (idempotency_key or "").strip()
+    d = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
+    if d.status != StatusDiagnostico.FINALIZADO or d.score_geral is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Só é possível explicar o score para diagnóstico finalizado com score persistido.",
+        )
+    tid_trace = getattr(request.state, "trace_id", None)
+    trace_log = str(tid_trace).strip() if tid_trace else str(uuid4())
+    cmd = ComandoExplicarScoreLlm(
+        tenant_id=tenant_id,
+        trace_id=trace_log,
+        score_geral=float(d.score_geral),
+        idempotency_key=raw_key[:128] if raw_key else None,
+    )
+    try:
+        out = await use_case.execute(cmd)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return ExplicarScoreLlmHttpResponse(
+        text=out.text,
+        provider=out.provider,
+        model=out.model,
+        policy_version=out.policy_version,
+        input_tokens=out.input_tokens,
+        output_tokens=out.output_tokens,
+        estimated_cost_usd=out.estimated_cost_usd,
+        latency_ms=out.latency_ms,
+        blocked_by_guardrail=out.blocked_by_guardrail,
+        guardrail_reason=out.guardrail_reason,
+        guardrail_status=out.guardrail_status,
+    )
 
 
 @router.post(

@@ -904,6 +904,24 @@ class DiagnosticoConclusaoSelfServicePublicoResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
 
+class ExplicarScoreLlmHttpResponse(BaseModel):
+    """Resposta HTTP da narrativa LLM sobre o score (espelha ``LlmGatewayResponse`` — ADR-022)."""
+
+    text: str
+    provider: str
+    model: str
+    policy_version: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    estimated_cost_usd: float = 0.0
+    latency_ms: int = 0
+    blocked_by_guardrail: bool = False
+    guardrail_reason: str | None = None
+    guardrail_status: str = "ok"
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class DiagnosticoResumoSchema(BaseModel):
     """Item resumido para listagem do tenant (P7 — painel)."""
 

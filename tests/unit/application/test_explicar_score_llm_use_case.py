@@ -39,4 +39,29 @@ class TestExplicarScoreLlmUseCase:
         assert req.task_type == LlmTaskType.EXPLICACAO_SCORE
         assert req.input_data["score_geral"] == 72.5
         assert req.tenant_id == str(tid)
+        assert req.idempotency_key is None
         assert out.text == "ok"
+
+    @pytest.mark.asyncio
+    async def test_repasse_idempotency_key_ao_gateway(self) -> None:
+        gw = AsyncMock()
+        gw.complete = AsyncMock(
+            return_value=LlmGatewayResponse(
+                text="x",
+                provider="fake",
+                model="m",
+                policy_version="v",
+            )
+        )
+        uc = ExplicarScoreLlmUseCase(gateway=gw)
+        tid = uuid4()
+        await uc.execute(
+            ComandoExplicarScoreLlm(
+                tenant_id=tid,
+                trace_id="tr-2",
+                score_geral=50.0,
+                idempotency_key="chave-http-1",
+            )
+        )
+        req = gw.complete.call_args[0][0]
+        assert req.idempotency_key == "chave-http-1"

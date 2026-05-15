@@ -22,6 +22,8 @@ class ComandoExplicarScoreLlm:
     trace_id: str
     score_geral: float
     campos_extras: dict[str, object] | None = None
+    #: Eco do header HTTP (correlação com fornecedor / auditoria ADR-022).
+    idempotency_key: str | None = None
 
 
 class ExplicarScoreLlmUseCase:
@@ -39,5 +41,6 @@ class ExplicarScoreLlmUseCase:
             task_type=LlmTaskType.EXPLICACAO_SCORE,
             prompt_key="explicacao_score",
             input_data={"score_geral": comando.score_geral, **extras},
+            idempotency_key=comando.idempotency_key,
         )
         return await self._gateway.complete(req)

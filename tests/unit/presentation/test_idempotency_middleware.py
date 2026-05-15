@@ -343,6 +343,16 @@ def test_post_retificacao_diagnostico_exige_idempotency_key() -> None:
         assert _exige_idempotencia(req) is True
 
 
+def test_post_explicacao_score_llm_exige_idempotency_key() -> None:
+    """POST painel LLM (custo) — mesma chave = replay de resposta 2xx (LC 214/2025)."""
+    from src.presentation.api.middleware.idempotency import _exige_idempotencia
+
+    base = "/diagnosticos/550e8400-e29b-41d4-a716-446655440000/explicacao-score-llm"
+    for suf in ("", "/"):
+        req = SimpleNamespace(method="POST", url=SimpleNamespace(path=f"{base}{suf}"))
+        assert _exige_idempotencia(req) is True
+
+
 def test_post_diagnostico_chama_idempotency_put_quando_engine_postgres() -> None:
     """Após 2xx, o middleware persiste o corpo em ``idempotency_put`` (thread síncrona)."""
     mock_put = MagicMock()

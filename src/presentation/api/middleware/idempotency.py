@@ -48,6 +48,9 @@ def _exige_idempotencia(request: Request) -> bool:
     # Retificação append-only (ADR-012 §5) — mesma chave = replay previsível.
     if path_norm.endswith("/retificacao") and path_norm.startswith("/diagnosticos/"):
         return True
+    # Narrativa LLM sobre score finalizado (painel) — custo/latência: replay idempotente.
+    if path_norm.endswith("/explicacao-score-llm") and path_norm.startswith("/diagnosticos/"):
+        return True
     return raw in (
         "/diagnosticos",
         "/diagnosticos/",
@@ -87,7 +90,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                     "detail": (
                         "Header Idempotency-Key obrigatório para POST sob /diagnosticos/ "
                         "(criação, self-service, rascunho self-service, concluir rascunho, vincular rascunho à conta, "
-                        "vincular-leads-self-service)."
+                        "vincular-leads-self-service, retificação, explicação score LLM)."
                     )
                 },
             )

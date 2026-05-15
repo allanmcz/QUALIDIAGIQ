@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { CalendarPlus, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
+import { ExplicacaoScoreLlmCard } from "@/components/painel/ExplicacaoScoreLlmCard";
 import { PrivacidadeDiagnosticoCard } from "@/components/painel/PrivacidadeDiagnosticoCard";
 import { RetificacaoDiagnosticoCard } from "@/components/painel/RetificacaoDiagnosticoCard";
 import { Badge } from "@/components/ui/badge";
@@ -589,6 +590,20 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             Guia ABNT / PDCA (M11)
           </Link>
         </div>
+        <nav
+          className="flex flex-wrap gap-2 mb-4"
+          aria-label="Atalhos para secções desta ficha"
+        >
+          <Button variant="outline" size="sm" asChild>
+            <Link href="#diag-privacidade-lgpd">LGPD</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="#diag-retificacoes">Retificações</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="#diag-explicacao-score-llm">Explicação IA</Link>
+          </Button>
+        </nav>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold">{data.empresa_razao_social}</h1>
@@ -649,6 +664,12 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       <PrivacidadeDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
 
       <RetificacaoDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
+
+      <ExplicacaoScoreLlmCard
+        diagnosticoId={data.id}
+        diagnosticoStatus={data.status}
+        scoreGeral={data.score?.score_geral?.valor ?? null}
+      />
 
       {radarData && radarData.length > 0 && (
         <Card className="mb-10">
