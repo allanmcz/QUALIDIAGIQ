@@ -6,17 +6,26 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ADMIN_PERFIL_CONTA_STORAGE_KEY } from "@/lib/api/config";
 import { postExplicacaoScoreLlm, type ExplicacaoScoreLlmHttp } from "@/lib/api/explicacao_score_llm";
 
 type Props = {
   diagnosticoId: string;
   diagnosticoStatus: string;
+  /** Plano persistido do diagnóstico (`avancado` desbloqueia sem perfil avançado). */
+  planoDiagnostico?: string | null;
   /** Score geral 0–100 já persistido (GET); null = botão desativado. */
   scoreGeral: number | null;
   /** Snapshot da BD (GET) — hidratação sem novo POST. */
   inicial?: ExplicacaoScoreLlmHttp | null;
   className?: string;
 };
+
+function sessaoPodeExplicacaoScore(perfilConta: string | null, plano: string | null): boolean {
+  const p = (perfilConta || "").trim().toLowerCase();
+  if (p === "avancado" || p === "admin") return true;
+  return (plano || "").trim().toLowerCase() === "avancado";
+}
 
 function formatarGeradoEmPtBr(iso: string | null | undefined): string | null {
   const s = (iso || "").trim();
@@ -33,6 +42,7 @@ function formatarGeradoEmPtBr(iso: string | null | undefined): string | null {
 export function ExplicacaoScoreLlmCard({
   diagnosticoId,
   diagnosticoStatus,
+  planoDiagnostico = null,
   scoreGeral,
   inicial = null,
   className,
@@ -40,13 +50,23 @@ export function ExplicacaoScoreLlmCard({
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resposta, setResposta] = useState<ExplicacaoScoreLlmHttp | null>(inicial);
+  const [perfilConta, setPerfilConta] = useState<string | null>(null);
 
   useEffect(() => {
     setResposta(inicial);
   }, [inicial]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setPerfilConta(window.localStorage.getItem(ADMIN_PERFIL_CONTA_STORAGE_KEY));
+  }, []);
+
+  const podeAcessar = sessaoPodeExplicacaoScore(perfilConta, planoDiagnostico);
   const podeGerar =
-    diagnosticoStatus === "finalizado" && scoreGeral != null && Number.isFinite(scoreGeral);
+    podeAcessar &&
+    diagnosticoStatus === "finalizado" &&
+    scoreGeral != null &&
+    Number.isFinite(scoreGeral);
 
   const gerar = useCallback(async () => {
     if (!podeGerar) return;
@@ -89,7 +109,12 @@ export function ExplicacaoScoreLlmCard({
           </p>
         ) : null}
 
-        {!podeGerar ? (
+        {!podeAcessar ? (
+          <p className="text-sm text-muted-foreground">
+            Explicação do score por IA está disponível no <strong>plano avançado</strong> da conta na
+            plataforma ou em diagnósticos com plano avançado. Faça upgrade para desbloquear.
+          </p>
+        ) : !podeGerar ? (
           <p className="text-sm text-muted-foreground">
             Disponível quando o diagnóstico está <strong>finalizado</strong> com score persistido.
           </p>

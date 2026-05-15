@@ -60,6 +60,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             client: Cliente Supabase síncrono (`create_client`) com JWT de tenant válido.
         """
         self._client = client
+        self._explicacao_historico_mem: dict[tuple[str, str], list[dict[str, Any]]] = {}
 
     async def salvar(self, diagnostico: Diagnostico) -> None:
         """Upsert idempotente — valida RLS no servidor."""
@@ -223,6 +224,33 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         response = await asyncio.to_thread(_update)
         if not response.data:
             raise ValueError("Diagnóstico não encontrado para persistir explicação LLM")
+
+    async def registrar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+        *,
+        actor_user_id: UUID | None,
+        trace_id: str | None,
+    ) -> None:
+        _ = actor_user_id
+        chave = (str(tenant_id), str(diagnostico_id))
+        item = dict(snapshot)
+        if trace_id:
+            item["trace_id"] = trace_id
+        self._explicacao_historico_mem.setdefault(chave, []).insert(0, item)
+
+    async def listar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        *,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        return list(
+            self._explicacao_historico_mem.get((str(tenant_id), str(diagnostico_id)), [])[:limit]
+        )
 
     def _salvar_e_materializar_thread(
         self, diagnostico: Diagnostico, score_completo: ScoreCompleto

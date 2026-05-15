@@ -16,8 +16,13 @@ from tests.conftest import cabecalho_post_diagnostico
 
 class MockPdfGenerator:
     async def gerar_pdf_diagnostico(
-        self, diagnostico, score_completo, recomendacao_ia: str | None
+        self,
+        diagnostico,
+        score_completo,
+        recomendacao_ia: str | None = None,
+        explicacao_score_llm_texto: str | None = None,
     ) -> bytes:
+        _ = explicacao_score_llm_texto
         return b"%PDF-1.4\nmock"
 
 

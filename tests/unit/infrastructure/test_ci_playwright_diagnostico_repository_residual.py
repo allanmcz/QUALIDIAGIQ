@@ -417,3 +417,22 @@ class TestCiPlaywrightSubtarefas:
         assert upd["prazo"] == "2026-06-01"
         assert upd["comentarios"] == "nota"
         assert upd["ordem"] == 3
+
+
+class TestCiPlaywrightExplicacaoHistorico:
+    @pytest.mark.asyncio
+    async def test_registrar_e_listar_historico(self) -> None:
+        repo = CiPlaywrightDiagnosticoRepository()
+        d = _diag_finalizado()
+        await repo.salvar(d)
+        snap = {"text": "n1", "provider": "fake", "model": "m", "policy_version": "v"}
+        await repo.registrar_explicacao_score_llm_historico(
+            d.id, d.tenant_id, snap, actor_user_id=uuid4(), trace_id="tr-hist"
+        )
+        await repo.registrar_explicacao_score_llm_historico(
+            d.id, d.tenant_id, {"text": "n2"}, actor_user_id=None, trace_id=None
+        )
+        rows = await repo.listar_explicacao_score_llm_historico(d.id, d.tenant_id, limit=5)
+        assert rows[0]["text"] == "n2"
+        assert rows[1]["text"] == "n1"
+        assert rows[1]["trace_id"] == "tr-hist"

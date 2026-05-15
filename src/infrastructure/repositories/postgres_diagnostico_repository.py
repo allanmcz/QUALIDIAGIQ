@@ -705,3 +705,45 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
             tenant_id,
             snapshot,
         )
+
+    async def registrar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+        *,
+        actor_user_id: UUID | None,
+        trace_id: str | None,
+    ) -> None:
+        from src.infrastructure.repositories.postgres_explicacao_score_llm_historico_sync import (
+            inserir_explicacao_score_llm_historico_sync,
+        )
+
+        await asyncio.to_thread(
+            inserir_explicacao_score_llm_historico_sync,
+            self._dsn,
+            tenant_id=tenant_id,
+            diagnostico_id=diagnostico_id,
+            snapshot=snapshot,
+            actor_user_id=actor_user_id,
+            trace_id=trace_id,
+        )
+
+    async def listar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        *,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        from src.infrastructure.repositories.postgres_explicacao_score_llm_historico_sync import (
+            listar_explicacao_score_llm_historico_sync,
+        )
+
+        return await asyncio.to_thread(
+            listar_explicacao_score_llm_historico_sync,
+            self._dsn,
+            tenant_id=tenant_id,
+            diagnostico_id=diagnostico_id,
+            limit=limit,
+        )

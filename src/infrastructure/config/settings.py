@@ -259,6 +259,36 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LLM_ROUTER_POLICY_VERSION"),
         description="Versão da política de roteamento registada em cada resposta (auditoria).",
     )
+    llm_quota_explicacao_score_daily: int = Field(
+        default=50,
+        ge=0,
+        validation_alias=AliasChoices("QDI_LLM_QUOTA_EXPLICACAO_SCORE_DAILY"),
+        description="Máximo de POST explicacao-score-llm por tenant por dia UTC (0 = sem limite).",
+    )
+    llm_circuit_breaker_failure_threshold: int = Field(
+        default=5,
+        ge=1,
+        validation_alias=AliasChoices("QDI_LLM_CIRCUIT_BREAKER_FAILURE_THRESHOLD"),
+    )
+    llm_circuit_breaker_cooldown_seconds: float = Field(
+        default=60.0,
+        ge=1.0,
+        validation_alias=AliasChoices("QDI_LLM_CIRCUIT_BREAKER_COOLDOWN_SECONDS"),
+    )
+    llm_bedrock_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("QDI_LLM_BEDROCK_ENABLED"),
+        description="ADR-022 Fase 4 — habilita completer Bedrock (requer boto3 + credenciais AWS).",
+    )
+    llm_bedrock_region: str = Field(
+        default="us-east-1",
+        validation_alias=AliasChoices("QDI_LLM_BEDROCK_REGION"),
+    )
+    llm_bedrock_model_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("QDI_LLM_BEDROCK_MODEL_ID"),
+        description="ModelId Bedrock (ex.: anthropic.claude-3-5-sonnet-20241022-v2:0).",
+    )
 
     cors_allowed_origins: str = Field(
         default=(

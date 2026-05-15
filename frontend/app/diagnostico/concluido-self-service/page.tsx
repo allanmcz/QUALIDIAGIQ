@@ -185,6 +185,17 @@ function DiagnosticoConcluidoSelfServiceConteudo() {
             )}
           </div>
 
+          {dados.explicacao_score_llm_texto ? (
+            <div className="rounded-lg border bg-card px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Explicação do score (IA)
+              </p>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {dados.explicacao_score_llm_texto}
+              </p>
+            </div>
+          ) : null}
+
           <p className="text-muted-foreground text-xs leading-relaxed">
             Situação: <span className="font-medium text-foreground">{dados.status}</span>
             {" · "}

@@ -100,6 +100,16 @@
     </div>
     {% endif %}
 
+    {% if explicacao_score_llm_texto %}
+    <div style="background-color: #F0F4FF; border-left: 4px solid #2563EB; padding: 15px; margin-top: 20px;">
+        <h3>{{ t.score_explain_box_title }}</h3>
+        <p><em>{{ t.score_explain_box_disclaimer }}</em></p>
+        <div>
+            {{ explicacao_score_llm_texto | replace('\n', '<br>') | safe }}
+        </div>
+    </div>
+    {% endif %}
+
     {% if cronograma|length > 0 %}
     <div style="page-break-before: always;"></div>
     <h2>{{ t.schedule_title }}</h2>

@@ -334,6 +334,14 @@ def create_app() -> FastAPI:
             "idempotency_backend": "postgres",
         }
 
+    @app.get("/health/llm", tags=["Infra"])
+    async def health_llm() -> dict[str, str]:
+        """Saúde do backend LLM (Ollama / router / Bedrock flag) — ADR-022 Fase 4."""
+        from src.infrastructure.config.settings import get_settings
+        from src.infrastructure.llm.llm_health_probe import probe_llm_health
+
+        return probe_llm_health(get_settings())
+
     # Registrar os Routers do Domínio
     from src.presentation.api.routers import (
         admin_maintenance_router,

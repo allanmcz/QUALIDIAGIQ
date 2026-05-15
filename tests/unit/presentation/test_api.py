@@ -1,7 +1,7 @@
 import copy
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,6 +19,7 @@ from src.domain.entities.diagnostico import (
 )
 from src.domain.ports.llm_gateway import LlmGatewayResponse
 from src.domain.value_objects.score import Dimensao, ScoreCompleto, ScoreNumerico
+from src.infrastructure.llm.llm_quota_service import LlmQuotaExcedidaError
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
@@ -1285,10 +1286,11 @@ def test_post_explicacao_score_llm_sucesso_200() -> None:
     mock_repo = AsyncMock()
     mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
     mock_repo.atualizar_explicacao_score_llm = AsyncMock()
+    mock_repo.registrar_explicacao_score_llm_historico = AsyncMock()
 
     app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
 
     response = client.post(
         f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
@@ -1307,6 +1309,7 @@ def test_post_explicacao_score_llm_sucesso_200() -> None:
     assert body.get("trace_id")
     mock_uc.execute.assert_awaited_once()
     mock_repo.atualizar_explicacao_score_llm.assert_awaited_once()
+    mock_repo.registrar_explicacao_score_llm_historico.assert_awaited_once()
     cmd = mock_uc.execute.await_args.args[0]
     assert cmd.score_geral == 62.0
     assert cmd.idempotency_key == "idem-explic-1"
@@ -1349,7 +1352,7 @@ def test_post_explicacao_score_llm_nao_finalizado_422() -> None:
 
     app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
 
     response = client.post(
         f"/diagnosticos/{d_aberto.id}/explicacao-score-llm",
@@ -1375,7 +1378,7 @@ def test_post_explicacao_score_llm_use_case_value_error_400() -> None:
 
     app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
 
     response = client.post(
         f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
@@ -1401,7 +1404,7 @@ def test_post_explicacao_score_llm_runtime_error_500() -> None:
 
     app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
 
     response = client.post(
         f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
@@ -1435,10 +1438,11 @@ def test_post_explicacao_score_llm_persistencia_falha_404() -> None:
     mock_repo.atualizar_explicacao_score_llm = AsyncMock(
         side_effect=ValueError("Diagnóstico não encontrado para persistir explicação LLM")
     )
+    mock_repo.registrar_explicacao_score_llm_historico = AsyncMock()
 
     app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
 
     response = client.post(
         f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
@@ -1475,3 +1479,115 @@ def test_post_explicacao_score_llm_sem_idempotency_key_400() -> None:
     assert response.status_code == 400
     assert "Idempotency-Key" in response.json()["detail"]
     mock_uc.execute.assert_not_called()
+
+
+def test_post_explicacao_score_llm_403_perfil_gratuito() -> None:
+    """Gate tier: gratuito sem plano avançado no diagnóstico."""
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.post(
+        f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
+        headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+    )
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 403
+    mock_uc.execute.assert_not_called()
+
+
+def test_get_explicacao_score_llm_historico_200() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+    item = {"text": "v1", "provider": "fake", "model": "m", "policy_version": "v"}
+
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+    mock_repo.listar_explicacao_score_llm_historico = AsyncMock(return_value=[item])
+
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
+
+    response = client.get(f"/diagnosticos/{d_snap.id}/explicacao-score-llm/historico")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["text"] == "v1"
+
+
+def test_health_llm_endpoint() -> None:
+    response = client.get("/health/llm")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] in ("ok", "degraded", "disabled")
+
+
+def test_post_explicacao_score_llm_quota_429() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+
+    mock_uc = AsyncMock()
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+
+    app.dependency_overrides[get_explicar_score_llm_use_case] = lambda: mock_uc
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
+
+    with patch(
+        "src.presentation.api.routers.diagnostico_painel_router.get_settings"
+    ) as mock_settings:
+        mock_settings.return_value.sync_database_url = "postgresql://local/db"
+        mock_settings.return_value.llm_quota_explicacao_score_daily = 1
+        with patch(
+            "src.presentation.api.routers.diagnostico_painel_router.assert_quota_disponivel_sync",
+            side_effect=LlmQuotaExcedidaError("quota"),
+        ):
+            response = client.post(
+                f"/diagnosticos/{d_snap.id}/explicacao-score-llm",
+                headers=cabecalho_post_diagnostico(usuario_id=uid, tenant_id=tid),
+            )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 429
+    mock_uc.execute.assert_not_called()
+
+
+def test_get_explicacao_score_llm_historico_404() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=None)
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
+    response = client.get(f"/diagnosticos/{uuid.uuid4()}/explicacao-score-llm/historico")
+    app.dependency_overrides.clear()
+    assert response.status_code == 404
+
+
+def test_get_explicacao_score_llm_historico_403() -> None:
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d_snap = copy.deepcopy(_diag_finalizado_micro())
+    d_snap.tenant_id = tid
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d_snap)
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    response = client.get(f"/diagnosticos/{d_snap.id}/explicacao-score-llm/historico")
+    app.dependency_overrides.clear()
+    assert response.status_code == 403

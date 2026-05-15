@@ -21,6 +21,9 @@ from fastapi import HTTPException, Request, status
 
 from src.application.ports.email_service import EmailServicePort
 from src.application.services.consultoria_service import ConsultoriaService
+from src.application.services.explicacao_score_publica import (
+    texto_explicacao_score_para_leitura_publica,
+)
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
     EntradaRespostaDiagnostico,
@@ -354,6 +357,8 @@ def _conclusao_publica_row_para_schema(
     loc = str(loc_raw).strip() if loc_raw is not None else "pt-BR"
     if not loc:
         loc = "pt-BR"
+    expl_raw = row.get("explicacao_score_llm")
+    expl_snap = expl_raw if isinstance(expl_raw, dict) else None
     return DiagnosticoConclusaoSelfServicePublicoResponse(
         id=UUID(str(row["id"])),
         status=str(row["status"]),
@@ -361,6 +366,7 @@ def _conclusao_publica_row_para_schema(
         locale_relatorio=loc,
         score_geral=score_geral,
         scores_por_dimensao=items,
+        explicacao_score_llm_texto=texto_explicacao_score_para_leitura_publica(expl_snap),
     )
 
 

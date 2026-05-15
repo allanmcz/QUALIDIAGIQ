@@ -900,6 +900,10 @@ class DiagnosticoConclusaoSelfServicePublicoResponse(BaseModel):
     scores_por_dimensao: list[DiagnosticoConclusaoPublicaDimensaoSchema] = Field(
         default_factory=list
     )
+    explicacao_score_llm_texto: str | None = Field(
+        default=None,
+        description="Narrativa LLM (somente texto) se existir e não bloqueada por guardrail.",
+    )
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -927,6 +931,14 @@ class ExplicacaoScoreLlmPersistidaSchema(ExplicarScoreLlmHttpResponse):
 
     gerado_em: datetime | None = None
     trace_id: str | None = None
+
+
+class ExplicacaoScoreLlmHistoricoListaSchema(BaseModel):
+    """Lista append-only de explicações LLM anteriores."""
+
+    items: list[ExplicacaoScoreLlmPersistidaSchema] = Field(default_factory=list)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     model_config = ConfigDict(str_strip_whitespace=True)
 

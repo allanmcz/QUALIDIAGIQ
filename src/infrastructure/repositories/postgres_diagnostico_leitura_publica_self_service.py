@@ -85,7 +85,8 @@ def buscar_diagnostico_conclusao_publica_sync(
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT id, status, empresa_razao_social, locale_relatorio, score_completo
+                SELECT id, status, empresa_razao_social, locale_relatorio, score_completo,
+                       explicacao_score_llm
                 FROM diagnosticos
                 WHERE id = %s AND tenant_id = %s
                 LIMIT 1

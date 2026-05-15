@@ -66,6 +66,7 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         self._rows: dict[UUID, Diagnostico] = {_ID_LISTA_CI: _seed_diagnostico_demo()}
         self._planos: dict[tuple[UUID, UUID], PlanoPainelSerializado] = {}
         self._subs_por_chave: dict[tuple[UUID, UUID, UUID], list[dict[str, Any]]] = {}
+        self._explicacao_historico: dict[tuple[UUID, UUID], list[dict[str, Any]]] = {}
 
     async def salvar(self, diagnostico: Diagnostico) -> None:
         self._rows[diagnostico.id] = diagnostico
@@ -142,6 +143,31 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         if row is None:
             raise ValueError("Diagnóstico não encontrado para persistir explicação LLM")
         row.explicacao_score_llm = snapshot
+
+    async def registrar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+        *,
+        actor_user_id: UUID | None,
+        trace_id: str | None,
+    ) -> None:
+        _ = actor_user_id
+        chave = (tenant_id, diagnostico_id)
+        item = dict(snapshot)
+        if trace_id:
+            item["trace_id"] = trace_id
+        self._explicacao_historico.setdefault(chave, []).insert(0, item)
+
+    async def listar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        *,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        return list(self._explicacao_historico.get((tenant_id, diagnostico_id), [])[:limit])
 
     def _merge_subtarefas_no_plano(
         self, plano: PlanoPainelSerializado, did: UUID, tid: UUID

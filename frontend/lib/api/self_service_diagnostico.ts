@@ -175,6 +175,10 @@ export async function getConclusaoSelfServiceVisualizacao(
       scores_por_dimensao.push({ dimensao, valor, peso_total_aplicado });
     }
   }
+  const explRaw = o["explicacao_score_llm_texto"];
+  const explicacao_score_llm_texto =
+    typeof explRaw === "string" && explRaw.trim() ? explRaw.trim() : null;
+
   if (!id || !status || !empresa) {
     throw new Error("Resposta da API em formato inesperado.");
   }
@@ -185,6 +189,7 @@ export async function getConclusaoSelfServiceVisualizacao(
     score_geral,
     scores_por_dimensao,
     locale_relatorio: locale || "pt-BR",
+    explicacao_score_llm_texto,
   };
 }
 

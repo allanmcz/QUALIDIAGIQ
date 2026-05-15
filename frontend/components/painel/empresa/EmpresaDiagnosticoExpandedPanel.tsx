@@ -359,6 +359,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
           <ExplicacaoScoreLlmCard
             diagnosticoId={diagnosticoId}
             diagnosticoStatus={data.status}
+            planoDiagnostico={data.plano}
             scoreGeral={data.score?.score_geral?.valor ?? null}
             inicial={data.explicacao_score_llm ?? null}
             className="mb-0 scroll-mt-0"

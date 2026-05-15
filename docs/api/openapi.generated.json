@@ -81,6 +81,32 @@
         }
       }
     },
+    "/health/llm": {
+      "get": {
+        "tags": [
+          "Infra"
+        ],
+        "summary": "Health Llm",
+        "description": "Saúde do backend LLM (Ollama / router / Bedrock flag) — ADR-022 Fase 4.",
+        "operationId": "health_llm_health_llm_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Llm Health Llm Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/public/institucional": {
       "get": {
         "tags": [
@@ -460,6 +486,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExplicacaoScoreLlmPersistidaSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosticos/{diagnostico_id}/explicacao-score-llm/historico": {
+      "get": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Histórico de explicações LLM do score",
+        "description": "Lista append-only das gerações anteriores (mais recente primeiro).",
+        "operationId": "listar_explicacao_score_llm_historico_painel_diagnosticos__diagnostico_id__explicacao_score_llm_historico_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplicacaoScoreLlmHistoricoListaSchema"
                 }
               }
             }
@@ -2862,6 +2947,18 @@
             },
             "type": "array",
             "title": "Scores Por Dimensao"
+          },
+          "explicacao_score_llm_texto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explicacao Score Llm Texto",
+            "description": "Narrativa LLM (somente texto) se existir e não bloqueada por guardrail."
           }
         },
         "type": "object",
@@ -3473,6 +3570,20 @@
           "setor_macro"
         ],
         "title": "EmpresaSchema"
+      },
+      "ExplicacaoScoreLlmHistoricoListaSchema": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExplicacaoScoreLlmPersistidaSchema"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "title": "ExplicacaoScoreLlmHistoricoListaSchema",
+        "description": "Lista append-only de explicações LLM anteriores."
       },
       "ExplicacaoScoreLlmPersistidaSchema": {
         "properties": {

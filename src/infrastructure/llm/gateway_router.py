@@ -14,8 +14,10 @@ import structlog
 from src.application.ports.llm_service import LlmServicePort
 from src.domain.ports.llm_gateway import LlmGateway, LlmGatewayRequest, LlmGatewayResponse
 from src.infrastructure.config.settings import Settings
+from src.infrastructure.llm.adapters.bedrock_llm_completer import BedrockLlmCompleter
 from src.infrastructure.llm.adapters.fake_llm_adapter import FakeLlmAdapter
 from src.infrastructure.llm.adapters.llm_service_gateway_completer import LlmServiceGatewayCompleter
+from src.infrastructure.llm.circuit_breaker import get_llm_circuit_breaker
 from src.infrastructure.llm.cost_estimator import CostEstimator
 from src.infrastructure.llm.guardrails.rag_guardrail_service import RagGuardrailService
 from src.infrastructure.llm.routing_policy import RoutingPolicy
@@ -136,9 +138,32 @@ class LlmGatewayRouter(LlmGateway):
             )
 
         provider, modelo = self._provider_e_modelo()
+        breaker = get_llm_circuit_breaker(
+            failure_threshold=self._settings.llm_circuit_breaker_failure_threshold,
+            cooldown_seconds=self._settings.llm_circuit_breaker_cooldown_seconds,
+        )
+        if breaker.is_open(provider):
+            record_llm_gateway_completion(task_type=str(request.task_type), outcome="circuit_open")
+            return LlmGatewayResponse(
+                text="",
+                provider=provider,
+                model=modelo,
+                policy_version=policy_version,
+                blocked_by_guardrail=True,
+                guardrail_reason="circuit_breaker_open",
+                guardrail_status="blocked",
+            )
+
+        completer = self._completer
+        if self._settings.llm_bedrock_enabled and rota.profile == "premium":
+            provider, modelo = "bedrock", self._settings.llm_bedrock_model_id.strip() or "bedrock"
+            completer = BedrockLlmCompleter(self._settings)  # type: ignore[assignment]
+
         try:
-            texto = await self._completer.complete(request)
+            texto = await completer.complete(request)
+            breaker.record_success(provider)
         except Exception as exc:
+            breaker.record_failure(provider)
             record_llm_gateway_completion(task_type=str(request.task_type), outcome="error")
             logger.error(
                 "llm_gateway_adapter_excecao",

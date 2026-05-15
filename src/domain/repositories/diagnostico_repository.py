@@ -125,6 +125,30 @@ class DiagnosticoRepository(ABC):
         ...
 
     @abstractmethod
+    async def registrar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        snapshot: dict[str, Any],
+        *,
+        actor_user_id: UUID | None,
+        trace_id: str | None,
+    ) -> None:
+        """Append-only — histórico de gerações da narrativa LLM."""
+        ...
+
+    @abstractmethod
+    async def listar_explicacao_score_llm_historico(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        *,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """Lista snapshots anteriores (mais recente primeiro)."""
+        ...
+
+    @abstractmethod
     async def salvar_e_materializar_plano_painel(
         self,
         diagnostico: Diagnostico,

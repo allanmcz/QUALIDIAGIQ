@@ -13,7 +13,11 @@ class PdfGeneratorPort(ABC):
 
     @abstractmethod
     async def gerar_pdf_diagnostico(
-        self, diagnostico: Diagnostico, score: ScoreCompleto, recomendacao_ia: str | None = None
+        self,
+        diagnostico: Diagnostico,
+        score: ScoreCompleto,
+        recomendacao_ia: str | None = None,
+        explicacao_score_llm_texto: str | None = None,
     ) -> bytes:
         """
         Gera um PDF a partir dos dados do diagnóstico e score.

@@ -291,8 +291,18 @@ class RealizarDiagnostico:
         if self.pdf_generator and self.storage_service:
             # Geração (síncrona por design do WeasyPrint na CPU, mas chamamos via adapter)
             # Passamos a recomendação IA para ser incluída no PDF se necessário
+            from src.application.services.explicacao_score_publica import (
+                texto_explicacao_score_para_leitura_publica,
+            )
+
+            expl_pdf = texto_explicacao_score_para_leitura_publica(
+                getattr(diagnostico, "explicacao_score_llm", None)
+            )
             pdf_bytes = await self.pdf_generator.gerar_pdf_diagnostico(
-                diagnostico, score_completo, recomendacao_ia
+                diagnostico,
+                score_completo,
+                recomendacao_ia,
+                expl_pdf,
             )
 
             # Upload para Storage

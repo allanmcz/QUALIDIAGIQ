@@ -39,7 +39,11 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         self.jinja_env = Environment(loader=FileSystemLoader(self.templates_dir), autoescape=True)
 
     async def gerar_pdf_diagnostico(
-        self, diagnostico: Diagnostico, score: ScoreCompleto, recomendacao_ia: str | None = None
+        self,
+        diagnostico: Diagnostico,
+        score: ScoreCompleto,
+        recomendacao_ia: str | None = None,
+        explicacao_score_llm_texto: str | None = None,
     ) -> bytes:
         """
         Renderiza o template jinja com os dados do diagnóstico e coverte para PDF.
@@ -75,6 +79,7 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             dimensoes=score.score_por_dimensao,
             data_geracao=data_geracao,
             recomendacao_ia=recomendacao_ia,
+            explicacao_score_llm_texto=explicacao_score_llm_texto,
             checklist=checklist,
             matriz_impacto=matriz_impacto,
             cronograma=cronograma,

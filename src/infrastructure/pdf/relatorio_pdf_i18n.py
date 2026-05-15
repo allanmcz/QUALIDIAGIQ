@@ -80,6 +80,11 @@ _STR_PT_BR: dict[str, str] = {
         "Conteúdo acima sujeito ao gate Lexiq (RAG-light + âncoras normativas reconhecíveis) antes da "
         "inclusão no PDF — princípio Tributiq: sem evidência citável, a recomendação não é publicada."
     ),
+    "score_explain_box_title": "Explicação do score (IA — painel)",
+    "score_explain_box_disclaimer": (
+        "Narrativa gerada no painel sobre o score já calculado pelo motor auditável (0-100). "
+        "Não substitui a recomendação da finalização nem altera o valor numérico."
+    ),
     "schedule_title": "Cronograma em cinco horizontes (transição LC 214/2025)",
     "schedule_intro": (
         "Referência temporal para governança e projetos — alinhado ao pipeline de implantação CBS/IBS."
@@ -177,6 +182,11 @@ _STR_EN: dict[str, str] = {
     "ai_box_guardrail_note": (
         "The content above is subject to the Lexiq gate (RAG-light + recognizable normative anchors) before "
         "inclusion in this PDF — Tributiq principle: without citable evidence, the recommendation is not published."
+    ),
+    "score_explain_box_title": "Score explanation (AI — panel)",
+    "score_explain_box_disclaimer": (
+        "Panel-generated narrative about the score already computed by the auditable engine (0-100). "
+        "Does not replace the completion recommendation or change the numeric value."
     ),
     "schedule_title": "Five-horizon roadmap (LC 214/2025 transition)",
     "schedule_intro": "Timeline reference for governance and CBS/IBS deployment.",

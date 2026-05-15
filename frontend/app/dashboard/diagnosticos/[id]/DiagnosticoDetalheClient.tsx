@@ -668,6 +668,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       <ExplicacaoScoreLlmCard
         diagnosticoId={data.id}
         diagnosticoStatus={data.status}
+        planoDiagnostico={data.plano}
         scoreGeral={data.score?.score_geral?.valor ?? null}
         inicial={data.explicacao_score_llm ?? null}
       />

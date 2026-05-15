@@ -20,6 +20,8 @@ export type SelfServiceDiagnosticoResultado = {
   /** Opcional — versões antigas do snapshot só tinham score geral. */
   scores_por_dimensao: ScorePorDimensaoItem[];
   locale_relatorio: string;
+  /** Narrativa LLM (somente texto) quando existir na BD e não bloqueada por guardrail. */
+  explicacao_score_llm_texto?: string | null;
 };
 
 /**

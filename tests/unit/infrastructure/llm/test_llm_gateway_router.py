@@ -9,6 +9,10 @@ from src.domain.value_objects.evidence_ref import EvidenceRef
 from src.domain.value_objects.llm_task_type import LlmTaskType
 from src.infrastructure.config.settings import Settings
 from src.infrastructure.llm.adapters.fake_llm_adapter import FakeLlmAdapter
+from src.infrastructure.llm.circuit_breaker import (
+    get_llm_circuit_breaker,
+    reset_llm_circuit_breaker_for_tests,
+)
 from src.infrastructure.llm.gateway_router import LlmGatewayRouter
 
 
@@ -301,3 +305,49 @@ class TestLlmGatewayRouter:
         )
         resp = await router.complete(req)
         assert resp.provider == "fake"
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_aberto_bloqueia_sem_chamar_completer(self) -> None:
+        reset_llm_circuit_breaker_for_tests()
+        br = get_llm_circuit_breaker(failure_threshold=1, cooldown_seconds=3600.0)
+        br.record_failure("fake")
+        router = LlmGatewayRouter(_settings())
+        req = LlmGatewayRequest(
+            tenant_id="t1",
+            trace_id="tr-cb",
+            task_type=LlmTaskType.EXPLICACAO_SCORE,
+            prompt_key="e",
+            input_data={"score": 50.0},
+        )
+        resp = await router.complete(req)
+        assert resp.blocked_by_guardrail is True
+        assert resp.guardrail_reason == "circuit_breaker_open"
+        reset_llm_circuit_breaker_for_tests()
+
+    @pytest.mark.asyncio
+    async def test_bedrock_habilitado_usa_completer_premium(self) -> None:
+        from unittest.mock import AsyncMock, patch
+
+        reset_llm_circuit_breaker_for_tests()
+        with patch("src.infrastructure.llm.gateway_router.BedrockLlmCompleter") as mock_cls:
+            mock_cls.return_value.complete = AsyncMock(
+                return_value="Conforme LC 214/2025 art. 1º, análise via Bedrock."
+            )
+            router = LlmGatewayRouter(
+                _settings(llm_bedrock_enabled=True, llm_bedrock_model_id="model-test")
+            )
+            ev = EvidenceRef(fonte="Lexiq", titulo="T", dispositivo="LC 214/2025 art. 1º")
+            req = LlmGatewayRequest(
+                tenant_id="t1",
+                trace_id="tr-bedrock",
+                task_type=LlmTaskType.ANALISE_NORMATIVA_RAG,
+                prompt_key="rag",
+                input_data={},
+                evidencias=(ev,),
+            )
+            resp = await router.complete(req)
+        assert resp.blocked_by_guardrail is False
+        assert "Bedrock" in resp.text
+        assert resp.provider == "bedrock"
+        mock_cls.assert_called_once()
+        reset_llm_circuit_breaker_for_tests()

@@ -139,6 +139,29 @@ class TestPostgresDiagnosticoRepository:
             await repo.atualizar_explicacao_score_llm(did, tid, snap)
         mock_patch.assert_called_once_with("postgresql://u:p@localhost:1/db", did, tid, snap)
 
+    async def test_registrar_explicacao_historico_async(self) -> None:
+        did, tid, uid = uuid4(), uuid4(), uuid4()
+        snap = {"text": "h"}
+        with patch(
+            "src.infrastructure.repositories.postgres_explicacao_score_llm_historico_sync.inserir_explicacao_score_llm_historico_sync"
+        ) as mock_ins:
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            await repo.registrar_explicacao_score_llm_historico(
+                did, tid, snap, actor_user_id=uid, trace_id="tr"
+            )
+        mock_ins.assert_called_once()
+
+    async def test_listar_explicacao_historico_async(self) -> None:
+        did, tid = uuid4(), uuid4()
+        with patch(
+            "src.infrastructure.repositories.postgres_explicacao_score_llm_historico_sync.listar_explicacao_score_llm_historico_sync",
+            return_value=[{"text": "x"}],
+        ) as mock_lst:
+            repo = PostgresDiagnosticoRepository(dsn_sync="postgresql://u:p@localhost:1/db")
+            out = await repo.listar_explicacao_score_llm_historico(did, tid, limit=3)
+        assert out[0]["text"] == "x"
+        mock_lst.assert_called_once()
+
     async def test_buscar_por_id_retorna_entidade(self) -> None:
         did, tid = uuid4(), uuid4()
         mock_cursor = MagicMock()

@@ -44,4 +44,7 @@
 \i /docker-entrypoint-initdb.d/migrations/0040_indices_diagnosticos_tenant_cnpj.sql
 \i /docker-entrypoint-initdb.d/migrations/0041_force_rls_cnpj_consultas.sql
 \i /docker-entrypoint-initdb.d/migrations/0042_normativa_pergunta_peso.sql
+\i /docker-entrypoint-initdb.d/migrations/0043_explicacao_score_llm.sql
+\i /docker-entrypoint-initdb.d/migrations/0044_diagnostico_explicacao_score_llm_historico.sql
+\i /docker-entrypoint-initdb.d/migrations/0045_llm_tenant_usage_ledger.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

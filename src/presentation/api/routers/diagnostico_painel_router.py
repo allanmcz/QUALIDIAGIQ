@@ -7,6 +7,7 @@ Responsabilidade: M12, quadro de implantação, subtarefas do plano, explicaçã
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -17,6 +18,10 @@ from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEn
 from src.application.services.explicacao_score_contexto import (
     montar_campos_extras_explicacao_score,
     snapshot_explicacao_score_llm_de_resposta,
+)
+from src.application.services.explicacao_score_llm_acesso import (
+    mensagem_acesso_negado_explicacao_score_llm,
+    pode_gerar_explicacao_score_llm,
 )
 from src.application.use_cases.anexar_relatorio_otimista import (
     AnexarRelatorioOtimista,
@@ -42,6 +47,12 @@ from src.application.use_cases.plano_painel_subtarefa import (
 )
 from src.domain.entities.diagnostico import StatusDiagnostico
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.infrastructure.config.settings import get_settings
+from src.infrastructure.llm.llm_quota_service import (
+    LlmQuotaExcedidaError,
+    assert_quota_disponivel_sync,
+    registrar_uso_llm_sync,
+)
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
@@ -56,6 +67,7 @@ from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
     CriarSubtarefaPlanoDiagnosticoRequest,
     DiagnosticoResponse,
+    ExplicacaoScoreLlmHistoricoListaSchema,
     ExplicacaoScoreLlmPersistidaSchema,
     PatchChecklistM12AutoconfRequest,
     PatchQuadroImplantacaoRequest,
@@ -195,7 +207,7 @@ async def explicar_score_llm_painel(
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
 ) -> ExplicacaoScoreLlmPersistidaSchema:
     """POST painel — delega a ``ExplicarScoreLlmUseCase`` e persiste snapshot JSONB."""
-    _, tenant_id, _ = current
+    user_id, tenant_id, perfil_conta = current
     raw_key = (idempotency_key or "").strip()
     d = await repo.buscar_por_id(diagnostico_id, tenant_id)
     if not d:
@@ -205,6 +217,27 @@ async def explicar_score_llm_painel(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Só é possível explicar o score para diagnóstico finalizado com score persistido.",
         )
+    if not pode_gerar_explicacao_score_llm(perfil_conta, d):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=mensagem_acesso_negado_explicacao_score_llm(),
+        )
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn and settings.llm_quota_explicacao_score_daily > 0:
+        try:
+            await asyncio.to_thread(
+                assert_quota_disponivel_sync,
+                dsn,
+                tenant_id=tenant_id,
+                task_type="explicacao_score",
+                limite_diario=settings.llm_quota_explicacao_score_daily,
+            )
+        except LlmQuotaExcedidaError as e:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=str(e),
+            ) from e
     tid_trace = getattr(request.state, "trace_id", None)
     trace_log = str(tid_trace).strip() if tid_trace else str(uuid4())
     cmd = ComandoExplicarScoreLlm(
@@ -226,9 +259,50 @@ async def explicar_score_llm_painel(
     )
     try:
         await repo.atualizar_explicacao_score_llm(diagnostico_id, tenant_id, snapshot)
+        await repo.registrar_explicacao_score_llm_historico(
+            diagnostico_id,
+            tenant_id,
+            snapshot,
+            actor_user_id=user_id,
+            trace_id=trace_log,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    if dsn:
+        await asyncio.to_thread(
+            registrar_uso_llm_sync,
+            dsn,
+            tenant_id=tenant_id,
+            task_type="explicacao_score",
+            trace_id=trace_log,
+        )
     return ExplicacaoScoreLlmPersistidaSchema.model_validate(snapshot)
+
+
+@router.get(
+    "/{diagnostico_id}/explicacao-score-llm/historico",
+    response_model=ExplicacaoScoreLlmHistoricoListaSchema,
+    summary="Histórico de explicações LLM do score",
+    description="Lista append-only das gerações anteriores (mais recente primeiro).",
+)
+async def listar_explicacao_score_llm_historico_painel(
+    diagnostico_id: UUID,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    limit: int = 20,
+) -> ExplicacaoScoreLlmHistoricoListaSchema:
+    _, tenant_id, perfil_conta = current
+    d = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not d:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
+    if not pode_gerar_explicacao_score_llm(perfil_conta, d):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=mensagem_acesso_negado_explicacao_score_llm(),
+        )
+    rows = await repo.listar_explicacao_score_llm_historico(diagnostico_id, tenant_id, limit=limit)
+    items = [ExplicacaoScoreLlmPersistidaSchema.model_validate(r) for r in rows]
+    return ExplicacaoScoreLlmHistoricoListaSchema(items=items)
 
 
 @router.post(

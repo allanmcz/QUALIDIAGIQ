@@ -439,3 +439,26 @@ def test_para_entity_quadro_cobre_ramos_parse(diagnostico_mock: Diagnostico) -> 
     assert q["comentarios_nao_lista"]["comentarios"] == ["fallback"]
     assert "descricao_personalizada" not in q["sem_descricao_personalizada"]
     assert q["sem_comentarios_nem_legado"]["comentarios"] == []
+
+
+@pytest.mark.asyncio
+async def test_registrar_e_listar_explicacao_historico_memoria(
+    diagnostico_mock: Diagnostico,
+) -> None:
+    """Histórico LLM em memória no adapter Supabase (MVP sem tabela dedicada)."""
+    repo = SupabaseDiagnosticoRepository(MagicMock())
+    tid = diagnostico_mock.tenant_id
+    did = diagnostico_mock.id
+    snap = {"text": "hist", "provider": "fake", "model": "m", "policy_version": "v"}
+    await repo.registrar_explicacao_score_llm_historico(
+        did, tid, snap, actor_user_id=None, trace_id="t1"
+    )
+    rows = await repo.listar_explicacao_score_llm_historico(did, tid)
+    assert rows[0]["text"] == "hist"
+
+    await repo.registrar_explicacao_score_llm_historico(
+        did, tid, {"text": "sem trace"}, actor_user_id=None, trace_id=None
+    )
+    rows2 = await repo.listar_explicacao_score_llm_historico(did, tid)
+    assert rows2[0]["text"] == "sem trace"
+    assert "trace_id" not in rows2[0] or rows2[0].get("trace_id") is None
