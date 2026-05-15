@@ -198,6 +198,71 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
         if dma_rls is not True:
             erros.append("RLS não habilitada em public.diagnostico_mutacao_audit (migração 0026).")
 
+    erros.extend(await _verificar_explicacao_score_llm_schema(conn))
+    return erros
+
+
+async def _verificar_explicacao_score_llm_schema(conn: asyncpg.Connection) -> list[str]:
+    """Migrações 0043–0045 — narrativa LLM do score + histórico + ledger de quota."""
+    erros: list[str] = []
+
+    expl_col = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'explicacao_score_llm'
+    """)
+    if expl_col != 1:
+        erros.append(
+            "Coluna public.diagnosticos.explicacao_score_llm ausente (aplique migração 0043)."
+        )
+
+    hist_tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnostico_explicacao_score_llm_historico'
+    """)
+    if hist_tbl != 1:
+        erros.append(
+            "Tabela public.diagnostico_explicacao_score_llm_historico ausente (migração 0044)."
+        )
+    else:
+        hist_rls = await conn.fetchval("""
+            SELECT c.relrowsecurity
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'diagnostico_explicacao_score_llm_historico'
+        """)
+        if hist_rls is not True:
+            erros.append(
+                "RLS não habilitada em public.diagnostico_explicacao_score_llm_historico (0044)."
+            )
+
+    ledger_tbl = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'llm_tenant_usage_ledger'
+    """)
+    if ledger_tbl != 1:
+        erros.append("Tabela public.llm_tenant_usage_ledger ausente (migração 0045).")
+
+    perfil_ci = await conn.fetchval("""
+        SELECT perfil_conta
+        FROM admins
+        WHERE lower(trim(email)) = lower(trim('ci-dashboard@qualidiagiq.test'))
+        LIMIT 1
+    """)
+    if perfil_ci is None:
+        erros.append("Admin ci-dashboard@qualidiagiq.test ausente (0005a / seed CI).")
+    elif str(perfil_ci).strip().lower() != "avancado":
+        erros.append(
+            "Admin CI deve ter perfil_conta=avancado para smoke LLM (migração 0046)."
+        )
+
     return erros
 
 
@@ -367,7 +432,10 @@ def main() -> int:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    msg = "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id + 0026 auditoria mutação)."
+    msg = (
+        "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id + 0026 auditoria mutação "
+        "+ explicacao_score_llm 0043–0046)."
+    )
     if strict_cnae:
         msg += " Modo strict: CNAE (extensões + 1332 subclasses) + normativa score macro (0015)."
     if rag_light:

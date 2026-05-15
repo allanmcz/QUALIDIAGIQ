@@ -19,6 +19,7 @@ from langgraph.graph import END, StateGraph
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
 from src.application.services.lexiq_guardrail import filtrar_resposta_recomendacao_llm
+from src.infrastructure.adapters.llm_prompt_modo import PROMPT_MODO_TEXTO_LIVRE
 from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
 from src.infrastructure.observability.qdi_otel_metrics import record_llm_recommendation
 
@@ -60,10 +61,13 @@ class LangGraphOllamaLlmAdapter(LlmServicePort):
         """Compila grafo single-node (entrada → recomendação → fim)."""
 
         async def no_recomendacao(state: _EstadoRecomendacao) -> _EstadoRecomendacao:
-            prompt = montar_prompt_recomendacao(
-                state["contexto_empresa"],
-                state["base_normativa"],
-            )
+            if state["base_normativa"] == PROMPT_MODO_TEXTO_LIVRE:
+                prompt = state["contexto_empresa"].strip()
+            else:
+                prompt = montar_prompt_recomendacao(
+                    state["contexto_empresa"],
+                    state["base_normativa"],
+                )
             msg = await self._llm.ainvoke([HumanMessage(content=prompt)])
             raw = getattr(msg, "content", None)
             texto = str(raw).strip() if raw is not None else ""

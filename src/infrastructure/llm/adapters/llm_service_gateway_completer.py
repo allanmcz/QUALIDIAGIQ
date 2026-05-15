@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from src.application.ports.llm_service import LlmServicePort
 from src.domain.ports.llm_gateway import LlmGatewayRequest
+from src.infrastructure.adapters.llm_explicacao_score_prompt import montar_prompt_explicacao_score
+from src.infrastructure.adapters.llm_prompt_modo import PROMPT_MODO_TEXTO_LIVRE
 
 _ANCORA_PADRAO = (
     "Âncoras: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026. "
@@ -54,6 +56,10 @@ class LlmServiceGatewayCompleter:
 
     async def complete(self, request: LlmGatewayRequest) -> str:
         """Mapeia pedido canónico para o par contexto/base do motor de recomendação."""
+        if request.prompt_key == "explicacao_score":
+            prompt = montar_prompt_explicacao_score(request)
+            return await self._llm.gerar_recomendacao(prompt, PROMPT_MODO_TEXTO_LIVRE)
+
         ctx_direct = request.input_data.get("contexto_executivo")
         if isinstance(ctx_direct, str) and ctx_direct.strip():
             contexto = ctx_direct.strip()

@@ -416,7 +416,7 @@ def test_obter_diagnostico_com_sucesso():
 
 
 def test_obter_diagnostico_inclui_explicacao_score_llm_persistida() -> None:
-    """GET devolve snapshot JSONB da última explicação LLM."""
+    """GET com perfil avançado devolve snapshot JSONB da última explicação LLM."""
     from src.presentation.api.dependencies import get_diagnostico_repository
 
     uid = uuid.uuid4()
@@ -444,7 +444,7 @@ def test_obter_diagnostico_inclui_explicacao_score_llm_persistida() -> None:
     mock_repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
 
     app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
-    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "avancado")
 
     response = client.get(
         f"/diagnosticos/{d.id}",
@@ -457,6 +457,47 @@ def test_obter_diagnostico_inclui_explicacao_score_llm_persistida() -> None:
     assert expl is not None
     assert expl["text"] == "Narrativa persistida."
     assert expl["trace_id"] == "trace-persist"
+
+
+def test_obter_diagnostico_omite_explicacao_score_llm_gratuito() -> None:
+    """GET com perfil gratuito e plano gratuito não expõe JSONB (gate tier B)."""
+    from src.presentation.api.dependencies import get_diagnostico_repository
+
+    uid = uuid.uuid4()
+    tid = uuid.uuid4()
+    d = copy.deepcopy(_diag_finalizado_micro())
+    d.tenant_id = tid
+    d.explicacao_score_llm = {
+        "text": "Narrativa oculta.",
+        "provider": "fake",
+        "model": "fake-llm",
+        "policy_version": "2026-05-15-v1",
+        "input_tokens": 1,
+        "output_tokens": 2,
+        "estimated_cost_usd": 0.0,
+        "latency_ms": 5,
+        "blocked_by_guardrail": False,
+        "guardrail_reason": None,
+        "guardrail_status": "ok",
+        "gerado_em": "2026-05-15T12:00:00+00:00",
+        "trace_id": "trace-oculto",
+    }
+
+    mock_repo = AsyncMock()
+    mock_repo.buscar_por_id = AsyncMock(return_value=d)
+    mock_repo.buscar_plano_painel_serializado = AsyncMock(return_value=None)
+
+    app.dependency_overrides[get_diagnostico_repository] = lambda: mock_repo
+    app.dependency_overrides[get_current_user_tenant] = lambda: (uid, tid, "gratuito")
+
+    response = client.get(
+        f"/diagnosticos/{d.id}",
+        headers=cabecalho_auth_bearer(usuario_id=uid, tenant_id=tid),
+    )
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json().get("explicacao_score_llm") is None
 
 
 def test_patch_relatorio_sem_if_match_400():

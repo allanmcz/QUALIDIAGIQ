@@ -99,7 +99,7 @@ async def atualizar_checklist_m12_autoconf(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> DiagnosticoResponse:
     """PATCH M12 — lock otimista alinhado ao PATCH de relatório PDF."""
-    user_id, tenant_id, _ = current
+    user_id, tenant_id, perfil_conta = current
     try:
         versao = diagnostico_helpers._parse_if_match_versao(if_match)
     except ValueError as e:
@@ -124,7 +124,9 @@ async def atualizar_checklist_m12_autoconf(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return await diagnostico_helpers._montar_diagnostico_response(repo, atualizado)
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, atualizado, perfil_conta=perfil_conta
+    )
 
 
 @router.patch(
@@ -151,7 +153,7 @@ async def atualizar_quadro_implantacao_anotacoes(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> DiagnosticoResponse:
     """PATCH quadro — lock otimista (mesmo contrato do M12)."""
-    user_id, tenant_id, _ = current
+    user_id, tenant_id, perfil_conta = current
     try:
         versao = diagnostico_helpers._parse_if_match_versao(if_match)
     except ValueError as e:
@@ -185,7 +187,9 @@ async def atualizar_quadro_implantacao_anotacoes(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return await diagnostico_helpers._montar_diagnostico_response(repo, atualizado)
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, atualizado, perfil_conta=perfil_conta
+    )
 
 
 @router.post(
@@ -329,7 +333,7 @@ async def criar_subtarefa_plano_diagnostico(
 ) -> DiagnosticoResponse:
     """POST subtarefa — exige diagnóstico finalizado com plano materializado."""
     _ = idempotency_key
-    _, tenant_id, _ = current
+    _, tenant_id, perfil_conta = current
     cmd = ComandoCriarSubtarefaPlanoDiagnostico(
         tenant_id=tenant_id,
         diagnostico_id=diagnostico_id,
@@ -344,7 +348,9 @@ async def criar_subtarefa_plano_diagnostico(
     d = await repo.buscar_por_id(diagnostico_id, tenant_id)
     if not d:
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
-    return await diagnostico_helpers._montar_diagnostico_response(repo, d)
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, d, perfil_conta=perfil_conta
+    )
 
 
 @router.patch(
@@ -364,7 +370,7 @@ async def atualizar_subtarefa_plano_diagnostico(
     ],
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
-    _, tenant_id, _ = current
+    _, tenant_id, perfil_conta = current
     cmd = ComandoAtualizarSubtarefaPlanoDiagnostico(
         tenant_id=tenant_id,
         diagnostico_id=diagnostico_id,
@@ -382,7 +388,9 @@ async def atualizar_subtarefa_plano_diagnostico(
     d = await repo.buscar_por_id(diagnostico_id, tenant_id)
     if not d:
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
-    return await diagnostico_helpers._montar_diagnostico_response(repo, d)
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, d, perfil_conta=perfil_conta
+    )
 
 
 @router.patch("/{diagnostico_id}", response_model=DiagnosticoResponse)
@@ -402,7 +410,7 @@ async def atualizar_relatorio_pdf(
 
     Exige `If-Match` com a `versao_otimista` retornada no GET (lock otimista).
     """
-    user_id, tenant_id, _ = current
+    user_id, tenant_id, perfil_conta = current
     try:
         versao = diagnostico_helpers._parse_if_match_versao(if_match)
     except ValueError as e:
@@ -427,4 +435,6 @@ async def atualizar_relatorio_pdf(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return await diagnostico_helpers._montar_diagnostico_response(repo, atualizado)
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, atualizado, perfil_conta=perfil_conta
+    )

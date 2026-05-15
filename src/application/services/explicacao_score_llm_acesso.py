@@ -33,5 +33,15 @@ def pode_gerar_explicacao_score_llm(perfil_conta: str, diagnostico: Diagnostico)
     ) or diagnostico_elegivel_explicacao_score_llm(diagnostico)
 
 
+def explicacao_score_llm_incluir_em_get(
+    perfil_conta: str | None,
+    diagnostico: Diagnostico,
+) -> bool:
+    """GET painel: omite JSONB quando sessão não tem tier (defesa além da UI)."""
+    if perfil_conta is None:
+        return True
+    return pode_gerar_explicacao_score_llm(perfil_conta, diagnostico)
+
+
 def mensagem_acesso_negado_explicacao_score_llm() -> str:
     return _MENSAGEM_403

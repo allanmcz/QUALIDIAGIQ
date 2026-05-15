@@ -9,6 +9,7 @@ import pytest
 from src.domain.ports.llm_gateway import LlmGatewayRequest
 from src.domain.value_objects.evidence_ref import EvidenceRef
 from src.domain.value_objects.llm_task_type import LlmTaskType
+from src.infrastructure.adapters.llm_prompt_modo import PROMPT_MODO_TEXTO_LIVRE
 from src.infrastructure.llm.adapters.llm_service_gateway_completer import LlmServiceGatewayCompleter
 
 
@@ -94,3 +95,24 @@ class TestLlmServiceGatewayCompleter:
         ctx = llm.gerar_recomendacao.call_args.kwargs["contexto_empresa"]
         assert "tarefa:" in ctx
         assert "resposta: talvez" in ctx
+
+    @pytest.mark.asyncio
+    async def test_explicacao_score_usa_prompt_dedicado_e_modo_texto_livre(self) -> None:
+        llm = AsyncMock()
+        llm.gerar_recomendacao = AsyncMock(return_value="Narrativa fiscal.")
+        comp = LlmServiceGatewayCompleter(llm)
+        req = LlmGatewayRequest(
+            tenant_id="t1",
+            trace_id="tr",
+            task_type=LlmTaskType.EXPLICACAO_SCORE,
+            prompt_key="explicacao_score",
+            input_data={"score_geral": 52.0, "score_por_dimensao": {"fiscal": 42.0}},
+        )
+        out = await comp.complete(req)
+        assert out == "Narrativa fiscal."
+        args, _kwargs = llm.gerar_recomendacao.call_args
+        assert len(args) >= 2
+        assert args[1] == PROMPT_MODO_TEXTO_LIVRE
+        prompt = args[0]
+        assert "52.0" in prompt
+        assert "NÃO recalcule o score" in prompt

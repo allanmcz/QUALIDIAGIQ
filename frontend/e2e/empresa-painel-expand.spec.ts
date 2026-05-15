@@ -7,6 +7,29 @@ import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
 const DIAG_ID = "22222222-2222-4222-a222-222222222222";
 const CNPJ14 = "12345678000195";
 
+const narrativaLlm = {
+  text: "Priorize a dimensão fiscal (42/100) antes da transição CBS/IBS (LC 214/2025).",
+  provider: "fake",
+  model: "fake-llm",
+  policy_version: "2026-05-15-v1",
+  input_tokens: 1,
+  output_tokens: 2,
+  estimated_cost_usd: 0,
+  latency_ms: 10,
+  blocked_by_guardrail: false,
+  guardrail_reason: null,
+  guardrail_status: "ok",
+  gerado_em: "2026-05-15T12:00:00+00:00",
+  trace_id: "e2e-trace-empresa-explic",
+};
+
+const narrativaAnterior = {
+  ...narrativaLlm,
+  text: "Versão anterior da narrativa fiscal.",
+  gerado_em: "2026-05-14T10:00:00+00:00",
+  trace_id: "e2e-trace-empresa-explic-ant",
+};
+
 function buildAbnt10Acoes() {
   return Array.from({ length: 10 }, (_, i) => ({
     descricao: `Controle ABNT M12 #${i + 1} (E2E)`,
@@ -29,42 +52,55 @@ const listaItem = {
   relatorio_pdf_url: null,
 };
 
-const detalheBody = {
-  id: DIAG_ID,
-  empresa_razao_social: listaItem.empresa_razao_social,
-  empresa_cnpj: CNPJ14,
-  status: "finalizado",
-  plano: "gratuito",
-  versao_otimista: 1,
-  relatorio_pdf_url: null,
-  checklist_m12_autoconf: null,
-  quadro_implantacao_anotacoes: null,
-  matriz_impacto: [],
-  cronograma: [],
-  score: {
-    score_geral: { valor: 52 },
-    score_por_dimensao: {
-      fiscal: { valor: 42, peso_total_aplicado: 1.5 },
-      tecnologica: { valor: 62, peso_total_aplicado: 1.3 },
-    },
-  },
-  explicacao_score_llm: null,
-  checklist: [
-    {
-      nome: "ABNT NBR 17301 — 10 controlos M12",
-      acoes: buildAbnt10Acoes(),
-    },
-  ],
+type InstallMocksOpts = {
+  explicacaoInicial?: typeof narrativaLlm | null;
+  perfilConta?: "gratuito" | "avancado";
 };
+
+function detalheBody(explicacao: typeof narrativaLlm | null) {
+  return {
+    id: DIAG_ID,
+    empresa_razao_social: listaItem.empresa_razao_social,
+    empresa_cnpj: CNPJ14,
+    status: "finalizado",
+    plano: "gratuito",
+    versao_otimista: 1,
+    relatorio_pdf_url: null,
+    checklist_m12_autoconf: null,
+    quadro_implantacao_anotacoes: null,
+    matriz_impacto: [],
+    cronograma: [],
+    score: {
+      score_geral: { valor: 52 },
+      score_por_dimensao: {
+        fiscal: { valor: 42, peso_total_aplicado: 1.5 },
+        tecnologica: { valor: 62, peso_total_aplicado: 1.3 },
+      },
+    },
+    explicacao_score_llm: explicacao,
+    checklist: [
+      {
+        nome: "ABNT NBR 17301 — 10 controlos M12",
+        acoes: buildAbnt10Acoes(),
+      },
+    ],
+  };
+}
 
 /**
  * Mocks partilhados: login, lista/detalhe diagnósticos, retificações (lista vazia),
  * solicitações LGPD (lista vazia — card «Nenhuma solicitação…»).
  */
-async function installPainelEmpresaApiMocks(page: Page): Promise<void> {
+async function installPainelEmpresaApiMocks(
+  page: Page,
+  opts: InstallMocksOpts = {},
+): Promise<void> {
+  const explicacaoAtual = opts.explicacaoInicial ?? null;
+
   await installMockBffPainelLogin(page, {
     tokenParaUpstream: "e2e-empresa-token",
     nome: "Consultor QA",
+    perfil_conta: opts.perfilConta ?? "gratuito",
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {
@@ -80,10 +116,7 @@ async function installPainelEmpresaApiMocks(page: Page): Promise<void> {
   });
 
   await page.route("**/diagnosticos/**", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.continue();
-      return;
-    }
+    const method = route.request().method();
     const pathname = new URL(route.request().url()).pathname.replace(/\/$/, "");
     // Não interceptar UI `/dashboard/diagnosticos/...` — glob `diagnosticos` apanha também o fetch RSC do Next.
     if (pathname.includes("/dashboard/diagnosticos")) {
@@ -97,6 +130,25 @@ async function installPainelEmpresaApiMocks(page: Page): Promise<void> {
       return;
     }
     const rest = parts.slice(di + 1);
+
+    if (
+      rest.length >= 3 &&
+      rest[0] === DIAG_ID &&
+      rest[1] === "explicacao-score-llm" &&
+      rest[2] === "historico" &&
+      method === "GET"
+    ) {
+      const items = explicacaoAtual
+        ? [explicacaoAtual, narrativaAnterior]
+        : [narrativaAnterior];
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items }),
+      });
+      return;
+    }
+
     if (rest.length === 0) {
       await route.fulfill({
         status: 200,
@@ -116,7 +168,7 @@ async function installPainelEmpresaApiMocks(page: Page): Promise<void> {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(detalheBody),
+      body: JSON.stringify(detalheBody(explicacaoAtual)),
     });
   });
 }
@@ -161,5 +213,25 @@ test.describe("Painel empresa — expandir linha", () => {
     const cardLgpd = page.locator("#diag-privacidade-lgpd");
     await expect(cardLgpd).toBeVisible({ timeout: 15_000 });
     await expect(cardLgpd.getByText(/Privacidade LGPD \(este diagnóstico\)/i)).toBeVisible();
+  });
+
+  test("expandir mostra explicação score LLM e histórico (perfil avançado)", async ({ page }) => {
+    await installPainelEmpresaApiMocks(page, {
+      explicacaoInicial: narrativaLlm,
+      perfilConta: "avancado",
+    });
+    await loginPainelE2E(page);
+
+    await page.goto(`/dashboard/empresas/${CNPJ14}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+    await page.getByRole("button", { name: /Expandir/i }).click();
+    await expect(page.getByText("Explicação do score (IA)")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Texto da explicação do score" })).toContainText(
+      "dimensão fiscal",
+    );
+    await expect(page.getByText("Gerações anteriores (1)")).toBeVisible();
+    await page.getByText("Gerações anteriores (1)").click();
+    await expect(page.getByText("Versão anterior da narrativa fiscal.")).toBeVisible();
   });
 });

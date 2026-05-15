@@ -6,6 +6,7 @@ import pytest
 
 from src.application.services.explicacao_score_llm_acesso import (
     diagnostico_elegivel_explicacao_score_llm,
+    explicacao_score_llm_incluir_em_get,
     mensagem_acesso_negado_explicacao_score_llm,
     perfil_pode_explicacao_score_llm,
     pode_gerar_explicacao_score_llm,
@@ -49,6 +50,28 @@ class TestPodeGerarCombinado:
 
     def test_mensagem_403(self) -> None:
         assert "plano avançado" in mensagem_acesso_negado_explicacao_score_llm().lower()
+
+
+class TestExplicacaoScoreLlmIncluirEmGet:
+    """GET painel omite JSONB quando tier negado."""
+
+    def test_gratuito_sem_plano_avancado_omite(self) -> None:
+        d = _diag_finalizado_micro()
+        d.plano = PlanoDiagnostico.GRATUITO
+        assert explicacao_score_llm_incluir_em_get("gratuito", d) is False
+
+    def test_avancado_inclui(self) -> None:
+        d = _diag_finalizado_micro()
+        assert explicacao_score_llm_incluir_em_get("avancado", d) is True
+
+    def test_gratuito_com_plano_avancado_inclui(self) -> None:
+        d = _diag_finalizado_micro()
+        d.plano = PlanoDiagnostico.AVANCADO
+        assert explicacao_score_llm_incluir_em_get("gratuito", d) is True
+
+    def test_perfil_none_inclui(self) -> None:
+        d = _diag_finalizado_micro()
+        assert explicacao_score_llm_incluir_em_get(None, d) is True
 
 
 class TestTextoLeituraPublica:

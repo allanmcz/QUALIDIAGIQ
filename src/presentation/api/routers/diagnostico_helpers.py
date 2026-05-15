@@ -224,6 +224,7 @@ async def _montar_diagnostico_response(
     diagnostico: Diagnostico,
     *,
     recomendacao_ia: str | None = None,
+    perfil_conta: str | None = None,
 ) -> DiagnosticoResponse:
     """Monta o payload HTTP canônico — prioriza plano materializado na BD (fallback motor legado)."""
     from dataclasses import asdict
@@ -268,7 +269,7 @@ async def _montar_diagnostico_response(
         locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
-        explicacao_score_llm=_explicacao_score_llm_para_http(diagnostico),
+        explicacao_score_llm=_explicacao_score_llm_para_http(diagnostico, perfil_conta=perfil_conta),
         recomendacao_ia=recomendacao_ia,
         checklist=checklist_data,
         matriz_impacto=matriz_data,
@@ -284,8 +285,16 @@ async def _montar_diagnostico_response(
 
 def _explicacao_score_llm_para_http(
     diagnostico: Diagnostico,
+    *,
+    perfil_conta: str | None = None,
 ) -> ExplicacaoScoreLlmPersistidaSchema | None:
     """Mapeia JSONB persistido para schema HTTP (GET /diagnosticos/{id})."""
+    from src.application.services.explicacao_score_llm_acesso import (
+        explicacao_score_llm_incluir_em_get,
+    )
+
+    if not explicacao_score_llm_incluir_em_get(perfil_conta, diagnostico):
+        return None
     raw = getattr(diagnostico, "explicacao_score_llm", None)
     if not isinstance(raw, dict):
         return None
@@ -434,5 +443,8 @@ async def _executar_criar_diagnostico_core(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return await _montar_diagnostico_response(
-        repo, resultado.diagnostico, recomendacao_ia=resultado.recomendacao_ia
+        repo,
+        resultado.diagnostico,
+        recomendacao_ia=resultado.recomendacao_ia,
+        perfil_conta=perfil_limite,
     )

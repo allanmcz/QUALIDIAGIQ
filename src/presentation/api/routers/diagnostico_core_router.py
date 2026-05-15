@@ -217,10 +217,12 @@ async def obter_diagnostico(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
 ) -> DiagnosticoResponse:
     """Busca um diagnóstico pelo ID, garantindo o isolamento do tenant."""
-    _, tenant_id, _ = current
+    _, tenant_id, perfil_conta = current
     diagnostico = await repo.buscar_por_id(diagnostico_id, tenant_id)
     if not diagnostico:
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Diagnóstico não encontrado")
-    return await diagnostico_helpers._montar_diagnostico_response(repo, diagnostico)
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, diagnostico, perfil_conta=perfil_conta
+    )

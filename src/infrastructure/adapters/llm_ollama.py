@@ -9,6 +9,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
 from src.application.services.lexiq_guardrail import filtrar_resposta_recomendacao_llm
+from src.infrastructure.adapters.llm_prompt_modo import PROMPT_MODO_TEXTO_LIVRE
 from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
 from src.infrastructure.observability.qdi_otel_metrics import record_llm_recommendation
 
@@ -68,7 +69,11 @@ class OllamaLlmAdapter(LlmServicePort):
         return cast("dict[str, object]", response.json())
 
     async def gerar_recomendacao(self, contexto_empresa: str, base_normativa: str) -> str:
-        prompt = montar_prompt_recomendacao(contexto_empresa, base_normativa)
+        prompt = (
+            contexto_empresa.strip()
+            if base_normativa == PROMPT_MODO_TEXTO_LIVRE
+            else montar_prompt_recomendacao(contexto_empresa, base_normativa)
+        )
         try:
             async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
                 data = await self._post_generate_json(client, prompt)
