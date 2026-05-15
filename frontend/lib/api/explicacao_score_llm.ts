@@ -78,3 +78,50 @@ export async function postExplicacaoScoreLlm(
     throw e;
   }
 }
+
+/** Resposta de GET `/diagnosticos/{id}/explicacao-score-llm/historico`. */
+export type ExplicacaoScoreLlmHistoricoLista = {
+  items: ExplicacaoScoreLlmHttp[];
+};
+
+/**
+ * Lista gerações anteriores (append-only), mais recente primeiro.
+ * Exige sessão na plataforma com acesso ao plano avançado ou diagnóstico avançado.
+ */
+export async function getExplicacaoScoreLlmHistorico(
+  diagnosticoId: string,
+  limit = 20,
+): Promise<ExplicacaoScoreLlmHttp[]> {
+  if (!temSessaoPainelParaApiCliente()) {
+    throw new Error("Sessão necessária.");
+  }
+  const qs = new URLSearchParams({ limit: String(limit) }).toString();
+  const url = `${base()}/diagnosticos/${diagnosticoId}/explicacao-score-llm/historico?${qs}`;
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        ...cabecalhosAuthPainelOpcional(),
+      },
+      credentials: "include",
+    });
+    if (!res.ok) {
+      if (encerrarSessaoPainelSe401(res.status)) {
+        throw new Error("Sessão expirada — a abrir o login.");
+      }
+      const err = await res.json().catch(() => ({}));
+      const detail = (err as { detail?: string }).detail ?? res.statusText;
+      throw new Error(typeof detail === "string" ? detail : `Erro ${res.status}`);
+    }
+    const body = (await res.json()) as ExplicacaoScoreLlmHistoricoLista;
+    return Array.isArray(body.items) ? body.items : [];
+  } catch (e) {
+    if (isLikelyNetworkFetchFailure(e)) {
+      const tecnico = e instanceof Error ? e.message : String(e);
+      throw new Error(`${mensagemConectividadeApiParaUsuario(base())} Detalhe: ${tecnico}`);
+    }
+    throw e;
+  }
+}

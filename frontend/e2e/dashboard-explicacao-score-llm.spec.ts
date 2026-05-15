@@ -6,6 +6,22 @@ import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
 const DIAG_ID = "33333333-3333-4333-a333-333333333333";
 const CNPJ14 = "12345678000195";
 
+const narrativaAnterior = {
+  text: "Versão anterior da narrativa fiscal.",
+  provider: "fake",
+  model: "fake-llm",
+  policy_version: "2026-05-14-v1",
+  input_tokens: 1,
+  output_tokens: 2,
+  estimated_cost_usd: 0,
+  latency_ms: 8,
+  blocked_by_guardrail: false,
+  guardrail_reason: null,
+  guardrail_status: "ok",
+  gerado_em: "2026-05-14T10:00:00+00:00",
+  trace_id: "e2e-trace-explic-ant",
+};
+
 const narrativaLlm = {
   text: "Priorize a dimensão fiscal (42/100) antes da transição CBS/IBS (LC 214/2025).",
   provider: "fake",
@@ -59,6 +75,7 @@ async function installMocks(page: Page, opts: { explicacaoInicial: typeof narrat
   await installMockBffPainelLogin(page, {
     tokenParaUpstream: "e2e-explic-llm-token",
     nome: "Consultor QA",
+    perfil_conta: "avancado",
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {
@@ -87,6 +104,24 @@ async function installMocks(page: Page, opts: { explicacaoInicial: typeof narrat
       return;
     }
     const rest = parts.slice(di + 1);
+
+    if (
+      rest.length >= 3 &&
+      rest[0] === DIAG_ID &&
+      rest[1] === "explicacao-score-llm" &&
+      rest[2] === "historico" &&
+      method === "GET"
+    ) {
+      const items = explicacaoAtual
+        ? [explicacaoAtual, narrativaAnterior]
+        : [narrativaAnterior];
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items }),
+      });
+      return;
+    }
 
     if (rest.length >= 2 && rest[0] === DIAG_ID && rest[1] === "explicacao-score-llm") {
       if (method === "POST") {
@@ -131,6 +166,15 @@ test.describe("Painel — explicação score LLM", () => {
       "dimensão fiscal",
     );
     await expect(page.getByText("Última geração:")).toBeVisible();
+  });
+
+  test("exibe gerações anteriores no histórico colapsável", async ({ page }) => {
+    await installMocks(page, { explicacaoInicial: narrativaLlm });
+    await loginPainel(page);
+    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await expect(page.getByText("Gerações anteriores (1)")).toBeVisible();
+    await page.getByText("Gerações anteriores (1)").click();
+    await expect(page.getByText("Versão anterior da narrativa fiscal.")).toBeVisible();
   });
 
   test("gerar explicação via POST mockado", async ({ page }) => {

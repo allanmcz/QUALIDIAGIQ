@@ -1,13 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ADMIN_PERFIL_CONTA_STORAGE_KEY } from "@/lib/api/config";
-import { postExplicacaoScoreLlm, type ExplicacaoScoreLlmHttp } from "@/lib/api/explicacao_score_llm";
+import {
+  getExplicacaoScoreLlmHistorico,
+  postExplicacaoScoreLlm,
+  type ExplicacaoScoreLlmHttp,
+} from "@/lib/api/explicacao_score_llm";
+import {
+  historicoAnterioresAExibicao,
+  textoExibicaoExplicacao,
+} from "@/lib/api/explicacao_score_llm_historico";
 
 type Props = {
   diagnosticoId: string;
@@ -50,6 +58,9 @@ export function ExplicacaoScoreLlmCard({
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resposta, setResposta] = useState<ExplicacaoScoreLlmHttp | null>(inicial);
+  const [historico, setHistorico] = useState<ExplicacaoScoreLlmHttp[]>([]);
+  const [historicoCarregando, setHistoricoCarregando] = useState(false);
+  const [historicoErro, setHistoricoErro] = useState<string | null>(null);
   const [perfilConta, setPerfilConta] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,6 +79,25 @@ export function ExplicacaoScoreLlmCard({
     scoreGeral != null &&
     Number.isFinite(scoreGeral);
 
+  const carregarHistorico = useCallback(async () => {
+    if (!podeAcessar) return;
+    setHistoricoCarregando(true);
+    setHistoricoErro(null);
+    try {
+      const items = await getExplicacaoScoreLlmHistorico(diagnosticoId);
+      setHistorico(items);
+    } catch (e) {
+      setHistorico([]);
+      setHistoricoErro(e instanceof Error ? e.message : "Falha ao carregar histórico.");
+    } finally {
+      setHistoricoCarregando(false);
+    }
+  }, [diagnosticoId, podeAcessar]);
+
+  useEffect(() => {
+    void carregarHistorico();
+  }, [carregarHistorico]);
+
   const gerar = useCallback(async () => {
     if (!podeGerar) return;
     setCarregando(true);
@@ -75,17 +105,20 @@ export function ExplicacaoScoreLlmCard({
     try {
       const out = await postExplicacaoScoreLlm(diagnosticoId);
       setResposta(out);
+      await carregarHistorico();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha ao gerar explicação.");
     } finally {
       setCarregando(false);
     }
-  }, [diagnosticoId, podeGerar]);
+  }, [carregarHistorico, diagnosticoId, podeGerar]);
 
-  const textoExibido =
-    resposta?.blocked_by_guardrail && resposta.guardrail_reason
-      ? resposta.guardrail_reason
-      : resposta?.text ?? "";
+  const anteriores = useMemo(
+    () => historicoAnterioresAExibicao(historico, resposta),
+    [historico, resposta],
+  );
+
+  const textoExibido = resposta ? textoExibicaoExplicacao(resposta) : "";
 
   const rotuloGerado = formatarGeradoEmPtBr(resposta?.gerado_em);
 
@@ -158,6 +191,62 @@ export function ExplicacaoScoreLlmCard({
               {resposta.latency_ms > 0 ? ` · ${resposta.latency_ms} ms` : ""}
               {resposta.output_tokens > 0 ? ` · ${resposta.output_tokens} tokens saída` : ""}
             </p>
+          </div>
+        ) : null}
+
+        {podeAcessar ? (
+          <div className="space-y-2">
+            {historicoCarregando ? (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin shrink-0" aria-hidden />
+                Carregando histórico…
+              </p>
+            ) : null}
+            {historicoErro ? (
+              <p className="text-xs text-destructive" role="alert">
+                {historicoErro}
+              </p>
+            ) : null}
+            {!historicoCarregando && anteriores.length > 0 ? (
+              <details className="rounded-md border bg-muted/30 px-3 py-2 text-sm group">
+                <summary className="cursor-pointer font-medium text-muted-foreground list-none flex items-center gap-2 select-none [&::-webkit-details-marker]:hidden">
+                  Gerações anteriores ({anteriores.length})
+                </summary>
+                <ul
+                  className="mt-3 space-y-3 border-t pt-3"
+                  aria-label="Histórico de explicações do score"
+                >
+                  {anteriores.map((item, idx) => {
+                    const quando = formatarGeradoEmPtBr(item.gerado_em);
+                    const key = `${item.gerado_em ?? "sem-data"}-${idx}`;
+                    return (
+                      <li key={key} className="rounded-md border bg-background/80 p-3 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {item.blocked_by_guardrail ? (
+                            <Badge variant="destructive" className="text-xs">
+                              Guardrail
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              Geração
+                            </Badge>
+                          )}
+                          {quando ? (
+                            <span className="text-xs text-muted-foreground">{quando}</span>
+                          ) : null}
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                          {textoExibicaoExplicacao(item)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.provider} · {item.model}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
+            ) : null}
           </div>
         ) : null}
       </CardContent>
