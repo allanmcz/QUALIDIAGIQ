@@ -407,6 +407,10 @@ async def test_get_conclusao_visualizacao_200(rascunho_async_client: AsyncClient
                 "fiscal": {"valor": 40.0, "peso_total_aplicado": 1.0, "perguntas_consideradas": []},
             },
         },
+        "explicacao_score_llm": {
+            "text": "Narrativa pública de teste.",
+            "blocked_by_guardrail": False,
+        },
     }
 
     async def fake_to_thread(fn: object, /, *args: object, **kwargs: object) -> object:
@@ -429,6 +433,7 @@ async def test_get_conclusao_visualizacao_200(rascunho_async_client: AsyncClient
     assert j["empresa_razao_social"] == "ACME"
     assert j["score_geral"] == 40.0
     assert len(j["scores_por_dimensao"]) >= 1
+    assert j["explicacao_score_llm_texto"] == "Narrativa pública de teste."
 
 
 @pytest.mark.asyncio
