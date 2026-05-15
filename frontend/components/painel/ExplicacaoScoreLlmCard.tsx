@@ -169,7 +169,7 @@ export function ExplicacaoScoreLlmCard({
           </Button>
         )}
 
-        {resposta ? (
+        {podeAcessar && resposta ? (
           <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
             {resposta.blocked_by_guardrail ? (
               <Badge variant="destructive">Bloqueado por guardrail</Badge>

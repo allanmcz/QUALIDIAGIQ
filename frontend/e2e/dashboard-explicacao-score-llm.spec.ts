@@ -38,13 +38,16 @@ const narrativaLlm = {
   trace_id: "e2e-trace-explic",
 };
 
-function detalheBody(explicacao: typeof narrativaLlm | null) {
+function detalheBody(
+  explicacao: typeof narrativaLlm | null,
+  plano: "gratuito" | "avancado" = "gratuito",
+) {
   return {
     id: DIAG_ID,
     empresa_razao_social: "Empresa E2E Explicação LLM",
     empresa_cnpj: CNPJ14,
     status: "finalizado",
-    plano: "gratuito",
+    plano,
     versao_otimista: 1,
     relatorio_pdf_url: null,
     checklist_m12_autoconf: null,
@@ -71,11 +74,27 @@ async function loginPainel(page: Page): Promise<void> {
   await page.waitForURL("**/dashboard/**", { timeout: 20_000 });
 }
 
-async function installMocks(page: Page, opts: { explicacaoInicial: typeof narrativaLlm | null }) {
+type InstallMocksOpts = {
+  explicacaoInicial: typeof narrativaLlm | null;
+  /** Perfil da conta na plataforma (gate tier no card). */
+  perfilConta?: "gratuito" | "avancado";
+  /** Plano persistido do diagnóstico (segundo braço do gate — ADR tier B). */
+  planoDiagnostico?: "gratuito" | "avancado";
+};
+
+/** Espelha ``pode_gerar_explicacao_score_llm`` (application) / ``sessaoPodeExplicacaoScore`` (UI). */
+function tierNegadoNoMock(opts: InstallMocksOpts): boolean {
+  const perfil = opts.perfilConta ?? "avancado";
+  if (perfil === "avancado") return false;
+  const plano = opts.planoDiagnostico ?? "gratuito";
+  return plano !== "avancado";
+}
+
+async function installMocks(page: Page, opts: InstallMocksOpts) {
   await installMockBffPainelLogin(page, {
     tokenParaUpstream: "e2e-explic-llm-token",
     nome: "Consultor QA",
-    perfil_conta: "avancado",
+    perfil_conta: opts.perfilConta ?? "avancado",
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {
@@ -127,6 +146,17 @@ async function installMocks(page: Page, opts: { explicacaoInicial: typeof narrat
       if (method === "POST") {
         const key = route.request().headers()["idempotency-key"];
         expect(key).toBeTruthy();
+        if (tierNegadoNoMock(opts)) {
+          await route.fulfill({
+            status: 403,
+            contentType: "application/json",
+            body: JSON.stringify({
+              detail:
+                "Explicação do score por IA está disponível no plano avançado da conta na plataforma (perfil avançado ou diagnóstico Plus). Faça upgrade para desbloquear.",
+            }),
+          });
+          return;
+        }
         explicacaoAtual = { ...narrativaLlm };
         await route.fulfill({
           status: 200,
@@ -148,7 +178,9 @@ async function installMocks(page: Page, opts: { explicacaoInicial: typeof narrat
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(detalheBody(explicacaoAtual)),
+        body: JSON.stringify(
+          detalheBody(explicacaoAtual, opts.planoDiagnostico ?? "gratuito"),
+        ),
       });
       return;
     }
@@ -185,5 +217,65 @@ test.describe("Painel — explicação score LLM", () => {
     await expect(page.getByRole("region", { name: "Texto da explicação do score" })).toContainText(
       "dimensão fiscal",
     );
+  });
+
+  test("perfil gratuito vê upgrade e não aciona POST de explicação", async ({ page }) => {
+    let postExplicacao = 0;
+    await installMocks(page, { explicacaoInicial: null, perfilConta: "gratuito" });
+    await page.route("**/diagnosticos/**/explicacao-score-llm", async (route) => {
+      const pathname = new URL(route.request().url()).pathname.replace(/\/$/, "");
+      if (pathname.includes("/dashboard/diagnosticos")) {
+        await route.continue();
+        return;
+      }
+      if (route.request().method() === "POST") {
+        postExplicacao += 1;
+      }
+      await route.continue();
+    });
+    await loginPainel(page);
+    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await expect(
+      page.getByText(/Explicação do score por IA está disponível no/i),
+    ).toBeVisible();
+    await expect(page.getByText(/plano avançado/i).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Gerar explicação/i })).toHaveCount(0);
+    await expect(page.getByText("Gerações anteriores")).toHaveCount(0);
+    expect(postExplicacao).toBe(0);
+  });
+
+  test("perfil gratuito não vê narrativa do GET sem acesso (tier)", async ({ page }) => {
+    await installMocks(page, {
+      explicacaoInicial: narrativaLlm,
+      perfilConta: "gratuito",
+      planoDiagnostico: "gratuito",
+    });
+    await loginPainel(page);
+    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await expect(
+      page.getByText(/Explicação do score por IA está disponível no/i),
+    ).toBeVisible();
+    await expect(page.getByRole("region", { name: "Texto da explicação do score" })).toHaveCount(
+      0,
+    );
+    await expect(page.getByText("Última geração:")).toHaveCount(0);
+    await expect(page.getByText(/dimensão fiscal/i)).toHaveCount(0);
+  });
+
+  test("perfil gratuito com diagnóstico avançado gera explicação (POST 200)", async ({ page }) => {
+    await installMocks(page, {
+      explicacaoInicial: null,
+      perfilConta: "gratuito",
+      planoDiagnostico: "avancado",
+    });
+    await loginPainel(page);
+    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await expect(page.getByText(/Faça upgrade para desbloquear/i)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Gerar explicação" })).toBeVisible();
+    await page.getByRole("button", { name: "Gerar explicação" }).click();
+    await expect(page.getByRole("region", { name: "Texto da explicação do score" })).toContainText(
+      "dimensão fiscal",
+    );
+    await expect(page.getByText("Última geração:")).toBeVisible();
   });
 });

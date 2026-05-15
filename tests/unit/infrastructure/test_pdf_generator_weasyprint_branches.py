@@ -102,3 +102,93 @@ async def test_weasyprint_indisponivel_retorna_pdf_minimo(monkeypatch: pytest.Mo
 
     assert isinstance(pdf, bytes)
     assert pdf.startswith(b"%PDF")
+
+
+@pytest.mark.asyncio
+async def test_gerar_pdf_inclui_score_explain_box_quando_texto_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Bloco ``score_explain`` do template quando ``explicacao_score_llm_texto`` é informado."""
+    html_gerado: list[str] = []
+    fake_wp = types.SimpleNamespace()
+
+    class _HTMLCaptura:
+        def __init__(self, *, string: str, **kwargs: object) -> None:
+            _ = kwargs
+            html_gerado.append(string)
+
+        def write_pdf(self, *args: object, **kwargs: object) -> bytes:
+            _ = args, kwargs
+            return b"%PDF-1.4\n%%EOF"
+
+    fake_wp.HTML = _HTMLCaptura
+    fake_wp.CSS = MagicMock()
+    monkeypatch.setitem(sys.modules, "weasyprint", fake_wp)
+
+    gen = WeasyPrintPdfGenerator()
+    diag, score = _diag_e_score()
+    narrativa = "Priorize a dimensão fiscal (LC 214/2025 art. 5º)."
+
+    async def to_thread_imediato(fn: object, /, *args: object, **kwargs: object) -> object:
+        assert callable(fn)
+        return fn(*args, **kwargs)
+
+    with (
+        patch(
+            "src.infrastructure.adapters.pdf_generator_weasyprint.get_settings",
+            return_value=MagicMock(pdf_render_timeout_seconds=60.0),
+        ),
+        patch.object(asyncio, "to_thread", to_thread_imediato),
+    ):
+        await gen.gerar_pdf_diagnostico(
+            diag,
+            score,
+            explicacao_score_llm_texto=narrativa,
+        )
+
+    assert len(html_gerado) == 1
+    html = html_gerado[0]
+    assert "Explicação do score (IA — painel)" in html
+    assert narrativa in html
+    assert "motor auditável" in html.lower()
+
+
+@pytest.mark.asyncio
+async def test_gerar_pdf_omite_score_explain_box_sem_texto_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem ``explicacao_score_llm_texto`` o template não renderiza o bloco dedicado."""
+    html_gerado: list[str] = []
+    fake_wp = types.SimpleNamespace()
+
+    class _HTMLCaptura:
+        def __init__(self, *, string: str, **kwargs: object) -> None:
+            _ = kwargs
+            html_gerado.append(string)
+
+        def write_pdf(self, *args: object, **kwargs: object) -> bytes:
+            _ = args, kwargs
+            return b"%PDF-1.4\n%%EOF"
+
+    fake_wp.HTML = _HTMLCaptura
+    fake_wp.CSS = MagicMock()
+    monkeypatch.setitem(sys.modules, "weasyprint", fake_wp)
+
+    gen = WeasyPrintPdfGenerator()
+    diag, score = _diag_e_score()
+
+    async def to_thread_imediato(fn: object, /, *args: object, **kwargs: object) -> object:
+        assert callable(fn)
+        return fn(*args, **kwargs)
+
+    with (
+        patch(
+            "src.infrastructure.adapters.pdf_generator_weasyprint.get_settings",
+            return_value=MagicMock(pdf_render_timeout_seconds=60.0),
+        ),
+        patch.object(asyncio, "to_thread", to_thread_imediato),
+    ):
+        await gen.gerar_pdf_diagnostico(diag, score, explicacao_score_llm_texto=None)
+
+    assert len(html_gerado) == 1
+    assert "Explicação do score (IA — painel)" not in html_gerado[0]
