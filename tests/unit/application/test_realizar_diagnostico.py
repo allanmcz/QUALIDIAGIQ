@@ -26,6 +26,8 @@ from src.domain.entities.diagnostico import (
     SetorMacro,
 )
 from src.domain.entities.questionario import Pergunta, TipoPergunta
+from src.domain.ports.llm_gateway import LlmGatewayResponse
+from src.domain.value_objects.llm_task_type import LlmTaskType
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.score import Dimensao
 from src.infrastructure.repositories.embutidas_normativa_score_macro_repository import (
@@ -183,6 +185,188 @@ async def test_llm_com_chunks_injeta_rag(calcular_real: CalcularScoreUseCase) ->
     await uc.execute(_comando_base())
     base = llm.gerar_recomendacao.call_args.kwargs["base_normativa"]
     assert "trecho-rag LC 214" in base
+
+
+@pytest.mark.asyncio
+async def test_recomendacao_via_llm_gateway(calcular_real: CalcularScoreUseCase) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="Sugestão via gateway",
+            provider="fake",
+            model="fake-llm",
+            policy_version="2026-05-15-v1",
+        )
+    )
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert res.recomendacao_ia == "Sugestão via gateway"
+    gw.complete.assert_awaited_once()
+    req = gw.complete.call_args[0][0]
+    assert req.task_type == LlmTaskType.RELATORIO_EXECUTIVO
+    assert req.prompt_key == "recomendacao_pos_diagnostico"
+
+
+@pytest.mark.asyncio
+async def test_recomendacao_gateway_sem_trace_id_gera_trace_interno(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="ok",
+            provider="fake",
+            model="fake-llm",
+            policy_version="v",
+        )
+    )
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        base_normativa_port=None,
+    )
+    cmd = replace(_comando_base(), trace_id=None)
+    await uc.execute(cmd)
+    req = gw.complete.call_args[0][0]
+    assert len(req.trace_id) >= 8
+
+
+@pytest.mark.asyncio
+async def test_gateway_prevale_nao_chama_llm_service_quando_ambos(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="via gateway",
+            provider="fake",
+            model="fake-llm",
+            policy_version="v",
+        )
+    )
+    llm = AsyncMock()
+    llm.gerar_recomendacao = AsyncMock(return_value="nunca")
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        llm_service=llm,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert res.recomendacao_ia == "via gateway"
+    llm.gerar_recomendacao.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_recomendacao_gateway_excecao_mensagem_estavel(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(side_effect=RuntimeError("falha rede"))
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert "indispon" in (res.recomendacao_ia or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_recomendacao_gateway_bloqueado_mensagem_estavel(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="",
+            provider="none",
+            model="none",
+            policy_version="v",
+            blocked_by_guardrail=True,
+            guardrail_reason="feature_disabled",
+        )
+    )
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert "indispon" in (res.recomendacao_ia or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_recomendacao_gateway_texto_vazio_mensagem_estavel(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="   \n",
+            provider="fake",
+            model="fake-llm",
+            policy_version="v",
+            blocked_by_guardrail=False,
+        )
+    )
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert "indispon" in (res.recomendacao_ia or "").lower()
+
+
+@pytest.mark.asyncio
+async def test_recomendacao_gateway_adapter_exception_sem_flag_bloqueio(
+    calcular_real: CalcularScoreUseCase,
+) -> None:
+    """Ramo do ``or`` em ``bloqueado`` quando só ``guardrail_reason`` indica excepção."""
+    repo = AsyncMock()
+    repo.salvar_e_materializar_plano_painel = AsyncMock(return_value=_plano_vazio())
+    gw = AsyncMock()
+    gw.complete = AsyncMock(
+        return_value=LlmGatewayResponse(
+            text="deve ignorar",
+            provider="x",
+            model="y",
+            policy_version="v",
+            blocked_by_guardrail=False,
+            guardrail_reason="adapter_exception",
+        )
+    )
+    uc = RealizarDiagnostico(
+        repo=repo,
+        calcular_score_use_case=calcular_real,
+        llm_gateway=gw,
+        base_normativa_port=None,
+    )
+    res = await uc.execute(_comando_base())
+    assert "indispon" in (res.recomendacao_ia or "").lower()
 
 
 @pytest.mark.asyncio

@@ -11,11 +11,13 @@ from fastapi import HTTPException, Request
 from src.application.ports.lead_diagnostico_vinculo_port import (
     NopLeadDiagnosticoVinculoAdapter,
 )
+from src.application.use_cases.explicar_score_llm_use_case import ExplicarScoreLlmUseCase
 from src.domain.entities.diagnostico import PorteEmpresa, RegimeTributario, SetorMacro
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
     MemoriaLeadDiagnosticoVinculoAdapter,
 )
+from src.infrastructure.llm.gateway_router import LlmGatewayRouter
 from src.infrastructure.repositories.embutidas_normativa_pergunta_peso_repository import (
     EmbutidasNormativaPerguntaPesoRepository,
 )
@@ -221,7 +223,7 @@ def test_get_llm_openai_sem_chave_fallback_langgraph() -> None:
     with (
         patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
-        patch("src.infrastructure.adapters.llm_router.logger") as log,
+        patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service(_http_request_vazio())
@@ -277,7 +279,7 @@ def test_get_llm_anthropic_sem_chave_fallback_langgraph() -> None:
     with (
         patch("src.presentation.api.deps_infra_services.get_settings", return_value=mock_s),
         patch("src.presentation.api.deps_infra_services.build_base_normativa_port") as mock_bn,
-        patch("src.infrastructure.adapters.llm_router.logger") as log,
+        patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log,
     ):
         mock_bn.return_value = MagicMock()
         svc = deps.get_llm_service(_http_request_vazio())
@@ -399,6 +401,26 @@ def test_perfil_empresa_questionario_rejeita_cnpj_nao_numerico() -> None:
         )
     assert ei.value.status_code == 400
     assert "dígitos" in str(ei.value.detail)
+
+
+def test_get_llm_gateway_constroi_router() -> None:
+    with patch("src.presentation.api.deps_infra_services.get_llm_service") as gs:
+        gs.return_value = MagicMock()
+        gw = deps.get_llm_gateway(_http_request_vazio())
+    assert isinstance(gw, LlmGatewayRouter)
+
+
+def test_get_llm_gateway_operacional_constroi_router() -> None:
+    with patch("src.presentation.api.deps_infra_services.get_llm_service") as gs:
+        gs.return_value = MagicMock()
+        gw = deps.get_llm_gateway_operacional(_http_request_vazio())
+    assert isinstance(gw, LlmGatewayRouter)
+
+
+def test_get_explicar_score_llm_use_case_instancia() -> None:
+    fake_gw = MagicMock()
+    uc = deps.get_explicar_score_llm_use_case(fake_gw)
+    assert isinstance(uc, ExplicarScoreLlmUseCase)
 
 
 def test_perfil_empresa_questionario_rejeita_cnpj_todos_iguais() -> None:

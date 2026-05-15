@@ -21,6 +21,7 @@ from src.application.services.cnpj_consulta_service import CnpjConsultaService, 
 from src.application.use_cases.buscar_cnae_subclasses import BuscarCnaeSubclasses
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.consultar_cnpj import ConsultarCnpjUseCase
+from src.application.use_cases.explicar_score_llm_use_case import ExplicarScoreLlmUseCase
 from src.application.use_cases.gerar_questionario_adaptativo import (
     GerarQuestionarioAdaptativoUseCase,
 )
@@ -32,6 +33,7 @@ from src.domain.entities.diagnostico import (
     RegimeTributario,
     SetorMacro,
 )
+from src.domain.ports.llm_gateway import LlmGateway
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.repositories.normativa_pergunta_peso_repository import (
     NormativaPerguntaPesoRepository,
@@ -45,10 +47,11 @@ from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNorm
 from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
 from src.infrastructure.adapters.cnpj_provedor_externo_http import CnpjProvedorExternoHttpAdapter
 from src.infrastructure.adapters.email_smtp import SmtpEmailAdapter
-from src.infrastructure.adapters.llm_router import build_llm_adapter_from_settings
+from src.infrastructure.adapters.llm_adapter_factory import build_llm_adapter_from_settings
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.infrastructure.adapters.storage_supabase import SupabaseStorageAdapter
 from src.infrastructure.config.settings import get_settings
+from src.infrastructure.llm.gateway_router import LlmGatewayRouter
 from src.infrastructure.questionario.banco_cache import get_banco_perguntas_cached
 from src.infrastructure.repositories.embutidas_normativa_pergunta_peso_repository import (
     EmbutidasNormativaPerguntaPesoRepository,
@@ -317,6 +320,30 @@ def get_llm_service(request: Request) -> LlmServicePort:
     )
 
 
+def get_llm_gateway_operacional(request: Request) -> LlmGateway:
+    """
+    Gateway LLM com router activo para fluxos de produto (**ADR-022**).
+
+    Usa *snapshot* de settings com ``llm_router_enabled=True`` para não depender do default global;
+    o kill-switch ``LLM_ROUTER_ENABLED=false`` mantém efeito em ``get_llm_gateway`` (sem override).
+    """
+    settings = get_settings()
+    activos = settings.model_copy(update={"llm_router_enabled": True})
+    return LlmGatewayRouter(activos, llm_service=get_llm_service(request))
+
+
+def get_llm_gateway(request: Request) -> LlmGateway:
+    """Gateway convergente respeitando ``LLM_ROUTER_ENABLED`` (testes / kill-switch)."""
+    return LlmGatewayRouter(get_settings(), llm_service=get_llm_service(request))
+
+
+def get_explicar_score_llm_use_case(
+    llm_gateway: Annotated[LlmGateway, Depends(get_llm_gateway_operacional)],
+) -> ExplicarScoreLlmUseCase:
+    """Narrativa sobre score via gateway — não recalcula o motor determinístico."""
+    return ExplicarScoreLlmUseCase(gateway=llm_gateway)
+
+
 def _cnpj_consulta_service_optional() -> CnpjConsultaService | None:
     """Monta serviço de CNPJ quando há Postgres local (mesmo critério do repositório de diagnóstico)."""
     settings = get_settings()
@@ -374,7 +401,7 @@ def get_realizar_diagnostico_use_case(
     pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
     storage_service: Annotated[SupabaseStorageAdapter, Depends(get_storage_service)],
     email_service: Annotated[SmtpEmailAdapter, Depends(get_email_service)],
-    llm_service: Annotated[LlmServicePort, Depends(get_llm_service)],
+    llm_gateway: Annotated[LlmGateway, Depends(get_llm_gateway_operacional)],
     base_normativa_port: Annotated[
         BaseNormativaPort,
         Depends(get_base_normativa_port_dependency),
@@ -387,7 +414,7 @@ def get_realizar_diagnostico_use_case(
         pdf_generator=pdf_generator,
         storage_service=storage_service,
         email_service=email_service,
-        llm_service=llm_service,
+        llm_gateway=llm_gateway,
         base_normativa_port=base_normativa_port,
         cnpj_consulta_service=_cnpj_consulta_service_optional(),
     )

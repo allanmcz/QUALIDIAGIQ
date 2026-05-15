@@ -35,12 +35,19 @@ from src.domain.entities.diagnostico import (
     Respondente,
 )
 from src.domain.entities.questionario import Pergunta, Resposta
+from src.domain.ports.llm_gateway import LlmGateway, LlmGatewayRequest
+from src.domain.value_objects.llm_task_type import LlmTaskType
 
 logger = structlog.get_logger(__name__)
 
 _ANCORA_FIXA_LLM = (
     "Âncoras: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026. "
     "Sugira medidas práticas citando dispositivo aplicável quando possível."
+)
+
+_MSG_RECOMENDACAO_IA_INDISPONIVEL = (
+    "Devido a indisponibilidade temporária do serviço de IA, a recomendação "
+    "personalizada não pôde ser gerada no momento."
 )
 
 
@@ -109,6 +116,7 @@ class RealizarDiagnostico:
         pdf_generator: PdfGeneratorPort | None = None,
         storage_service: StorageServicePort | None = None,
         email_service: EmailServicePort | None = None,
+        llm_gateway: LlmGateway | None = None,
         llm_service: LlmServicePort | None = None,
         base_normativa_port: BaseNormativaPort | None = None,
         cnpj_consulta_service: CnpjConsultaService | None = None,
@@ -118,6 +126,7 @@ class RealizarDiagnostico:
         self.pdf_generator = pdf_generator
         self.storage_service = storage_service
         self.email_service = email_service
+        self.llm_gateway = llm_gateway
         self.llm_service = llm_service
         self.base_normativa_port = base_normativa_port
         self._cnpj_consulta_service = cnpj_consulta_service
@@ -189,9 +198,14 @@ class RealizarDiagnostico:
         # 3. Finaliza e congela evidência em ordem de domínio (hash + snapshot)
         diagnostico.finalizar_e_registrar_evidencia(score_completo)
 
-        # 4. Geração de Recomendações por IA (LLM) liberada temporariamente para todos
+        # 4. Geração de Recomendações por IA (LLM) — **ADR-022:** gateway preferencial; legado ``LlmServicePort`` em testes.
         recomendacao_ia = None
-        if self.llm_service:
+        if any(
+            (
+                self.llm_gateway is not None,
+                self.llm_service is not None,
+            )
+        ):
             tier_plano = tier_observabilidade_de_plano_str(comando.plano)
             logger.info(
                 "diagnostico_llm_tier_plano_observabilidade",
@@ -219,21 +233,58 @@ class RealizarDiagnostico:
                     rag_blob = "\n\n".join(c.texto for c in chunks_ctx)
                     base_normativa = f"{rag_blob}\n\n{_ANCORA_FIXA_LLM}"
 
-            try:
-                recomendacao_ia = await self.llm_service.gerar_recomendacao(
-                    contexto_empresa=contexto_empresa, base_normativa=base_normativa
+            if self.llm_gateway is not None:
+                tid = comando.trace_id.strip() if comando.trace_id is not None else ""
+                if tid:  # noqa: SIM108 — explícito para auditoria de trace_id vazio vs ausente
+                    trace_llm = tid
+                else:
+                    trace_llm = str(uuid4())
+                req = LlmGatewayRequest(
+                    tenant_id=str(comando.tenant_id),
+                    trace_id=trace_llm,
+                    task_type=LlmTaskType.RELATORIO_EXECUTIVO,
+                    prompt_key="recomendacao_pos_diagnostico",
+                    input_data={
+                        "contexto_executivo": contexto_empresa,
+                        "base_normativa": base_normativa,
+                    },
                 )
-            except Exception as exc:
-                logger.warning(
-                    "recomendacao_llm_excecao_nao_tratada",
-                    erro=str(exc),
-                    trace_id=comando.trace_id,
-                    exc_info=True,
-                )
-                recomendacao_ia = (
-                    "Devido a indisponibilidade temporária do serviço de IA, a recomendação "
-                    "personalizada não pôde ser gerada no momento."
-                )
+                try:
+                    gw_resp = await self.llm_gateway.complete(req)
+                except Exception as exc:
+                    logger.warning(
+                        "recomendacao_llm_gateway_excecao",
+                        erro=str(exc),
+                        trace_id=comando.trace_id,
+                        exc_info=True,
+                    )
+                    recomendacao_ia = _MSG_RECOMENDACAO_IA_INDISPONIVEL
+                else:
+                    bloqueado = any(
+                        (
+                            gw_resp.blocked_by_guardrail,
+                            gw_resp.guardrail_reason == "adapter_exception",
+                        )
+                    )
+                    texto_efetivo = gw_resp.text.strip()
+                    if any((bloqueado, not texto_efetivo)):
+                        recomendacao_ia = _MSG_RECOMENDACAO_IA_INDISPONIVEL
+                    else:
+                        recomendacao_ia = gw_resp.text
+            else:
+                assert self.llm_service is not None
+                try:
+                    recomendacao_ia = await self.llm_service.gerar_recomendacao(
+                        contexto_empresa=contexto_empresa, base_normativa=base_normativa
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "recomendacao_llm_excecao_nao_tratada",
+                        erro=str(exc),
+                        trace_id=comando.trace_id,
+                        exc_info=True,
+                    )
+                    recomendacao_ia = _MSG_RECOMENDACAO_IA_INDISPONIVEL
 
         # 5. Geração de PDF e Upload (Se configurado)
         pdf_url = None

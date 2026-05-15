@@ -246,6 +246,20 @@ class Settings(BaseSettings):
         description="Threshold cosine similarity pós-processamento Lexiq RAG.",
     )
 
+    llm_router_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("LLM_ROUTER_ENABLED"),
+        description=(
+            "ADR-022: gateway LLM convergente — ``false`` devolve bloqueio controlado sem adapter real "
+            "(Fase 1 usa apenas ``FakeLlmAdapter`` quando ``true``)."
+        ),
+    )
+    llm_router_policy_version: str = Field(
+        default="2026-05-15-v1",
+        validation_alias=AliasChoices("LLM_ROUTER_POLICY_VERSION"),
+        description="Versão da política de roteamento registada em cada resposta (auditoria).",
+    )
+
     cors_allowed_origins: str = Field(
         default=(
             "http://localhost:3010,http://127.0.0.1:3010,"

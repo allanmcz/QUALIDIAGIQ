@@ -1,7 +1,9 @@
 """
-Roteamento do adapter LLM por configuração (Settings).
+Fábrica do adapter LLM por configuração (Settings).
 
-Camada: Infrastructure — implementa política documentada em **ADR-021** (cruzamento ADR-003, ADR-007).
+Camada: Infrastructure — política documentada em **ADR-021** (cruzamento ADR-003, ADR-007).
+**ADR-022:** este módulo substitui o nome legado ``llm_router.py`` para evitar colisão com o
+``LlmGatewayRouter`` convergente em ``src/infrastructure/llm/`` (porta de governação por tarefa).
 
 Analogia (Winthor): é o «parâmetro de filial + política de preço» que decide qual motor de cálculo chamar —
 aqui o «motor» é Anthropic vs Ollama vs LangGraph vs OpenAI Chat, sem expor SDK na camada de aplicação.

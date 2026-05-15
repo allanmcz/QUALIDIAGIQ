@@ -10,7 +10,8 @@ class LlmServicePort(ABC):
     Responsabilidade: isolar a camada de aplicação de SDKs específicos (Ollama, Anthropic).
 
     Implementações: ``src/infrastructure/adapters/llm_*.py`` — selecção central em **ADR-021**
-    (``build_llm_adapter_from_settings``).
+    (``build_llm_adapter_from_settings`` em ``llm_adapter_factory.py``). **ADR-022:** governação por tarefa
+    via ``LlmGatewayRouter`` em ``src/infrastructure/llm/`` (fase incremental).
     """
 
     @abstractmethod

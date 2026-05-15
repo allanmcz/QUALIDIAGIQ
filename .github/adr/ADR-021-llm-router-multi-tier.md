@@ -11,7 +11,7 @@ Base normativa: **LC 214/2025** — previsibilidade de ambiente e rastreabilidad
 
 ## Decisão
 
-1. **Fábrica única** `build_llm_adapter_from_settings()` em `src/infrastructure/adapters/llm_router.py` — precedência:
+1. **Fábrica única** `build_llm_adapter_from_settings()` em `src/infrastructure/adapters/llm_adapter_factory.py` — precedência:
    - `QDI_LLM_BACKEND=openai` + `OPENAI_API_KEY` não vazia → `OpenAiChatLlmAdapter` (`OPENAI_CHAT_MODEL` / `QDI_OPENAI_CHAT_MODEL`);
    - `openai` sem chave → se ``QDI_LLM_OPENAI_FALLBACK_ANTHROPIC=true`` e ``ANTHROPIC_API_KEY`` válida → ``AnthropicLlmAdapter`` (log ``llm_openai_indisponivel_fallback_anthropic``); caso contrário ``logger.warning`` (`llm_backend_openai_sem_api_key`) + fallback ``LangGraphOllamaLlmAdapter``;
    - `QDI_LLM_BACKEND=anthropic` + `ANTHROPIC_API_KEY` não vazia → `AnthropicLlmAdapter`;

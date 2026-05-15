@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from src.infrastructure.adapters.llm_adapter_factory import build_llm_adapter_from_settings
 from src.infrastructure.adapters.llm_anthropic import AnthropicLlmAdapter
 from src.infrastructure.adapters.llm_langgraph_ollama import LangGraphOllamaLlmAdapter
 from src.infrastructure.adapters.llm_ollama import OllamaLlmAdapter
 from src.infrastructure.adapters.llm_openai import OpenAiChatLlmAdapter
-from src.infrastructure.adapters.llm_router import build_llm_adapter_from_settings
 
 
 class TestBuildLlmAdapterFromSettings:
@@ -27,7 +27,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.anthropic_model = "ignored"
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             svc = build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,
@@ -58,7 +58,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.ollama_timeout_seconds = 30.0
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             svc = build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,
@@ -87,7 +87,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.ollama_timeout_seconds = 30.0
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             svc = build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,
@@ -119,7 +119,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.ollama_timeout_seconds = 30.0
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             svc = build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,
@@ -149,7 +149,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.ollama_timeout_seconds = 30.0
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             svc = build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,
@@ -174,7 +174,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.anthropic_model = "claude-3-5-sonnet-20241022"
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             svc = build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,
@@ -200,7 +200,7 @@ class TestBuildLlmAdapterFromSettings:
         mock_s.anthropic_model = "ignored"
 
         norm = MagicMock()
-        with patch("src.infrastructure.adapters.llm_router.logger") as log:
+        with patch("src.infrastructure.adapters.llm_adapter_factory.logger") as log:
             build_llm_adapter_from_settings(
                 mock_s,
                 base_normativa_port=norm,

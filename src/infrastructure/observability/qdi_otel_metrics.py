@@ -33,6 +33,12 @@ _llm_recommendation = _meter.create_counter(
     description="Chamadas ao serviço de recomendação LLM",
 )
 
+_llm_gateway = _meter.create_counter(
+    "qdi.llm.gateway.complete.total",
+    unit="1",
+    description="Conclusões do gateway LLM convergente (ADR-022) — sem PII",
+)
+
 
 def record_pdf_generation(
     *,
@@ -58,3 +64,19 @@ def record_llm_recommendation(
 ) -> None:
     """Regista chamada ao LLM de recomendação."""
     _llm_recommendation.add(1, {"qdi.adapter": adapter, "qdi.outcome": outcome})
+
+
+def record_llm_gateway_completion(
+    *,
+    task_type: str,
+    outcome: Literal[
+        "success",
+        "blocked_policy",
+        "blocked_guardrail_input",
+        "blocked_guardrail_output",
+        "feature_disabled",
+        "error",
+    ],
+) -> None:
+    """Regista desfecho do ``LlmGatewayRouter`` (política + guardrails + adapter)."""
+    _llm_gateway.add(1, {"qdi.task_type": task_type, "qdi.outcome": outcome})

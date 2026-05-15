@@ -15,6 +15,7 @@
 | 05 | [Segurança — política de autenticação](../_DEVELOPER/DECISAO_EXTERNA/POLITICA_AUTENTICACAO.md) | MVP / ADR-004 — decisão PO/DPO |
 | 06 | [Operação — BACKUP e DR](operacao/BACKUP_E_DR.md) | RTO/RPO + ligação a backup técnico |
 | 07 | [Operação — auditoria eventos vs código](operacao/AUDITORIA_EVENTOS_VS_CODIGO.md) | QDI-H-022 |
+| 08 | [ADR-022 — Gateway LLM convergente](refs/ADRs/ADR-022-llm-router-convergente.md) | Política por tarefa, guardrails, flag `LLM_ROUTER_ENABLED` |
 
 ## Documentos externos referenciados
 
