@@ -28,10 +28,14 @@ print(fin[0]['id'])
 ")
 
 echo "→ POST /diagnosticos/${DID}/explicacao-score-llm"
-curl -sS -X POST "${API}/diagnosticos/${DID}/explicacao-score-llm" \
+RESP=$(curl -sS -X POST "${API}/diagnosticos/${DID}/explicacao-score-llm" \
   -H "Authorization: Bearer ${TOKEN}" \
-  -H "Idempotency-Key: smoke-live-$(date +%s)" \
-  | python3 -m json.tool | head -20
+  -H "Idempotency-Key: smoke-live-$(date +%s)")
+echo "$RESP" | python3 -m json.tool | head -25
+if echo "$RESP" | grep -q "indisponibilidade temporária do serviço de IA"; then
+  echo "⚠️  Ollama indisponível ou modelo ausente — rode: make ollama-pull && docker compose restart api" >&2
+  exit 1
+fi
 
 echo "→ GET /diagnosticos/${DID}/explicacao-score-llm/historico"
 curl -sS "${API}/diagnosticos/${DID}/explicacao-score-llm/historico" \

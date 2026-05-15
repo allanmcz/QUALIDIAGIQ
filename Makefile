@@ -1,5 +1,5 @@
 # Makefile — atalhos de desenvolvimento QDI
-.PHONY: help install install-hooks dev down logs test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci fe-playwright-record-eval fe-playwright-integrado-ui qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
+.PHONY: help install install-hooks dev down logs ollama-up ollama-pull test test-domain lint format type-check clean migrate ci-integration frontend-init fe-playwright-ci fe-playwright-record-eval fe-playwright-integrado-ui qa-backend openapi-export mvp-gate go-live-tecnico verify-schema-mvp verify-schema-mvp-strict report-rls-public audit-secrets audit-catalogo export-manifesto-pesos-md go-live go-live-45min uv-lock uv-lock-check k6-smoke lighthouse-ci
 
 PYTHON := python3.12
 VENV := .venv
@@ -24,7 +24,14 @@ install-hooks: ## Configura Git para usar .githooks/ (pre-commit + commit-msg)
 	@command -v gitleaks >/dev/null 2>&1 || echo "⚠️  gitleaks não encontrado — brew install gitleaks (opcional, recomendado)."
 	@echo "✅ Hooks Git apontando para .githooks/"
 
-dev: ## Sobe ambiente de dev (db + api + web); --build alinha deps do pyproject na imagem da API
+ollama-up: ## Sobe só o Ollama no compose (pull da imagem ~3GB na 1.ª vez)
+	docker compose pull ollama
+	docker compose up -d ollama
+
+ollama-pull: ## Baixa OLLAMA_MODEL no serviço ollama do compose (recomendado antes do 1.º smoke LLM)
+	docker compose exec -T ollama ollama pull $${OLLAMA_MODEL:-llama3}
+
+dev: ## Sobe ambiente de dev (db + api + web + ollama); --build alinha deps do pyproject na imagem da API
 	docker compose up -d --build --remove-orphans
 	@bash -ec 'source INICIAR_APP/lib/qdi-env.sh && qdi_cd_root "$(CURDIR)/INICIAR_APP" && if qdi_wait_api_health 25; then echo "✓ API /health OK."; else echo "⚠ API ainda não respondeu — docker compose logs api"; fi'
 	@echo ""
@@ -32,6 +39,7 @@ dev: ## Sobe ambiente de dev (db + api + web); --build alinha deps do pyproject 
 	@echo "  → API:  http://localhost:60000/docs (mapa host 60000 → container 8000)"
 	@echo "  → Web:  http://localhost:60001 (mapa host 60001 → container 3010)"
 	@echo "  → DB:   postgres://postgres:postgres@localhost:60322/postgres"
+	@echo "  → Ollama: http://127.0.0.1:11434 (modelo: $${OLLAMA_MODEL:-llama3} — rode make ollama-pull se necessário)"
 	@echo "  → Mailpit (SMTP OTP): API usa host mailpit:1025 · UI http://127.0.0.1:8025"
 	@echo ""
 	@echo "Logs:    make logs"

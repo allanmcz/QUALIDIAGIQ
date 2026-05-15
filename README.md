@@ -55,13 +55,17 @@ Ver também [`docs/operacao/RUNBOOK_SEGREDO_VAZADO.md`](docs/operacao/RUNBOOK_SE
 
 ### Ollama local (recomendações IA no diagnóstico)
 
-1. Instale o [Ollama](https://ollama.com) no Mac e deixe o serviço rodando (porta **11434**).
-2. Baixe o modelo configurado em `OLLAMA_MODEL`, por exemplo: `ollama pull llama3`.
-3. **Onde a API roda importa para a URL:**
-   - **`make dev` (API dentro do Docker):** o `docker-compose.yml` já define `OLLAMA_BASE_URL=http://host.docker.internal:11434` para falar com o Ollama no host — não use `127.0.0.1` aí (dentro do container isso não é a sua máquina).
-   - **uvicorn no host** (sem container da API): use `OLLAMA_BASE_URL=http://127.0.0.1:11434` no `.env`.
+**Modo recomendado (`make dev`):** o `docker-compose.yml` inclui o serviço **`ollama`** (porta **11434** no host) e a API usa `OLLAMA_BASE_URL=http://ollama:11434` com **`LLM_ROUTER_ENABLED=true`**.
 
-Se o Ollama não estiver disponível, o fluxo de diagnóstico segue com mensagem amigável de fallback na recomendação IA.
+1. `make dev` — sobe db, mailpit, **ollama**, api e web.
+2. `make ollama-pull` — baixa o modelo (`OLLAMA_MODEL`, default `llama3`) antes do primeiro smoke (evita timeout na 1.ª inferência).
+3. Smoke LLM: `bash scripts/smoke_explicacao_score_llm_live.sh`
+
+**Alternativa — Ollama só no Mac:** instale [Ollama](https://ollama.com), `ollama pull llama3`, e no `.env` ou compose override use `OLLAMA_BASE_URL=http://host.docker.internal:11434`.
+
+**uvicorn no host** (sem container da API): `OLLAMA_BASE_URL=http://127.0.0.1:11434`.
+
+Se o Ollama não estiver disponível, o fluxo segue com mensagem amigável de fallback na recomendação IA.
 
 **Stack default:** **LangGraph + LangChain (`ChatOllama`)** contra o servidor Ollama — ver **ADR-007**.  
 Env opcional: **`QDI_LLM_BACKEND=http_ollama`** — força chamada REST direta (adapter legado `llm_ollama.py`).  

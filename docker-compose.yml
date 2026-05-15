@@ -37,6 +37,25 @@ services:
     networks:
       - qdi-network
 
+  # LLM local (ADR-007) — stack LangGraph + ChatOllama na API.
+  # Primeira inferência pode demorar (pull automático do modelo); ou: make ollama-pull
+  ollama:
+    image: ollama/ollama:latest
+    container_name: qdi-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - qdi-ollama-data:/root/.ollama
+    networks:
+      - qdi-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
   api:
     build:
       context: .
@@ -50,6 +69,8 @@ services:
       db:
         condition: service_healthy
       mailpit:
+        condition: service_started
+      ollama:
         condition: service_started
     environment:
       APP_ENV: development
@@ -71,9 +92,13 @@ services:
       QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES: "${QDI_SELF_SERVICE_JWT_EXPIRE_MINUTES:-30}"
       # Next no compose exposto em :60001 — precisa constar no CORS (senão fetch → "Failed to fetch").
       CORS_ALLOWED_ORIGINS: http://localhost:3010,http://127.0.0.1:3010,http://localhost:3000,http://127.0.0.1:3000,http://localhost:60001,http://127.0.0.1:60001,http://localhost:3333,http://127.0.0.1:3333
-      # Ollama típico no host; dentro do container 127.0.0.1 NÃO é o Mac — ver README «Ollama local».
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Ollama no compose (default). Para Ollama só no Mac: OLLAMA_BASE_URL=http://host.docker.internal:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-120}
+      # Gateway ADR-022 activo em dev — explicacao-score-llm e /health/llm coerentes.
+      LLM_ROUTER_ENABLED: ${LLM_ROUTER_ENABLED:-true}
+      LLM_ROUTER_POLICY_VERSION: ${LLM_ROUTER_POLICY_VERSION:-2026-05-15-v1}
       # :- evita WARN do Compose quando as variáveis não existem no host (LLM é opcional em dev).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -139,6 +164,7 @@ services:
 
 volumes:
   qdi-db-data:
+  qdi-ollama-data:
   qdi-mock-pdf-spool:
   qdi-web-node-modules:
   qdi-web-next-cache:
