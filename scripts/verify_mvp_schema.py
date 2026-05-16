@@ -114,6 +114,29 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     if vp != 1:
         erros.append("Coluna public.diagnosticos.versao_plano ausente (migração 0027).")
 
+    pec = await conn.fetchval("""
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'diagnosticos'
+          AND column_name = 'painel_estado_ciclo'
+    """)
+    if pec != 1:
+        erros.append("Coluna public.diagnosticos.painel_estado_ciclo ausente (migração 0048).")
+    else:
+        dflt_pec = await conn.fetchval("""
+            SELECT column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'diagnosticos'
+              AND column_name = 'painel_estado_ciclo'
+        """)
+        if dflt_pec is None or "em_andamento" not in str(dflt_pec):
+            erros.append(
+                "DEFAULT em public.diagnosticos.painel_estado_ciclo ausente ou incorreto "
+                "(aplique migração 0050)."
+            )
+
     ip_origem = await conn.fetchval("""
         SELECT 1
         FROM information_schema.columns
