@@ -20,6 +20,9 @@ from src.application.ports.lead_diagnostico_vinculo_port import (
 from src.application.ports.lgpd_anonimizacao_executor_port import LgpdAnonimizacaoExecutorPort
 from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
+from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
+    EliminarDiagnosticosEmpresaPainel,
+)
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.infrastructure.adapters.noop_diagnostico_mutacao_audit_adapter import (
     NoOpDiagnosticoMutacaoAuditAdapter,
@@ -82,6 +85,11 @@ def get_diagnostico_repository() -> DiagnosticoRepository:
     if settings.ci_playwright_integrated:
         return _singleton_ci_playwright_repo()
     return SupabaseDiagnosticoRepository(client=get_supabase_client())
+
+
+def get_eliminar_diagnosticos_empresa_painel_use_case() -> EliminarDiagnosticosEmpresaPainel:
+    """Exclusão administrativa por CNPJ (painel consultor)."""
+    return EliminarDiagnosticosEmpresaPainel(repo=get_diagnostico_repository())
 
 
 def get_diagnostico_mutacao_audit_port() -> DiagnosticoMutacaoAuditPort:

@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { WizardOfflineBanner } from "@/components/wizard/WizardOfflineBanner";
 import { WizardCacheResumeOverlay } from "@/components/wizard/WizardCacheResumeOverlay";
 import { WizardNavigationButtons } from "@/components/wizard/WizardNavigationButtons";
+import { WizardEmpresaNovoCicloBanner } from "@/components/wizard/WizardEmpresaNovoCicloBanner";
 import { WizardStepIdentificacao } from "@/components/wizard/steps/WizardStepIdentificacao";
 import { WizardStepPerfilEmpresa } from "@/components/wizard/steps/WizardStepPerfilEmpresa";
 import { WizardStepQuestionario } from "@/components/wizard/steps/WizardStepQuestionario";
@@ -89,17 +90,29 @@ export function WizardForm() {
               )}
             >
               <CardTitle className={cn("text-primary", w.step === 3 ? "text-xl md:text-2xl" : "text-2xl")}>
-                {w.step === 1 && "Identificação Inicial"}
-                {w.step === 2 && "Perfil da Empresa"}
+                {w.step === 1 &&
+                  (w.exibirContextoNovoCiclo
+                    ? w.razaoSocialWizard
+                      ? `Novo ciclo — ${w.razaoSocialWizard}`
+                      : "Novo ciclo de diagnóstico"
+                    : w.hasToken
+                      ? "Empresa e respondente"
+                      : "Identificação inicial")}
+                {w.step === 2 &&
+                  (w.exibirContextoNovoCiclo ? "Perfil da empresa (novo ciclo)" : "Perfil da empresa")}
                 {w.step === 3 && "Questionário adaptativo (Reforma + ABNT NBR 17301)"}
               </CardTitle>
               <CardDescription className={cn(w.step === 3 && "text-xs md:text-sm leading-snug")}>
                 {w.step === 1 &&
                   (w.hasToken
-                    ? "Cadastro da empresa: com acesso ao painel, o CNPJ é obrigatório para organizar o histórico por empresa. Cada diagnóstico fica registrado como um ciclo de acompanhamento, com consentimento LGPD abaixo."
+                    ? w.exibirContextoNovoCiclo
+                      ? "Confirme os dados da PJ e do respondente. Não é um novo cadastro de empresa — ao concluir, o painel acrescenta mais um ciclo numerado no histórico deste CNPJ."
+                      : "Informe a empresa e o respondente. Com acesso ao painel, o CNPJ é obrigatório (14 dígitos) para organizar o histórico por empresa. Consentimento LGPD abaixo."
                     : "Cadastro da empresa: você pode começar sem conta e confirmar o diagnóstico por e-mail ao final. Se informar o CNPJ agora, será mais fácil levar o resultado para o painel depois. Consentimento LGPD abaixo.")}
                 {w.step === 2 &&
-                  "As perguntas são ajustadas conforme porte, regime, setor e UF para gerar um diagnóstico mais aderente à realidade da empresa. Ao concluir sem conta, você confirma por e-mail; com acesso ao painel, o resultado já fica organizado no histórico."}
+                  (w.exibirContextoNovoCiclo
+                    ? "Perfil tributário deste novo ciclo — as perguntas do questionário serão adaptadas ao porte, regime, setor e UF informados."
+                    : "As perguntas são ajustadas conforme porte, regime, setor e UF para gerar um diagnóstico mais aderente à realidade da empresa. Ao concluir sem conta, você confirma por e-mail; com acesso ao painel, o resultado já fica organizado no histórico.")}
                 {w.step === 3 &&
                   "Uma pergunta por tela — Seguir / Voltar. Sem conta na plataforma: «Gerar diagnóstico» salva e segue para confirmar o e-mail e gravar na nuvem; com sessão iniciada, «Finalizar Diagnóstico» envia direto."}
               </CardDescription>
@@ -123,6 +136,11 @@ export function WizardForm() {
                     control={w.control}
                     errors={w.errors}
                     hasToken={w.hasToken}
+                    exibirContextoNovoCiclo={w.exibirContextoNovoCiclo}
+                    modoNovoCicloExplicito={w.modoNovoCicloExplicito}
+                    razaoSocialWizard={w.razaoSocialWizard}
+                    ciclosEmpresaPainel={w.ciclosEmpresaPainel}
+                    ciclosEmpresaPainelLoading={w.ciclosEmpresaPainelLoading}
                     consultaCnpjLoading={w.consultaCnpjLoading}
                     consultaCnpjFeedback={w.consultaCnpjFeedback}
                     forceRefreshConsultaCnpj={w.forceRefreshConsultaCnpjUi}
@@ -131,26 +149,36 @@ export function WizardForm() {
                   />
                 )}
                 {w.step === 2 && (
-                  <WizardStepPerfilEmpresa
-                    catalogLoading={w.catalogLoading}
-                    catalogError={w.catalogError}
-                    register={w.register}
-                    control={w.control}
-                    errors={w.errors}
-                    empresaPerfil={w.empresaPerfil}
-                    selectPerfilVazio={w.selectPerfilVazio}
-                    classSelectPerfil={w.classSelectPerfil}
-                    cnaeAnchorRef={w.cnaeAnchorRef}
-                    cnaeBuscaTexto={w.cnaeBuscaTexto}
-                    setCnaeBuscaTexto={w.setCnaeBuscaTexto}
-                    cnaeBuscaTextoRef={w.cnaeBuscaTextoRef}
-                    cnaeListaAberta={w.cnaeListaAberta}
-                    setCnaeListaAberta={w.setCnaeListaAberta}
-                    cnaeBlurFecharTimerRef={w.cnaeBlurFecharTimerRef}
-                    cnaeSugestoes={w.cnaeSugestoes}
-                    cnaePopoverBox={w.cnaePopoverBox}
-                    clearErrors={w.clearErrors}
-                  />
+                  <>
+                    {w.exibirContextoNovoCiclo ? (
+                      <WizardEmpresaNovoCicloBanner
+                        carregando={w.ciclosEmpresaPainelLoading}
+                        resumo={w.ciclosEmpresaPainel}
+                        razaoSocial={w.razaoSocialWizard}
+                        modoNovoCicloExplicito={w.modoNovoCicloExplicito}
+                      />
+                    ) : null}
+                    <WizardStepPerfilEmpresa
+                      catalogLoading={w.catalogLoading}
+                      catalogError={w.catalogError}
+                      register={w.register}
+                      control={w.control}
+                      errors={w.errors}
+                      empresaPerfil={w.empresaPerfil}
+                      selectPerfilVazio={w.selectPerfilVazio}
+                      classSelectPerfil={w.classSelectPerfil}
+                      cnaeAnchorRef={w.cnaeAnchorRef}
+                      cnaeBuscaTexto={w.cnaeBuscaTexto}
+                      setCnaeBuscaTexto={w.setCnaeBuscaTexto}
+                      cnaeBuscaTextoRef={w.cnaeBuscaTextoRef}
+                      cnaeListaAberta={w.cnaeListaAberta}
+                      setCnaeListaAberta={w.setCnaeListaAberta}
+                      cnaeBlurFecharTimerRef={w.cnaeBlurFecharTimerRef}
+                      cnaeSugestoes={w.cnaeSugestoes}
+                      cnaePopoverBox={w.cnaePopoverBox}
+                      clearErrors={w.clearErrors}
+                    />
+                  </>
                 )}
                 {w.step === 3 && (
                   <WizardStepQuestionario

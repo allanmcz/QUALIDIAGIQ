@@ -30,6 +30,7 @@ from src.domain.entities.diagnostico import (
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.email import normalizar_email
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
 
 _TENANT_PADRAO_CI = UUID("33333333-3333-4333-8333-333333333333")
@@ -93,6 +94,42 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
             items = [d for d in items if d.empresa.cnpj == empresa_cnpj]
         items.sort(key=lambda d: d.criado_em, reverse=True)
         return items[offset : offset + limit]
+
+    async def eliminar_diagnosticos_empresa_eliminaveis(
+        self,
+        tenant_id: UUID,
+        empresa_cnpj: str,
+        *,
+        actor_user_id: UUID | None = None,
+    ) -> ResultadoEliminacaoEmpresa:
+        _ = actor_user_id
+        eliminaveis = frozenset(
+            {
+                StatusDiagnostico.EM_ANDAMENTO,
+                StatusDiagnostico.CANCELADO,
+                StatusDiagnostico.EXPIRADO,
+            }
+        )
+        eliminados: list[UUID] = []
+        mantidos_finalizados = 0
+        mantidos_outros = 0
+        for rid, d in list(self._rows.items()):
+            if d.tenant_id != tenant_id or d.empresa.cnpj != empresa_cnpj:
+                continue
+            if d.status == StatusDiagnostico.FINALIZADO:
+                mantidos_finalizados += 1
+            elif d.status in eliminaveis:
+                del self._rows[rid]
+                self._planos.pop((tenant_id, rid), None)
+                eliminados.append(rid)
+            else:
+                mantidos_outros += 1
+        return ResultadoEliminacaoEmpresa(
+            empresa_cnpj=empresa_cnpj,
+            eliminados_ids=tuple(eliminados),
+            mantidos_finalizados=mantidos_finalizados,
+            mantidos_outros_status=mantidos_outros,
+        )
 
     async def atualizar_relatorio_pdf_com_versao(
         self,

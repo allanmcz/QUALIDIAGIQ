@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, RefreshCw } from "lucide-react";
 
 import EmpresaDiagnosticoExpandedPanel from "@/components/painel/empresa/EmpresaDiagnosticoExpandedPanel";
@@ -45,6 +45,14 @@ import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 const PREFETCH_CONCORRENCIA = 4;
 
+/** Âncoras na ficha expandida — só abrem a linha com hash (não auto-expandir ao carregar). */
+const HASHES_QUE_ABREM_LINHA = new Set([
+  "diag-explicacao-score-llm",
+  "empresa-m12-autoconf",
+  "diag-ranking-gaps-heading",
+  "empresa-matriz-impacto",
+]);
+
 const GRID_COLS_EMPRESA =
   "sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_minmax(11rem,13rem)]";
 
@@ -72,7 +80,10 @@ export type EmpresaDiagnosticosListaPainelProps = {
   cnpjNormalizado: string;
   /** `/dashboard/empresas/...?expand=` — só activo quando `true`. */
   usarExpandNaQuery?: boolean;
-  /** Ao carregar a lista, expande esta linha (ex.: ficha actual). */
+  /**
+   * Diagnóstico em foco na ficha `/dashboard/diagnosticos/[id]` — usado só com âncora (#)
+   * ou `?expand=` (empresa); não expande a linha ao abrir a página.
+   */
   expandirDiagnosticoId?: string | null;
   /** Evita esperar prefetch para o ciclo já mostrado na página pai. */
   diagnosticoSemeado?: DiagnosticoDetalheApi | null;
@@ -108,9 +119,15 @@ export function EmpresaDiagnosticosListaPainel({
   const [painelEstadoDraft, setPainelEstadoDraft] = useState<PainelEstadoCicloApi | null>(null);
   const [painelEstadoSaving, setPainelEstadoSaving] = useState(false);
   const [painelEstadoErr, setPainelEstadoErr] = useState<string | null>(null);
+  const [hashLocal, setHashLocal] = useState("");
 
-  /** Abre ciclo vindos da página empresa (`?expand=`) sem conflitar com fecho manual pela mesma deps. */
-  const expandJaAplicadoChaveRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ler = () => setHashLocal(window.location.hash.replace(/^#/, "").trim());
+    ler();
+    window.addEventListener("hashchange", ler);
+    return () => window.removeEventListener("hashchange", ler);
+  }, []);
 
   useEffect(() => {
     if (!diagnosticoSemeado) return;
@@ -125,22 +142,13 @@ export function EmpresaDiagnosticosListaPainel({
     setLinhaAbertaId(expandId);
   }, [usarExpandNaQuery, searchParams, diagnosticos]);
 
-  /**
-   * Ficha única: expande o ciclo actual uma vez quando a lista chega (query sem `expand` tem prioridade vazia).
-   */
+  /** Ficha ou empresa: expande só com âncora (#) apontando para secção dentro do painel expandido. */
   useEffect(() => {
-    if (usarExpandNaQuery && searchParams.get("expand")?.trim()) return;
+    if (!hashLocal || !HASHES_QUE_ABREM_LINHA.has(hashLocal)) return;
     const sid = expandirDiagnosticoId?.trim();
     if (!sid || !diagnosticos?.some((d) => d.id === sid)) return;
-    const chave = `${cnpjNormalizado}:${sid}`;
-    if (expandJaAplicadoChaveRef.current === chave) return;
     setLinhaAbertaId(sid);
-    expandJaAplicadoChaveRef.current = chave;
-  }, [usarExpandNaQuery, searchParams, diagnosticos, expandirDiagnosticoId, cnpjNormalizado]);
-
-  useEffect(() => {
-    expandJaAplicadoChaveRef.current = null;
-  }, [cnpjNormalizado, expandirDiagnosticoId]);
+  }, [hashLocal, expandirDiagnosticoId, diagnosticos]);
 
   useEffect(() => {
     if (!linhaAbertaId || typeof window === "undefined") return;
@@ -461,7 +469,7 @@ export function EmpresaDiagnosticosListaPainel({
                                 onClick={() => aoRefazerDiagnostico(diag.empresa_razao_social)}
                               >
                                 <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                Refazer diagnóstico
+                                Novo ciclo de diagnóstico
                               </button>
                             ) : null}
                             <button

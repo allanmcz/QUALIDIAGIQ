@@ -37,6 +37,7 @@ from src.domain.entities.diagnostico import (
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.repositories.postgres_plano_painel_sync import (
     atualizar_subtarefa_sync,
@@ -404,6 +405,66 @@ def _buscar_sync(dsn: str, diagnostico_id: UUID, tenant_id: UUID) -> Diagnostico
         conn.close()
 
 
+_STATUSES_ELIMINAVEIS_EMPRESA = frozenset({"em_andamento", "cancelado", "expirado"})
+
+
+def _eliminar_empresa_sync(
+    dsn: str,
+    tenant_id: UUID,
+    empresa_cnpj: str,
+    *,
+    actor_user_id: UUID | None,
+) -> ResultadoEliminacaoEmpresa:
+    _ = actor_user_id
+    conn = psycopg2.connect(dsn)
+    try:
+        conn.autocommit = False
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT id, status
+                FROM diagnosticos
+                WHERE tenant_id = %s
+                  AND empresa_cnpj = %s
+                """,
+                (str(tenant_id), empresa_cnpj),
+            )
+            rows = cur.fetchall()
+            eliminados: list[UUID] = []
+            mantidos_finalizados = 0
+            mantidos_outros = 0
+            for row in rows:
+                st = str(row["status"])
+                rid = UUID(str(row["id"]))
+                if st == "finalizado":
+                    mantidos_finalizados += 1
+                elif st in _STATUSES_ELIMINAVEIS_EMPRESA:
+                    cur.execute(
+                        """
+                        DELETE FROM diagnosticos
+                        WHERE id = %s
+                          AND tenant_id = %s
+                        """,
+                        (str(rid), str(tenant_id)),
+                    )
+                    if cur.rowcount == 1:
+                        eliminados.append(rid)
+                else:
+                    mantidos_outros += 1
+        conn.commit()
+        return ResultadoEliminacaoEmpresa(
+            empresa_cnpj=empresa_cnpj,
+            eliminados_ids=tuple(eliminados),
+            mantidos_finalizados=mantidos_finalizados,
+            mantidos_outros_status=mantidos_outros,
+        )
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def _listar_sync(
     dsn: str,
     tenant_id: UUID,
@@ -701,6 +762,21 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
     ) -> list[Diagnostico]:
         return await asyncio.to_thread(
             _listar_sync, self._dsn, tenant_id, limit, offset, empresa_cnpj
+        )
+
+    async def eliminar_diagnosticos_empresa_eliminaveis(
+        self,
+        tenant_id: UUID,
+        empresa_cnpj: str,
+        *,
+        actor_user_id: UUID | None = None,
+    ) -> ResultadoEliminacaoEmpresa:
+        return await asyncio.to_thread(
+            _eliminar_empresa_sync,
+            self._dsn,
+            tenant_id,
+            empresa_cnpj,
+            actor_user_id=actor_user_id,
         )
 
     async def atualizar_relatorio_pdf_com_versao(

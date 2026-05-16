@@ -40,6 +40,7 @@ from src.domain.entities.diagnostico import (
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.repositories.supabase_plano_painel_sync import (
     atualizar_subtarefa_supabase,
@@ -110,6 +111,58 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
 
         response = await asyncio.to_thread(_select)
         return [self._para_entity(row) for row in response.data]
+
+    async def eliminar_diagnosticos_empresa_eliminaveis(
+        self,
+        tenant_id: UUID,
+        empresa_cnpj: str,
+        *,
+        actor_user_id: UUID | None = None,
+    ) -> ResultadoEliminacaoEmpresa:
+        _ = actor_user_id
+        stid = str(tenant_id)
+        statuses_eliminaveis = ("em_andamento", "cancelado", "expirado")
+
+        def _select_ids() -> Any:
+            return (
+                self._client.table("diagnosticos")
+                .select("id, status")
+                .eq("tenant_id", stid)
+                .eq("empresa_cnpj", empresa_cnpj)
+                .execute()
+            )
+
+        response = await asyncio.to_thread(_select_ids)
+        eliminados: list[UUID] = []
+        mantidos_finalizados = 0
+        mantidos_outros = 0
+        for row in response.data:
+            st = str(row.get("status", ""))
+            rid = UUID(str(row["id"]))
+            if st == "finalizado":
+                mantidos_finalizados += 1
+            elif st in statuses_eliminaveis:
+
+                def _delete_one(diagnostico_id: str = str(rid)) -> Any:
+                    return (
+                        self._client.table("diagnosticos")
+                        .delete()
+                        .eq("id", diagnostico_id)
+                        .eq("tenant_id", stid)
+                        .execute()
+                    )
+
+                del_resp = await asyncio.to_thread(_delete_one)
+                if del_resp.data:
+                    eliminados.append(rid)
+            else:
+                mantidos_outros += 1
+        return ResultadoEliminacaoEmpresa(
+            empresa_cnpj=empresa_cnpj,
+            eliminados_ids=tuple(eliminados),
+            mantidos_finalizados=mantidos_finalizados,
+            mantidos_outros_status=mantidos_outros,
+        )
 
     async def atualizar_relatorio_pdf_com_versao(
         self,

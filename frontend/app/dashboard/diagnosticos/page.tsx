@@ -15,15 +15,18 @@ import {
 import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
+import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPainelButton";
 import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostico_urls";
+import { buildWizardUrlNovaEmpresa } from "@/lib/wizard/wizard_modo_empresa";
 
 /** Lista do tenant + atalhos (novo diagnóstico, importar OTP) — rota canónica após login. */
 export default function PainelDiagnosticosPage() {
   const ajudaImportarOtp =
-    "Use apenas se você concluiu o assistente sem conta na plataforma e confirmou o resultado por código no e-mail. A importação procura diagnósticos gratuitos vinculados ao mesmo e-mail do seu login atual. Se você já estava com sessão iniciada e usou «Nova Empresa/Novo Diag», os itens já aparecem na lista abaixo — não precisam de importação.";
+    "Use apenas se você concluiu o assistente sem conta na plataforma e confirmou o resultado por código no e-mail. A importação procura diagnósticos gratuitos vinculados ao mesmo e-mail do seu login atual. Se você já estava com sessão iniciada e usou «Nova empresa», os itens já aparecem na lista abaixo — não precisam de importação.";
   const [itens, setItens] = useState<DiagnosticoResumoApi[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [msgVinculo, setMsgVinculo] = useState<string | null>(null);
+  const [msgExclusao, setMsgExclusao] = useState<string | null>(null);
   const [vinculando, setVinculando] = useState(false);
 
   useEffect(() => {
@@ -93,7 +96,7 @@ export default function PainelDiagnosticosPage() {
               <div className="flex w-full max-w-xl flex-col gap-3 sm:max-w-none sm:items-end">
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <Button asChild variant="default">
-                    <Link href="/wizard">Nova Empresa/Novo Diag</Link>
+                    <Link href={buildWizardUrlNovaEmpresa()}>Nova empresa</Link>
                   </Button>
                   <TooltipProvider delayDuration={250}>
                     <Tooltip>
@@ -164,6 +167,16 @@ export default function PainelDiagnosticosPage() {
           </div>
         )}
 
+        {!semSessao && msgExclusao && (
+          <div
+            className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm text-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            {msgExclusao}
+          </div>
+        )}
+
         {!semSessao && !erro && itens !== null && itens.length === 0 && (
           <p
             className="text-muted-foreground text-sm leading-relaxed max-w-2xl"
@@ -171,7 +184,7 @@ export default function PainelDiagnosticosPage() {
             aria-live="polite"
           >
             Nenhum diagnóstico neste painel ainda. Use{" "}
-            <strong className="text-foreground">Nova Empresa/Novo Diag</strong>{" "}
+            <strong className="text-foreground">Nova empresa</strong>{" "}
             acima ou inicie em{" "}
             <Link href="/wizard" className="text-primary underline font-medium">
               /wizard
@@ -256,6 +269,22 @@ export default function PainelDiagnosticosPage() {
                         )}
                       </div>
                     </Link>
+                    {cnpj14 ? (
+                      <div className="mt-4 pt-3 border-t border-border/60">
+                        <ExcluirEmpresaPainelButton
+                          cnpj14={cnpj14}
+                          razaoSocial={diag.empresa_razao_social}
+                          variant="outline"
+                          className="w-full text-destructive hover:text-destructive"
+                          onExcluido={(mensagem) => {
+                            setMsgVinculo(null);
+                            setMsgExclusao(mensagem);
+                            setErro(null);
+                            void recarregarLista();
+                          }}
+                        />
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               );

@@ -12,7 +12,12 @@ from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, status
 
+from src.application.errors import EliminacaoEmpresaSomenteWormError
 from src.application.ports.diagnostico_retificacao_port import DiagnosticoRetificacaoRegisto
+from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
+    ComandoEliminarDiagnosticosEmpresaPainel,
+    EliminarDiagnosticosEmpresaPainel,
+)
 from src.application.use_cases.listar_retificacoes_diagnostico import (
     ComandoListarRetificacoesDiagnostico,
     ListarRetificacoesDiagnostico,
@@ -30,6 +35,7 @@ from src.domain.value_objects.cnpj_brasil import (
 from src.presentation.api.dependencies import (
     get_current_user_tenant,
     get_diagnostico_repository,
+    get_eliminar_diagnosticos_empresa_painel_use_case,
     get_listar_retificacoes_diagnostico_use_case,
     get_realizar_diagnostico_use_case,
     get_registrar_retificacao_diagnostico_use_case,
@@ -40,6 +46,7 @@ from src.presentation.api.schemas import (
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
     DiagnosticoRetificacaoHttpResponse,
+    EliminarEmpresaDiagnosticoHttpResponse,
     IniciarDiagnosticoPainelRequest,
     RegistrarRetificacaoDiagnosticoRequest,
 )
@@ -98,6 +105,72 @@ async def listar_diagnosticos(
         tenant_id, limit=limit, offset=offset, empresa_cnpj=filtro_cnpj
     )
     return [diagnostico_helpers._para_resumo(d) for d in rows]
+
+
+@router.delete(
+    "/empresa/{empresa_cnpj}",
+    response_model=EliminarEmpresaDiagnosticoHttpResponse,
+    summary="Excluir diagnósticos elegíveis da empresa (CNPJ)",
+    description=(
+        "Remove fisicamente todos os diagnósticos do tenant com o CNPJ informado que ainda "
+        "não estão ``finalizado`` (em andamento, cancelado ou expirado). "
+        "Diagnósticos **finalizados** permanecem (WORM — ADR-012); use Privacidade LGPD por ciclo. "
+        "**Headers:** JWT + ``Idempotency-Key``."
+    ),
+)
+async def eliminar_diagnosticos_empresa_painel(
+    empresa_cnpj: str,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        EliminarDiagnosticosEmpresaPainel,
+        Depends(get_eliminar_diagnosticos_empresa_painel_use_case),
+    ],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> EliminarEmpresaDiagnosticoHttpResponse:
+    """Limpeza operacional no painel — não substitui fluxo LGPD com solicitação deferida."""
+    _ = idempotency_key
+    user_id, tenant_id, _ = current
+    norm = normalizar_cnpj_apenas_digitos(empresa_cnpj)
+    try:
+        exigir_cnpj_vazio_ou_com_dv_ok(norm)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    if len(norm) != 14:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="CNPJ deve conter 14 dígitos com DV válido.",
+        )
+    try:
+        resultado = await use_case.execute(
+            ComandoEliminarDiagnosticosEmpresaPainel(
+                tenant_id=tenant_id,
+                actor_user_id=user_id,
+                empresa_cnpj=norm,
+            )
+        )
+    except EliminacaoEmpresaSomenteWormError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    msg = (
+        f"{resultado.total_eliminados} diagnóstico(s) excluído(s) para o CNPJ informado."
+    )
+    if resultado.mantidos_finalizados > 0:
+        msg += (
+            f" {resultado.mantidos_finalizados} finalizado(s) mantido(s) "
+            "(evidência WORM — use Privacidade LGPD se necessário)."
+        )
+    return EliminarEmpresaDiagnosticoHttpResponse(
+        empresa_cnpj=resultado.empresa_cnpj,
+        total_eliminados=resultado.total_eliminados,
+        mantidos_finalizados=resultado.mantidos_finalizados,
+        mantidos_outros_status=resultado.mantidos_outros_status,
+        eliminados_ids=list(resultado.eliminados_ids),
+        mensagem=msg,
+    )
 
 
 @router.post(

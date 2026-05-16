@@ -557,6 +557,17 @@ class EliminarDiagnosticoLgpdHttpResponse(BaseModel):
     )
 
 
+class EliminarEmpresaDiagnosticoHttpResponse(BaseModel):
+    """DELETE /diagnosticos/empresa/{cnpj} — exclusão em lote no painel (pré-WORM)."""
+
+    empresa_cnpj: str = Field(..., description="CNPJ normalizado (14 dígitos).")
+    total_eliminados: int
+    mantidos_finalizados: int
+    mantidos_outros_status: int
+    eliminados_ids: list[UUID]
+    mensagem: str
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 

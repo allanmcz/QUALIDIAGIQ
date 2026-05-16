@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPainelButton";
 import { EmpresaImplantacaoResumoDepartamentosCard } from "@/components/painel/empresa/EmpresaImplantacaoResumoDepartamentosCard";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { QuadroImplantacaoGrid } from "@/components/painel/empresa/QuadroImplantacaoGrid";
@@ -40,6 +42,7 @@ export default function EmpresaDiagnosticosClient({
   cnpjNormalizado: string;
   razaoSocialHint: string;
 }) {
+  const router = useRouter();
   /** Espelho da lista interior — cabeçalho e botão «Plano» sem GET duplicado. */
   const [listaPainel, setListaPainel] = useState<DiagnosticoResumoApi[] | null>(null);
   const [quadroEmpresaDetalhe, setQuadroEmpresaDetalhe] = useState<DiagnosticoDetalheApi | null>(null);
@@ -126,6 +129,15 @@ export default function EmpresaDiagnosticosClient({
                 <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                   <Link href="/dashboard/privacidade">LGPD e direitos do titular</Link>
                 </Button>
+                <ExcluirEmpresaPainelButton
+                  cnpj14={cnpjNormalizado}
+                  razaoSocial={tituloEmpresa}
+                  variant="outline"
+                  className="w-full sm:w-auto text-destructive hover:text-destructive"
+                  onExcluido={() => {
+                    router.push("/dashboard/diagnosticos");
+                  }}
+                />
               </div>
               <p className="text-xs text-muted-foreground max-w-md sm:text-right">
                 Plano e cronograma consolidados abrem no diagnóstico mais recente. A área LGPD reúne solicitações e
@@ -139,7 +151,7 @@ export default function EmpresaDiagnosticosClient({
           <div>
             <Button asChild className="w-full sm:w-auto">
               <Link href={buildWizardUrlNovaDiagnosticoEmpresa(cnpjNormalizado, tituloEmpresa)}>
-                Novo Diagnóstico
+                Novo ciclo de diagnóstico
               </Link>
             </Button>
           </div>

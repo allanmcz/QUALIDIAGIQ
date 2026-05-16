@@ -2,6 +2,11 @@
  * Rotas do painel — agrupamento por PJ (CNPJ) e atalho para novo ciclo no wizard.
  */
 
+import {
+  WIZARD_MODO_NOVO_CICLO,
+  WIZARD_QUERY_MODO,
+} from "@/lib/wizard/wizard_modo_empresa";
+
 /** Extrai 14 dígitos do segmento de URL `/dashboard/empresas/[cnpj]`. */
 export function parseCnpjFromRouteSegment(segment: string): string | null {
   let raw = segment;
@@ -18,6 +23,7 @@ export function parseCnpjFromRouteSegment(segment: string): string | null {
 /** Monta `/wizard` com query para pré-preencher passo 1 (sessão painel + ADR-013). */
 export function buildWizardUrlNovaDiagnosticoEmpresa(cnpj14: string, razaoSocial: string): string {
   const q = new URLSearchParams();
+  q.set(WIZARD_QUERY_MODO, WIZARD_MODO_NOVO_CICLO);
   q.set("empresa_cnpj", cnpj14.replace(/\D/g, ""));
   const r = razaoSocial.trim();
   if (r.length >= 3) {

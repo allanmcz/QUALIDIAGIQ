@@ -185,6 +185,20 @@ async function loginPainelE2E(page: Page): Promise<void> {
 }
 
 test.describe("Painel empresa — expandir linha", () => {
+  test("sem expandir não mostra ranking M05 (mock)", async ({ page }) => {
+    await installPainelEmpresaApiMocks(page);
+    await loginPainelE2E(page);
+
+    await page.goto(`/dashboard/empresas/${CNPJ14}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+    await expect(
+      page.getByRole("heading", { name: /Ranking explícito de gaps \(M05\)/i }),
+    ).not.toBeVisible();
+    await expect(page.getByText("Explicação do score (IA)")).not.toBeVisible();
+    await expect(page.getByText("Autoconferência ABNT — 10 controles")).not.toBeVisible();
+  });
+
   test("expandir mostra ranking ou radar (mock)", async ({ page }) => {
     await installPainelEmpresaApiMocks(page);
     await loginPainelE2E(page);

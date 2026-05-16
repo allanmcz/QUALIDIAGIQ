@@ -24,3 +24,7 @@ class EliminacaoDiagnosticoFinalizadoWormError(Exception):
     Operação correta: anonimização controlada (LGPD art. 18, IV) via fluxo dedicado.
     Alinhado a ADR-012 e workshop J4 (DEV_09052026_V2).
     """
+
+
+class EliminacaoEmpresaSomenteWormError(Exception):
+    """Exclusão em massa por CNPJ bloqueada — só há diagnósticos finalizados no tenant."""

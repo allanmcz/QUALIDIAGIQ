@@ -46,9 +46,18 @@ import {
 import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { DEFAULT_WIZARD_FORM_VALUES, TOTAL_STEPS } from "@/lib/wizard/wizardFormDefaults";
 import {
+  fetchResumoCiclosEmpresaPainel,
+  type ResumoCiclosEmpresaPainel,
+} from "@/lib/wizard/empresa_painel_ciclos";
+import {
   normalizarTipoPerguntaWizard,
   valorInicialPorTipoPergunta,
 } from "@/lib/wizard/perguntaTipo";
+import {
+  parseWizardModoEmpresaFromSearchParams,
+  WIZARD_MODO_NOVO_CICLO,
+  type WizardModoEmpresa,
+} from "@/lib/wizard/wizard_modo_empresa";
 
 /**
  * Estado e efeitos do assistente de diagnóstico (react-hook-form + passos + rascunho).
@@ -86,6 +95,15 @@ export function useWizardState() {
   const [consultaCnpjLoading, setConsultaCnpjLoading] = useState(false);
   const [consultaCnpjFeedback, setConsultaCnpjFeedback] = useState<string | null>(null);
   const [forceRefreshConsultaCnpjUi, setForceRefreshConsultaCnpjUi] = useState(false);
+  /** `novo_ciclo` (painel / refazer) vs `nova_empresa` (atalho sem CNPJ). */
+  const [wizardModoEmpresa, setWizardModoEmpresa] = useState<WizardModoEmpresa>("nova_empresa");
+  const [queryRazaoEmpresaPainel, setQueryRazaoEmpresaPainel] = useState("");
+  /** CNPJ da query (`empresa_cnpj`) — fallback do GET histórico antes do RHF propagar o pré-preenchimento. */
+  const [queryCnpjEmpresaPainel, setQueryCnpjEmpresaPainel] = useState("");
+  const [ciclosEmpresaPainel, setCiclosEmpresaPainel] = useState<ResumoCiclosEmpresaPainel | null>(
+    null,
+  );
+  const [ciclosEmpresaPainelLoading, setCiclosEmpresaPainelLoading] = useState(false);
 
   useEffect(() => {
     setTokenChecked(true);
@@ -419,6 +437,23 @@ export function useWizardState() {
     })();
   }, [aplicarRascunhoWizard, router]);
 
+  const aplicarQueryEmpresaPainelNoFormulario = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const parsed = parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search));
+    setWizardModoEmpresa(parsed.modo);
+    setQueryRazaoEmpresaPainel(parsed.razaoSocial);
+    setQueryCnpjEmpresaPainel(parsed.cnpj14);
+    if (parsed.cnpj14.length === 14) {
+      setValue("empresa.cnpj", parsed.cnpj14, { shouldDirty: false, shouldValidate: false });
+    }
+    if (parsed.razaoSocial.length >= 3) {
+      setValue("empresa.razao_social", parsed.razaoSocial, {
+        shouldDirty: false,
+        shouldValidate: false,
+      });
+    }
+  }, [setValue]);
+
   const handleCacheReiniciar = useCallback(() => {
     clearWizardDraft();
     clearPendingDiagnosticoFromStorage();
@@ -433,7 +468,8 @@ export function useWizardState() {
     wizardQueryEmpresaPrefillAppliedRef.current = false;
     setDraftHydrated(true);
     aplicarRespondenteDaConta();
-  }, [reset, aplicarRespondenteDaConta]);
+    aplicarQueryEmpresaPainelNoFormulario();
+  }, [reset, aplicarRespondenteDaConta, aplicarQueryEmpresaPainelNoFormulario]);
 
   /**
    * Na abertura: se há JWT + pendente de POST, não restaura rascunho (fluxo automático existente).
@@ -503,6 +539,54 @@ export function useWizardState() {
       setValue("empresa.razao_social", razaoQ, { shouldDirty: false, shouldValidate: false });
     }
   }, [draftHydrated, cacheResumePrompt, getValues, setValue]);
+
+  /** Modo e razão social vindos da query (`modo=novo_ciclo` + CNPJ do painel). */
+  useEffect(() => {
+    if (!draftHydrated || cacheResumePrompt !== null) return;
+    if (typeof window === "undefined") return;
+    const parsed = parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search));
+    setWizardModoEmpresa(parsed.modo);
+    setQueryRazaoEmpresaPainel(parsed.razaoSocial);
+    setQueryCnpjEmpresaPainel(parsed.cnpj14);
+  }, [draftHydrated, cacheResumePrompt]);
+
+  const cnpjEmpresaWatch = watch("empresa.cnpj");
+  const razaoEmpresaWatch = watch("empresa.razao_social");
+  const sessaoPainelAtiva = tokenChecked && temSessaoPainelParaApiCliente();
+
+  /** Histórico da PJ no tenant (passo 1 — reconhecer empresa já cadastrada). */
+  useEffect(() => {
+    if (!draftHydrated || !sessaoPainelAtiva) {
+      setCiclosEmpresaPainel(null);
+      return;
+    }
+    const cnpjForm = String(cnpjEmpresaWatch ?? "").replace(/\D/g, "");
+    let cnpjQuery = queryCnpjEmpresaPainel.length === 14 ? queryCnpjEmpresaPainel : "";
+    if (cnpjQuery.length !== 14 && typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("empresa_cnpj")?.replace(/\D/g, "") ?? "";
+      if (q.length === 14) cnpjQuery = q;
+    }
+    const cnpj = cnpjForm.length === 14 ? cnpjForm : cnpjQuery;
+    if (cnpj.length !== 14) {
+      setCiclosEmpresaPainel(null);
+      return;
+    }
+    let cancel = false;
+    setCiclosEmpresaPainelLoading(true);
+    void fetchResumoCiclosEmpresaPainel(cnpj)
+      .then((resumo) => {
+        if (!cancel) setCiclosEmpresaPainel(resumo);
+      })
+      .catch(() => {
+        if (!cancel) setCiclosEmpresaPainel(null);
+      })
+      .finally(() => {
+        if (!cancel) setCiclosEmpresaPainelLoading(false);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [draftHydrated, sessaoPainelAtiva, cnpjEmpresaWatch, queryCnpjEmpresaPainel]);
 
   /** Persiste rascunho com debounce — mesma origem que «Voltar ao diagnóstico» na política de privacidade. */
   useEffect(() => {
@@ -822,9 +906,19 @@ export function useWizardState() {
         ? ((2 + (indicePerguntaAtual + 1) / totalPerguntas) / TOTAL_STEPS) * 100
         : (step / TOTAL_STEPS) * 100;
   const progressBarPercent = progress;
-  const hasToken = tokenChecked && temSessaoPainelParaApiCliente();
+  const hasToken = sessaoPainelAtiva;
   const ultimaPerguntaDoQuestionario =
     step === 3 && totalPerguntas > 0 && indicePerguntaAtual >= totalPerguntas - 1;
+
+  const empresaJaNoPainel = (ciclosEmpresaPainel?.totalCiclos ?? 0) > 0;
+  const modoNovoCicloExplicito = wizardModoEmpresa === WIZARD_MODO_NOVO_CICLO;
+  const exibirContextoNovoCiclo =
+    hasToken && (modoNovoCicloExplicito || empresaJaNoPainel);
+  const razaoSocialWizard =
+    String(razaoEmpresaWatch ?? "").trim() ||
+    queryRazaoEmpresaPainel.trim() ||
+    ciclosEmpresaPainel?.razaoSocialMaisRecente?.trim() ||
+    "";
 
   return {
     router,
@@ -888,5 +982,12 @@ export function useWizardState() {
     consultarCnpjNoWizard,
     forceRefreshConsultaCnpjUi,
     setForceRefreshConsultaCnpjUi,
+    wizardModoEmpresa,
+    exibirContextoNovoCiclo,
+    modoNovoCicloExplicito,
+    empresaJaNoPainel,
+    razaoSocialWizard,
+    ciclosEmpresaPainel,
+    ciclosEmpresaPainelLoading,
   };
 }

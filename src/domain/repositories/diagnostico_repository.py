@@ -24,6 +24,7 @@ from uuid import UUID
 
 from src.domain.entities.diagnostico import Diagnostico
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
+from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
 
 
@@ -63,6 +64,21 @@ class DiagnosticoRepository(ABC):
 
         Args:
             empresa_cnpj: Se informado, apenas linhas com esse CNPJ normalizado (14 dígitos).
+        """
+        ...
+
+    @abstractmethod
+    async def eliminar_diagnosticos_empresa_eliminaveis(
+        self,
+        tenant_id: UUID,
+        empresa_cnpj: str,
+        *,
+        actor_user_id: UUID | None = None,
+    ) -> ResultadoEliminacaoEmpresa:
+        """
+        Remove fisicamente diagnósticos do CNPJ com status ``em_andamento``, ``cancelado`` ou ``expirado``.
+
+        Diagnósticos ``finalizado`` são contabilizados em ``mantidos_finalizados`` e não apagados.
         """
         ...
 

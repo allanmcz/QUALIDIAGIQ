@@ -2,13 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
-import {
-  ExplicacaoScoreLlmCard,
-  type ExplicacaoScoreLlmCardHandle,
-} from "@/components/painel/ExplicacaoScoreLlmCard";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { PrivacidadeDiagnosticoCard } from "@/components/painel/PrivacidadeDiagnosticoCard";
 import { RetificacaoDiagnosticoCard } from "@/components/painel/RetificacaoDiagnosticoCard";
@@ -86,7 +82,6 @@ function mockDiagnostico(id: string): DiagnosticoDetalheApi {
 
 export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const router = useRouter();
-  const explicacaoScoreRef = useRef<ExplicacaoScoreLlmCardHandle>(null);
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -160,16 +155,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           <Button variant="outline" size="sm" asChild>
             <Link href="#diag-retificacoes">Retificações</Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={() => {
-              explicacaoScoreRef.current?.scrollParaSecao();
-              explicacaoScoreRef.current?.solicitarGeracao();
-            }}
-          >
-            Explicação IA
+          <Button variant="outline" size="sm" asChild>
+            <Link href="#diag-explicacao-score-llm">Explicação IA</Link>
           </Button>
         </nav>
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -220,15 +207,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
       <RetificacaoDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
 
-      <ExplicacaoScoreLlmCard
-        ref={explicacaoScoreRef}
-        diagnosticoId={data.id}
-        diagnosticoStatus={data.status}
-        planoDiagnostico={data.plano}
-        scoreGeral={data.score?.score_geral?.valor ?? null}
-        inicial={data.explicacao_score_llm ?? null}
-      />
-
       {temCnpj14 ? (
         <Card className="mb-10" id="painel-diagnosticos-mesma-empresa">
           <CardHeader className="pb-2">
@@ -238,7 +216,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             <div className="mb-4">
               <Button asChild variant="default" size="sm">
                 <Link href={buildWizardUrlNovaDiagnosticoEmpresa(cnpjDigits, data.empresa_razao_social)}>
-                  Novo Diagnóstico
+                  Novo ciclo de diagnóstico
                 </Link>
               </Button>
             </div>

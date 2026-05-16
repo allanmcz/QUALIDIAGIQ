@@ -7,7 +7,9 @@ import type { Control, FieldErrors, UseFormRegister } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WizardEmpresaNovoCicloBanner } from "@/components/wizard/WizardEmpresaNovoCicloBanner";
 import type { DiagnosticoPayloadFormInput } from "@/lib/schemas/wizard";
+import type { ResumoCiclosEmpresaPainel } from "@/lib/wizard/empresa_painel_ciclos";
 import { cn } from "@/lib/utils";
 import { mascaraTelefoneBR } from "@/lib/utils/mascaraTelefoneBr";
 
@@ -16,6 +18,11 @@ export type WizardStepIdentificacaoProps = {
   control: Control<DiagnosticoPayloadFormInput>;
   errors: FieldErrors<DiagnosticoPayloadFormInput>;
   hasToken: boolean;
+  exibirContextoNovoCiclo: boolean;
+  modoNovoCicloExplicito: boolean;
+  razaoSocialWizard: string;
+  ciclosEmpresaPainel: ResumoCiclosEmpresaPainel | null;
+  ciclosEmpresaPainelLoading: boolean;
   consultaCnpjLoading: boolean;
   consultaCnpjFeedback: string | null;
   forceRefreshConsultaCnpj: boolean;
@@ -28,6 +35,11 @@ export function WizardStepIdentificacao({
   control,
   errors,
   hasToken,
+  exibirContextoNovoCiclo,
+  modoNovoCicloExplicito,
+  razaoSocialWizard,
+  ciclosEmpresaPainel,
+  ciclosEmpresaPainelLoading,
   consultaCnpjLoading,
   consultaCnpjFeedback,
   forceRefreshConsultaCnpj,
@@ -36,15 +48,34 @@ export function WizardStepIdentificacao({
 }: WizardStepIdentificacaoProps) {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {exibirContextoNovoCiclo ? (
+        <WizardEmpresaNovoCicloBanner
+          carregando={ciclosEmpresaPainelLoading}
+          resumo={ciclosEmpresaPainel}
+          razaoSocial={razaoSocialWizard}
+          modoNovoCicloExplicito={modoNovoCicloExplicito}
+        />
+      ) : null}
       <div>
-        <h3 className="text-sm font-semibold text-foreground tracking-tight">Cadastro da empresa</h3>
+        <h3 className="text-sm font-semibold text-foreground tracking-tight">
+          {exibirContextoNovoCiclo ? "Dados da empresa (mesmo CNPJ do painel)" : "Cadastro da empresa"}
+        </h3>
         <p className="text-xs text-muted-foreground mt-1">
           {hasToken ? (
-            <>
-              Com <strong className="font-medium text-foreground">sessão na plataforma</strong>, o{" "}
-              <strong className="font-medium text-foreground">CNPJ é obrigatório</strong> (14 dígitos, DV válido)
-              para manter o histórico por empresa no painel. Você também pode preencher dados públicos automaticamente.
-            </>
+            exibirContextoNovoCiclo ? (
+              <>
+                Confirme o <strong className="font-medium text-foreground">CNPJ</strong> e a razão social. O
+                respondente pode ser o mesmo ou outro contacto deste novo ciclo. Use «Buscar dados públicos» se
+                precisar atualizar endereço ou CNAE na Receita.
+              </>
+            ) : (
+              <>
+                Com <strong className="font-medium text-foreground">sessão na plataforma</strong>, o{" "}
+                <strong className="font-medium text-foreground">CNPJ é obrigatório</strong> (14 dígitos, DV válido)
+                para manter o histórico por empresa no painel. Você também pode preencher dados públicos
+                automaticamente.
+              </>
+            )
           ) : (
             <>
               Sem sessão, o CNPJ é <strong className="font-medium text-foreground">opcional</strong> neste passo; se
