@@ -6,6 +6,12 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
@@ -13,6 +19,8 @@ import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostic
 
 /** Lista do tenant + atalhos (novo diagnóstico, importar OTP) — rota canónica após login. */
 export default function PainelDiagnosticosPage() {
+  const ajudaImportarOtp =
+    "Use apenas se você concluiu o assistente sem conta na plataforma e confirmou o resultado por código no e-mail. A importação procura diagnósticos gratuitos vinculados ao mesmo e-mail do seu login atual. Se você já estava com sessão iniciada e usou «Nova Empresa/Novo Diag», os itens já aparecem na lista abaixo — não precisam de importação.";
   const [itens, setItens] = useState<DiagnosticoResumoApi[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [msgVinculo, setMsgVinculo] = useState<string | null>(null);
@@ -59,8 +67,8 @@ export default function PainelDiagnosticosPage() {
       const r = await postVincularLeadsSelfService();
       setMsgVinculo(
         r.total_vinculados === 0
-          ? "Nenhum registro elegível: só existem diagnósticos no «pool» self-service (após OTP), plano gratuito, com e-mail do respondente igual ao do seu login na plataforma. Diagnósticos feitos já com sessão iniciada no painel não entram aqui — já estão no seu tenant."
-          : `${r.total_vinculados} diagnóstico(s) do fluxo gratuito (OTP / self-service) foram trazidos para este painel.`,
+          ? "Nenhum diagnóstico elegível para importar. Apenas resultados gratuitos confirmados por e-mail, com o mesmo e-mail do seu login atual, podem ser trazidos para este painel."
+          : `${r.total_vinculados} diagnóstico(s) gratuito(s) confirmado(s) por e-mail foram trazidos para este painel.`,
       );
       await recarregarLista();
     } catch (e) {
@@ -87,29 +95,35 @@ export default function PainelDiagnosticosPage() {
                   <Button asChild variant="default">
                     <Link href="/wizard">Nova Empresa/Novo Diag</Link>
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={vinculando}
-                    onClick={() => void importarLeadsSelfService()}
-                    aria-describedby="ajuda-importar-otp"
-                  >
-                    {vinculando ? "Importando…" : "Importar do fluxo OTP (gratuito)"}
-                  </Button>
+                  <TooltipProvider delayDuration={250}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={vinculando}
+                            onClick={() => void importarLeadsSelfService()}
+                            aria-describedby="ajuda-importar-otp"
+                          >
+                            {vinculando ? "Importando…" : "Importar Fluxo OTP"}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        id="ajuda-importar-otp"
+                        side="bottom"
+                        align="end"
+                        className="max-w-md text-left leading-relaxed"
+                      >
+                        {ajudaImportarOtp}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <Button asChild variant="outline">
                     <Link href="/dashboard/privacidade">Privacidade LGPD</Link>
                   </Button>
                 </div>
-                <p
-                  id="ajuda-importar-otp"
-                  className="text-xs text-muted-foreground text-left sm:text-right leading-relaxed max-w-md sm:ml-auto"
-                >
-                  Use apenas se você concluiu o assistente <strong className="font-medium text-foreground">sem</strong>{" "}
-                  conta na plataforma: código no e-mail → gravação no ambiente self-service. A API só traz linhas em que o
-                  e-mail do respondente é o <strong className="font-medium text-foreground">mesmo</strong> do seu
-                  login atual e o plano é gratuito. Se você já estava com sessão iniciada e usou «Nova Empresa/Novo Diag», os
-                  itens já aparecem na lista abaixo — não precisam de importação.
-                </p>
               </div>
             )}
             {!semSessao && itens === null && (
@@ -122,7 +136,7 @@ export default function PainelDiagnosticosPage() {
 
         {semSessao && (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-            Para ver os diagnósticos do tenant faça{" "}
+            Para ver seus diagnósticos e planos de ação, faça{" "}
             <Button variant="link" className="p-0 h-auto align-baseline" asChild>
               <Link href="/login">login</Link>
             </Button>
@@ -162,8 +176,8 @@ export default function PainelDiagnosticosPage() {
             <Link href="/wizard" className="text-primary underline font-medium">
               /wizard
             </Link>{" "}
-            (logado). Se você só usou o fluxo com código por e-mail (lead), clique em «Importar do fluxo OTP
-            (gratuito)» — desde que o e-mail confirmado no OTP seja o mesmo do login na plataforma.
+            com acesso ao painel. Se você concluiu pelo código enviado por e-mail, clique em «Importar Fluxo OTP» —
+            desde que o e-mail confirmado no OTP seja o mesmo do login na plataforma.
           </p>
         )}
 
@@ -207,7 +221,7 @@ export default function PainelDiagnosticosPage() {
                         href={buildEmpresaDiagnosticosHref(cnpj14, diag.empresa_razao_social)}
                         className="text-xs font-medium text-primary hover:underline inline-block w-fit"
                       >
-                        Ver todos os ciclos da empresa
+                        Ver todos os diagnósticos da empresa
                       </Link>
                     ) : null}
                     <CardDescription>

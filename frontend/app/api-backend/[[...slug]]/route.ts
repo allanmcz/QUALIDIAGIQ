@@ -114,10 +114,9 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
     const base = resolveApiUpstreamBase();
     if (!base) {
       return NextResponse.json(
-        {
-          detail:
-            "Proxy /api-backend indisponível: defina API_PROXY_TARGET no ambiente do Next " +
-            "(ex.: http://api:8000 no Docker ou http://127.0.0.1:60000 no host) e reinicie o servidor.",
+          {
+            detail:
+            "Serviço temporariamente indisponível. Tente novamente em instantes ou acione o suporte.",
         },
         { status: 503 },
       );
@@ -127,7 +126,7 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
     try {
       pathSuffix = montarCaminhoUpstream(segments);
     } catch {
-      return NextResponse.json({ detail: "Caminho de proxy inválido" }, { status: 400 });
+      return NextResponse.json({ detail: "Solicitação inválida para este serviço." }, { status: 400 });
     }
     pathSuffix = normalizarCaminhoUpstreamFastApi(pathSuffix, request.method);
 
@@ -179,9 +178,8 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
         return NextResponse.json(
           {
             detail: respostaErroProxySeguro()
-              ? "Indisponível temporariamente (proxy). Consulte os logs do servidor."
-              : "Proxy não conseguiu montar a resposta ao browser (cabeçalhos/corpo). " +
-                  `Verifique logs «qdi_api_proxy_next_response_falhou». Detalhe: ${m}`,
+              ? "Serviço temporariamente indisponível. Tente novamente em instantes."
+              : "Serviço temporariamente indisponível. Tente novamente em instantes.",
           },
           { status: 502 },
         );
@@ -201,8 +199,8 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
       return NextResponse.json(
         {
           detail: respostaErroProxySeguro()
-            ? "Indisponível temporariamente (proxy). Consulte os logs do servidor."
-            : `Falha ao contactar a API em «${base}» (${pathSuffix || "/"}). ` + `Erro: ${msg}`,
+            ? "Serviço temporariamente indisponível. Tente novamente em instantes."
+            : "Serviço temporariamente indisponível. Tente novamente em instantes.",
         },
         { status: 502 },
       );
@@ -219,8 +217,8 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
     return NextResponse.json(
       {
         detail: respostaErroProxySeguro()
-          ? "Indisponível temporariamente (proxy). Consulte os logs do servidor."
-          : `Exceção no proxy /api-backend (evita página HTML «Internal Server Error»). Detalhe: ${msg}`,
+          ? "Serviço temporariamente indisponível. Tente novamente em instantes."
+          : "Serviço temporariamente indisponível. Tente novamente em instantes.",
       },
       { status: 502 },
     );

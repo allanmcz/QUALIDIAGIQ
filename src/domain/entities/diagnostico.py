@@ -22,7 +22,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
@@ -41,6 +41,22 @@ class StatusDiagnostico(Enum):
     FINALIZADO = "finalizado"
     EXPIRADO = "expirado"
     CANCELADO = "cancelado"
+
+
+class PainelEstadoCicloDiagnostico(StrEnum):
+    """
+    Estado de acompanhamento no painel administrativo (separado do ``StatusDiagnostico`` técnico).
+
+    O snapshot de evidência permanece imutável quando ``StatusDiagnostico.FINALIZADO``; este campo
+    apenas classifica o ciclo operacional percebido pelo consultor (planeamento, descarte, encerramento).
+
+    Base normativa complementar: LC 214/2025 (previsibilidade processual); ABNT NBR 17301:2026 (gestão).
+    """
+
+    REALIZADO = "realizado"
+    EM_ANDAMENTO = "em_andamento"
+    DESCARTADO = "descartado"
+    FINALIZADO = "finalizado"
 
 
 class PlanoDiagnostico(Enum):
@@ -197,6 +213,8 @@ class Diagnostico:
     explicacao_score_llm: dict[str, Any] | None = None
     # Sequencial por tenant + CNPJ (ou e-mail do respondente quando CNPJ vazio) — apenas para listagens do painel.
     numero_interno_grupo: int | None = None
+    # Ciclo administrativo visível na grelha do painel (coluna Postgres ``painel_estado_ciclo``).
+    painel_estado_ciclo: str = PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value
 
     def finalizar(self, score_geral: float) -> None:
         """
@@ -220,6 +238,7 @@ class Diagnostico:
 
         self.score_geral = score_geral
         self.status = StatusDiagnostico.FINALIZADO
+        self.painel_estado_ciclo = PainelEstadoCicloDiagnostico.REALIZADO.value
         self.finalizado_em = datetime.now(UTC)
 
     def registrar_score_completo_para_evidencia(self, score_completo: ScoreCompleto) -> None:
@@ -295,6 +314,15 @@ class Diagnostico:
             )
         validar_itens_m12_likert(itens)
         self.checklist_m12_estado = list(itens)
+
+    def definir_painel_estado_ciclo(self, estado: PainelEstadoCicloDiagnostico) -> None:
+        """
+        Atualiza o ciclo operacional exibido ao consultor (campo ``painel_estado_ciclo``).
+
+        Não altera nem invalida a evidência técnica já congelada quando ``status`` é finalizado;
+        é metadado de acompanhamento (ABNT NBR 17301 — ciclo PDCA operacional).
+        """
+        self.painel_estado_ciclo = estado.value
 
     _CHAVE_QUADRO_RE = re.compile(r"^f\d+_a\d+$")
     _CHAVE_QUADRO_UUID_RE = re.compile(

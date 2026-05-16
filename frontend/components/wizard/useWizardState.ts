@@ -117,7 +117,7 @@ export function useWizardState() {
           clearWizardDraft();
           if (!cancelled) router.replace("/sucesso");
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : "Falha ao gravar diagnóstico na API.";
+          const msg = err instanceof Error ? err.message : "Não foi possível salvar o diagnóstico agora.";
           if (!cancelled) setApiError(msg);
         } finally {
           if (!cancelled) setIsSubmitting(false);
@@ -132,8 +132,8 @@ export function useWizardState() {
     if (!pendingResult.ok) {
       if (pendingResult.reason !== "missing") {
         setApiError(
-          "Os dados do diagnóstico guardados neste navegador estão inválidos ou desactualizados. " +
-            "Volte ao assistente (/wizard), complete o passo 1 e envie novamente — ou limpe o cache do diagnóstico no diálogo de retomada.",
+          "Os dados do diagnóstico salvos neste navegador estão inválidos ou desatualizados. " +
+            "Volte ao assistente, complete a identificação e envie novamente — ou reinicie o diagnóstico.",
         );
       }
       return;
@@ -149,7 +149,7 @@ export function useWizardState() {
         clearWizardDraft();
         if (!cancelled) router.replace("/sucesso");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Falha ao gravar diagnóstico na API.";
+        const msg = err instanceof Error ? err.message : "Não foi possível salvar o diagnóstico agora.";
         if (!cancelled) setApiError(msg);
       } finally {
         if (!cancelled) setIsSubmitting(false);
@@ -782,7 +782,7 @@ export function useWizardState() {
       router.push(`/diagnostico/confirmar-gravacao#${encodeURIComponent(resgate_token)}`);
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Falha ao gravar o rascunho na API. Tente novamente.";
+        err instanceof Error ? err.message : "Não foi possível salvar suas respostas agora. Tente novamente.";
       setApiError(msg);
     } finally {
       setIsSubmitting(false);

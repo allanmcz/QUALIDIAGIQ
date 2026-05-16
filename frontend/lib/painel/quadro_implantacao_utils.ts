@@ -82,3 +82,43 @@ export function linhasQuadroGrid(
   });
   return rows;
 }
+
+/** Por frente («departamento» do quadro): totais para o cartão consolidado ao nível da empresa. */
+export type ResumoAtividadesImplantacaoFrente = {
+  frente: string;
+  total: number;
+  finalizadas: number;
+  pendentes: number;
+};
+
+/** Uma linha conta como finalizada com meta de prazo e pelo menos uma nota (comentário) gravada pelo consultor. */
+export function resumoAtividadesImplantacaoPorFrente(
+  checklist: FrenteChecklistQuadro[] | null | undefined,
+  persistido: DiagnosticoDetalheApi["quadro_implantacao_anotacoes"],
+): ResumoAtividadesImplantacaoFrente[] {
+  const inicial = chavesQuadroIniciais(checklist, persistido ?? null);
+  const linhas = linhasQuadroGrid(checklist);
+  const porNome = new Map<string, { total: number; finalizadas: number }>();
+  for (const L of linhas) {
+    const cur = porNome.get(L.frente) ?? { total: 0, finalizadas: 0 };
+    cur.total += 1;
+    const ed = inicial[L.qk];
+    const prazoOk = !!(ed?.prazo_meta && String(ed.prazo_meta).trim());
+    const comenta =
+      Array.isArray(ed?.comentarios) &&
+      ed.comentarios.some((c) => typeof c === "string" && c.trim().length > 0);
+    if (prazoOk && comenta) cur.finalizadas += 1;
+    porNome.set(L.frente, cur);
+  }
+  const out: ResumoAtividadesImplantacaoFrente[] = [];
+  porNome.forEach((v, frente) => {
+    out.push({
+      frente,
+      total: v.total,
+      finalizadas: v.finalizadas,
+      pendentes: Math.max(0, v.total - v.finalizadas),
+    });
+  });
+  out.sort((a, b) => a.frente.localeCompare(b.frente, "pt-BR"));
+  return out;
+}

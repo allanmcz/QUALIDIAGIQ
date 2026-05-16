@@ -32,7 +32,7 @@ class BedrockLlmCompleter:
             raise RuntimeError("bedrock_misconfigured")
 
         try:
-            import boto3  # type: ignore[import-untyped]
+            import boto3
         except ImportError as e:
             raise RuntimeError("bedrock_boto3_missing") from e
 

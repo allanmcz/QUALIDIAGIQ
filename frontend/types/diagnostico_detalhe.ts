@@ -57,6 +57,8 @@ export type DiagnosticoDetalheApi = {
   quadro_implantacao_anotacoes?: Record<string, QuadroItemPersistidoApi> | null;
   versao_otimista: number | null;
   versao_plano?: number;
+  /** Estado administrativo persistido (`painel_estado_ciclo`). */
+  painel_estado_ciclo?: string | null;
   score: {
     score_geral: { valor: number };
     score_por_dimensao: Record<string, { valor: number; peso_total_aplicado: number }>;

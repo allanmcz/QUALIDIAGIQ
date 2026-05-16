@@ -138,7 +138,7 @@ export default function DashboardPrivacidadePage() {
           ? `qdi-portabilidade-${diagnosticoId}.pdf`
           : "qdi-diagnostico-export-v1.json";
       downloadBlob(blob, nome);
-      setMsgGlobal(`Export ${formato === "pacote_pdf" ? "PDF" : "JSON"} descarregado.`);
+      setMsgGlobal(`Pacote ${formato === "pacote_pdf" ? "PDF" : "de dados"} baixado.`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha no export.");
     } finally {
@@ -163,12 +163,12 @@ export default function DashboardPrivacidadePage() {
         diagnostico_id: diag.length >= 32 ? diag : undefined,
         payload: { origem: "painel_demo" },
       });
-      setMsgGlobal("Solicitação registada.");
+      setMsgGlobal("Solicitação registrada.");
       setRegEmail("");
       setRegDiag("");
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao registar.");
+      setErro(e instanceof Error ? e.message : "Falha ao registrar.");
     } finally {
       setRegSalvando(false);
     }
@@ -180,11 +180,11 @@ export default function DashboardPrivacidadePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Privacidade LGPD</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">
-            Solicitações do titular (art. 18) no seu tenant. Para demonstração: registe um pedido,
+            Solicitações do titular (art. 18) vinculadas à sua conta. Para acompanhar o fluxo, registre um pedido,
             altere o status para <strong className="font-medium text-foreground">deferida</strong>
             {", "}
-            execute a anonimização ou descarregue o pacote de{" "}
-            <strong className="font-medium text-foreground">portabilidade</strong> (JSON / PDF) quando o pedido
+            execute a anonimização ou baixe o pacote de{" "}
+            <strong className="font-medium text-foreground">portabilidade</strong> (dados / PDF) quando o pedido
             estiver <strong className="font-medium text-foreground">deferida</strong> e o diagnóstico{" "}
             <strong className="font-medium text-foreground">finalizado</strong> com evidência.
           </p>
@@ -207,10 +207,10 @@ export default function DashboardPrivacidadePage() {
 
       <Card className="mb-10">
         <CardHeader>
-          <CardTitle className="text-lg">Registar solicitação (demonstração)</CardTitle>
+          <CardTitle className="text-lg">Registrar solicitação</CardTitle>
           <CardDescription>
-            Simula entrada pelo canal da plataforma. UUID do diagnóstico opcional — copie da página de
-            detalhe do diagnóstico.
+            Registre pedidos recebidos pelo canal de atendimento. O diagnóstico é opcional e pode ser copiado da página
+            de detalhe.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,7 +247,7 @@ export default function DashboardPrivacidadePage() {
             <Label htmlFor="lgpd-diag">ID do diagnóstico (opcional)</Label>
             <Input
               id="lgpd-diag"
-              placeholder="UUID — ver painel do diagnóstico"
+              placeholder="Identificador — ver detalhe do diagnóstico"
               value={regDiag}
               onChange={(e) => setRegDiag(e.target.value)}
               className="font-mono text-sm"
@@ -255,7 +255,7 @@ export default function DashboardPrivacidadePage() {
           </div>
           <div className="flex items-end">
             <Button type="button" disabled={regSalvando} onClick={() => void registrarDemo()}>
-              {regSalvando ? "A registar…" : "Registar"}
+              {regSalvando ? "Registrando…" : "Registrar"}
             </Button>
           </div>
         </CardContent>
@@ -265,7 +265,7 @@ export default function DashboardPrivacidadePage() {
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <CardTitle className="text-lg">Lista de solicitações</CardTitle>
-            <CardDescription>Filtro opcional por status no servidor.</CardDescription>
+            <CardDescription>Filtre por status para acompanhar a operação LGPD.</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <Label htmlFor="filtro-st" className="sr-only">
@@ -296,7 +296,7 @@ export default function DashboardPrivacidadePage() {
         </CardHeader>
         <CardContent>
           {carregando ? (
-            <p className="text-muted-foreground text-sm">A carregar…</p>
+            <p className="text-muted-foreground text-sm">Carregando…</p>
           ) : linhas.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhuma solicitação encontrada.</p>
           ) : (
@@ -308,7 +308,7 @@ export default function DashboardPrivacidadePage() {
                     <th className="p-3 font-medium">Status</th>
                     <th className="p-3 font-medium">Diagnóstico</th>
                     <th className="p-3 font-medium">Titular</th>
-                    <th className="p-3 font-medium">Acções</th>
+                    <th className="p-3 font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -390,7 +390,7 @@ export default function DashboardPrivacidadePage() {
                                     )
                                   }
                                 >
-                                  {exportandoChave === `${row.id}-json` ? "…" : "JSON"}
+                                  {exportandoChave === `${row.id}-json` ? "…" : "Dados"}
                                 </Button>
                                 <Button
                                   type="button"
@@ -440,8 +440,8 @@ export default function DashboardPrivacidadePage() {
       </Card>
 
       <p className="text-xs text-muted-foreground max-w-3xl">
-        Base normativa: LGPD Lei 13.709/2018 (art. 18). Execução técnica alinhada ao WORM do diagnóstico
-        finalizado (LC 214/2025 / evidências — ver migrations 0025 e 0029).
+        Base normativa: LGPD Lei 13.709/2018 (art. 18). Os registros preservam evidências do atendimento e apoiam a
+        rastreabilidade das decisões.
       </p>
     </div>
   );

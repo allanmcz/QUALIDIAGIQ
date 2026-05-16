@@ -8,6 +8,7 @@ from src.domain.entities.diagnostico import (
     DiagnosticoNaoFinalizavelError,
     EmpresaInfo,
     FaixaFaturamentoDeclarada,
+    PainelEstadoCicloDiagnostico,
     PorteEmpresa,
     RegimeTributario,
     Respondente,
@@ -181,6 +182,13 @@ class TestDiagnostico:
         assert diag.score_geral is None
         assert diag.relatorio_pdf_url is None
         assert diag.finalizado_em is None
+
+    def test_definir_painel_estado_ciclo(self, empresa_fixture, respondente_fixture) -> None:
+        diag = Diagnostico(
+            tenant_id=uuid.uuid4(), empresa=empresa_fixture, respondente=respondente_fixture
+        )
+        diag.definir_painel_estado_ciclo(PainelEstadoCicloDiagnostico.DESCARTADO)
+        assert diag.painel_estado_ciclo == PainelEstadoCicloDiagnostico.DESCARTADO.value
 
     def test_deve_finalizar_diagnostico_com_sucesso(self, empresa_fixture, respondente_fixture):
         diag = Diagnostico(

@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EmpresaImplantacaoResumoDepartamentosCard } from "@/components/painel/empresa/EmpresaImplantacaoResumoDepartamentosCard";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
+import { QuadroImplantacaoGrid } from "@/components/painel/empresa/QuadroImplantacaoGrid";
 import { Button } from "@/components/ui/button";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
+import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
+import {
+  idDiagnosticoMaisAntigoEmpresa,
+  quadroImplantacaoEditavel,
+} from "@/lib/painel/diagnostico_empresa_ordem";
+import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 function mascaraCnpj14(d: string): string {
   const c = d.replace(/\D/g, "");
@@ -34,9 +42,43 @@ export default function EmpresaDiagnosticosClient({
 }) {
   /** Espelho da lista interior — cabeçalho e botão «Plano» sem GET duplicado. */
   const [listaPainel, setListaPainel] = useState<DiagnosticoResumoApi[] | null>(null);
+  const [quadroEmpresaDetalhe, setQuadroEmpresaDetalhe] = useState<DiagnosticoDetalheApi | null>(null);
+
+  const primeiroDiagId = useMemo(
+    () => (listaPainel?.length ? idDiagnosticoMaisAntigoEmpresa(listaPainel) : null),
+    [listaPainel],
+  );
+
   const aoDiagnosticosPainel = useCallback((rows: DiagnosticoResumoApi[]) => {
     setListaPainel(rows);
   }, []);
+
+  const syncQuadroTopo = useCallback(
+    (d: DiagnosticoDetalheApi) => {
+      if (primeiroDiagId && d.id === primeiroDiagId) setQuadroEmpresaDetalhe(d);
+    },
+    [primeiroDiagId],
+  );
+
+  const semSessao = !temSessaoPainelParaApiCliente();
+
+  useEffect(() => {
+    if (!primeiroDiagId || semSessao) {
+      setQuadroEmpresaDetalhe(null);
+      return;
+    }
+    let cancel = false;
+    void fetchDiagnosticoDetalhe(primeiroDiagId)
+      .then((d) => {
+        if (!cancel) setQuadroEmpresaDetalhe(d);
+      })
+      .catch(() => {
+        if (!cancel) setQuadroEmpresaDetalhe(null);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [primeiroDiagId, semSessao]);
 
   const tituloEmpresa = useMemo(() => {
     const hint = razaoSocialHint.trim();
@@ -51,10 +93,8 @@ export default function EmpresaDiagnosticosClient({
     [listaPainel],
   );
 
-  const semSessao = !temSessaoPainelParaApiCliente();
-
   const sublinhaCounts =
-    listaPainel === null && !semSessao ? " · …" : listaPainel != null ? ` · ${listaPainel.length} diagnóstico(s) neste tenant` : "";
+    listaPainel === null && !semSessao ? " · …" : listaPainel != null ? ` · ${listaPainel.length} diagnóstico(s) no painel` : "";
 
   return (
     <div className="container py-10">
@@ -88,8 +128,8 @@ export default function EmpresaDiagnosticosClient({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground max-w-md sm:text-right">
-                Plano e cronograma consolidados abrem no diagnóstico mais recente. LGPD: área do tenant
-                (solicitações, portabilidade).
+                Plano e cronograma consolidados abrem no diagnóstico mais recente. A área LGPD reúne solicitações e
+                portabilidade dos dados.
               </p>
             </div>
           )}
@@ -105,10 +145,43 @@ export default function EmpresaDiagnosticosClient({
           </div>
         )}
 
+        {!semSessao && listaPainel && listaPainel.length > 0 && quadroEmpresaDetalhe && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Quadro de implantação da empresa</h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+                <strong className="font-medium text-foreground">Um quadro por empresa</strong> para o mesmo CNPJ:
+                prazos meta e notas do consultor aplicam-se à implantação global, não ao ciclo individual. Na
+                tabela abaixo usa-se o plano de ações de referência; em cada linha da lista,{" "}
+                <strong className="font-medium text-foreground">Expandir</strong> continua a mostrar só matriz,
+                ranking e M12 daquele diagnóstico.
+              </p>
+            </div>
+            <EmpresaImplantacaoResumoDepartamentosCard data={quadroEmpresaDetalhe} />
+            <QuadroImplantacaoGrid
+              diagnosticoId={quadroEmpresaDetalhe.id}
+              data={quadroEmpresaDetalhe}
+              editavel={quadroImplantacaoEditavel(quadroEmpresaDetalhe.id, listaPainel, quadroEmpresaDetalhe.status)}
+              avisoSomenteLeitura={
+                !quadroImplantacaoEditavel(
+                  quadroEmpresaDetalhe.id,
+                  listaPainel,
+                  quadroEmpresaDetalhe.status,
+                ) && quadroEmpresaDetalhe.status === "finalizado"
+                  ? "Quadro da empresa em consulta: a edição fica concentrada no ciclo de referência da empresa. Neste diagnóstico, use a visualização apenas para acompanhamento."
+                  : undefined
+              }
+              onDataAtualizado={syncQuadroTopo}
+              id="empresa-quadro-implantacao-principal"
+            />
+          </div>
+        )}
+
         <EmpresaDiagnosticosListaPainel
           cnpjNormalizado={cnpjNormalizado}
           usarExpandNaQuery
           onDiagnosticosAlterados={aoDiagnosticosPainel}
+          onListaDetalheAtualizado={syncQuadroTopo}
         />
       </div>
     </div>

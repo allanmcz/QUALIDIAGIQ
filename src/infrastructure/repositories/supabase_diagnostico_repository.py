@@ -30,6 +30,7 @@ from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
     FaixaFaturamentoDeclarada,
+    PainelEstadoCicloDiagnostico,
     PorteEmpresa,
     RegimeTributario,
     Respondente,
@@ -189,6 +190,36 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
                 .update(
                     {
                         "quadro_implantacao_anotacoes": quadro_implantacao_anotacoes,
+                        "versao_otimista": versao_esperada + 1,
+                    }
+                )
+                .eq("id", sid)
+                .eq("tenant_id", stid)
+                .eq("versao_otimista", versao_esperada)
+            )
+            return q.select("*").execute()
+
+        response = await asyncio.to_thread(_update)
+        data = response.data
+        if not data:
+            return None
+        return self._para_entity(data[0])
+
+    async def atualizar_painel_estado_ciclo_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        painel_estado_ciclo: str,
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        sid, stid = str(diagnostico_id), str(tenant_id)
+
+        def _update() -> Any:
+            q: Any = (
+                self._client.table("diagnosticos")
+                .update(
+                    {
+                        "painel_estado_ciclo": painel_estado_ciclo,
                         "versao_otimista": versao_esperada + 1,
                     }
                 )
@@ -419,6 +450,11 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
             "versao_plano": int(getattr(d, "versao_plano", 1) or 1),
             "explicacao_score_llm": getattr(d, "explicacao_score_llm", None),
+            "painel_estado_ciclo": getattr(
+                d,
+                "painel_estado_ciclo",
+                PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value,
+            ),
         }
 
     def _para_entity(self, row: dict[str, Any]) -> Diagnostico:
@@ -491,6 +527,14 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         expl_raw = row.get("explicacao_score_llm")
         explicacao_score_llm = expl_raw if isinstance(expl_raw, dict) else None
 
+        raw_pec = row.get("painel_estado_ciclo")
+        if isinstance(raw_pec, str) and raw_pec.strip():
+            pec = raw_pec.strip()
+        elif str(row.get("status")) == StatusDiagnostico.FINALIZADO.value:
+            pec = PainelEstadoCicloDiagnostico.REALIZADO.value
+        else:
+            pec = PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value
+
         return Diagnostico(
             id=UUID(row["id"]),
             tenant_id=UUID(row["tenant_id"]),
@@ -527,8 +571,7 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             versao_plano=int(row.get("versao_plano") or 1),
             explicacao_score_llm=explicacao_score_llm,
             numero_interno_grupo=(
-                int(raw_nim)
-                if (raw_nim := row.get("numero_interno_grupo")) is not None
-                else None
+                int(raw_nim) if (raw_nim := row.get("numero_interno_grupo")) is not None else None
             ),
+            painel_estado_ciclo=pec,
         )

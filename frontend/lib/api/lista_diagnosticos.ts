@@ -19,6 +19,10 @@ export type DiagnosticoResumoApi = {
   criado_em: string;
   finalizado_em: string | null;
   relatorio_pdf_url: string | null;
+  /** Lock otimista para PATCH de mutações do painel (If-Match). */
+  versao_otimista?: number | null;
+  /** Estado operacional persistido (`painel_estado_ciclo`). */
+  painel_estado_ciclo?: string | null;
   /** Sequencial interno por CNPJ (ou por e-mail do respondente se CNPJ vazio). */
   numero_interno_grupo?: number | null;
 };
@@ -57,7 +61,7 @@ export async function fetchDiagnosticosResumoTodasPaginasPorEmpresa(
     }
   }
   throw new Error(
-    `Esta empresa ultrapassa ${MAX_PAGES * PAGE} diagnósticos neste tenant no painel. Contacte suporte para relatório completo.`,
+    `Esta empresa ultrapassa ${MAX_PAGES * PAGE} diagnósticos no painel. Contate o suporte para relatório completo.`,
   );
 }
 

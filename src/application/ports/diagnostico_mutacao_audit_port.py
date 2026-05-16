@@ -23,6 +23,7 @@ class TipoMutacaoDiagnostico(StrEnum):
     M12_LIKERT = "m12_likert"
     QUADRO_IMPLANTACAO = "quadro_implantacao"
     RELATORIO_PDF = "relatorio_pdf"
+    PAINEL_ESTADO_CICLO = "painel_estado_ciclo"
 
 
 class DiagnosticoMutacaoAuditPort(ABC):

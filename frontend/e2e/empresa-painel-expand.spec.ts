@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+import { painelInterceptarUrlApiDiagnosticos } from "./helpers/painel_api_diagnosticos_url";
 
 /** Smoke handoff P3 — grelha empresa + expandir (API mockada; sem backend real). */
 const DIAG_ID = "22222222-2222-4222-a222-222222222222";
@@ -50,6 +51,8 @@ const listaItem = {
   criado_em: "2026-05-11T10:00:00Z",
   finalizado_em: "2026-05-11T10:30:00Z",
   relatorio_pdf_url: null,
+  versao_otimista: 1,
+  painel_estado_ciclo: "realizado",
 };
 
 type InstallMocksOpts = {
@@ -101,6 +104,7 @@ async function installPainelEmpresaApiMocks(
     tokenParaUpstream: "e2e-empresa-token",
     nome: "Consultor QA",
     perfil_conta: opts.perfilConta ?? "gratuito",
+    limparLocalStoragePainelAntesDeCadaDocumento: true,
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {
@@ -115,7 +119,7 @@ async function installPainelEmpresaApiMocks(
     });
   });
 
-  await page.route("**/diagnosticos/**", async (route) => {
+  await page.route(painelInterceptarUrlApiDiagnosticos, async (route) => {
     const method = route.request().method();
     const pathname = new URL(route.request().url()).pathname.replace(/\/$/, "");
     // Não interceptar UI `/dashboard/diagnosticos/...` — glob `diagnosticos` apanha também o fetch RSC do Next.
@@ -191,11 +195,11 @@ test.describe("Painel empresa — expandir linha", () => {
     await page.getByRole("button", { name: /Expandir/i }).click();
 
     await expect(
-      page.getByRole("heading", { name: /Ranking explícito de gaps — este diagnóstico/i }),
+      page.getByRole("heading", { name: /Ranking explícito de gaps \(M05\)/i }),
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("atalho LGPD deste diagnóstico abre ficha com âncora (mock)", async ({ page }) => {
+  test("atalho LGPD no menu Ações abre ficha com âncora (mock)", async ({ page }) => {
     await installPainelEmpresaApiMocks(page);
     await loginPainelE2E(page);
 
@@ -204,15 +208,17 @@ test.describe("Painel empresa — expandir linha", () => {
 
     await page.getByRole("button", { name: /Expandir/i }).click();
     await expect(
-      page.getByRole("heading", { name: /Ranking explícito de gaps — este diagnóstico/i }),
+      page.getByRole("heading", { name: /Ranking explícito de gaps \(M05\)/i }),
     ).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("link", { name: /LGPD deste diagnóstico/i }).click();
+    const primeiraLinhaDetails = page.locator('ul[aria-label="Diagnósticos desta empresa no tenant"] li').first().locator("details");
+    await primeiraLinhaDetails.locator("summary").click();
+    await primeiraLinhaDetails.locator("[data-acao-links]").getByRole("link", { name: "LGPD" }).click();
 
     await expect(page).toHaveURL(new RegExp(`/dashboard/diagnosticos/${DIAG_ID}`));
     const cardLgpd = page.locator("#diag-privacidade-lgpd");
     await expect(cardLgpd).toBeVisible({ timeout: 15_000 });
-    await expect(cardLgpd.getByText(/Privacidade LGPD \(este diagnóstico\)/i)).toBeVisible();
+    await expect(cardLgpd.locator('[data-slot="card-title"]').first()).toContainText("Privacidade LGPD");
   });
 
   test("expandir mostra explicação score LLM e histórico (perfil avançado)", async ({ page }) => {

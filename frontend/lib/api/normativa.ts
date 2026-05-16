@@ -16,7 +16,7 @@ export async function postValidarAncora(texto: string): Promise<ValidarAncoraRes
     body: JSON.stringify({ texto }),
   });
   if (!res.ok) {
-    throw new Error(`Erro na API: ${res.status}`);
+    throw new Error(`Não foi possível validar a referência agora (HTTP ${res.status}).`);
   }
   return res.json() as Promise<ValidarAncoraResponse>;
 }

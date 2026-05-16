@@ -49,13 +49,11 @@ export function WizardStepQuestionario({
         {normativaWizardPainelAtivo() && (
           <div data-testid="wizard-p8-normativa" className="rounded-lg border bg-muted/10 p-3 space-y-2">
             <p className="text-sm font-semibold text-foreground">
-              P8 — Protótipo: checagem leve de redação normativa (não é Lexiq / RAG completo)
+              Checagem rápida de referência normativa
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Ferramenta didática apenas: heurísticas simples sobre citações (ex.: LC 214/2025, EC 132/2023). Não gera
-              parecer jurídico, não substitui análise profissional e não garante suficiência perante auditorias formais
-              (LC 214/2025 — boa fé informacional ao contribuinte). Endpoint{" "}
-              <span className="font-mono">POST /normativa/validar-ancora</span> sem login.
+              Use para conferir se uma resposta menciona referências reconhecíveis, como LC 214/2025 ou EC 132/2023.
+              É um apoio de redação e não substitui análise profissional.
             </p>
             <textarea
               value={normaTexto}

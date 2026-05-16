@@ -30,7 +30,7 @@ function novoIdempotencyKey(): string {
 async function mensagemErroHttp(res: Response): Promise<string> {
   const errorData: unknown = await res.json().catch(() => ({}));
   if (!errorData || typeof errorData !== "object") {
-    return `Erro na API: ${res.status}`;
+    return `Não foi possível consultar o CNPJ agora (HTTP ${res.status}).`;
   }
   const detail = (errorData as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;
@@ -40,7 +40,7 @@ async function mensagemErroHttp(res: Response): Promise<string> {
       .join("; ");
   }
   if (detail !== undefined) return JSON.stringify(detail);
-  return `Erro na API: ${res.status}`;
+  return `Não foi possível consultar o CNPJ agora (HTTP ${res.status}).`;
 }
 
 /** Rótulos amigáveis para `ConsultarCnpjResponse.fonte`. */
@@ -58,7 +58,7 @@ export async function postConsultarCnpjAutenticado(params: {
   aplicarNoDiagnosticoId?: string | null;
 }): Promise<ConsultarCnpjResponseApi> {
   if (!temSessaoPainelParaApiCliente()) {
-    throw new Error("Sessão necessária para consultar CNPJ na API (login na plataforma).");
+    throw new Error("Entre na plataforma para buscar dados públicos pelo CNPJ.");
   }
 
   const base = getApiUrlForFetch().replace(/\/$/, "");

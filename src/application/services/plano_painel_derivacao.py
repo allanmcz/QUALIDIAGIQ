@@ -11,10 +11,16 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_OID, UUID, uuid4, uuid5
 
 from src.application.services.consultoria_service import ConsultoriaService
 from src.domain.entities.diagnostico import Diagnostico
+from src.domain.services.calculador_plano_acao import (
+    computar_criticidade,
+    criticidade_rotulo_pt_para_enum,
+    fase_pdca_default_para_dimensao,
+    inferir_horizonte_de_prazo_texto,
+)
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.score import ScoreCompleto
 
@@ -53,6 +59,13 @@ class LinhaPlanoAcaoParaPersistir:
     base_legal: str | None
     origem_motor: str
     prioridade_motor: int
+    # Sprint 1 — motor PDCA + criticidade codificada (migração 0049).
+    fase_pdca: str = "DO"
+    horizonte_planejado: str = "CURTO_PRAZO"
+    criticidade_codigo: str = "MEDIA"
+    dimensao_origem: str | None = None
+    peso_motor: float = 5.0
+    perguntas_origem_ids: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,11 +121,26 @@ def derivar_plano_painel_materializado(
     checklist_http: list[dict[str, Any]] = []
     ordem = 0
 
+    def _pergunta_sintetica(o: int) -> UUID:
+        return uuid5(NAMESPACE_OID, f"plano-pergunta-sintetica-{o}")
+
     for fi, frente in enumerate(frentes):
         origem = _origem_motor_por_nome_frente(frente.nome)
         acoes_http: list[dict[str, Any]] = []
         for aj, acao in enumerate(frente.acoes):
             aid = uuid4()
+            dim_v = acao.dimensao_gap.value if acao.dimensao_gap is not None else None
+            if dim_v is not None and acao.dimensao_gap is not None:
+                sn = score_completo.score_por_dimensao.get(acao.dimensao_gap)
+                ratio = (sn.valor / 100.0) if sn is not None else 0.5
+                crit_e = computar_criticidade(8.0, ratio, dim_v)
+                peso_m = float(sn.valor) if sn is not None else 5.0
+            else:
+                crit_e = criticidade_rotulo_pt_para_enum(acao.criticidade)
+                peso_m = 5.0
+            horiz = inferir_horizonte_de_prazo_texto(acao.prazo)
+            fase = fase_pdca_default_para_dimensao(dim_v)
+            pid = _pergunta_sintetica(ordem)
             linhas_acao.append(
                 LinhaPlanoAcaoParaPersistir(
                     id=aid,
@@ -127,9 +155,16 @@ def derivar_plano_painel_materializado(
                     base_legal=acao.base_legal,
                     origem_motor=origem,
                     prioridade_motor=acao.prioridade,
+                    fase_pdca=fase.value,
+                    horizonte_planejado=horiz.value,
+                    criticidade_codigo=crit_e.value,
+                    dimensao_origem=dim_v,
+                    peso_motor=peso_m,
+                    perguntas_origem_ids=(pid,),
                 )
             )
             d_acao = asdict(acao)
+            d_acao.pop("dimensao_gap", None)
             d_acao["plano_acao_id"] = str(aid)
             d_acao["chave_quadro_legado"] = f"f{fi}_a{aj}"
             acoes_http.append(d_acao)

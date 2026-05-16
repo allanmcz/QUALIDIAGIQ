@@ -75,6 +75,7 @@ def record_llm_gateway_completion(
         "blocked_guardrail_input",
         "blocked_guardrail_output",
         "feature_disabled",
+        "circuit_open",
         "error",
     ],
 ) -> None:

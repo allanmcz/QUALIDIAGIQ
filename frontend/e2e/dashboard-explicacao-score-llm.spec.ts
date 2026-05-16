@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { installMockBffPainelLogin } from "./helpers/mock_bff_painel_auth";
+import { painelInterceptarUrlApiDiagnosticos } from "./helpers/painel_api_diagnosticos_url";
 
 const DIAG_ID = "33333333-3333-4333-a333-333333333333";
 const CNPJ14 = "12345678000195";
@@ -95,6 +96,7 @@ async function installMocks(page: Page, opts: InstallMocksOpts) {
     tokenParaUpstream: "e2e-explic-llm-token",
     nome: "Consultor QA",
     perfil_conta: opts.perfilConta ?? "avancado",
+    limparLocalStoragePainelAntesDeCadaDocumento: true,
   });
 
   await page.route("**/privacidade/solicitacoes**", async (route) => {
@@ -107,7 +109,7 @@ async function installMocks(page: Page, opts: InstallMocksOpts) {
 
   let explicacaoAtual = opts.explicacaoInicial;
 
-  await page.route("**/diagnosticos/**", async (route) => {
+  await page.route(painelInterceptarUrlApiDiagnosticos, async (route) => {
     const method = route.request().method();
     const pathname = new URL(route.request().url()).pathname.replace(/\/$/, "");
     // Não interceptar UI `/dashboard/diagnosticos/...` — o glob apanha também a navegação Next.

@@ -76,7 +76,9 @@ def _carregar_diagnostico(dsn: str, diagnostico_id: UUID) -> tuple[object, UUID]
         raise SystemExit(f"Diagnóstico não encontrado: {diagnostico_id}")
     diag = _row_dict_para_entity(dict(row))
     if diag.status != StatusDiagnostico.FINALIZADO:
-        raise SystemExit(f"Diagnóstico {diagnostico_id} não está finalizado (status={diag.status.value}).")
+        raise SystemExit(
+            f"Diagnóstico {diagnostico_id} não está finalizado (status={diag.status.value})."
+        )
     if diag.score_completo_snapshot is None:
         raise SystemExit("Sem score_completo na BD — não é possível renderizar o PDF.")
     return diag, diag.tenant_id
@@ -87,9 +89,7 @@ async def _regenerar(dsn: str, diagnostico_id: UUID) -> str:
     score = diag.score_completo_snapshot
     assert score is not None
 
-    expl = texto_explicacao_score_para_leitura_publica(
-        getattr(diag, "explicacao_score_llm", None)
-    )
+    expl = texto_explicacao_score_para_leitura_publica(getattr(diag, "explicacao_score_llm", None))
     pdf_gen = WeasyPrintPdfGenerator()
     pdf_bytes = await pdf_gen.gerar_pdf_diagnostico(
         diag,
@@ -118,7 +118,9 @@ async def _regenerar(dsn: str, diagnostico_id: UUID) -> str:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("Uso: python scripts/regenerar_pdf_diagnostico_dev.py <diagnostico_id>", file=sys.stderr)
+        print(
+            "Uso: python scripts/regenerar_pdf_diagnostico_dev.py <diagnostico_id>", file=sys.stderr
+        )
         return 1
     try:
         did = UUID(sys.argv[1].strip())

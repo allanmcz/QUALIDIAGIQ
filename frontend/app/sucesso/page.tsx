@@ -17,15 +17,15 @@ export default function SucessoPage() {
         </div>
 
         <div className="space-y-4">
-          <h1 className="text-3xl font-bold text-primary">Fase 1 concluída — diagnóstico gravado na API</h1>
+          <h1 className="text-3xl font-bold text-primary">Diagnóstico concluído com sucesso</h1>
           <p className="text-lg text-muted-foreground">
-            O score de maturidade tributária foi processado e persistido no tenant autenticado. Relatório PDF,
-            recomendações e trilha no painel seguem as regras do seu ambiente (e-mail quando configurado).
+            O score de maturidade tributária foi processado e ficará disponível no painel, junto com relatório PDF,
+            recomendações e próximos passos.
           </p>
         </div>
 
         <div className="space-y-4 border-t border-border pt-8 text-left">
-          <h2 className="text-center text-xl font-semibold text-foreground">Fase 2 — após cadastro e login</h2>
+          <h2 className="text-center text-xl font-semibold text-foreground">Acompanhe pelo painel</h2>
           <p className="text-center text-sm leading-relaxed text-muted-foreground">
             O acesso completo ao painel consultor (histórico, detalhe por diagnóstico, checklist M12, etc.)
             permanece ligado à sua conta na plataforma Tributiq. Se ainda não tiver cadastro, utilize o
@@ -35,7 +35,7 @@ export default function SucessoPage() {
             <Button asChild size="lg" className="w-full gap-2 sm:w-auto">
               <Link href="/dashboard/diagnosticos">
                 <LayoutDashboard className="h-4 w-4" />
-                Abrir painel (fase 2)
+                Abrir painel
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">

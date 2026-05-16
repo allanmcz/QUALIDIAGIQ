@@ -115,6 +115,22 @@ class DiagnosticoRepository(ABC):
         ...
 
     @abstractmethod
+    async def atualizar_painel_estado_ciclo_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        painel_estado_ciclo: str,
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        """
+        Atualiza apenas o estado operacional do painel (``painel_estado_ciclo``) com lock otimista.
+
+        Retorna:
+            Diagnóstico atualizado se o UPDATE afetou uma linha; None em conflito de versão.
+        """
+        ...
+
+    @abstractmethod
     async def atualizar_explicacao_score_llm(
         self,
         diagnostico_id: UUID,

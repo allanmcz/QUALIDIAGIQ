@@ -11,6 +11,7 @@ test.describe("Dashboard lista (mock API)", () => {
     await installMockBffPainelLogin(page, {
       tokenParaUpstream: "e2e-dashboard-token",
       nome: "Consultor QA",
+      limparLocalStoragePainelAntesDeCadaDocumento: true,
     });
 
     await installMockListaDiagnosticosGet(page, [

@@ -209,6 +209,8 @@ class AcaoChecklist:
     criticidade: str
     base_legal: str | None = None
     prioridade: int = 50
+    # Lacuna M07: dimensão de origem (``None`` nas frentes editoriais fixas).
+    dimensao_gap: Dimensao | None = None
 
 
 @dataclass
@@ -261,6 +263,7 @@ class ConsultoriaService:
                         crit,
                         tpl[3],
                         prioridade,
+                        dimensao_gap=dim,
                     )
                 )
         return FrenteTrabalho(

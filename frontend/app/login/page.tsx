@@ -9,6 +9,8 @@ import { mensagemErroHttp } from "@/lib/api/http_errors"
 import { setPainelSessionCookiePresent } from "@/lib/auth/session_cookie"
 import { destinoSeguroAposLogin } from "@/lib/auth/safe_redirect_after_login"
 import { Button } from "@/components/ui/button"
+import { EndorsedBadge } from "@/components/brand/EndorsedBadge"
+import { Logo } from "@/components/brand/Logo"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,7 +49,7 @@ function LoginPageContent() {
         throw new Error(mensagemErroHttp(res.status, raw))
       }
       if (!data.ok) {
-        throw new Error("Resposta de login inválida. Confira a versão do BFF.")
+        throw new Error("Não foi possível concluir o acesso agora. Tente novamente em instantes.")
       }
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
@@ -71,13 +73,17 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-slate-50">
-      <Card className="w-[400px]">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">QualiDiagIQ — conta na plataforma</CardTitle>
+    <div className="flex h-screen w-full items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-[400px]">
+        <CardHeader className="items-center text-center">
+          <div className="flex flex-col items-center gap-2">
+            <Logo size="xl" priority />
+            <EndorsedBadge />
+          </div>
+          <CardTitle className="text-2xl font-bold">Painel de diagnóstico tributário</CardTitle>
           <CardDescription>
-            Acesse o painel. Após cadastro no ecossistema Tributiq, o login desbloqueia gravar o diagnóstico na API e a
-            fase 2 (painel).
+            Acesse seus diagnósticos, acompanhe prioridades da Reforma do Consumo e transforme respostas em plano de
+            ação para a diretoria.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,8 +93,7 @@ function LoginPageContent() {
               role="status"
               aria-live="polite"
             >
-              A sua sessão no painel expirou ou o servidor passou a usar outra chave de assinatura (JWT).
-              Entre novamente com e-mail e senha.
+              Por segurança, sua sessão foi encerrada. Entre novamente com e-mail e senha para continuar.
             </div>
           )}
           <form onSubmit={handleLogin} className="space-y-4">
@@ -123,9 +128,8 @@ function LoginPageContent() {
               </Link>
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed border-t pt-4 mt-4">
-              MVP/desenvolvimento: sessão mantida no navegador (localStorage). Não é o modelo previsto
-              para Enterprise (cookie httpOnly — ver ADR-004). Informações exibidas seguem boa-fé
-              informacional (LC 214/2025); não substituem assessoria jurídica.
+              Inteligência normativa aplicada à maturidade fiscal da empresa. Conteúdo orientativo, baseado nas
+              informações declaradas; decisões formais devem ser validadas com sua assessoria especializada.
             </p>
           </form>
         </CardContent>

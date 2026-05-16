@@ -1,6 +1,6 @@
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 
-/** Diagnóstico mais antigo da PJ no tenant (primeiro ciclo — único com quadro editável). */
+/** Diagnóstico baseline da empresa no tenant (ciclo mais antigo — ancoragem técnica do quadro único por CNPJ). */
 export function idDiagnosticoMaisAntigoEmpresa(rows: DiagnosticoResumoApi[]): string | null {
   if (!rows.length) return null;
   const sorted = [...rows].sort((a, b) => {
@@ -12,7 +12,7 @@ export function idDiagnosticoMaisAntigoEmpresa(rows: DiagnosticoResumoApi[]): st
   return sorted[0]?.id ?? null;
 }
 
-/** Quadro de implantação: edição só no primeiro diagnóstico finalizado da empresa. */
+/** Quadro de implantação: um por empresa; edição só quando este id é o baseline canónico e está finalizado. */
 export function quadroImplantacaoEditavel(
   diagnosticoId: string,
   resumosEmpresa: DiagnosticoResumoApi[],

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Lista de ciclos (diagnósticos) da mesma PJ no tenant — M05/M12 na expansão.
+ * Lista de diagnósticos da mesma PJ no tenant — M05/M12 na expansão.
  * Partilhado entre `/dashboard/empresas/[cnpj]` e `/dashboard/diagnosticos/[id]`.
  */
 
@@ -14,22 +14,59 @@ import { ChevronDown, RefreshCw } from "lucide-react";
 import EmpresaDiagnosticoExpandedPanel from "@/components/painel/empresa/EmpresaDiagnosticoExpandedPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  fetchDiagnosticoDetalhe,
+  hrefRelatorioPdfAbsoluto,
+} from "@/lib/api/fetch_diagnostico_detalhe";
 import {
   DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX,
   fetchDiagnosticosResumo,
   fetchDiagnosticosResumoTodasPaginasPorEmpresa,
   type DiagnosticoResumoApi,
 } from "@/lib/api/lista_diagnosticos";
+import { patchPainelEstadoCicloDiagnostico } from "@/lib/api/patch_painel_estado_ciclo";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
+import {
+  PAINEL_ESTADO_CICLO_VALORES,
+  type PainelEstadoCicloApi,
+  rotuloPainelEstadoCiclo,
+} from "@/lib/painel/painel_estado_ciclo_labels";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 const PREFETCH_CONCORRENCIA = 4;
 
 const GRID_COLS_EMPRESA =
   "sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_minmax(11rem,13rem)]";
+
+/** Garante linha na grelha quando o GET por CNPJ omite o registo em vista (ex.: `empresa_cnpj` vazio na lista). */
+function resumoApiDesdeDetalheSemeado(d: DiagnosticoDetalheApi): DiagnosticoResumoApi {
+  const criado =
+    (d.criado_em && String(d.criado_em).trim()) || "1970-01-01T00:00:00.000Z";
+  const cnpj = (d.empresa_cnpj ?? "").replace(/\D/g, "").trim();
+  return {
+    id: d.id,
+    empresa_razao_social: d.empresa_razao_social,
+    ...(cnpj.length === 14 ? { empresa_cnpj: cnpj } : {}),
+    status: d.status,
+    plano: d.plano,
+    score_geral: d.score?.score_geral?.valor ?? null,
+    criado_em: criado,
+    finalizado_em: d.finalizado_em ?? null,
+    relatorio_pdf_url: d.relatorio_pdf_url,
+    versao_otimista: d.versao_otimista ?? null,
+    painel_estado_ciclo: d.painel_estado_ciclo ?? null,
+  };
+}
 
 export type EmpresaDiagnosticosListaPainelProps = {
   cnpjNormalizado: string;
@@ -43,6 +80,8 @@ export type EmpresaDiagnosticosListaPainelProps = {
   cabecalhoSlot?: ReactNode;
   /** Chamado sempre que o array de diagnósticos muda no tenant (lista carregada ou vazia). */
   onDiagnosticosAlterados?: (rows: DiagnosticoResumoApi[]) => void;
+  /** Após mutação de GET detalhe ou PATCH (ex.: sincronizar quadro global da página empresa). */
+  onListaDetalheAtualizado?: (d: DiagnosticoDetalheApi) => void;
 };
 
 export function EmpresaDiagnosticosListaPainel({
@@ -52,6 +91,7 @@ export function EmpresaDiagnosticosListaPainel({
   diagnosticoSemeado = null,
   cabecalhoSlot,
   onDiagnosticosAlterados,
+  onListaDetalheAtualizado,
 }: EmpresaDiagnosticosListaPainelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,6 +103,11 @@ export function EmpresaDiagnosticosListaPainel({
   );
   const [prefetchErro, setPrefetchErro] = useState<string | null>(null);
   const [linhaAbertaId, setLinhaAbertaId] = useState<string | null>(null);
+  /** Diálogo «Mudar estado» — só um por grelha (abre com o id do diagnóstico alvo). */
+  const [painelEstadoDialogDiagId, setPainelEstadoDialogDiagId] = useState<string | null>(null);
+  const [painelEstadoDraft, setPainelEstadoDraft] = useState<PainelEstadoCicloApi | null>(null);
+  const [painelEstadoSaving, setPainelEstadoSaving] = useState(false);
+  const [painelEstadoErr, setPainelEstadoErr] = useState<string | null>(null);
 
   /** Abre ciclo vindos da página empresa (`?expand=`) sem conflitar com fecho manual pela mesma deps. */
   const expandJaAplicadoChaveRef = useRef<string | null>(null);
@@ -159,7 +204,7 @@ export function EmpresaDiagnosticosListaPainel({
         setDetalhesPorId((prev) => ({ ...prev, ...next }));
       }
     })().catch(() => {
-      if (!cancel) setPrefetchErro("Pré-carga de scores para ranking global incompleta — expanda uma linha.");
+      if (!cancel) setPrefetchErro("Pré-carga de detalhes incompleta — expanda uma linha ou recarregue.");
     });
 
     return () => {
@@ -168,15 +213,30 @@ export function EmpresaDiagnosticosListaPainel({
   }, [diagnosticos]);
 
   useEffect(() => {
+    if (!painelEstadoDialogDiagId || !temSessaoPainelParaApiCliente()) return;
+    if (detalhesPorId[painelEstadoDialogDiagId]?.versao_otimista != null) return;
+    let cancel = false;
+    void fetchDiagnosticoDetalhe(painelEstadoDialogDiagId)
+      .then((d) => {
+        if (!cancel) setDetalhesPorId((p) => ({ ...p, [d.id]: d }));
+      })
+      .catch(() => {
+        if (!cancel) setPainelEstadoErr("Não foi possível preparar a alteração de estado agora.");
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [painelEstadoDialogDiagId, detalhesPorId]);
+
+  useEffect(() => {
     if (diagnosticos === null) return;
     onDiagnosticosAlterados?.(diagnosticos);
   }, [diagnosticos, onDiagnosticosAlterados]);
 
-  const detalhesListaAgregacao = useMemo(() => Object.values(detalhesPorId), [detalhesPorId]);
-
   const aoAtualizarDetalhe = useCallback((d: DiagnosticoDetalheApi) => {
     setDetalhesPorId((prev) => ({ ...prev, [d.id]: d }));
-  }, []);
+    onListaDetalheAtualizado?.(d);
+  }, [onListaDetalheAtualizado]);
 
   const aoRefazerDiagnostico = useCallback(
     (razaoSocial: string) => {
@@ -188,7 +248,62 @@ export function EmpresaDiagnosticosListaPainel({
     [router, cnpjNormalizado],
   );
 
-  const daEmpresa = diagnosticos ?? [];
+  const aplicarMudancaPainelEstado = useCallback(async () => {
+    if (!painelEstadoDialogDiagId || painelEstadoDraft == null) return;
+    const versaoPatch =
+      detalhesPorId[painelEstadoDialogDiagId]?.versao_otimista ??
+      diagnosticos?.find((row) => row.id === painelEstadoDialogDiagId)?.versao_otimista ??
+      null;
+    if (versaoPatch == null) {
+      setPainelEstadoErr(
+        "Versão otimista indisponível — aguarde a sincronização ou expanda a linha para carregar o detalhe.",
+      );
+      return;
+    }
+    setPainelEstadoSaving(true);
+    setPainelEstadoErr(null);
+    try {
+      const json = await patchPainelEstadoCicloDiagnostico({
+        diagnosticoId: painelEstadoDialogDiagId,
+        painel_estado_ciclo: painelEstadoDraft,
+        versao_esperada: versaoPatch,
+      });
+      setDiagnosticos((prev) =>
+        (prev ?? []).map((row) =>
+          row.id === painelEstadoDialogDiagId
+            ? {
+                ...row,
+                painel_estado_ciclo: json.painel_estado_ciclo ?? painelEstadoDraft,
+                versao_otimista: json.versao_otimista ?? row.versao_otimista,
+              }
+            : row,
+        ),
+      );
+      setDetalhesPorId((prev) => ({ ...prev, [json.id]: json }));
+      onListaDetalheAtualizado?.(json);
+      setPainelEstadoDialogDiagId(null);
+    } catch (e) {
+      setPainelEstadoErr(e instanceof Error ? e.message : "Falha ao gravar estado.");
+    } finally {
+      setPainelEstadoSaving(false);
+    }
+  }, [
+    painelEstadoDialogDiagId,
+    painelEstadoDraft,
+    detalhesPorId,
+    diagnosticos,
+    onListaDetalheAtualizado,
+  ]);
+
+  const linhasGrelha = useMemo(() => {
+    if (diagnosticos === null) return [];
+    const base = diagnosticos;
+    if (!diagnosticoSemeado) return base;
+    if (base.some((row) => row.id === diagnosticoSemeado.id)) return base;
+    /** Inclui o diagnóstico em vista (ex.: finalizado) quando a lista por CNPJ não o devolve. */
+    return [resumoApiDesdeDetalheSemeado(diagnosticoSemeado), ...base];
+  }, [diagnosticos, diagnosticoSemeado]);
+
   const semSessao = !temSessaoPainelParaApiCliente();
 
   return (
@@ -220,44 +335,32 @@ export function EmpresaDiagnosticosListaPainel({
         </p>
       )}
 
-      {!semSessao &&
-        !carregando &&
-        diagnosticos !== null &&
-        daEmpresa.length > 0 &&
-        Object.keys(detalhesPorId).length < daEmpresa.length &&
-        !prefetchErro && (
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            A consolidar ranking global… ({Object.keys(detalhesPorId).length}/{daEmpresa.length}{" "}
-            diagnósticos com detalhe carregado)
-          </p>
-        )}
-
       {!semSessao && carregando && (
         <p className="text-muted-foreground text-sm" aria-live="polite">
-          A carregar diagnósticos desta empresa…
+          Carregando diagnósticos desta empresa…
         </p>
       )}
 
-      {!semSessao && !erro && !carregando && diagnosticos !== null && daEmpresa.length === 0 && (
+      {!semSessao && !erro && !carregando && diagnosticos !== null && linhasGrelha.length === 0 && (
         <p className="text-muted-foreground text-sm max-w-2xl leading-relaxed">
-          Nenhum diagnóstico encontrado para este CNPJ neste tenant (ou os registos ainda não incluem{" "}
+          Nenhum diagnóstico encontrado para este CNPJ neste painel (ou os registros ainda não incluem{" "}
           <span className="font-mono tabular-nums">{cnpjNormalizado}</span>).
         </p>
       )}
 
-      {!semSessao && !carregando && daEmpresa.length > 0 && (
+      {!semSessao && !carregando && linhasGrelha.length > 0 && (
         <div className="rounded-xl border bg-card/40 overflow-hidden">
           <div
             className={`hidden sm:grid ${GRID_COLS_EMPRESA} sm:gap-3 sm:items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/30`}
           >
             <span>Empresa / ciclo</span>
             <span className="text-center">Score</span>
-            <span className="text-center">Estado</span>
+            <span className="text-center">Ciclo</span>
             <span className="text-center">Data</span>
             <span className="text-center">Ações</span>
           </div>
-          <ul className="divide-y" aria-label="Diagnósticos desta empresa no tenant">
-            {daEmpresa.map((diag) => {
+          <ul className="divide-y" aria-label="Diagnósticos desta empresa no painel">
+            {linhasGrelha.map((diag) => {
               const score = diag.score_geral;
               const pct = score != null ? Math.min(100, Math.max(0, score)) : null;
               const quando = new Date(diag.finalizado_em ?? diag.criado_em).toLocaleDateString("pt-BR", {
@@ -267,6 +370,10 @@ export function EmpresaDiagnosticosListaPainel({
               });
               const aberto = linhaAbertaId === diag.id;
               const detailHref = `/dashboard/diagnosticos/${diag.id}`;
+              const detalhePrefetch = detalhesPorId[diag.id];
+              const pdfHref = hrefRelatorioPdfAbsoluto(detalhePrefetch?.relatorio_pdf_url ?? diag.relatorio_pdf_url ?? null);
+              const cicloAtual =
+                diag.painel_estado_ciclo ?? detalhePrefetch?.painel_estado_ciclo ?? undefined;
 
               return (
                 <li key={diag.id}>
@@ -294,31 +401,82 @@ export function EmpresaDiagnosticosListaPainel({
                       <span className="text-xs text-muted-foreground sm:hidden">Score</span>
                       <span>{pct != null ? `${pct.toFixed(1)}` : "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-2 sm:flex sm:justify-center">
-                      <span className="text-xs text-muted-foreground sm:hidden">Estado</span>
-                      <Badge variant={diag.plano === "avancado" ? "default" : "secondary"}>
-                        {diag.status === "finalizado" ? "Finalizado" : diag.status}
+                    <div className="flex flex-col items-stretch gap-1 sm:flex sm:justify-center sm:items-center">
+                      <span className="text-xs text-muted-foreground sm:hidden">Ciclo</span>
+                      <Badge variant="outline" className="font-normal w-fit mx-auto sm:mx-0">
+                        {rotuloPainelEstadoCiclo(cicloAtual)}
                       </Badge>
+                      <span className="text-[10px] leading-tight text-muted-foreground text-center sm:text-center">
+                        Evidência: {diag.status === "finalizado" ? "Finalizado" : diag.status}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between gap-2 sm:block sm:text-center text-sm text-muted-foreground">
                       <span className="text-xs sm:hidden">Data</span>
                       <span>{quando}</span>
                     </div>
                     <div className="flex flex-col gap-1.5 w-full sm:items-end">
-                      <div className="flex flex-wrap gap-1.5 w-full justify-end">
-                        {diag.plano === "avancado" ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1.5 h-8 text-xs shrink-0"
-                            title="Novo ciclo no assistente (sem rascunho local)"
-                            onClick={() => aoRefazerDiagnostico(diag.empresa_razao_social)}
+                      <div className="flex flex-wrap gap-1.5 w-full justify-end items-center">
+                        <details className="relative shrink-0">
+                          <summary className="list-none cursor-pointer rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            Ações ▾
+                          </summary>
+                          <div
+                            data-acao-links
+                            className="absolute right-0 mt-1 z-30 min-w-[14rem] rounded-md border bg-popover py-1 text-sm shadow-md"
                           >
-                            <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                            Refazer diagnóstico
-                          </Button>
-                        ) : null}
+                            {pdfHref ? (
+                              <a
+                                href={pdfHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block px-3 py-2 hover:bg-muted/60"
+                              >
+                                Relatório PDF
+                              </a>
+                            ) : (
+                              <span className="block px-3 py-2 text-muted-foreground">PDF indisponível</span>
+                            )}
+                            <Link
+                              href={`${detailHref}#diag-retificacoes`}
+                              className="block px-3 py-2 hover:bg-muted/60"
+                            >
+                              Retificações
+                            </Link>
+                            <Link href={`${detailHref}#diag-privacidade-lgpd`} className="block px-3 py-2 hover:bg-muted/60">
+                              LGPD
+                            </Link>
+                            <Link
+                              href={`${detailHref}#diag-explicacao-score-llm`}
+                              className="block px-3 py-2 hover:bg-muted/60"
+                            >
+                              Explicação IA (score)
+                            </Link>
+                            <Link href={detailHref} className="block px-3 py-2 hover:bg-muted/60">
+                              Ficha completa
+                            </Link>
+                            {diag.plano === "avancado" ? (
+                              <button
+                                type="button"
+                                className="w-full text-left px-3 py-2 hover:bg-muted/60 flex items-center gap-2"
+                                onClick={() => aoRefazerDiagnostico(diag.empresa_razao_social)}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                Refazer diagnóstico
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-muted/60 border-t mt-1 pt-2"
+                              onClick={() => {
+                                setPainelEstadoErr(null);
+                                setPainelEstadoDraft((cicloAtual as PainelEstadoCicloApi) ?? "realizado");
+                                setPainelEstadoDialogDiagId(diag.id);
+                              }}
+                            >
+                              Mudar estado…
+                            </button>
+                          </div>
+                        </details>
                         <Button
                           type="button"
                           variant={aberto ? "secondary" : "outline"}
@@ -345,8 +503,6 @@ export function EmpresaDiagnosticosListaPainel({
                       <EmpresaDiagnosticoExpandedPanel
                         diagnosticoId={diag.id}
                         detalhePrecarregado={detalhesPorId[diag.id] ?? null}
-                        detalhesEmpresaParaAgregado={detalhesListaAgregacao}
-                        resumosEmpresa={daEmpresa}
                         onDetalheAtualizado={aoAtualizarDetalhe}
                       />
                     </div>
@@ -357,6 +513,61 @@ export function EmpresaDiagnosticosListaPainel({
           </ul>
         </div>
       )}
+      <Dialog
+        open={painelEstadoDialogDiagId !== null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setPainelEstadoDialogDiagId(null);
+            setPainelEstadoErr(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mudar estado do ciclo</DialogTitle>
+            <DialogDescription>
+              Classifica o acompanhamento na tabela (realizado / em andamento / descartado / finalizado). É uma
+              informação operacional do painel — não substitui as evidências já preservadas no diagnóstico finalizado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2" role="radiogroup" aria-label="Novo estado do ciclo administrativo">
+            {PAINEL_ESTADO_CICLO_VALORES.map((v) => (
+              <label
+                key={v}
+                className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-sm transition-colors ${
+                  painelEstadoDraft === v ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="painel-estado-ciclo-grid"
+                  className="mt-1"
+                  checked={painelEstadoDraft === v}
+                  onChange={() => setPainelEstadoDraft(v)}
+                />
+                <span>{rotuloPainelEstadoCiclo(v)}</span>
+              </label>
+            ))}
+          </div>
+          {painelEstadoErr ? (
+            <p className="text-sm text-destructive" role="alert">
+              {painelEstadoErr}
+            </p>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setPainelEstadoDialogDiagId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              disabled={painelEstadoSaving || painelEstadoDraft == null}
+              onClick={() => void aplicarMudancaPainelEstado()}
+            >
+              {painelEstadoSaving ? "Gravando…" : "Gravar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

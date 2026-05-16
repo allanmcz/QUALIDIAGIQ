@@ -29,7 +29,12 @@ from src.application.use_cases.realizar_diagnostico import (
     EntradaRespostaDiagnostico,
     RealizarDiagnostico,
 )
-from src.domain.entities.diagnostico import Diagnostico, EmpresaInfo, Respondente
+from src.domain.entities.diagnostico import (
+    Diagnostico,
+    EmpresaInfo,
+    PainelEstadoCicloDiagnostico,
+    Respondente,
+)
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.config.settings import get_settings
@@ -218,6 +223,14 @@ def _para_resumo(diagnostico: Diagnostico) -> DiagnosticoResumoSchema:
         finalizado_em=diagnostico.finalizado_em,
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
         numero_interno_grupo=nim if isinstance(nim, int) else None,
+        versao_otimista=int(getattr(diagnostico, "versao_otimista", 1) or 1),
+        painel_estado_ciclo=str(
+            getattr(
+                diagnostico,
+                "painel_estado_ciclo",
+                PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value,
+            )
+        ),
     )
 
 
@@ -271,7 +284,9 @@ async def _montar_diagnostico_response(
         locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,
-        explicacao_score_llm=_explicacao_score_llm_para_http(diagnostico, perfil_conta=perfil_conta),
+        explicacao_score_llm=_explicacao_score_llm_para_http(
+            diagnostico, perfil_conta=perfil_conta
+        ),
         recomendacao_ia=recomendacao_ia,
         checklist=checklist_data,
         matriz_impacto=matriz_data,
@@ -279,6 +294,13 @@ async def _montar_diagnostico_response(
         checklist_m12_autoconf=_checklist_m12_para_http(diagnostico),
         quadro_implantacao_anotacoes=_quadro_implantacao_para_http(diagnostico),
         aceite_termos_privacidade_em=_aceite_lgpd_para_http(diagnostico),
+        painel_estado_ciclo=str(
+            getattr(
+                diagnostico,
+                "painel_estado_ciclo",
+                PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value,
+            )
+        ),
         hash_evidencia=h_aud,
         versao_otimista=v_aud,
         versao_plano=versao_plano,

@@ -16,7 +16,7 @@ import {
 export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
   if (!temSessaoPainelParaApiCliente()) {
     throw new Error(
-      "Sessão necessária: faça login em /login antes de enviar o diagnóstico (Bearer JWT)."
+      "Entre na plataforma antes de enviar o diagnóstico para o painel."
     );
   }
 

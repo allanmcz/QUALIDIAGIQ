@@ -9,7 +9,10 @@ from uuid import uuid4
 import psycopg2
 import pytest
 
-from src.application.errors import EliminacaoDiagnosticoFinalizadoWormError, ErroPersistenciaLgpdError
+from src.application.errors import (
+    EliminacaoDiagnosticoFinalizadoWormError,
+    ErroPersistenciaLgpdError,
+)
 from src.application.ports.lgpd_titular_solicitacao_port import (
     CanalSolicitacaoTitular,
     StatusSolicitacaoTitular,

@@ -19,6 +19,7 @@ from src.application.services.plano_painel_derivacao import derivar_plano_painel
 from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
+    PainelEstadoCicloDiagnostico,
     PlanoDiagnostico,
     PorteEmpresa,
     RegimeTributario,
@@ -57,6 +58,7 @@ def _seed_diagnostico_demo() -> Diagnostico:
         score_geral=68.5,
         relatorio_pdf_url=None,
         numero_interno_grupo=1,
+        painel_estado_ciclo=PainelEstadoCicloDiagnostico.REALIZADO.value,
     )
 
 
@@ -131,6 +133,21 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         if row is None or row.versao_otimista != versao_esperada:
             return None
         row.definir_quadro_implantacao_anotacoes(quadro_implantacao_anotacoes)
+        row.versao_otimista += 1
+        return row
+
+    async def atualizar_painel_estado_ciclo_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        painel_estado_ciclo: str,
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        row = await self.buscar_por_id(diagnostico_id, tenant_id)
+        if row is None or row.versao_otimista != versao_esperada:
+            return None
+        estado = PainelEstadoCicloDiagnostico(painel_estado_ciclo)
+        row.definir_painel_estado_ciclo(estado)
         row.versao_otimista += 1
         return row
 

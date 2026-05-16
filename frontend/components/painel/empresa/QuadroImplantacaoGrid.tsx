@@ -20,6 +20,7 @@ import {
   getApiUrlForFetch,
   temSessaoPainelParaApiCliente,
 } from "@/lib/api/config";
+import { cn } from "@/lib/utils";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import {
   chavesQuadroIniciais,
@@ -37,9 +38,11 @@ type Props = {
   avisoSomenteLeitura?: string;
   onDataAtualizado?: (d: DiagnosticoDetalheApi) => void;
   id?: string;
+  /** Classes Tailwind opcionais no cartão raiz (ex.: margem na vista empresa). */
+  className?: string;
 };
 
-/** Quadro de implantação em grelha (painel empresa — expansão da linha). */
+/** Quadro de implantação em grelha — âmbito empresa (quadro único por CNPJ no tenant). */
 export function QuadroImplantacaoGrid({
   diagnosticoId,
   data,
@@ -47,6 +50,7 @@ export function QuadroImplantacaoGrid({
   avisoSomenteLeitura,
   onDataAtualizado,
   id = "empresa-quadro-implantacao",
+  className,
 }: Props) {
   const versaoOtimistaRef = useRef<number | null>(data.versao_otimista ?? null);
   const [localData, setLocalData] = useState(data);
@@ -97,7 +101,7 @@ export function QuadroImplantacaoGrid({
       if (!temSessaoPainelParaApiCliente() || localData.status !== "finalizado") {
         setQuadroMsgPorAcao((prev) => ({
           ...prev,
-          [qk]: "É necessário estar autenticado e o diagnóstico finalizado.",
+          [qk]: "É necessário sessão na plataforma e o baseline do quadro da empresa finalizado.",
         }));
         return false;
       }
@@ -177,13 +181,13 @@ export function QuadroImplantacaoGrid({
   const podeEditarLinha = editavel && localData.status === "finalizado";
 
   return (
-    <Card id={id} className="scroll-mt-24">
+    <Card id={id} className={cn("scroll-mt-24", className)}>
       <CardHeader>
-        <CardTitle className="text-base">Quadro de implantação</CardTitle>
+        <CardTitle className="text-base">Quadro de implantação da empresa</CardTitle>
         <p className="text-sm font-normal text-muted-foreground">
           {editavel
-            ? "Grelha de ações do plano — edição permitida neste primeiro diagnóstico da empresa (If-Match)."
-            : "Visualização em grelha — o quadro só pode ser alterado no primeiro diagnóstico desta empresa."}
+            ? "Quadro único do plano de implantação desta empresa — prazos meta e notas de acompanhamento."
+            : "Quadro único da empresa em visualização — edição disponível apenas no ciclo de referência."}
         </p>
         {!editavel && avisoSomenteLeitura ? (
           <p className="text-sm border rounded-md p-3 mt-2 bg-amber-500/10 text-amber-900 dark:text-amber-200" role="note">
@@ -315,7 +319,7 @@ export function QuadroImplantacaoGrid({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Prazo planejado (meta)</DialogTitle>
-            <DialogDescription>Data YYYY-MM-DD — gravar com If-Match.</DialogDescription>
+            <DialogDescription>Informe a data planejada para acompanhamento da implantação.</DialogDescription>
           </DialogHeader>
           <Input type="date" value={prazoModalDraft} onChange={(e) => setPrazoModalDraft(e.target.value)} />
           <DialogFooter>

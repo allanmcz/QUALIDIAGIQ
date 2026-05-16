@@ -13,12 +13,10 @@ export default function TermosPage() {
       <Link href="/" className="text-sm text-primary hover:underline">
         Voltar ao início
       </Link>
-      <h1 className="text-3xl font-bold tracking-tight">Termos de uso (MVP QDI)</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Termos de uso QualiDiagIQ</h1>
       <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
         <strong>Status:</strong> minuta <strong>aprovada</strong> (parecer jurídico de 5 mai. 2026 — Pereira e Rodrigues
-        Advogados) e <strong>aprovada para publicação</strong> pelo controlador. Manter o texto alinhado à operação real e
-        aos apontamentos do parecer; versão e vigência em produção seguem controle de mudanças interno. Dados pessoais
-        e encarregado (DPO):{" "}
+        Advogados) e <strong>aprovada para publicação</strong> pelo controlador. Dados pessoais e encarregado (DPO):{" "}
         <Link href="/privacidade#dpo" className="font-medium text-primary underline">
           Política de Privacidade
         </Link>
@@ -40,7 +38,7 @@ export default function TermosPage() {
         </li>
         <li>
           <strong>Dados declarados e outputs:</strong> o score e o relatório resultam exclusivamente das
-          informações fornecidas pelo utilizador ou pela sua organização; erros ou omissões nesses dados não
+          informações fornecidas pelo usuário ou pela sua organização; erros ou omissões nesses dados não
           imputam ao Provedor, sem prejuízo de eventual falha interna demonstrável do sistema.
         </li>
         <li>

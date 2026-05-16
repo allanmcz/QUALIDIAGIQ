@@ -48,7 +48,7 @@ function CadastroPageContent() {
         throw new Error(mensagemErroHttp(res.status, raw));
       }
       if (!data.ok) {
-        throw new Error("Resposta de cadastro inválida. Confira a versão do BFF.");
+        throw new Error("Não foi possível concluir o cadastro agora. Tente novamente em instantes.");
       }
       const perfil =
         data.perfil_conta === "avancado" || data.perfil_conta === "gratuito"
@@ -77,8 +77,8 @@ function CadastroPageContent() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Criar conta na plataforma</CardTitle>
           <CardDescription>
-            Nome, e-mail e senha — mesmo acesso ao painel de diagnósticos que o login. Senha com no mínimo 8
-            caracteres.
+            Crie seu acesso ao painel QualiDiagIQ para acompanhar diagnósticos, relatórios e planos de ação em um só
+            lugar. Use uma senha com no mínimo 8 caracteres.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -131,9 +131,8 @@ function CadastroPageContent() {
               </Link>
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed border-t pt-4">
-              Sessão do painel: JWT em cookie httpOnly (`qdi_painel_access`) via BFF; metadados de UX em
-              `localStorage` (sem token). Em produção o cadastro pode ser desligado na API
-              (`QDI_CADASTRO_CONSULTOR_B2B_HABILITADO=false`).
+              Ambiente protegido para registrar diagnósticos, organizar evidências e apoiar decisões sobre a Reforma
+              do Consumo. O acesso é pessoal e vinculado ao e-mail informado.
             </p>
           </form>
         </CardContent>

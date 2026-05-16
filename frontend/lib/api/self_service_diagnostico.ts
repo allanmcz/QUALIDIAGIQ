@@ -22,7 +22,7 @@ function novoIdempotencyKey(): string {
 async function mensagemErroHttp(res: Response): Promise<string> {
   const errorData: unknown = await res.json().catch(() => ({}));
   if (!errorData || typeof errorData !== "object") {
-    return `Erro na API: ${res.status}`;
+    return `Não foi possível concluir a solicitação agora (HTTP ${res.status}).`;
   }
   const detail = (errorData as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;
@@ -32,7 +32,7 @@ async function mensagemErroHttp(res: Response): Promise<string> {
       .join("; ");
   }
   if (detail !== undefined) return JSON.stringify(detail);
-  return `Erro na API: ${res.status}`;
+  return `Não foi possível concluir a solicitação agora (HTTP ${res.status}).`;
 }
 
 /** Dispara envio do código numérico por e-mail (Mailpit em dev). */
@@ -130,7 +130,7 @@ export async function getConclusaoSelfServiceVisualizacao(
   }
   const j: unknown = await res.json();
   if (!j || typeof j !== "object") {
-    throw new Error("Resposta da API em formato inesperado.");
+    throw new Error("Não foi possível carregar o resultado agora. Tente novamente em instantes.");
   }
   const o = j as Record<string, unknown>;
   const id = o["id"] != null ? String(o["id"]) : "";
@@ -180,7 +180,7 @@ export async function getConclusaoSelfServiceVisualizacao(
     typeof explRaw === "string" && explRaw.trim() ? explRaw.trim() : null;
 
   if (!id || !status || !empresa) {
-    throw new Error("Resposta da API em formato inesperado.");
+    throw new Error("Não foi possível carregar o resultado agora. Tente novamente em instantes.");
   }
   return {
     id,

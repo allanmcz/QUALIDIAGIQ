@@ -43,13 +43,12 @@ export function WizardStepIdentificacao({
             <>
               Com <strong className="font-medium text-foreground">sessão na plataforma</strong>, o{" "}
               <strong className="font-medium text-foreground">CNPJ é obrigatório</strong> (14 dígitos, DV válido)
-              para histórico por empresa no painel. Pode pré-preencher dados públicos antes de seguir.
+              para manter o histórico por empresa no painel. Você também pode preencher dados públicos automaticamente.
             </>
           ) : (
             <>
               Sem sessão, o CNPJ é <strong className="font-medium text-foreground">opcional</strong> neste passo; se
-              preencher, use 14 dígitos com DV válidos. O fluxo segue para confirmar por e-mail (OTP) e gravar no
-              ambiente self-service.
+              preencher, use 14 dígitos válidos. Ao final, o diagnóstico poderá ser confirmado por e-mail.
             </>
           )}
         </p>
@@ -74,8 +73,8 @@ export function WizardStepIdentificacao({
                 disabled={consultaCnpjLoading || !hasToken}
                 title={
                   !hasToken
-                    ? "Disponível com sessão iniciada na plataforma (Bearer JWT)."
-                    : "Consulta dados públicos (BrasilAPI; reserva só em falha de rede)."
+                    ? "Entre na plataforma para preencher dados públicos pelo CNPJ."
+                    : "Preenche dados públicos da empresa para reduzir digitação."
                 }
                 onClick={() => void onConsultarCnpjPublico()}
               >
@@ -89,7 +88,7 @@ export function WizardStepIdentificacao({
                     checked={forceRefreshConsultaCnpj}
                     onChange={(e) => setForceRefreshConsultaCnpj(e.target.checked)}
                   />
-                  <span>Ignorar cache nesta consulta — nova chamada às fontes públicas.</span>
+                  <span>Atualizar dados públicos nesta consulta.</span>
                 </label>
               ) : null}
             </div>

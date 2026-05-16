@@ -20,6 +20,9 @@ from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoEx
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
+from src.application.use_cases.atualizar_painel_estado_ciclo_diagnostico import (
+    AtualizarPainelEstadoCicloDiagnostico,
+)
 from src.application.use_cases.atualizar_quadro_implantacao import AtualizarQuadroImplantacao
 from src.application.use_cases.atualizar_status_solicitacao_titular_lgpd import (
     AtualizarStatusSolicitacaoTitularLgpd,
@@ -199,6 +202,17 @@ def get_atualizar_quadro_implantacao_use_case(
 ) -> AtualizarQuadroImplantacao:
     """PATCH quadro de implantação (comentários e prazos) com versão otimista."""
     return AtualizarQuadroImplantacao(repo=repo, mutacao_audit=mutacao_audit)
+
+
+def get_atualizar_painel_estado_ciclo_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    mutacao_audit: Annotated[
+        DiagnosticoMutacaoAuditPort,
+        Depends(get_diagnostico_mutacao_audit_port),
+    ],
+) -> AtualizarPainelEstadoCicloDiagnostico:
+    """PATCH estado operacional do ciclo administrativo."""
+    return AtualizarPainelEstadoCicloDiagnostico(repo=repo, mutacao_audit=mutacao_audit)
 
 
 def get_criar_subtarefa_plano_diagnostico_use_case(

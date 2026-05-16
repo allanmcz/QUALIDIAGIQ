@@ -22,6 +22,7 @@ import {
 } from "@/lib/api/config";
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import {
+  buildEmpresaDiagnosticosHref,
   buildWizardUrlNovaDiagnosticoEmpresa,
 } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { clearPendingDiagnosticoFromStorage } from "@/lib/wizard/pending_diagnostico";
@@ -104,7 +105,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
         if (!res.ok) {
           if (encerrarSessaoPainelSe401(res.status)) return;
           if (!cancel) {
-            setError(`API ${res.status}`);
+            setError("Não foi possível atualizar os dados deste diagnóstico agora.");
             setData(mockDiagnostico(id));
           }
           return;
@@ -116,7 +117,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
         }
       } catch {
         if (!cancel) {
-          setError("Falha de rede — exibindo dados de exemplo.");
+          setError("Conexão temporariamente indisponível. Exibindo uma prévia local para consulta.");
           setData(mockDiagnostico(id));
         }
       }
@@ -151,7 +152,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
         </div>
         <nav
           className="flex flex-wrap gap-2 mb-4"
-          aria-label="Atalhos para secções desta ficha"
+          aria-label="Atalhos para seções desta ficha"
         >
           <Button variant="outline" size="sm" asChild>
             <Link href="#diag-privacidade-lgpd">LGPD</Link>
@@ -176,7 +177,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             <h1 className="text-3xl font-bold">{data.empresa_razao_social}</h1>
             {error && (
               <p className="text-sm text-amber-600 mt-2">
-                {error} — dados podem ser mock locais.
+                {error}
               </p>
             )}
           </div>
@@ -229,9 +230,9 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       />
 
       {temCnpj14 ? (
-        <Card className="mb-10" id="painel-ciclos-mesma-empresa">
+        <Card className="mb-10" id="painel-diagnosticos-mesma-empresa">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Todos os ciclos desta empresa neste tenant</CardTitle>
+            <CardTitle className="text-lg">Diagnósticos desta empresa no painel</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
@@ -242,10 +243,24 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              Análise por dimensão (M05), matriz de impacto, quadro de implantação e autoconferência ABNT (M12).
-              O quadro editável aplica-se ao <strong className="font-medium text-foreground">primeiro</strong>{" "}
-              diagnóstico finalizado da empresa. Use <strong className="font-medium text-foreground">Expandir</strong>{" "}
-              na linha.
+              Análise por dimensão (M05), matriz de impacto e autoconferência ABNT (M12) são por diagnóstico — use{" "}
+              <strong className="font-medium text-foreground">Expandir</strong> na linha. O{" "}
+              <strong className="font-medium text-foreground">quadro de implantação</strong> é{" "}
+              <strong className="font-medium text-foreground">único por empresa</strong>: consulte e
+              edite-o na{" "}
+              {temCnpj14 ? (
+                <Link
+                  href={buildEmpresaDiagnosticosHref(cnpjDigits, data.empresa_razao_social, {
+                    hash: "empresa-quadro-implantacao-principal",
+                  })}
+                  className="text-primary font-medium underline"
+                >
+                  vista Empresa (CNPJ)
+                </Link>
+              ) : (
+                <span className="font-medium text-foreground">vista Empresa (CNPJ)</span>
+              )}
+              , não nesta ficha por ciclo.
             </p>
             <EmpresaDiagnosticosListaPainel
               cnpjNormalizado={cnpjDigits}

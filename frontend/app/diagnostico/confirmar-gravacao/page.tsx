@@ -97,7 +97,7 @@ export default function DiagnosticoConfirmarGravacaoPage() {
     const r = await getRascunhoDiagnosticoSelfServiceResumo(token);
     setResumo(r);
     setCodigoEnviadoMsg(
-      "Um código foi enviado ao e-mail do assistente ao gravar o rascunho no servidor. Pode reenviar abaixo se necessário.",
+      "Um código foi enviado ao e-mail informado. Você pode reenviar abaixo se necessário.",
     );
   }, []);
 
@@ -122,7 +122,7 @@ export default function DiagnosticoConfirmarGravacaoPage() {
             }
           } catch (e) {
             if (!cancelado) {
-              setInitErro(e instanceof Error ? e.message : "Falha ao migrar dados para o servidor.");
+              setInitErro(e instanceof Error ? e.message : "Não foi possível preparar seus dados para confirmação.");
             }
             return;
           }
@@ -189,7 +189,7 @@ export default function DiagnosticoConfirmarGravacaoPage() {
           : "";
       if (!parsed || !leitura) {
         throw new Error(
-          "Resposta da API sem token de visualização. Actualize a API ou contacte suporte.",
+          "Não foi possível abrir a visualização do resultado agora. Tente novamente em instantes ou acione o suporte.",
         );
       }
       clearWizardDraft();
@@ -244,18 +244,18 @@ export default function DiagnosticoConfirmarGravacaoPage() {
       </div>
 
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Rascunho gravado no servidor</h1>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Confirme seu e-mail para finalizar</h1>
         <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
-          As respostas do assistente estão na base de dados aguardando confirmação do e-mail. Introduza o código
+          Suas respostas foram recebidas e aguardam confirmação do e-mail. Introduza o código
           enviado para <strong className="text-foreground">{resumo.email_mascarado}</strong> para concluir a gravação
-          do diagnóstico na nuvem (tenant self-service).
+          do diagnóstico.
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Resumo</CardTitle>
-          <CardDescription>Dados persistidos na API (rascunho)</CardDescription>
+          <CardDescription>Diagnóstico aguardando confirmação</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-1">
@@ -319,10 +319,10 @@ export default function DiagnosticoConfirmarGravacaoPage() {
               role="status"
             >
               <strong className="font-medium text-foreground">Vincular ao painel após o login:</strong> é necessário um{" "}
-              <strong className="font-medium text-foreground">CNPJ válido (14 dígitos)</strong> no rascunho (ADR-013).
+              <strong className="font-medium text-foreground">CNPJ válido (14 dígitos)</strong> nas respostas.
               Sem CNPJ, use <strong className="font-medium text-foreground">«Revisar no assistente»</strong>, preencha o
               passo 1 e grave o rascunho outra vez antes de entrar na plataforma — ou conclua só com o código por e-mail
-              (OTP), sem vincular ao tenant do consultor neste momento.
+              (OTP), sem levar este resultado ao painel neste momento.
             </div>
           ) : null}
           <Button

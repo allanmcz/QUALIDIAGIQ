@@ -27,15 +27,14 @@ export function WizardCacheResumeOverlay({
           Diagnóstico em andamento neste navegador
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Há dados do assistente em cache local neste navegador (localStorage). O diagnóstico concluído fica na base de
-          dados após confirmação por e-mail. Deseja continuar de onde parou ou iniciar um novo diagnóstico do zero?
+          Há um diagnóstico em andamento neste navegador. O resultado final fica disponível após confirmação por
+          e-mail. Deseja continuar de onde parou ou iniciar um novo diagnóstico do zero?
         </p>
         <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-          {cacheResumePrompt.hasDraft ? <li>Rascunho do wizard (identificação, perfil e/ou questionário).</li> : null}
+          {cacheResumePrompt.hasDraft ? <li>Respostas já preenchidas no assistente.</li> : null}
           {cacheResumePrompt.hasPending ? (
             <li>
-              Rascunho legado no navegador ou fluxo de confirmação — abrir a página de confirmação para migrar ou
-              concluir.
+              Resultado aguardando confirmação por e-mail.
             </li>
           ) : null}
         </ul>
@@ -46,8 +45,7 @@ export function WizardCacheResumeOverlay({
           </p>
         ) : null}
         <p className="text-xs leading-snug text-muted-foreground">
-          LGPD: trata-se de cache local no seu dispositivo; não substitui o armazenamento seguro após autenticação na
-          plataforma.
+          LGPD: estes dados ficam apenas no seu dispositivo até você confirmar ou salvar o diagnóstico na plataforma.
         </p>
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={onReiniciar}>

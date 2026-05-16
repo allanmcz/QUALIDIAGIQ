@@ -65,10 +65,10 @@ export function RetificacaoDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
         payload_retificacao: {},
       });
       setMotivo("");
-      setMensagem("Retificação registada na cadeia (append-only).");
+      setMensagem("Retificação registrada com rastreabilidade.");
       await recarregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao registar retificação.");
+      setErro(e instanceof Error ? e.message : "Falha ao registrar retificação.");
     } finally {
       setGravando(false);
     }
@@ -106,19 +106,19 @@ export function RetificacaoDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
           />
           {!podeRegistar ? (
             <p className="text-xs text-amber-800">
-              Só é possível registar retificação quando o diagnóstico está <strong>finalizado</strong> com hash de
-              evidência.
+              Só é possível registrar retificação quando o diagnóstico está <strong>finalizado</strong> com evidência
+              preservada.
             </p>
           ) : null}
           <Button type="button" disabled={!podeRegistar || gravando} onClick={() => void registar()}>
-            {gravando ? "A gravar…" : "Registar retificação"}
+            {gravando ? "Gravando…" : "Registrar retificação"}
           </Button>
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold mb-2">Cadeia registada</h3>
+          <h3 className="text-sm font-semibold mb-2">Histórico registrado</h3>
           {carregando ? (
-            <p className="text-sm text-muted-foreground">A carregar…</p>
+            <p className="text-sm text-muted-foreground">Carregando…</p>
           ) : linhas.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma retificação neste diagnóstico.</p>
           ) : (

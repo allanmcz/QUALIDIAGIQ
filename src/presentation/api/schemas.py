@@ -25,6 +25,7 @@ from pydantic import (
 
 from src.domain.entities.diagnostico import (
     FaixaFaturamentoDeclarada,
+    PainelEstadoCicloDiagnostico,
     PorteEmpresa,
     RegimeTributario,
     SetorMacro,
@@ -406,6 +407,17 @@ class PatchQuadroImplantacaoRequest(BaseModel):
                     f"Chave inválida: {k!r}. Use UUID da ação materializada ou f{{índice}}_a{{índice}}."
                 ) from e
         return v
+
+
+class PatchPainelEstadoCicloRequest(BaseModel):
+    """Corpo do PATCH do estado operacional do ciclo no grid do painel — exige ``If-Match``."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    painel_estado_ciclo: PainelEstadoCicloDiagnostico = Field(
+        ...,
+        description="Ciclo administrativo: realizado, em_andamento, descartado, finalizado (encerramento).",
+    )
 
 
 class CriarSubtarefaPlanoDiagnosticoRequest(BaseModel):
@@ -964,6 +976,15 @@ class DiagnosticoResumoSchema(BaseModel):
         default=None,
         description="Número sequencial interno por grupo (CNPJ da empresa ou e-mail quando CNPJ vazio) no tenant.",
     )
+    versao_otimista: int = Field(
+        default=1,
+        ge=1,
+        description="Versão otimista atual (lock em PATCH de quadro, M12, PDF e estado operacional).",
+    )
+    painel_estado_ciclo: str = Field(
+        default=PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value,
+        description="Estado operacional do ciclo no painel (independente da evidência técnica WORM).",
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -1012,6 +1033,10 @@ class DiagnosticoResponse(BaseModel):
     )
     # LGPD — instante registrado pelo servidor no POST (coluna `aceite_termos_privacidade_em`)
     aceite_termos_privacidade_em: datetime | None = None
+    painel_estado_ciclo: str = Field(
+        default=PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value,
+        description="Estado operacional exibido ao consultor na grelha (coluna dedicada).",
+    )
     # Trilha de auditoria (persistência: hash_sha256, versao_otimista — LC 214/2025, ABNT NBR 17301:2026)
     hash_evidencia: str | None = None
     versao_otimista: int | None = None

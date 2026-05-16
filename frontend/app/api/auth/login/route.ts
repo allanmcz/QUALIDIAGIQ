@@ -20,20 +20,20 @@ type CorpoLogin = { email?: string; password?: string };
 export async function POST(request: Request): Promise<Response> {
   const base = resolveApiUpstreamBase();
   if (!base) {
-    return NextResponse.json(
-      {
-        detail:
-          "Login indisponível: defina API_PROXY_TARGET no Next (ex.: http://127.0.0.1:60000) e reinicie.",
-      },
-      { status: 503 },
-    );
+      return NextResponse.json(
+        {
+          detail:
+          "Login temporariamente indisponível. Tente novamente em instantes ou acione o suporte.",
+        },
+        { status: 503 },
+      );
   }
 
   let corpo: CorpoLogin;
   try {
     corpo = (await request.json()) as CorpoLogin;
   } catch {
-    return NextResponse.json({ detail: "JSON inválido" }, { status: 400 });
+    return NextResponse.json({ detail: "Dados de login inválidos." }, { status: 400 });
   }
 
   const upstream = await fetch(`${base}/auth/login`, {
@@ -56,12 +56,12 @@ export async function POST(request: Request): Promise<Response> {
   try {
     data = JSON.parse(raw) as { access_token?: string; nome?: string | null; perfil_conta?: string };
   } catch {
-    return NextResponse.json({ detail: "Resposta de login inválida (JSON)" }, { status: 502 });
+    return NextResponse.json({ detail: "Não foi possível concluir o login agora." }, { status: 502 });
   }
 
   const token = data.access_token;
   if (!token || typeof token !== "string") {
-    return NextResponse.json({ detail: "Resposta de login sem access_token" }, { status: 502 });
+    return NextResponse.json({ detail: "Não foi possível iniciar sua sessão agora." }, { status: 502 });
   }
 
   const exp = jwtExpUnixSeconds(token);

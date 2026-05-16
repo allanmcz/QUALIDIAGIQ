@@ -32,7 +32,7 @@ export default async function EmpresaDiagnosticosPage({
   return (
     <Suspense
       fallback={
-        <div className="container py-10 text-muted-foreground">A carregar empresa…</div>
+        <div className="container py-10 text-muted-foreground">Carregando empresa…</div>
       }
     >
       <EmpresaDiagnosticosClient cnpjNormalizado={cnpjNorm} razaoSocialHint={razaoSocialHint} />

@@ -108,7 +108,7 @@ function DiagnosticoConcluidoSelfServiceConteudo() {
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Diagnóstico concluído</h1>
         <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
-          O questionário foi associado ao e-mail confirmado e armazenado no ambiente self-service. O painel
+          O questionário foi associado ao e-mail confirmado. O painel
           completo (histórico, PDF, M12) continua ligado à sua conta na plataforma Tributiq, se desejar evoluir depois.
         </p>
       </div>
@@ -117,8 +117,7 @@ function DiagnosticoConcluidoSelfServiceConteudo() {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Resultado do diagnóstico</CardTitle>
           <CardDescription>
-            Score geral e notas por dimensão (mesmo critério do relatório e do motor M03 — LC 214/2025 em contexto de
-            maturidade organizacional). Dados obtidos do servidor (PostgreSQL).
+            Score geral e notas por dimensão, calculados com o mesmo critério do relatório executivo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
@@ -134,7 +133,7 @@ function DiagnosticoConcluidoSelfServiceConteudo() {
               </p>
             ) : (
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Se o score não aparecer, confira a versão da API — o JSON deve incluir score agregado persistido.
+                O score ainda não ficou disponível para esta visualização. Tente recarregar em instantes.
               </p>
             )}
           </div>

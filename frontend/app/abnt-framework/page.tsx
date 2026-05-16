@@ -71,18 +71,18 @@ export default function AbntFrameworkPage() {
           </li>
           <li>
             <strong>Do</strong>: coleta ponderada pelo manifesto público (<strong>M03</strong>,
-            endpoints <strong>/manifesto-pesos</strong> e <strong>/metodologia</strong> na API FastAPI — ou o painel{" "}
+            também disponível na área pública de{" "}
             <Link href="/metodologia" className="text-primary underline font-medium">
               Metodologia e pesos
             </Link>{" "}
-            no site).
+            ).
           </li>
           <li>
             <strong>Check</strong>: gera radar, heatmap e ranking (<strong>M05</strong>) + PDF executivo sintético (<strong>M04</strong>).
           </li>
           <li>
-            <strong>Act</strong>: backlog priorizado quando score está disponível (<strong>M07</strong>) multi-tenant sob RLS
-            PostgreSQL (<strong>M10</strong>).
+            <strong>Act</strong>: plano priorizado quando o score está disponível (<strong>M07</strong>), com
+            rastreabilidade por empresa no painel (<strong>M10</strong>).
           </li>
         </ul>
       </section>

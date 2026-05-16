@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   fetchDiagnosticoDetalhe,
-  hrefRelatorioPdfAbsoluto,
 } from "@/lib/api/fetch_diagnostico_detalhe";
 import {
   cabecalhosAuthPainelOpcional,
@@ -41,11 +39,9 @@ import {
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import {
   BAR_GAP_COLORS,
-  aggregateRankingGapsEmpresa,
   corHeat,
   radarRowsFromScore,
   rankingGapsFromScore,
-  type RankingGapRow,
 } from "@/lib/painel/diagnostico_scores";
 import {
   M12_NUM_ITENS,
@@ -54,29 +50,20 @@ import {
   normalizarM12DoApi,
   rotuloLikertM12,
 } from "@/lib/painel/m12_autoconf_utils";
-import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
-import { quadroImplantacaoEditavel } from "@/lib/painel/diagnostico_empresa_ordem";
+
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 import { MatrizImpactoDepartamentoCard } from "./MatrizImpactoDepartamentoCard";
-import { QuadroImplantacaoGrid } from "./QuadroImplantacaoGrid";
 
 type Props = {
   diagnosticoId: string;
-  /** Se já veio do prefetch (lista completa), evita GET duplicado ao expandir. */
   detalhePrecarregado: DiagnosticoDetalheApi | null;
-  /** Todos os detalhes com score — para bloco «global empresa». */
-  detalhesEmpresaParaAgregado: DiagnosticoDetalheApi[];
-  /** Resumos da PJ — define qual linha pode editar o quadro (primeiro diagnóstico). */
-  resumosEmpresa: DiagnosticoResumoApi[];
   onDetalheAtualizado?: (d: DiagnosticoDetalheApi) => void;
 };
 
 export default function EmpresaDiagnosticoExpandedPanel({
   diagnosticoId,
   detalhePrecarregado,
-  detalhesEmpresaParaAgregado,
-  resumosEmpresa,
   onDetalheAtualizado,
 }: Props) {
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(detalhePrecarregado);
@@ -139,10 +126,6 @@ export default function EmpresaDiagnosticoExpandedPanel({
 
   const radarData = useMemo(() => radarRowsFromScore(data?.score ?? null), [data?.score]);
   const rankingEsteDiag = useMemo(() => rankingGapsFromScore(data?.score ?? null), [data?.score]);
-
-  const rankingGlobalEmpresa = useMemo((): RankingGapRow[] => {
-    return aggregateRankingGapsEmpresa(detalhesEmpresaParaAgregado.map((d) => ({ score: d.score })));
-  }, [detalhesEmpresaParaAgregado]);
 
   const refetchDetalhe = useCallback(async () => {
     const base = getApiUrlForFetch().replace(/\/$/, "");
@@ -220,7 +203,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
   const gravarM12NaApi = useCallback(async () => {
     const payload = m12ValoresSeCompleto(m12Likert);
     if (!payload) {
-      setM12Msg("Assine os 10 controles (nível 1 a 5 em cada um) antes de gravar na API.");
+      setM12Msg("Assinale os 10 controles (nível 1 a 5 em cada um) antes de salvar a autoconferência.");
       return;
     }
     await salvarM12LikertCompleto(payload);
@@ -240,13 +223,10 @@ export default function EmpresaDiagnosticoExpandedPanel({
   const m12ProgressoAssinalados = m12Likert.filter((x) => x !== null).length;
   const m12CompletoParaApi = m12ValoresSeCompleto(m12Likert) !== null;
 
-  const pdfHref = hrefRelatorioPdfAbsoluto(data?.relatorio_pdf_url ?? null);
-  const fichaCompletaHref = `/dashboard/diagnosticos/${diagnosticoId}`;
-
   if (loading) {
     return (
       <div className="rounded-lg border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-        A carregar detalhes do diagnóstico…
+        Carregando detalhes do diagnóstico…
       </div>
     );
   }
@@ -259,80 +239,12 @@ export default function EmpresaDiagnosticoExpandedPanel({
     );
   }
 
-  const quadroEditavel = quadroImplantacaoEditavel(diagnosticoId, resumosEmpresa, data.status);
-
   return (
     <div className="rounded-xl border bg-card/50 p-4 sm:p-6 space-y-8 mt-4 motion-reduce:transition-none">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {pdfHref ? (
-            <Button variant="default" size="sm" asChild>
-              <a href={pdfHref} target="_blank" rel="noopener noreferrer">
-                Relatório PDF (este diagnóstico)
-              </a>
-            </Button>
-          ) : (
-            <Badge variant="secondary">PDF ainda não disponível</Badge>
-          )}
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`${fichaCompletaHref}#diag-retificacoes`}>Retificações (este diagnóstico)</Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`${fichaCompletaHref}#diag-privacidade-lgpd`}>LGPD deste diagnóstico</Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`${fichaCompletaHref}#diag-explicacao-score-llm`}>
-              Explicação IA (este diagnóstico)
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={fichaCompletaHref}>Ficha completa do diagnóstico</Link>
-          </Button>
-        </div>
-      </div>
-
-      {rankingGlobalEmpresa.length > 0 && (
-        <section
-          aria-labelledby="empresa-ranking-global-heading"
-          className="rounded-xl border bg-muted/15 px-4 py-5 sm:px-6"
-        >
-          <h3 id="empresa-ranking-global-heading" className="text-base font-semibold tracking-tight mb-2">
-            Ranking de gaps — visão global da empresa (média dos diagnósticos deste CNPJ)
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Ordem: menor média de score por dimensão primeiro — agrega todos os diagnósticos carregados para esta PJ no
-            tenant.
-          </p>
-          <ol className="list-decimal list-inside space-y-1.5 text-sm">
-            {rankingGlobalEmpresa.map((row, idx) => (
-              <li key={row.dimensao}>
-                <span className="capitalize font-medium">{row.dimensao}</span>
-                <span className="text-muted-foreground"> — média </span>
-                <span className="tabular-nums font-semibold">{row.valor.toFixed(1)}</span>
-                <span className="text-muted-foreground"> / 100</span>
-                {idx === 0 ? <span className="sr-only"> (prioridade média máxima)</span> : null}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
       <MatrizImpactoDepartamentoCard
         matriz={data.matriz_impacto}
         id="empresa-matriz-impacto"
         className="scroll-mt-24"
-      />
-
-      <QuadroImplantacaoGrid
-        diagnosticoId={diagnosticoId}
-        data={data}
-        editavel={quadroEditavel}
-        avisoSomenteLeitura={
-          !quadroEditavel && data.status === "finalizado"
-            ? "Este não é o primeiro diagnóstico desta empresa no tenant — o quadro de implantação fica imutável (consulta apenas)."
-            : undefined
-        }
-        onDataAtualizado={onDetalheAtualizado}
       />
 
       {rankingEsteDiag.length > 0 && (
@@ -342,7 +254,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
             className="rounded-xl border bg-card px-4 py-5 sm:px-6 shadow-sm"
           >
             <h3 id="diag-ranking-gaps-heading" className="text-base font-semibold tracking-tight mb-4">
-              Ranking explícito de gaps — este diagnóstico (M05)
+              Ranking explícito de gaps (M05)
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               Ordem: menor score por dimensão primeiro — mesmo critério da ficha completa.
@@ -417,7 +329,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Ranking de gaps — barras (este diagnóstico)</CardTitle>
+                <CardTitle className="text-base">Ranking de gaps — barras</CardTitle>
               </CardHeader>
               <CardContent className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -451,9 +363,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
               Escala Likert 1 (mínimo) a 5 (máximo) por controle — espelho do checklist do relatório PDF.{" "}
               <strong className="font-medium text-foreground">Alterar</strong> aplica o nível apenas neste controle.
               Depois de <strong className="font-medium text-foreground">10/10 assinalados</strong>, use{" "}
-              <strong className="font-medium text-foreground">Gravar autoconf na API</strong> (
-              <code className="text-xs">If-Match</code> / <code className="text-xs">versao_otimista</code>) — ABNT NBR
-              17301:2026.
+              <strong className="font-medium text-foreground">Salvar autoconferência</strong> — ABNT NBR 17301:2026.
             </p>
             {data.status === "finalizado" ? (
               <p
@@ -474,7 +384,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
                   disabled={m12Saving || data.status !== "finalizado" || !m12CompletoParaApi}
                   onClick={() => void gravarM12NaApi()}
                 >
-                  {m12Saving ? "Gravando…" : "Gravar autoconf na API"}
+                  {m12Saving ? "Gravando…" : "Salvar autoconferência"}
                 </Button>
               </div>
             ) : null}
@@ -534,7 +444,7 @@ export default function EmpresaDiagnosticoExpandedPanel({
           <DialogHeader>
             <DialogTitle>Controle M12 — escala Likert</DialogTitle>
             <DialogDescription>
-              Escolha 1–5; «Aplicar» atualiza só este controlo no ecrã. «Gravar autoconf na API» persiste os 10.
+              Escolha 1–5; «Aplicar» atualiza só este controle na tela. «Salvar autoconferência» grava os 10 controles.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2" role="radiogroup" aria-label="Escala Likert 1 a 5">

@@ -1,5 +1,5 @@
 """
-Smoke integrado — migrações 0043–0045 e leitura pública com narrativa LLM.
+Smoke integrado - migrações 0043-0045 e leitura pública com narrativa LLM.
 
 Requer Postgres local (`make dev` / `make migrate`).
 Variável: QDI_POSTGRES_TEST_URL (default :60322).
@@ -45,28 +45,22 @@ async def pg_conn():
 @pytest.mark.mvp_gate
 async def test_schema_explicacao_llm_0043_0044_0045(pg_conn) -> None:
     """Coluna JSONB + histórico append-only + ledger de quota."""
-    col = await pg_conn.fetchval(
-        """
+    col = await pg_conn.fetchval("""
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'diagnosticos'
           AND column_name = 'explicacao_score_llm'
-        """
-    )
+        """)
     assert col == 1
-    hist = await pg_conn.fetchval(
-        """
+    hist = await pg_conn.fetchval("""
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public'
           AND table_name = 'diagnostico_explicacao_score_llm_historico'
-        """
-    )
+        """)
     assert hist == 1
-    ledger = await pg_conn.fetchval(
-        """
+    ledger = await pg_conn.fetchval("""
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'llm_tenant_usage_ledger'
-        """
-    )
+        """)
     assert ledger == 1
 
 

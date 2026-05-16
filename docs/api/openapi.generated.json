@@ -445,6 +445,81 @@
         }
       }
     },
+    "/diagnosticos/{diagnostico_id}/painel-estado-ciclo": {
+      "patch": {
+        "tags": [
+          "Diagnósticos"
+        ],
+        "summary": "Atualizar estado operacional do ciclo (painel)",
+        "description": "Persiste ``painel_estado_ciclo`` para classificação no grid do tenant (realizado / em_andamento / descartado / finalizado). Header **If-Match** com ``versao_otimista`` atual — LC 214/2025 (rastreio operacional).",
+        "operationId": "atualizar_painel_estado_ciclo_diagnostico_diagnosticos__diagnostico_id__painel_estado_ciclo_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "diagnostico_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Diagnostico Id"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPainelEstadoCicloRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/diagnosticos/{diagnostico_id}/explicacao-score-llm": {
       "post": {
         "tags": [
@@ -3209,6 +3284,12 @@
             ],
             "title": "Aceite Termos Privacidade Em"
           },
+          "painel_estado_ciclo": {
+            "type": "string",
+            "title": "Painel Estado Ciclo",
+            "description": "Estado operacional exibido ao consultor na grelha (coluna dedicada).",
+            "default": "em_andamento"
+          },
           "hash_evidencia": {
             "anyOf": [
               {
@@ -3336,6 +3417,19 @@
             ],
             "title": "Numero Interno Grupo",
             "description": "Número sequencial interno por grupo (CNPJ da empresa ou e-mail quando CNPJ vazio) no tenant."
+          },
+          "versao_otimista": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao Otimista",
+            "description": "Versão otimista atual (lock em PATCH de quadro, M12, PDF e estado operacional).",
+            "default": 1
+          },
+          "painel_estado_ciclo": {
+            "type": "string",
+            "title": "Painel Estado Ciclo",
+            "description": "Estado operacional do ciclo no painel (independente da evidência técnica WORM).",
+            "default": "em_andamento"
           }
         },
         "type": "object",
@@ -4250,6 +4344,17 @@
         "title": "NormativaPesoPerguntaOverlaySchema",
         "description": "Transparência quando o peso efetivo substitui o do catálogo JSON (Postgres).\n\nTabela: ``qdi.normativa_pergunta_peso`` (migração 0042). LC 214/2025 art. 5º — previsibilidade."
       },
+      "PainelEstadoCicloDiagnostico": {
+        "type": "string",
+        "enum": [
+          "realizado",
+          "em_andamento",
+          "descartado",
+          "finalizado"
+        ],
+        "title": "PainelEstadoCicloDiagnostico",
+        "description": "Estado de acompanhamento no painel administrativo (separado do ``StatusDiagnostico`` técnico).\n\nO snapshot de evidência permanece imutável quando ``StatusDiagnostico.FINALIZADO``; este campo\napenas classifica o ciclo operacional percebido pelo consultor (planeamento, descarte, encerramento).\n\nBase normativa complementar: LC 214/2025 (previsibilidade processual); ABNT NBR 17301:2026 (gestão)."
+      },
       "PatchChecklistM12AutoconfRequest": {
         "properties": {
           "checklist_m12_autoconf": {
@@ -4272,6 +4377,21 @@
         ],
         "title": "PatchChecklistM12AutoconfRequest",
         "description": "Corpo do PATCH M12 - espelho dos 10 controles ABNT (Likert 1-5 por item).\n\nExige `If-Match` com `versao_otimista` atual (mesmo contrato do PATCH de relatório)."
+      },
+      "PatchPainelEstadoCicloRequest": {
+        "properties": {
+          "painel_estado_ciclo": {
+            "$ref": "#/components/schemas/PainelEstadoCicloDiagnostico",
+            "description": "Ciclo administrativo: realizado, em_andamento, descartado, finalizado (encerramento)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "painel_estado_ciclo"
+        ],
+        "title": "PatchPainelEstadoCicloRequest",
+        "description": "Corpo do PATCH do estado operacional do ciclo no grid do painel — exige ``If-Match``."
       },
       "PatchQuadroImplantacaoRequest": {
         "properties": {

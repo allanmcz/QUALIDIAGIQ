@@ -26,6 +26,7 @@ from src.domain.entities.diagnostico import (
     Diagnostico,
     EmpresaInfo,
     FaixaFaturamentoDeclarada,
+    PainelEstadoCicloDiagnostico,
     PlanoDiagnostico,
     PorteEmpresa,
     RegimeTributario,
@@ -76,6 +77,18 @@ def _explicacao_score_llm_de_row(row: dict[str, Any]) -> dict[str, Any] | None:
     """Lê JSONB ``explicacao_score_llm`` (última narrativa LLM do painel)."""
     raw = row.get("explicacao_score_llm")
     return cast("dict[str, Any]", raw) if isinstance(raw, dict) else None
+
+
+def _painel_estado_ciclo_de_row(row: dict[str, Any]) -> str:
+    """Fallback alinhado à migração 0048 para linhas antigas sem coluna hidratada no driver."""
+    raw = row.get("painel_estado_ciclo")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return (
+        PainelEstadoCicloDiagnostico.REALIZADO.value
+        if str(row.get("status") or "") == StatusDiagnostico.FINALIZADO.value
+        else PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value
+    )
 
 
 def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
@@ -157,10 +170,9 @@ def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
         versao_plano=int(row.get("versao_plano") or 1),
         explicacao_score_llm=_explicacao_score_llm_de_row(row),
         numero_interno_grupo=(
-            int(raw_nim)
-            if (raw_nim := row.get("numero_interno_grupo")) is not None
-            else None
+            int(raw_nim) if (raw_nim := row.get("numero_interno_grupo")) is not None else None
         ),
+        painel_estado_ciclo=_painel_estado_ciclo_de_row(row),
     )
 
 
@@ -209,6 +221,9 @@ def _entity_para_params(d: Diagnostico) -> dict[str, Any]:
         "aceite_termos_privacidade_em": d.aceite_termos_privacidade_em,
         "locale_relatorio": getattr(d, "locale_relatorio", "pt-BR"),
         "versao_plano": int(getattr(d, "versao_plano", 1) or 1),
+        "painel_estado_ciclo": getattr(
+            d, "painel_estado_ciclo", PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value
+        ),
     }
 
 
@@ -223,7 +238,7 @@ INSERT INTO diagnosticos (
     criado_em, finalizado_em,
     hash_sha256, score_completo, versao_otimista, checklist_m12_estado,
     quadro_implantacao_anotacoes,
-    aceite_termos_privacidade_em, locale_relatorio, versao_plano
+    aceite_termos_privacidade_em, locale_relatorio, versao_plano, painel_estado_ciclo
 ) VALUES (
     %(id)s, %(tenant_id)s,
     %(respondente_email)s, %(respondente_nome)s, %(respondente_cargo)s, %(respondente_telefone)s,
@@ -234,7 +249,8 @@ INSERT INTO diagnosticos (
     %(criado_em)s, %(finalizado_em)s,
     %(hash_sha256)s, %(score_completo)s, %(versao_otimista)s, %(checklist_m12_estado)s,
     %(quadro_implantacao_anotacoes)s,
-    %(aceite_termos_privacidade_em)s, %(locale_relatorio)s, %(versao_plano)s
+    %(aceite_termos_privacidade_em)s, %(locale_relatorio)s, %(versao_plano)s,
+    %(painel_estado_ciclo)s
 )
 ON CONFLICT (id) DO UPDATE SET
     tenant_id = EXCLUDED.tenant_id,
@@ -264,7 +280,8 @@ ON CONFLICT (id) DO UPDATE SET
     quadro_implantacao_anotacoes = EXCLUDED.quadro_implantacao_anotacoes,
     aceite_termos_privacidade_em = EXCLUDED.aceite_termos_privacidade_em,
     locale_relatorio = EXCLUDED.locale_relatorio,
-    versao_plano = EXCLUDED.versao_plano
+    versao_plano = EXCLUDED.versao_plano,
+    painel_estado_ciclo = EXCLUDED.painel_estado_ciclo
 """
 
 
@@ -492,6 +509,43 @@ def _patch_quadro_sync(
         conn.close()
 
 
+def _patch_painel_estado_ciclo_sync(
+    dsn: str,
+    diagnostico_id: UUID,
+    tenant_id: UUID,
+    painel_estado_ciclo: str,
+    versao_esperada: int,
+) -> Diagnostico | None:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE diagnosticos
+                SET painel_estado_ciclo = %s,
+                    versao_otimista = versao_otimista + 1
+                WHERE id = %s AND tenant_id = %s AND versao_otimista = %s
+                RETURNING *
+                """,
+                (
+                    painel_estado_ciclo,
+                    str(diagnostico_id),
+                    str(tenant_id),
+                    versao_esperada,
+                ),
+            )
+            row = cur.fetchone()
+        conn.commit()
+        if not row:
+            return None
+        return _row_dict_para_entity(cast("dict[str, Any]", dict(row)))
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def _patch_m12_sync(
     dsn: str,
     diagnostico_id: UUID,
@@ -694,6 +748,22 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
             diagnostico_id,
             tenant_id,
             quadro_implantacao_anotacoes,
+            versao_esperada,
+        )
+
+    async def atualizar_painel_estado_ciclo_com_versao(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        painel_estado_ciclo: str,
+        versao_esperada: int,
+    ) -> Diagnostico | None:
+        return await asyncio.to_thread(
+            _patch_painel_estado_ciclo_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
+            painel_estado_ciclo,
             versao_esperada,
         )
 

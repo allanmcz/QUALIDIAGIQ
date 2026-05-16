@@ -87,6 +87,7 @@ get_atualizar_checklist_m12_autoconf_use_case = (
     _deps_lgpd.get_atualizar_checklist_m12_autoconf_use_case
 )
 get_atualizar_quadro_implantacao_use_case = _deps_lgpd.get_atualizar_quadro_implantacao_use_case
+get_atualizar_painel_estado_ciclo_use_case = _deps_lgpd.get_atualizar_painel_estado_ciclo_use_case
 get_criar_subtarefa_plano_diagnostico_use_case = (
     _deps_lgpd.get_criar_subtarefa_plano_diagnostico_use_case
 )

@@ -94,7 +94,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
           ? `qdi-portabilidade-${diagnosticoId}.pdf`
           : "qdi-diagnostico-export-v1.json";
       downloadBlob(blob, nome);
-      setMensagem(`Pacote ${formato === "pacote_pdf" ? "PDF" : "JSON"} descarregado.`);
+      setMensagem(`Pacote ${formato === "pacote_pdf" ? "PDF" : "de dados"} baixado.`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha no export de portabilidade.");
     } finally {
@@ -122,7 +122,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
       <Card id="diag-privacidade-lgpd" className="mb-10 scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-lg">Privacidade LGPD</CardTitle>
-          <CardDescription>A carregar solicitações…</CardDescription>
+          <CardDescription>Carregando solicitações…</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -134,11 +134,11 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
         <CardHeader>
           <CardTitle className="text-lg">Privacidade LGPD</CardTitle>
           <CardDescription>
-            Nenhuma solicitação do titular ligada a este registo. Use o painel{" "}
+            Nenhuma solicitação do titular ligada a este registro. Use o painel{" "}
             <Link href="/dashboard/privacidade" className="text-primary underline">
               Privacidade LGPD
             </Link>{" "}
-            para registar ou filtrar pedidos (art. 18).
+            para registrar ou filtrar pedidos (art. 18).
           </CardDescription>
         </CardHeader>
       </Card>
@@ -150,11 +150,11 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
       <CardHeader>
         <CardTitle className="text-lg">Privacidade LGPD</CardTitle>
         <CardDescription>
-          Pedidos do titular vinculados a este registo.{" "}
-          <strong className="font-medium text-foreground">Portabilidade deferida</strong>: descarregar JSON ou PDF com
-          anexo JSON (LGPD art. 18, V).{" "}
-          <strong className="font-medium text-foreground">Anonimização deferida</strong>: executar troca técnica do
-          respondente (trilha auditável no servidor).
+          Pedidos do titular vinculados a este registro.{" "}
+          <strong className="font-medium text-foreground">Portabilidade deferida</strong>: baixar arquivo de dados ou
+          pacote PDF (LGPD art. 18, V).{" "}
+          <strong className="font-medium text-foreground">Anonimização deferida</strong>: aplicar proteção dos dados do
+          respondente com trilha auditável.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -196,7 +196,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
                         disabled={exportandoChave !== null}
                         onClick={() => void exportarPortabilidade(s.id, "json")}
                       >
-                        {exportandoChave === `${s.id}-json` ? "JSON…" : "Export JSON"}
+                        {exportandoChave === `${s.id}-json` ? "Dados…" : "Baixar dados"}
                       </Button>
                       <Button
                         type="button"
@@ -205,7 +205,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
                         disabled={exportandoChave !== null}
                         onClick={() => void exportarPortabilidade(s.id, "pacote_pdf")}
                       >
-                        {exportandoChave === `${s.id}-pacote_pdf` ? "PDF…" : "Export PDF"}
+                        {exportandoChave === `${s.id}-pacote_pdf` ? "PDF…" : "Baixar PDF"}
                       </Button>
                     </>
                   ) : s.tipo === "portabilidade" && s.status === "deferida" && !podeExecutarAnonimizacao ? (
@@ -225,7 +225,7 @@ export function PrivacidadeDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
                     </Button>
                   ) : s.tipo === "anonimizacao" && s.status === "deferida" && !podeExecutarAnonimizacao ? (
                     <p className="text-xs text-amber-700 max-w-xs">
-                      Anonimização só após o diagnóstico estar finalizado (evidência WORM).
+                      Anonimização disponível após o diagnóstico estar finalizado e com evidência preservada.
                     </p>
                   ) : null}
                   <Button type="button" size="sm" variant="outline" asChild>

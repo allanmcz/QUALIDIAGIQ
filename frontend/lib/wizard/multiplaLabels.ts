@@ -19,7 +19,7 @@ export function montarRotulosMultiplaEscolha(
   );
   const avisoRotulos =
     (!opcoes || opcoes.length === 0) && total > 0
-      ? `O catálogo não enviou rótulos para «${codigoPergunta}». Seleção possível por itens genéricos; se persistir, contacte o suporte.`
+      ? `Não encontramos rótulos específicos para «${codigoPergunta}». Seleção possível por itens genéricos; se persistir, contate o suporte.`
       : undefined;
   return { labels, avisoRotulos };
 }

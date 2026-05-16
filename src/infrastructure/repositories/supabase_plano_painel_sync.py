@@ -53,6 +53,9 @@ def materializar_plano_painel_supabase(
                 "base_legal": ln.base_legal,
                 "origem_motor": ln.origem_motor,
                 "prioridade_motor": ln.prioridade_motor,
+                "fase_pdca": ln.fase_pdca,
+                "horizonte_planejado": ln.horizonte_planejado,
+                "criticidade_codigo": ln.criticidade_codigo,
             }
         ).execute()
     for m in deriv.linhas_matriz:
@@ -158,6 +161,9 @@ def buscar_plano_painel_serializado_supabase(
                     "plano_acao_id": pid,
                     "chave_quadro_legado": f"f{int(r['frente_indice'])}_a{int(r['acao_indice'])}",
                     "subtarefas": st_list,
+                    "fase_pdca": r.get("fase_pdca"),
+                    "horizonte_planejado": r.get("horizonte_planejado"),
+                    "criticidade_codigo": r.get("criticidade_codigo"),
                 }
             )
         checklist.append({"nome": nome_f, "acoes": acoes_http})

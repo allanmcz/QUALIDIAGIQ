@@ -49,4 +49,7 @@
 \i /docker-entrypoint-initdb.d/migrations/0045_llm_tenant_usage_ledger.sql
 \i /docker-entrypoint-initdb.d/migrations/0046_ci_dashboard_perfil_avancado_smoke.sql
 \i /docker-entrypoint-initdb.d/migrations/0047_diagnosticos_numero_interno_grupo.sql
+\i /docker-entrypoint-initdb.d/migrations/0048_diagnosticos_painel_estado_ciclo.sql
+\i /docker-entrypoint-initdb.d/migrations/0049_diagnostico_plano_acao_pdca_horizonte.sql
+\i /docker-entrypoint-initdb.d/migrations/0050_diagnosticos_painel_estado_ciclo_default.sql
 \echo 'QualiDiagIQ: migrações concluídas.'

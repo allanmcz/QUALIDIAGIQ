@@ -69,7 +69,7 @@ function TabelaPesosMacroVigencia({
     <div className="space-y-2">
       <h3 className="text-lg font-semibold">{titulo}</h3>
       <p className="text-xs text-muted-foreground">
-        LC 214/2025 (previsibilidade) — linha normativa efetiva na data do pedido à API (UTC).
+        LC 214/2025 (previsibilidade) — critério normativo vigente na data da consulta.
       </p>
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-sm">
@@ -262,7 +262,7 @@ export default function MetodologiaPage() {
           </div>
           <TabelaPesosMacro titulo="Pesos por dimensão (detalhamento)" pesos={manifesto.pesos_macro_dimensao} />
           <TabelaPesosMacroVigencia
-            titulo="Vigência aplicada aos pesos macro (mesmo critério da API)"
+            titulo="Vigência aplicada aos pesos macro"
             normativa={manifesto.pesos_macro_dimensao_normativa}
           />
           <div className="space-y-3">

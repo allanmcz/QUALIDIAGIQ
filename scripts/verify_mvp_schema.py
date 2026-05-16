@@ -131,6 +131,18 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
     """)
     if plano_tbl != 1:
         erros.append("Tabela public.diagnostico_plano_acao ausente (migração 0027).")
+    else:
+        pdca = await conn.fetchval("""
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'diagnostico_plano_acao'
+              AND column_name = 'fase_pdca'
+        """)
+        if pdca != 1:
+            erros.append(
+                "Coluna public.diagnostico_plano_acao.fase_pdca ausente (migração 0049 Sprint 1)."
+            )
 
     rls = await conn.fetchval("""
         SELECT c.relrowsecurity
@@ -203,7 +215,7 @@ async def _verificar_nucleo(conn: asyncpg.Connection) -> list[str]:
 
 
 async def _verificar_explicacao_score_llm_schema(conn: asyncpg.Connection) -> list[str]:
-    """Migrações 0043–0045 — narrativa LLM do score + histórico + ledger de quota."""
+    """Migrações 0043-0045 — narrativa LLM do score + histórico + ledger de quota."""
     erros: list[str] = []
 
     expl_col = await conn.fetchval("""
@@ -259,9 +271,7 @@ async def _verificar_explicacao_score_llm_schema(conn: asyncpg.Connection) -> li
     if perfil_ci is None:
         erros.append("Admin ci-dashboard@qualidiagiq.test ausente (0005a / seed CI).")
     elif str(perfil_ci).strip().lower() != "avancado":
-        erros.append(
-            "Admin CI deve ter perfil_conta=avancado para smoke LLM (migração 0046)."
-        )
+        erros.append("Admin CI deve ter perfil_conta=avancado para smoke LLM (migração 0046).")
 
     return erros
 
@@ -434,7 +444,7 @@ def main() -> int:
 
     msg = (
         "Verificação MVP schema: OK (0012 + M12 + RLS + qdi_jwt_tenant_id + 0026 auditoria mutação "
-        "+ explicacao_score_llm 0043–0046)."
+        "+ explicacao_score_llm 0043-0046)."
     )
     if strict_cnae:
         msg += " Modo strict: CNAE (extensões + 1332 subclasses) + normativa score macro (0015)."

@@ -96,10 +96,10 @@ export function WizardForm() {
               <CardDescription className={cn(w.step === 3 && "text-xs md:text-sm leading-snug")}>
                 {w.step === 1 &&
                   (w.hasToken
-                    ? "Cadastro da empresa: com sessão na plataforma o CNPJ é obrigatório (histórico por PJ no tenant). Razão social é obrigatória. Cada diagnóstico gera um registro próprio (quadro por ID). A gravação é direta no tenant do JWT. LGPD: consentimento abaixo."
-                    : "Cadastro da empresa: sem sessão, CNPJ opcional neste passo (se informado, validamos DV). Razão social é obrigatória. Para gravar na nuvem sem conta: OTP no e-mail (self-service). Depois de entrar na plataforma, pode vincular rascunhos à conta — nessa vinculação o CNPJ deve estar no payload (ADR-013). Com sessão já iniciada, CNPJ obrigatório e gravação direta. LGPD: consentimento abaixo.")}
+                    ? "Cadastro da empresa: com acesso ao painel, o CNPJ é obrigatório para organizar o histórico por empresa. Cada diagnóstico fica registrado como um ciclo de acompanhamento, com consentimento LGPD abaixo."
+                    : "Cadastro da empresa: você pode começar sem conta e confirmar o diagnóstico por e-mail ao final. Se informar o CNPJ agora, será mais fácil levar o resultado para o painel depois. Consentimento LGPD abaixo.")}
                 {w.step === 2 &&
-                  "M01 — Motor adaptativo: porte × regime × setor × UF filtram perguntas (LC 214/2025 art. 5º — previsibilidade). Ao concluir sem sessão na plataforma, o assistente **grava um rascunho na API** e segue para **OTP no e-mail**; com sessão iniciada, a gravação do diagnóstico é direta no tenant do JWT."}
+                  "As perguntas são ajustadas conforme porte, regime, setor e UF para gerar um diagnóstico mais aderente à realidade da empresa. Ao concluir sem conta, você confirma por e-mail; com acesso ao painel, o resultado já fica organizado no histórico."}
                 {w.step === 3 &&
                   "Uma pergunta por tela — Seguir / Voltar. Sem conta na plataforma: «Gerar diagnóstico» salva e segue para confirmar o e-mail e gravar na nuvem; com sessão iniciada, «Finalizar Diagnóstico» envia direto."}
               </CardDescription>
@@ -198,8 +198,8 @@ export function WizardForm() {
                         ref={field.ref}
                       />
                       <span>
-                        Opcional: ao finalizar o diagnóstico, voltar às fontes públicas pelo CNPJ ignorando cache (TTL —
-                        momento típico antes da gravação imutável / WORM).
+                        Opcional: ao finalizar o diagnóstico, consultar novamente as fontes públicas do CNPJ para usar
+                        informações mais recentes.
                       </span>
                     </label>
                   )}

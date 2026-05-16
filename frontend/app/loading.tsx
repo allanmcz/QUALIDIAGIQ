@@ -8,7 +8,7 @@ export default function RootLoading() {
         className="h-10 w-10 animate-spin rounded-full border-2 border-slate-300 border-t-[#0D1B4B]"
         role="status"
       />
-      <span className="sr-only">A carregar…</span>
+      <span className="sr-only">Carregando…</span>
     </div>
   );
 }

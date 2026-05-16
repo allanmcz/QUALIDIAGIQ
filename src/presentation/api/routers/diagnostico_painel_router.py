@@ -31,6 +31,10 @@ from src.application.use_cases.atualizar_checklist_m12_autoconf import (
     AtualizarChecklistM12Autoconf,
     ComandoAtualizarChecklistM12Autoconf,
 )
+from src.application.use_cases.atualizar_painel_estado_ciclo_diagnostico import (
+    AtualizarPainelEstadoCicloDiagnostico,
+    ComandoAtualizarPainelEstadoCicloDiagnostico,
+)
 from src.application.use_cases.atualizar_quadro_implantacao import (
     AtualizarQuadroImplantacao,
     ComandoAtualizarQuadroImplantacao,
@@ -56,6 +60,7 @@ from src.infrastructure.llm.llm_quota_service import (
 from src.presentation.api.dependencies import (
     get_anexar_relatorio_otimista_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
+    get_atualizar_painel_estado_ciclo_use_case,
     get_atualizar_quadro_implantacao_use_case,
     get_atualizar_subtarefa_plano_diagnostico_use_case,
     get_criar_subtarefa_plano_diagnostico_use_case,
@@ -70,6 +75,7 @@ from src.presentation.api.schemas import (
     ExplicacaoScoreLlmHistoricoListaSchema,
     ExplicacaoScoreLlmPersistidaSchema,
     PatchChecklistM12AutoconfRequest,
+    PatchPainelEstadoCicloRequest,
     PatchQuadroImplantacaoRequest,
     PatchRelatorioPdfRequest,
     PatchSubtarefaPlanoDiagnosticoRequest,
@@ -172,6 +178,58 @@ async def atualizar_quadro_implantacao_anotacoes(
         tenant_id=tenant_id,
         diagnostico_id=diagnostico_id,
         quadro_implantacao_anotacoes=blob,
+        versao_esperada=versao,
+        actor_user_id=user_id,
+    )
+    try:
+        atualizado = await use_case.execute(comando)
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except ConflitoVersaoOtimistaError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail=str(e),
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    return await diagnostico_helpers._montar_diagnostico_response(
+        repo, atualizado, perfil_conta=perfil_conta
+    )
+
+
+@router.patch(
+    "/{diagnostico_id}/painel-estado-ciclo",
+    response_model=DiagnosticoResponse,
+    summary="Atualizar estado operacional do ciclo (painel)",
+    description=(
+        "Persiste ``painel_estado_ciclo`` para classificação no grid do tenant "
+        "(realizado / em_andamento / descartado / finalizado). "
+        "Header **If-Match** com ``versao_otimista`` atual — LC 214/2025 (rastreio operacional)."
+    ),
+)
+async def atualizar_painel_estado_ciclo_diagnostico(
+    diagnostico_id: UUID,
+    payload: PatchPainelEstadoCicloRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AtualizarPainelEstadoCicloDiagnostico,
+        Depends(get_atualizar_painel_estado_ciclo_use_case),
+    ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> DiagnosticoResponse:
+    """PATCH estado do ciclo administrativo — não altera evidência técnica WORM."""
+    user_id, tenant_id, perfil_conta = current
+    try:
+        versao = diagnostico_helpers._parse_if_match_versao(if_match)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    comando = ComandoAtualizarPainelEstadoCicloDiagnostico(
+        tenant_id=tenant_id,
+        diagnostico_id=diagnostico_id,
+        painel_estado_ciclo=payload.painel_estado_ciclo,
         versao_esperada=versao,
         actor_user_id=user_id,
     )

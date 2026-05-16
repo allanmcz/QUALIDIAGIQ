@@ -21,7 +21,7 @@ export default function PrivacidadePage() {
       <Link href="/wizard" className="text-sm text-primary hover:underline">
         Voltar ao diagnóstico
       </Link>
-      <h1 className="text-3xl font-bold tracking-tight">Política de privacidade (MVP QDI)</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Política de privacidade QualiDiagIQ</h1>
       <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground">
         <strong>Status:</strong> minuta <strong>aprovada</strong> (parecer jurídico de 5 mai. 2026) e{" "}
         <strong>aprovada para publicação</strong> pelo controlador. LGPD (Lei 13.709/2018).
@@ -31,7 +31,7 @@ export default function PrivacidadePage() {
             <strong>Versão {politicaMeta.versao}</strong> · vigência <strong>{politicaMeta.vigenciaIso}</strong>.
           </>
         ) : null}{" "}
-        Canal do encarregado (DPO) na seção abaixo{dpo ? "" : " — defina `NEXT_PUBLIC_LGPD_DPO_EMAIL` no deploy"}.
+        Canal do encarregado (DPO) na seção abaixo{dpo ? "." : " será informado nos canais oficiais do produto."}
       </p>
       <section
         id="dpo"
@@ -56,10 +56,9 @@ export default function PrivacidadePage() {
           </p>
         ) : (
           <p className="mt-2 text-muted-foreground">
-            O endereço público do encarregado será exibido aqui quando{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">NEXT_PUBLIC_LGPD_DPO_EMAIL</code> estiver
-            definido no ambiente do site (ex.: build de produção). Até lá, utilize o contato institucional do
-            controlador (Tributiq) indicado na página de suporte ou no contrato comercial.
+            O contato público do encarregado será apresentado nesta página e nos canais oficiais do produto. Enquanto
+            isso, utilize o contato institucional do controlador (Tributiq) indicado na página de suporte ou no contrato
+            comercial.
           </p>
         )}
       </section>
@@ -74,11 +73,6 @@ export default function PrivacidadePage() {
             Retenção — resumo publicado pelo controlador
           </h2>
           <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{retencaoResumo}</p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Texto injetado em build via{" "}
-            <code className="rounded bg-muted px-1">NEXT_PUBLIC_LGPD_RETENCAO_RESUMO</code> (decisão pós-workshop LGPD
-            / ADR-012). Ajuste no host quando a política de retenção for actualizada.
-          </p>
         </section>
       ) : null}
 
@@ -94,9 +88,7 @@ export default function PrivacidadePage() {
           O telefone opcional mantém-se associado ao registro do diagnóstico no mesmo período de retenção daquele
           registro. Pedidos dos titulares (acesso, correção, anonimização, eliminação nos limites legais) tramitam pelo
           canal do DPO; em caso de pedido fundamentado sobre este dado, o controlador registra a solicitação, avalia o
-          enquadramento com o WORM/auditoria e responde no prazo interno definido pela operação — alinhado ao runbook{" "}
-          <span className="font-mono text-xs">RUNBOOK_DIREITOS_TITULAR_RASCUNHO.md</span> e aos endpoints autenticados{" "}
-          <span className="font-mono text-xs">POST/GET/PATCH /privacidade/solicitacoes</span> na API.
+          enquadramento legal e responde no prazo interno definido pela operação.
         </p>
       </section>
 
@@ -112,7 +104,7 @@ export default function PrivacidadePage() {
           Para pedidos de confirmação, acesso, correção e demais direitos exercidos pelo canal do DPO, o
           controlador compromete-se com prazo de resposta de{" "}
           <strong>{LGPD_PRAZO_RESPOSTA_ART18_DIAS_UTEIS} dias úteis</strong>, em linha com o art. 19, II da Lei
-          13.709/2018, salvo fundamentação de extensão ou complexidade adicional registada na solicitação.
+          13.709/2018, salvo fundamentação de extensão ou complexidade adicional registrada na solicitação.
         </p>
       </section>
 
@@ -126,12 +118,12 @@ export default function PrivacidadePage() {
         </li>
         <li>
           <strong>Dados tratados:</strong> dados cadastrais da empresa e do respondente informados no
-          formulário; respostas ao questionário; métricas de uso técnico (logs), quando aplicável.
+          formulário; respostas ao questionário; métricas de uso e segurança, quando aplicável.
         </li>
         <li>
           <strong>Telefone do respondente (opcional):</strong> quando informado, utilizado para contato
           comercial na plataforma relacionado ao diagnóstico; mantido pelo mesmo período de retenção do registro do
-          diagnóstico no PostgreSQL (Supabase); exclusão e titularidade — ver{" "}
+          diagnóstico; exclusão e titularidade — ver{" "}
           <Link href="/privacidade#retencao-telefone" className="text-primary underline font-medium">
             retenção e titularidade (telefone)
           </Link>
@@ -140,7 +132,7 @@ export default function PrivacidadePage() {
         <li>
           <strong>Relatório PDF (WeasyPrint):</strong> na peça gerada para download, o bloco explícito de
           captação de lead exibe apenas <strong>e-mail</strong> e <strong>telefone</strong>; nome e cargo
-          permanecem no cadastro operacional/API quando informados, mas não são repetidos nesse bloco do PDF.
+          permanecem no cadastro operacional quando informados, mas não são repetidos nesse bloco do PDF.
         </li>
         <li>
           <strong>Base legal:</strong> execução de procedimentos preliminares a pedido do titular e
@@ -148,11 +140,11 @@ export default function PrivacidadePage() {
         </li>
         <li>
           <strong>Fluxos de gravação:</strong> o diagnóstico pode ser concluído sem conta na plataforma por
-          confirmação de e-mail self-service, ou gravado/vinculado em uma sessão com conta na plataforma. Em ambos os
+          confirmação de e-mail, ou gravado/vinculado em uma sessão com conta na plataforma. Em ambos os
           casos, os pedidos LGPD seguem pelo canal do DPO.
         </li>
         <li>
-          <strong>Retenção:</strong> diagnóstico finalizado e logs de auditoria multi-tenant por referência operacional
+          <strong>Retenção:</strong> diagnóstico finalizado e registros de auditoria por referência operacional
           de 5 anos; dados pessoais identificáveis até cancelamento + 6 meses, observados os limites legais, o RIPD e a
           política de anonimização quando o registro técnico precisar ser preservado.
         </li>
@@ -179,7 +171,7 @@ export default function PrivacidadePage() {
       <p className="text-sm text-muted-foreground pt-2">
         Condições gerais de uso:{" "}
         <Link href="/termos" className="text-primary underline font-medium">
-          Termos de uso (MVP)
+          Termos de uso
         </Link>
         .
       </p>

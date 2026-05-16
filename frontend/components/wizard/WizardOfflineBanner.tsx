@@ -35,9 +35,9 @@ export function WizardOfflineBanner() {
     >
       <WifiOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
       <p className="min-w-0 leading-snug">
-        Sem ligação à Internet. Podes continuar a ler o formulário, mas{" "}
-        <strong>consulta CNPJ</strong>, <strong>gravação na API</strong> e{" "}
-        <strong>envio de códigos</strong> só funcionam quando voltares a estar online.
+        Sem conexão com a Internet. Você pode continuar consultando o formulário, mas{" "}
+        <strong>consulta CNPJ</strong>, <strong>salvamento do diagnóstico</strong> e{" "}
+        <strong>envio de códigos</strong> só funcionam quando a conexão voltar.
       </p>
     </div>
   );
