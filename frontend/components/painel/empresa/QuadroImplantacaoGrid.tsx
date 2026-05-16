@@ -210,7 +210,6 @@ export function QuadroImplantacaoGrid({
               <th className="text-left py-2 px-2 font-semibold min-w-[200px]">Ação</th>
               <th className="text-left py-2 px-2 font-semibold">Responsável</th>
               <th className="text-left py-2 px-2 font-semibold">Criticidade</th>
-              <th className="text-left py-2 px-2 font-semibold">Prazo motor</th>
               <th className="text-left py-2 px-2 font-semibold">Prazo meta</th>
               <th className="text-left py-2 px-2 font-semibold min-w-[140px]">Comentários</th>
               {podeEditarLinha ? (
@@ -243,7 +242,6 @@ export function QuadroImplantacaoGrid({
                       {acao.criticidade}
                     </Badge>
                   </td>
-                  <td className="py-3 px-2 text-xs text-muted-foreground">{acao.prazo}</td>
                   <td className="py-3 px-2 text-xs tabular-nums">
                     {qv.prazo_meta.trim()
                       ? formatarMetaPrazoPtBr(qv.prazo_meta)
