@@ -211,6 +211,20 @@ class TestPostgresLgpdTitularSolicitacaoSync:
         assert len(out) == 1
         assert "AND status = %s" in cur.execute.call_args[0][0]
 
+    def test_listar_sync_serializa_uuid_como_str(self) -> None:
+        """psycopg2 não adapta uuid.UUID — evita ProgrammingError na listagem."""
+        tid = uuid4()
+        cur = MagicMock()
+        cur.fetchall.return_value = []
+        conn = _conn_com_cursor(cur)
+        with patch(
+            "src.infrastructure.adapters.postgres_lgpd_titular_solicitacao_adapter.psycopg2.connect",
+            return_value=conn,
+        ):
+            _listar_sync("postgresql://x", tenant_id=tid, status=None, limit=10)
+        params = cur.execute.call_args[0][1]
+        assert params == (str(tid), 10)
+
     def test_atualizar_status_sync_none_quando_sem_linha(self) -> None:
         cur = MagicMock()
         cur.fetchone.return_value = None

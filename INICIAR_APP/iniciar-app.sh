@@ -70,6 +70,7 @@ run_frontend() {
 }
 
 run_dev() {
+  qdi_ensure_docker_daemon
   # --build: evita imagem da API “congelada” sem deps novas do pyproject.toml (ex.: langchain-ollama).
   docker compose up -d --build --remove-orphans
   echo "→ Aguardando GET /health na API (porta 60000)…"

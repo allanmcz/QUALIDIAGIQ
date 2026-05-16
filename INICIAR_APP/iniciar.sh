@@ -34,6 +34,8 @@ echo -e "${GREEN}=================================================${NC}"
 echo -e "${GREEN}   QualiDiagIQ — Docker + logs (MVP)             ${NC}"
 echo -e "${GREEN}=================================================${NC}"
 
+echo -e "${BLUE}[DOCKER]${NC} A garantir motor Docker (OrbStack / Docker Desktop)…"
+qdi_ensure_docker_daemon
 echo -e "${BLUE}[STACK]${NC} make dev — Compose com ${YELLOW}--build${NC} se Dockerfile/pyproject mudaram (PostgreSQL + API + Next)…"
 make dev
 

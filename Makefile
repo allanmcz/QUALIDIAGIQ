@@ -25,6 +25,7 @@ install-hooks: ## Configura Git para usar .githooks/ (pre-commit + commit-msg)
 	@echo "✅ Hooks Git apontando para .githooks/"
 
 ollama-up: ## Sobe só o Ollama no compose (pull da imagem ~3GB na 1.ª vez)
+	@bash -ec 'source INICIAR_APP/lib/qdi-env.sh && qdi_ensure_docker_daemon'
 	docker compose pull ollama
 	docker compose up -d ollama
 
@@ -43,6 +44,7 @@ regenerar-pdf-dev: ## Regenera PDF mock para DIAG_ID (ex.: make regenerar-pdf-de
 	docker compose exec -T api env PYTHONPATH=/app python /tmp/regenerar_pdf_diagnostico_dev.py "$(DIAG_ID)"
 
 dev: ## Sobe ambiente de dev (db + api + web + ollama); --build alinha deps do pyproject na imagem da API
+	@bash -ec 'source INICIAR_APP/lib/qdi-env.sh && qdi_ensure_docker_daemon'
 	docker compose up -d --build --remove-orphans
 	@bash -ec 'source INICIAR_APP/lib/qdi-env.sh && qdi_cd_root "$(CURDIR)/INICIAR_APP" && if qdi_wait_api_health 25; then echo "✓ API /health OK."; else echo "⚠ API ainda não respondeu — docker compose logs api"; fi'
 	@echo ""

@@ -82,6 +82,10 @@ Antes de `integration`: suba o DB (`./INICIAR_APP/iniciar-app.sh dev`) ou aponte
 | Docker | Stack db + api + web |
 | `psql` | Obrigatório para `integration` |
 
+### Docker parado no Mac
+
+`make dev`, `./INICIAR_APP/iniciar-app.sh dev` e `./INICIAR_APP/iniciar.sh` chamam **`qdi_ensure_docker_daemon`** (`lib/qdi-env.sh`): se o motor não estiver ativo, abrem **OrbStack** (se existir) ou **Docker Desktop** e aguardam até **90s** (`QDI_DOCKER_START_TIMEOUT_SEC` para alterar). Na primeira vez após reiniciar o Mac, o arranque do motor pode levar ~30–60s.
+
 ## Makefile
 
 - `make dev` — `docker compose up -d --build --remove-orphans` (usado por **`iniciar.sh`** e espelhado por **`iniciar-app.sh dev`**).

@@ -7,7 +7,8 @@ Camada: Infrastructure
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
+from uuid import UUID
 
 import psycopg2
 import structlog
@@ -22,10 +23,12 @@ from src.application.ports.lgpd_titular_solicitacao_port import (
     TipoSolicitacaoTitular,
 )
 
-if TYPE_CHECKING:
-    from uuid import UUID
-
 logger = structlog.get_logger(__name__)
+
+
+def _pg_uuid(value: UUID | None) -> str | None:
+    """psycopg2 não adapta ``uuid.UUID`` nativamente — serializar como texto."""
+    return None if value is None else str(value)
 
 
 def _from_row(row: dict[str, Any]) -> SolicitacaoTitular:
@@ -61,7 +64,7 @@ def _buscar_sync(
                 WHERE id = %s
                   AND tenant_id = %s
                 """,
-                (str(solicitacao_id), str(tenant_id)),
+                (_pg_uuid(solicitacao_id), _pg_uuid(tenant_id)),
             )
             raw = cur.fetchone()
         if raw is None:
@@ -100,13 +103,13 @@ def _criar_sync(
                 RETURNING *
                 """,
                 (
-                    tenant_id,
-                    diagnostico_id,
+                    _pg_uuid(tenant_id),
+                    _pg_uuid(diagnostico_id),
                     tipo,
                     canal,
                     solicitante_email,
                     Json(payload),
-                    actor_user_id,
+                    _pg_uuid(actor_user_id),
                 ),
             )
             raw = cur.fetchone()
@@ -140,7 +143,7 @@ def _listar_sync(
                     ORDER BY criado_em DESC
                     LIMIT %s
                     """,
-                    (tenant_id, limit),
+                    (_pg_uuid(tenant_id), limit),
                 )
             else:
                 cur.execute(
@@ -152,7 +155,7 @@ def _listar_sync(
                     ORDER BY criado_em DESC
                     LIMIT %s
                     """,
-                    (tenant_id, status, limit),
+                    (_pg_uuid(tenant_id), status, limit),
                 )
             rows = cast("list[dict[str, Any]]", cur.fetchall())
         return [_from_row(row) for row in rows]
@@ -182,7 +185,13 @@ def _atualizar_status_sync(
                   AND tenant_id = %s
                 RETURNING *
                 """,
-                (status, observacao_interna, actor_user_id, solicitacao_id, tenant_id),
+                (
+                    status,
+                    observacao_interna,
+                    _pg_uuid(actor_user_id),
+                    _pg_uuid(solicitacao_id),
+                    _pg_uuid(tenant_id),
+                ),
             )
             raw = cur.fetchone()
         conn.commit()
@@ -256,8 +265,8 @@ class PostgresLgpdTitularSolicitacaoAdapter(LgpdTitularSolicitacaoPort):
         except psycopg2.Error as exc:
             logger.error("lgpd_listar_por_tenant_falhou", erro=str(exc), exc_info=True)
             raise ErroPersistenciaLgpdError(
-                "Não foi possível listar pedidos LGPD. Verifique migração 0028 (tabela lgpd_titular_solicitacao) "
-                "e DATABASE_URL síncrono."
+                "Não foi possível listar pedidos LGPD. Verifique migração 0028 (tabela lgpd_titular_solicitacao), "
+                "DATABASE_URL síncrono e conectividade com o Postgres."
             ) from exc
 
     async def atualizar_status(

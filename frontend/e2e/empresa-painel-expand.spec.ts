@@ -199,6 +199,32 @@ test.describe("Painel empresa — expandir linha", () => {
     await expect(page.getByText("Autoconferência ABNT — 10 controles")).not.toBeVisible();
   });
 
+  test("vista empresa mostra quadro de implantação em grelha (mock)", async ({ page }) => {
+    await installPainelEmpresaApiMocks(page);
+    await loginPainelE2E(page);
+
+    await page.goto(`/dashboard/empresas/${CNPJ14}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Quadro de implantação da empresa/i })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator("#empresa-quadro-implantacao-principal table")).toBeVisible();
+    await expect(page.getByText(/Controle ABNT M12 #1/i).first()).toBeVisible();
+  });
+
+  test("menu Ações mostra opções sem ir à ficha (mock)", async ({ page }) => {
+    await installPainelEmpresaApiMocks(page);
+    await loginPainelE2E(page);
+
+    await page.goto(`/dashboard/empresas/${CNPJ14}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+    await page.getByRole("button", { name: "Ações ▾" }).first().click();
+    await expect(page.getByRole("menu").getByRole("menuitem", { name: "Retificações" })).toBeVisible();
+    await expect(page.getByRole("menu").getByRole("menuitem", { name: "LGPD" })).toBeVisible();
+    await expect(page.getByRole("menu").getByRole("menuitem", { name: "Ficha completa" })).toBeVisible();
+  });
+
   test("expandir mostra ranking ou radar (mock)", async ({ page }) => {
     await installPainelEmpresaApiMocks(page);
     await loginPainelE2E(page);
@@ -225,9 +251,8 @@ test.describe("Painel empresa — expandir linha", () => {
       page.getByRole("heading", { name: /Ranking explícito de gaps \(M05\)/i }),
     ).toBeVisible({ timeout: 15_000 });
 
-    const primeiraLinhaDetails = page.locator('ul[aria-label="Diagnósticos desta empresa no tenant"] li').first().locator("details");
-    await primeiraLinhaDetails.locator("summary").click();
-    await primeiraLinhaDetails.locator("[data-acao-links]").getByRole("link", { name: "LGPD" }).click();
+    await page.getByRole("button", { name: "Ações ▾" }).first().click();
+    await page.getByRole("menu").getByRole("menuitem", { name: "LGPD" }).click();
 
     await expect(page).toHaveURL(new RegExp(`/dashboard/diagnosticos/${DIAG_ID}`));
     const cardLgpd = page.locator("#diag-privacidade-lgpd");

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
+import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
+import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { PrivacidadeDiagnosticoCard } from "@/components/painel/PrivacidadeDiagnosticoCard";
 import { RetificacaoDiagnosticoCard } from "@/components/painel/RetificacaoDiagnosticoCard";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +86,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
   const router = useRouter();
   const [data, setData] = useState<DiagnosticoDetalheApi | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [listaEmpresa, setListaEmpresa] = useState<DiagnosticoResumoApi[] | null>(null);
+  const [detalhesEmpresa, setDetalhesEmpresa] = useState<Record<string, DiagnosticoDetalheApi>>({});
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -122,6 +126,32 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     };
   }, [id]);
 
+  const aoDetalheEmpresaAtualizado = useCallback((d: DiagnosticoDetalheApi) => {
+    setDetalhesEmpresa((prev) => ({ ...prev, [d.id]: d }));
+  }, []);
+
+  const listaParaQuadro = useMemo((): DiagnosticoResumoApi[] | null => {
+    if (listaEmpresa?.length) return listaEmpresa;
+    if (!data) return null;
+    const cnpj = (data.empresa_cnpj ?? "").replace(/\D/g, "").trim();
+    const criado = (data.criado_em && String(data.criado_em).trim()) || "1970-01-01T00:00:00.000Z";
+    return [
+      {
+        id: data.id,
+        empresa_razao_social: data.empresa_razao_social,
+        ...(cnpj.length === 14 ? { empresa_cnpj: cnpj } : {}),
+        status: data.status,
+        plano: data.plano,
+        score_geral: data.score?.score_geral?.valor ?? null,
+        criado_em: criado,
+        finalizado_em: data.finalizado_em ?? null,
+        relatorio_pdf_url: data.relatorio_pdf_url,
+        versao_otimista: data.versao_otimista ?? null,
+        painel_estado_ciclo: data.painel_estado_ciclo ?? null,
+      },
+    ];
+  }, [listaEmpresa, data]);
+
   if (!data) {
     return (
       <div className="container py-10 text-muted-foreground">
@@ -132,6 +162,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
   const cnpjDigits = (data.empresa_cnpj ?? "").replace(/\D/g, "");
   const temCnpj14 = cnpjDigits.length === 14;
+
+  const detalhesEmpresaComAtual = { ...detalhesEmpresa, [data.id]: data };
 
   return (
     <div className="container py-10">
@@ -220,31 +252,41 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
                 </Link>
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              Análise por dimensão (M05), matriz de impacto e autoconferência ABNT (M12) são por diagnóstico — use{" "}
-              <strong className="font-medium text-foreground">Expandir</strong> na linha. O{" "}
-              <strong className="font-medium text-foreground">quadro de implantação</strong> é{" "}
-              <strong className="font-medium text-foreground">único por empresa</strong>: consulte e
-              edite-o na{" "}
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+              Ranking (M05), matriz de impacto e autoconferência ABNT (M12) são por diagnóstico — use{" "}
+              <strong className="font-medium text-foreground">Expandir</strong> na linha. O quadro de
+              implantação abaixo é <strong className="font-medium text-foreground">único por empresa</strong>
               {temCnpj14 ? (
-                <Link
-                  href={buildEmpresaDiagnosticosHref(cnpjDigits, data.empresa_razao_social, {
-                    hash: "empresa-quadro-implantacao-principal",
-                  })}
-                  className="text-primary font-medium underline"
-                >
-                  vista Empresa (CNPJ)
-                </Link>
-              ) : (
-                <span className="font-medium text-foreground">vista Empresa (CNPJ)</span>
-              )}
-              , não nesta ficha por ciclo.
+                <>
+                  {" "}
+                  (
+                  <Link
+                    href={buildEmpresaDiagnosticosHref(cnpjDigits, data.empresa_razao_social, {
+                      hash: "empresa-quadro-implantacao-principal",
+                    })}
+                    className="text-primary font-medium underline"
+                  >
+                    vista dedicada por CNPJ
+                  </Link>
+                  ).
+                </>
+              ) : null}
             </p>
+            <div className="mb-8">
+              <EmpresaQuadroImplantacaoTopo
+                listaPainel={listaParaQuadro}
+                detalhesPorId={detalhesEmpresaComAtual}
+                onDataAtualizado={aoDetalheEmpresaAtualizado}
+              />
+            </div>
             <EmpresaDiagnosticosListaPainel
               cnpjNormalizado={cnpjDigits}
               expandirDiagnosticoId={data.id}
               diagnosticoSemeado={data}
               usarExpandNaQuery={false}
+              onDiagnosticosAlterados={setListaEmpresa}
+              onDetalhesPrefetch={(d) => setDetalhesEmpresa((prev) => ({ ...prev, ...d }))}
+              onListaDetalheAtualizado={aoDetalheEmpresaAtualizado}
             />
           </CardContent>
         </Card>

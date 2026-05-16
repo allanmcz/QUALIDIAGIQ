@@ -176,8 +176,6 @@ export function QuadroImplantacaoGrid({
   );
 
   const linhas = linhasQuadroGrid(localData.checklist);
-  if (!linhas.length) return null;
-
   const podeEditarLinha = editavel && localData.status === "finalizado";
 
   return (
@@ -196,6 +194,15 @@ export function QuadroImplantacaoGrid({
         ) : null}
       </CardHeader>
       <CardContent className="overflow-x-auto">
+        {!linhas.length ? (
+          <p className="text-sm text-muted-foreground border rounded-md p-4 bg-muted/20" role="status">
+            O plano de implantação ainda não tem linhas materializadas neste ciclo de referência. Se o
+            diagnóstico baseline já está <strong className="font-medium text-foreground">finalizado</strong>,
+            aguarde a sincronização do checklist ou recarregue a página; ciclos só em andamento não geram
+            grelha editável.
+          </p>
+        ) : null}
+        {linhas.length > 0 ? (
         <table className="w-full text-sm border-collapse min-w-[960px]">
           <thead>
             <tr className="border-b bg-muted/30">
@@ -313,6 +320,7 @@ export function QuadroImplantacaoGrid({
             })}
           </tbody>
         </table>
+        ) : null}
       </CardContent>
 
       <Dialog open={prazoModalQk !== null} onOpenChange={(open) => !open && setPrazoModalQk(null)}>

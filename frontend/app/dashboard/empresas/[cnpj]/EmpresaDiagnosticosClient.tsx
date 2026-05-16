@@ -5,18 +5,14 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPainelButton";
-import { EmpresaImplantacaoResumoDepartamentosCard } from "@/components/painel/empresa/EmpresaImplantacaoResumoDepartamentosCard";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
-import { QuadroImplantacaoGrid } from "@/components/painel/empresa/QuadroImplantacaoGrid";
+import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
 import { Button } from "@/components/ui/button";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
-import {
-  idDiagnosticoMaisAntigoEmpresa,
-  quadroImplantacaoEditavel,
-} from "@/lib/painel/diagnostico_empresa_ordem";
+import { idDiagnosticoBaselineQuadroEmpresa } from "@/lib/painel/diagnostico_empresa_ordem";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 function mascaraCnpj14(d: string): string {
@@ -43,12 +39,13 @@ export default function EmpresaDiagnosticosClient({
   razaoSocialHint: string;
 }) {
   const router = useRouter();
-  /** Espelho da lista interior — cabeçalho e botão «Plano» sem GET duplicado. */
   const [listaPainel, setListaPainel] = useState<DiagnosticoResumoApi[] | null>(null);
-  const [quadroEmpresaDetalhe, setQuadroEmpresaDetalhe] = useState<DiagnosticoDetalheApi | null>(null);
+  const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DiagnosticoDetalheApi>>({});
+  const [quadroCarregando, setQuadroCarregando] = useState(false);
+  const [quadroErro, setQuadroErro] = useState<string | null>(null);
 
-  const primeiroDiagId = useMemo(
-    () => (listaPainel?.length ? idDiagnosticoMaisAntigoEmpresa(listaPainel) : null),
+  const baselineId = useMemo(
+    () => (listaPainel?.length ? idDiagnosticoBaselineQuadroEmpresa(listaPainel) : null),
     [listaPainel],
   );
 
@@ -56,32 +53,52 @@ export default function EmpresaDiagnosticosClient({
     setListaPainel(rows);
   }, []);
 
-  const syncQuadroTopo = useCallback(
-    (d: DiagnosticoDetalheApi) => {
-      if (primeiroDiagId && d.id === primeiroDiagId) setQuadroEmpresaDetalhe(d);
-    },
-    [primeiroDiagId],
-  );
+  const aoDetalhesPrefetch = useCallback((detalhes: Record<string, DiagnosticoDetalheApi>) => {
+    setDetalhesPorId((prev) => ({ ...prev, ...detalhes }));
+  }, []);
+
+  const aoDetalheAtualizado = useCallback((d: DiagnosticoDetalheApi) => {
+    setDetalhesPorId((prev) => ({ ...prev, [d.id]: d }));
+  }, []);
 
   const semSessao = !temSessaoPainelParaApiCliente();
 
+  /** Garante GET do baseline se o prefetch da lista ainda não trouxe o detalhe. */
   useEffect(() => {
-    if (!primeiroDiagId || semSessao) {
-      setQuadroEmpresaDetalhe(null);
-      return;
-    }
+    if (!baselineId || semSessao) return;
+    if (detalhesPorId[baselineId]) return;
+
     let cancel = false;
-    void fetchDiagnosticoDetalhe(primeiroDiagId)
+    setQuadroCarregando(true);
+    setQuadroErro(null);
+    void fetchDiagnosticoDetalhe(baselineId)
       .then((d) => {
-        if (!cancel) setQuadroEmpresaDetalhe(d);
+        if (!cancel) aoDetalheAtualizado(d);
       })
-      .catch(() => {
-        if (!cancel) setQuadroEmpresaDetalhe(null);
+      .catch((e) => {
+        if (!cancel) {
+          setQuadroErro(
+            e instanceof Error ? e.message : "Não foi possível carregar o quadro de implantação da empresa.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancel) setQuadroCarregando(false);
       });
     return () => {
       cancel = true;
     };
-  }, [primeiroDiagId, semSessao]);
+  }, [baselineId, semSessao, detalhesPorId[baselineId ?? ""], aoDetalheAtualizado]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "").trim();
+    if (hash !== "empresa-quadro-implantacao-principal") return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [listaPainel, detalhesPorId]);
 
   const tituloEmpresa = useMemo(() => {
     const hint = razaoSocialHint.trim();
@@ -157,43 +174,22 @@ export default function EmpresaDiagnosticosClient({
           </div>
         )}
 
-        {!semSessao && listaPainel && listaPainel.length > 0 && quadroEmpresaDetalhe && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">Quadro de implantação da empresa</h2>
-              <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-                <strong className="font-medium text-foreground">Um quadro por empresa</strong> para o mesmo CNPJ:
-                prazos meta e notas do consultor aplicam-se à implantação global, não ao ciclo individual. Na
-                tabela abaixo usa-se o plano de ações de referência; em cada linha da lista,{" "}
-                <strong className="font-medium text-foreground">Expandir</strong> continua a mostrar só matriz,
-                ranking e M12 daquele diagnóstico.
-              </p>
-            </div>
-            <EmpresaImplantacaoResumoDepartamentosCard data={quadroEmpresaDetalhe} />
-            <QuadroImplantacaoGrid
-              diagnosticoId={quadroEmpresaDetalhe.id}
-              data={quadroEmpresaDetalhe}
-              editavel={quadroImplantacaoEditavel(quadroEmpresaDetalhe.id, listaPainel, quadroEmpresaDetalhe.status)}
-              avisoSomenteLeitura={
-                !quadroImplantacaoEditavel(
-                  quadroEmpresaDetalhe.id,
-                  listaPainel,
-                  quadroEmpresaDetalhe.status,
-                ) && quadroEmpresaDetalhe.status === "finalizado"
-                  ? "Quadro da empresa em consulta: a edição fica concentrada no ciclo de referência da empresa. Neste diagnóstico, use a visualização apenas para acompanhamento."
-                  : undefined
-              }
-              onDataAtualizado={syncQuadroTopo}
-              id="empresa-quadro-implantacao-principal"
-            />
-          </div>
+        {!semSessao && (
+          <EmpresaQuadroImplantacaoTopo
+            listaPainel={listaPainel}
+            detalhesPorId={detalhesPorId}
+            carregando={quadroCarregando}
+            erro={quadroErro}
+            onDataAtualizado={aoDetalheAtualizado}
+          />
         )}
 
         <EmpresaDiagnosticosListaPainel
           cnpjNormalizado={cnpjNormalizado}
           usarExpandNaQuery
           onDiagnosticosAlterados={aoDiagnosticosPainel}
-          onListaDetalheAtualizado={syncQuadroTopo}
+          onListaDetalheAtualizado={aoDetalheAtualizado}
+          onDetalhesPrefetch={aoDetalhesPrefetch}
         />
       </div>
     </div>
