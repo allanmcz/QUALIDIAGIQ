@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, RefreshCw } from "lucide-react";
 
 import EmpresaDiagnosticoExpandedPanel from "@/components/painel/empresa/EmpresaDiagnosticoExpandedPanel";
@@ -126,6 +126,34 @@ export function EmpresaDiagnosticosListaPainel({
   const [hashLocal, setHashLocal] = useState("");
   /** Menu «Ações» por linha — evita `<details>` cortado por `overflow-hidden` do contentor. */
   const [acoesMenuDiagId, setAcoesMenuDiagId] = useState<string | null>(null);
+  /** Lote de prefetch a notificar ao pai após commit (evita setState no pai durante render do filho). */
+  const [prefetchLotePai, setPrefetchLotePai] = useState<Record<string, DiagnosticoDetalheApi> | null>(
+    null,
+  );
+  const onDiagnosticosAlteradosRef = useRef(onDiagnosticosAlterados);
+  const onDetalhesPrefetchRef = useRef(onDetalhesPrefetch);
+  const onListaDetalheAtualizadoRef = useRef(onListaDetalheAtualizado);
+
+  useEffect(() => {
+    onDiagnosticosAlteradosRef.current = onDiagnosticosAlterados;
+  }, [onDiagnosticosAlterados]);
+
+  useEffect(() => {
+    onDetalhesPrefetchRef.current = onDetalhesPrefetch;
+  }, [onDetalhesPrefetch]);
+
+  useEffect(() => {
+    onListaDetalheAtualizadoRef.current = onListaDetalheAtualizado;
+  }, [onListaDetalheAtualizado]);
+
+  useEffect(() => {
+    if (!prefetchLotePai) return;
+    const lote = prefetchLotePai;
+    startTransition(() => {
+      onDetalhesPrefetchRef.current?.(lote);
+    });
+    setPrefetchLotePai(null);
+  }, [prefetchLotePai]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -214,12 +242,9 @@ export function EmpresaDiagnosticosListaPainel({
           if (r.status === "fulfilled") next[id] = r.value;
         });
       }
-      if (!cancel) {
-        setDetalhesPorId((prev) => {
-          const merged = { ...prev, ...next };
-          onDetalhesPrefetch?.(merged);
-          return merged;
-        });
+      if (!cancel && Object.keys(next).length > 0) {
+        setDetalhesPorId((prev) => ({ ...prev, ...next }));
+        setPrefetchLotePai(next);
       }
     })().catch(() => {
       if (!cancel) setPrefetchErro("Pré-carga de detalhes incompleta — expanda uma linha ou recarregue.");
@@ -228,18 +253,24 @@ export function EmpresaDiagnosticosListaPainel({
     return () => {
       cancel = true;
     };
-  }, [diagnosticos, onDetalhesPrefetch]);
+  }, [diagnosticos]);
 
   useEffect(() => {
     if (!acoesMenuDiagId) return;
     const fechar = (ev: MouseEvent) => {
       const alvo = ev.target;
       if (!(alvo instanceof Node)) return;
-      if (document.querySelector(`[data-acao-menu="${acoesMenuDiagId}"]`)?.contains(alvo)) return;
+      const root = document.querySelector(`[data-acao-menu="${acoesMenuDiagId}"]`);
+      if (root?.contains(alvo)) return;
       setAcoesMenuDiagId(null);
     };
-    document.addEventListener("mousedown", fechar);
-    return () => document.removeEventListener("mousedown", fechar);
+    const timer = window.setTimeout(() => {
+      document.addEventListener("click", fechar);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("click", fechar);
+    };
   }, [acoesMenuDiagId]);
 
   useEffect(() => {
@@ -260,13 +291,18 @@ export function EmpresaDiagnosticosListaPainel({
 
   useEffect(() => {
     if (diagnosticos === null) return;
-    onDiagnosticosAlterados?.(diagnosticos);
-  }, [diagnosticos, onDiagnosticosAlterados]);
+    const rows = diagnosticos;
+    startTransition(() => {
+      onDiagnosticosAlteradosRef.current?.(rows);
+    });
+  }, [diagnosticos]);
 
   const aoAtualizarDetalhe = useCallback((d: DiagnosticoDetalheApi) => {
     setDetalhesPorId((prev) => ({ ...prev, [d.id]: d }));
-    onListaDetalheAtualizado?.(d);
-  }, [onListaDetalheAtualizado]);
+    startTransition(() => {
+      onListaDetalheAtualizadoRef.current?.(d);
+    });
+  }, []);
 
   const aoRefazerDiagnostico = useCallback(
     (razaoSocial: string) => {
@@ -310,7 +346,9 @@ export function EmpresaDiagnosticosListaPainel({
         ),
       );
       setDetalhesPorId((prev) => ({ ...prev, [json.id]: json }));
-      onListaDetalheAtualizado?.(json);
+      startTransition(() => {
+        onListaDetalheAtualizadoRef.current?.(json);
+      });
       setPainelEstadoDialogDiagId(null);
     } catch (e) {
       setPainelEstadoErr(e instanceof Error ? e.message : "Falha ao gravar estado.");
@@ -322,7 +360,6 @@ export function EmpresaDiagnosticosListaPainel({
     painelEstadoDraft,
     detalhesPorId,
     diagnosticos,
-    onListaDetalheAtualizado,
   ]);
 
   const linhasGrelha = useMemo(() => {

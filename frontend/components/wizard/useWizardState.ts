@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -54,6 +54,11 @@ import {
   valorInicialPorTipoPergunta,
 } from "@/lib/wizard/perguntaTipo";
 import {
+  fetchPerfilEmpresaUltimoCicloPainel,
+  type PerfilEmpresaWizardPrefill,
+} from "@/lib/wizard/prefill_perfil_ultimo_ciclo";
+import { WIZARD_FORCE_NOVO_CICLO_KEY } from "@/lib/dashboard/refazer_diagnostico_painel";
+import {
   parseWizardModoEmpresaFromSearchParams,
   WIZARD_MODO_NOVO_CICLO,
   type WizardModoEmpresa,
@@ -84,6 +89,8 @@ export function useWizardState() {
   const skipPersistRef = useRef(false);
   /** Query `empresa_cnpj` / `empresa_razao_social` — aplicar pré-preenchimento uma vez por ciclo de overlay. */
   const wizardQueryEmpresaPrefillAppliedRef = useRef(false);
+  /** Perfil passo 2 — semear a partir do último diagnóstico da PJ (`modo=novo_ciclo`). */
+  const perfilUltimoCicloPrefillAppliedRef = useRef(false);
   /** Após ler/restaurar cache local (localStorage) — só então passamos a persistir alterações. */
   const [draftHydrated, setDraftHydrated] = useState(false);
   /** Há rascunho e/ou diagnóstico pendente — pergunta continuar vs reiniciar antes de hidratar. */
@@ -96,10 +103,24 @@ export function useWizardState() {
   const [consultaCnpjFeedback, setConsultaCnpjFeedback] = useState<string | null>(null);
   const [forceRefreshConsultaCnpjUi, setForceRefreshConsultaCnpjUi] = useState(false);
   /** `novo_ciclo` (painel / refazer) vs `nova_empresa` (atalho sem CNPJ). */
-  const [wizardModoEmpresa, setWizardModoEmpresa] = useState<WizardModoEmpresa>("nova_empresa");
-  const [queryRazaoEmpresaPainel, setQueryRazaoEmpresaPainel] = useState("");
+  const [wizardModoEmpresa, setWizardModoEmpresa] = useState<WizardModoEmpresa>(() => {
+    if (typeof window === "undefined") return "nova_empresa";
+    if (window.sessionStorage.getItem(WIZARD_FORCE_NOVO_CICLO_KEY) === "1") {
+      return WIZARD_MODO_NOVO_CICLO;
+    }
+    return parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search)).modo;
+  });
+  const [queryRazaoEmpresaPainel, setQueryRazaoEmpresaPainel] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search))
+      .razaoSocial;
+  });
   /** CNPJ da query (`empresa_cnpj`) — fallback do GET histórico antes do RHF propagar o pré-preenchimento. */
-  const [queryCnpjEmpresaPainel, setQueryCnpjEmpresaPainel] = useState("");
+  const [queryCnpjEmpresaPainel, setQueryCnpjEmpresaPainel] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search)).cnpj14;
+  });
+  const consultaCnpjAutoNovoCicloRef = useRef(false);
   const [ciclosEmpresaPainel, setCiclosEmpresaPainel] = useState<ResumoCiclosEmpresaPainel | null>(
     null,
   );
@@ -466,6 +487,7 @@ export function useWizardState() {
     setCacheResumePrompt(null);
     skipPersistRef.current = false;
     wizardQueryEmpresaPrefillAppliedRef.current = false;
+    perfilUltimoCicloPrefillAppliedRef.current = false;
     setDraftHydrated(true);
     aplicarRespondenteDaConta();
     aplicarQueryEmpresaPainelNoFormulario();
@@ -477,6 +499,36 @@ export function useWizardState() {
    */
   useEffect(() => {
     if (typeof window === "undefined") {
+      setDraftHydrated(true);
+      return;
+    }
+
+    const parsedModo = parseWizardModoEmpresaFromSearchParams(
+      new URLSearchParams(window.location.search),
+    );
+    const forceNovoCiclo =
+      typeof window !== "undefined" &&
+      window.sessionStorage.getItem(WIZARD_FORCE_NOVO_CICLO_KEY) === "1";
+    if (forceNovoCiclo) {
+      try {
+        window.sessionStorage.removeItem(WIZARD_FORCE_NOVO_CICLO_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
+    const isNovoCicloPainel = parsedModo.modo === WIZARD_MODO_NOVO_CICLO || forceNovoCiclo;
+    /** Painel — novo ciclo: não perguntar «continuar rascunho»; limpar cache local e abrir formulário limpo. */
+    if (isNovoCicloPainel) {
+      clearWizardDraft();
+      clearPendingDiagnosticoFromStorage();
+      skipPersistRef.current = false;
+      wizardQueryEmpresaPrefillAppliedRef.current = false;
+      perfilUltimoCicloPrefillAppliedRef.current = false;
+      consultaCnpjAutoNovoCicloRef.current = false;
+      setWizardModoEmpresa(WIZARD_MODO_NOVO_CICLO);
+      setQueryRazaoEmpresaPainel(parsedModo.razaoSocial);
+      setQueryCnpjEmpresaPainel(parsedModo.cnpj14);
+      setCacheResumePrompt(null);
       setDraftHydrated(true);
       return;
     }
@@ -587,6 +639,96 @@ export function useWizardState() {
       cancel = true;
     };
   }, [draftHydrated, sessaoPainelAtiva, cnpjEmpresaWatch, queryCnpjEmpresaPainel]);
+
+  const aplicarPerfilEmpresaWizard = useCallback(
+    (perfil: PerfilEmpresaWizardPrefill) => {
+      if (perfil.porte) {
+        setValue("empresa.porte", perfil.porte, { shouldDirty: false, shouldValidate: false });
+      }
+      if (perfil.regime) {
+        setValue("empresa.regime", perfil.regime, { shouldDirty: false, shouldValidate: false });
+      }
+      if (perfil.setor_macro) {
+        setValue("empresa.setor_macro", perfil.setor_macro, {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
+      }
+      if (perfil.uf) {
+        setValue("empresa.uf", perfil.uf, { shouldDirty: false, shouldValidate: false });
+      }
+      if (perfil.cnae_principal) {
+        setValue("empresa.cnae_principal", perfil.cnae_principal, {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
+        setCnaeBuscaTexto(perfil.cnae_principal);
+        cnaeBuscaTextoRef.current = perfil.cnae_principal;
+      }
+    },
+    [setValue],
+  );
+
+  /** Novo ciclo (painel): copia porte/regime/setor/UF/CNAE do último diagnóstico da PJ (passo 1 ou 2). */
+  useEffect(() => {
+    if (!draftHydrated || cacheResumePrompt !== null) return;
+    if (wizardModoEmpresa !== WIZARD_MODO_NOVO_CICLO) return;
+    if (perfilUltimoCicloPrefillAppliedRef.current) return;
+
+    const cnpjForm = String(cnpjEmpresaWatch ?? "").replace(/\D/g, "");
+    let cnpjQuery = queryCnpjEmpresaPainel.length === 14 ? queryCnpjEmpresaPainel : "";
+    if (cnpjQuery.length !== 14 && typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("empresa_cnpj")?.replace(/\D/g, "") ?? "";
+      if (q.length === 14) cnpjQuery = q;
+    }
+    const cnpj = cnpjForm.length === 14 ? cnpjForm : cnpjQuery;
+    if (cnpj.length !== 14) return;
+
+    let cancel = false;
+    void fetchPerfilEmpresaUltimoCicloPainel(cnpj)
+      .then((perfil) => {
+        if (cancel) return;
+        if (perfil) {
+          aplicarPerfilEmpresaWizard(perfil);
+          perfilUltimoCicloPrefillAppliedRef.current = true;
+          return;
+        }
+        if (
+          !consultaCnpjAutoNovoCicloRef.current &&
+          temSessaoPainelParaApiCliente() &&
+          !(getValues("empresa.porte") ?? "").trim()
+        ) {
+          consultaCnpjAutoNovoCicloRef.current = true;
+          perfilUltimoCicloPrefillAppliedRef.current = true;
+          void consultarCnpjNoWizard();
+        }
+      })
+      .catch(() => {
+        if (cancel) return;
+        if (
+          !consultaCnpjAutoNovoCicloRef.current &&
+          temSessaoPainelParaApiCliente() &&
+          !(getValues("empresa.porte") ?? "").trim()
+        ) {
+          consultaCnpjAutoNovoCicloRef.current = true;
+          perfilUltimoCicloPrefillAppliedRef.current = true;
+          void consultarCnpjNoWizard();
+        }
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [
+    draftHydrated,
+    cacheResumePrompt,
+    wizardModoEmpresa,
+    cnpjEmpresaWatch,
+    queryCnpjEmpresaPainel,
+    step,
+    aplicarPerfilEmpresaWizard,
+    consultarCnpjNoWizard,
+    getValues,
+  ]);
 
   /** Persiste rascunho com debounce — mesma origem que «Voltar ao diagnóstico» na política de privacidade. */
   useEffect(() => {

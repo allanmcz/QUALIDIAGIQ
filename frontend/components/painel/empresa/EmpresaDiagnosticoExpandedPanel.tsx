@@ -279,19 +279,34 @@ export default function EmpresaDiagnosticoExpandedPanel({
               <CardHeader>
                 <CardTitle className="text-base">Radar por dimensão</CardTitle>
               </CardHeader>
-              <CardContent className="h-[280px] sm:h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="dimensao" tick={{ fontSize: 10 }} />
-                    <Radar name="Score" dataKey="valor" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.35} />
-                  </RadarChart>
-                </ResponsiveContainer>
-                {data.score?.score_geral && (
-                  <p className="text-center text-xs text-muted-foreground mt-2">
-                    Score geral: <strong>{data.score.score_geral.valor}</strong> / 100
+              <CardContent className="space-y-2">
+                <div className="h-[min(320px,55vw)] w-full min-h-[220px] max-h-[360px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart
+                      data={radarData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="68%"
+                      margin={{ top: 12, right: 28, bottom: 12, left: 28 }}
+                    >
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="dimensao" tick={{ fontSize: 10 }} />
+                      <Radar
+                        name="Score"
+                        dataKey="valor"
+                        stroke="#2563eb"
+                        fill="#3b82f6"
+                        fillOpacity={0.35}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                {data.score?.score_geral ? (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Score geral:{" "}
+                    <strong className="tabular-nums">{data.score.score_geral.valor}</strong> / 100
                   </p>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           )}

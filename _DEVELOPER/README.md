@@ -2,6 +2,23 @@
 
 Este diretório concentra **planos de execução, handoffs e notas de engenharia**. O mapa canónico dos planos está em **[`INDICE_PLANOS_HANDOFF.md`](./INDICE_PLANOS_HANDOFF.md)**. Documentação de produto e operação versionada para stakeholders: **[`docs/README.md`](../docs/README.md)**.
 
+## Regra de documentação de desenvolvimento
+
+Toda documentação de **processo, planejamento de implementação, handoff técnico, backlog de execução, proposta técnica, análise de arquitetura e roteiro de desenvolvimento** deve ser criada e mantida dentro de `_DEVELOPER/`.
+
+Exceções:
+
+| Tipo de documento | Local correto |
+|---|---|
+| Documentação pública/produto para stakeholders | `docs/` |
+| Documentação operacional versionada para produção | `docs/operacao/` |
+| Documentação jurídica/LGPD validável externamente | `docs/legal/` |
+| Referências-base de produto já consolidadas | `docs/refs/` |
+
+Quando uma proposta começar como processo ou implementação e depois virar documentação oficial, ela deve ser promovida de `_DEVELOPER/` para `docs/` por decisão explícita.
+
+Críticas, avaliações e pareceres produzidos pelo Codex sobre propostas externas devem ser registrados em subpasta própria dentro de `_DEVELOPER/`, preservando a pasta-fonte original sem alterações, salvo pedido explícito do Allan.
+
 ## Onde está o quê
 
 | Área | Caminho |
@@ -21,6 +38,8 @@ Este diretório concentra **planos de execução, handoffs e notas de engenharia
 | [`RUNBOOK_SUPABASE_RLS.md`](./RUNBOOK_SUPABASE_RLS.md) | Operação RLS multi-tenant, migrações e checagens. |
 | [`RUNBOOK_SMOKE_SUPABASE_OPS.md`](./RUNBOOK_SMOKE_SUPABASE_OPS.md) | Smoke ops Supabase. |
 | [`GUIA_TESTE_AMBIENTE_COMPLETO_E_VISAO_CONTADOR.md`](./GUIA_TESTE_AMBIENTE_COMPLETO_E_VISAO_CONTADOR.md) | Guia de teste / visão contador. |
+| [`PLANO_ACAO_AVANCADO/`](./PLANO_ACAO_AVANCADO/) | Propostas avançadas para plano de ação, Kanban e gestão de tarefas. |
+| [`PLANO_ACAO_V99/`](./PLANO_ACAO_V99/) | Pacote final consolidado para Kanban do Plano de Ação, incluindo ADR, PRD, especificação técnica e prompt Antigravity. |
 
 ### `_CONCLUIDOS_DEV/` (snapshots)
 

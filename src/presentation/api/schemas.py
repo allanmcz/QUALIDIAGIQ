@@ -1021,6 +1021,26 @@ class DiagnosticoResponse(BaseModel):
         default=None,
         description="Faixa de faturamento autodeclarada no POST (slug canónico), se informada.",
     )
+    empresa_porte: str | None = Field(
+        default=None,
+        description="Porte da empresa no snapshot do diagnóstico (slug: micro, pequeno, medio, grande).",
+    )
+    empresa_regime: str | None = Field(
+        default=None,
+        description="Regime tributário no snapshot (slug: simples_nacional, lucro_presumido, lucro_real, mei).",
+    )
+    empresa_cnae: str | None = Field(
+        default=None,
+        description="CNAE principal (7 dígitos) no snapshot.",
+    )
+    empresa_uf: str | None = Field(
+        default=None,
+        description="UF da empresa no snapshot.",
+    )
+    empresa_setor_macro: str | None = Field(
+        default=None,
+        description="Setor macro no snapshot (slug: comercio, industria, servicos, agro, consumo).",
+    )
     locale_relatorio: str = Field(
         default="pt-BR",
         description="Idioma usado na geração do PDF (persistido com o diagnóstico).",

@@ -281,6 +281,11 @@ async def _montar_diagnostico_response(
             if diagnostico.empresa.faixa_faturamento is not None
             else None
         ),
+        empresa_porte=diagnostico.empresa.porte.value,
+        empresa_regime=diagnostico.empresa.regime.value,
+        empresa_cnae=diagnostico.empresa.cnae_principal,
+        empresa_uf=diagnostico.empresa.uf,
+        empresa_setor_macro=diagnostico.empresa.setor_macro.value,
         locale_relatorio=getattr(diagnostico, "locale_relatorio", "pt-BR"),
         score=_score_completo_para_http(diagnostico),
         relatorio_pdf_url=diagnostico.relatorio_pdf_url,

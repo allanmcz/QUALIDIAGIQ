@@ -54,6 +54,39 @@ async function aguardarHistoricoEmpresaMock(page: import("@playwright/test").Pag
   );
 }
 
+async function instalarMockDetalheComPerfil(page: import("@playwright/test").Page) {
+  await page.route(/\/api-backend\/diagnosticos\/[0-9a-f-]{36}$/i, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    const id = route.request().url().split("/").pop() ?? listaDoisCiclos[0]!.id;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id,
+        empresa_razao_social: RAZAO,
+        empresa_cnpj: CNPJ14,
+        plano: "gratuito",
+        status: "finalizado",
+        relatorio_pdf_url: null,
+        checklist: null,
+        matriz_impacto: null,
+        cronograma: null,
+        checklist_m12_autoconf: null,
+        versao_otimista: 1,
+        score: { score_geral: { valor: 55 }, score_por_dimensao: {} },
+        empresa_porte: "medio",
+        empresa_regime: "lucro_real",
+        empresa_cnae: "4711301",
+        empresa_uf: "SP",
+        empresa_setor_macro: "comercio",
+      }),
+    });
+  });
+}
+
 async function instalarSessaoEMocks(page: import("@playwright/test").Page) {
   await installMockBffPainelLogin(page, {
     tokenParaUpstream: "e2e-wizard-novo-ciclo",
@@ -61,6 +94,7 @@ async function instalarSessaoEMocks(page: import("@playwright/test").Page) {
     limparLocalStoragePainelAntesDeCadaDocumento: true,
   });
   await installMockListaDiagnosticosPorEmpresa(page, CNPJ14, listaDoisCiclos);
+  await instalarMockDetalheComPerfil(page);
 
   await page.addInitScript(() => {
     window.localStorage.removeItem("qdi_wizard_draft_v1");
@@ -91,12 +125,40 @@ test.describe("Wizard — novo ciclo (empresa já no painel)", () => {
 
     await expect(page.getByText(`Novo ciclo — ${RAZAO}`)).toBeVisible();
 
-    await expect(page.getByText(/Empresa já cadastrada no painel/i).first()).toBeVisible({
+    await expect(page.getByText(/esta empresa já faz parte da sua base/i).first()).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText(/2 diagnósticos anteriores/i).first()).toBeVisible();
-    await expect(page.getByText(/ciclo nº 3/i).first()).toBeVisible();
-    await expect(page.getByText(/não é um novo cadastro de empresa/i).first()).toBeVisible();
+    await expect(page.getByText(/2 diagnósticos já realizados/i).first()).toBeVisible();
+    await expect(page.getByText(/3º ciclo de maturidade/i).first()).toBeVisible();
+    await expect(page.getByText(/evolução do mesmo acompanhamento/i).first()).toBeVisible();
+  });
+
+  test("modo novo_ciclo não exibe diálogo de rascunho local", async ({ page }) => {
+    await instalarSessaoEMocks(page);
+    await page.goto(urlWizardNovoCiclo());
+    await expect(
+      page.getByRole("dialog", { name: /Diagnóstico em andamento neste navegador/i }),
+    ).toHaveCount(0);
+  });
+
+  test("passo 2 pré-preenche perfil do último ciclo", async ({ page }) => {
+    await instalarSessaoEMocks(page);
+    const historico = aguardarHistoricoEmpresaMock(page);
+    await page.goto(urlWizardNovoCiclo());
+    await historico;
+    await expect(page.getByText(/esta empresa já faz parte da sua base/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByLabel(/Seu Nome \*/i).fill("Fulano QA");
+    await page.getByLabel(/E-mail Profissional \*/i).fill("qa.novo.ciclo@example.com");
+    await page.getByRole("checkbox", { name: /Declaro que li e aceito/i }).check();
+    await page.getByRole("button", { name: "Próxima Etapa" }).click();
+    await expect(page.getByText("Perfil da empresa (novo ciclo)")).toBeVisible();
+    await expect(page.locator("#porte")).toHaveValue("medio");
+    await expect(page.locator("#regime")).toHaveValue("lucro_real");
+    await expect(page.locator("#setor_macro")).toHaveValue("comercio");
+    await expect(page.locator("#uf")).toHaveValue("SP");
+    await expect(page.locator("#cnae_principal")).toHaveValue("4711301");
   });
 
   test("passo 2 mantém aviso de novo ciclo após Próxima Etapa", async ({ page }) => {
@@ -108,7 +170,7 @@ test.describe("Wizard — novo ciclo (empresa já no painel)", () => {
     await dispensarOverlayRascunho(page);
     await historico;
 
-    await expect(page.getByText(/Empresa já cadastrada no painel/i).first()).toBeVisible({
+    await expect(page.getByText(/esta empresa já faz parte da sua base/i).first()).toBeVisible({
       timeout: 15_000,
     });
 
@@ -119,7 +181,7 @@ test.describe("Wizard — novo ciclo (empresa já no painel)", () => {
     await page.getByRole("button", { name: "Próxima Etapa" }).click();
 
     await expect(page.getByText("Perfil da empresa (novo ciclo)")).toBeVisible();
-    await expect(page.getByText(/ciclo nº 3/i).first()).toBeVisible();
+    await expect(page.getByText(/3º ciclo de maturidade/i).first()).toBeVisible();
   });
 
   test("mock lista por CNPJ responde com histórico (sanidade do helper)", async ({ page }) => {

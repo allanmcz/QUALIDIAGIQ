@@ -36,6 +36,12 @@ export type DiagnosticoDetalheApi = {
   id: string;
   empresa_razao_social: string;
   empresa_cnpj?: string;
+  /** Snapshot empresa — pré-preenchimento wizard «novo ciclo». */
+  empresa_porte?: string | null;
+  empresa_regime?: string | null;
+  empresa_cnae?: string | null;
+  empresa_uf?: string | null;
+  empresa_setor_macro?: string | null;
   criado_em?: string | null;
   finalizado_em?: string | null;
   plano: string;

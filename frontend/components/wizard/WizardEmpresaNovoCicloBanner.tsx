@@ -26,7 +26,7 @@ export function WizardEmpresaNovoCicloBanner({
   if (carregando) {
     return (
       <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
-        Verificando histórico desta empresa no painel…
+        Recuperando o histórico desta empresa na plataforma…
       </p>
     );
   }
@@ -34,29 +34,34 @@ export function WizardEmpresaNovoCicloBanner({
   const razao = razaoSocial.trim() || resumo?.razaoSocialMaisRecente?.trim() || "";
 
   if (resumo != null && resumo.totalCiclos > 0) {
-    const plural = resumo.totalCiclos === 1 ? "diagnóstico anterior" : "diagnósticos anteriores";
+    const pluralDiag =
+      resumo.totalCiclos === 1 ? "1 diagnóstico já realizado" : `${resumo.totalCiclos} diagnósticos já realizados`;
+    const proximo = resumo.proximoNumeroInternoEstimado;
     return (
       <div
         className="rounded-md border border-primary/35 bg-primary/5 px-3 py-3 text-sm leading-relaxed text-foreground"
         role="status"
       >
         <p>
-          <strong className="font-semibold">Empresa já cadastrada no painel.</strong>{" "}
-          {resumo.totalCiclos} {plural}
+          <strong className="font-semibold">Boa notícia: esta empresa já faz parte da sua base.</strong>
           {razao ? (
             <>
               {" "}
-              para <strong className="font-semibold">{razao}</strong>
+              Para <strong className="font-semibold">{razao}</strong>, encontramos{" "}
+              <strong className="font-semibold">{pluralDiag}</strong> na plataforma.
             </>
-          ) : null}
-          .
+          ) : (
+            <>
+              {" "}
+              Encontramos <strong className="font-semibold">{pluralDiag}</strong> na plataforma.
+            </>
+          )}
         </p>
-        <p className="mt-2 text-muted-foreground text-xs">
-          Este assistente registrará o{" "}
-          <strong className="text-foreground font-medium">
-            ciclo nº {resumo.proximoNumeroInternoEstimado}
-          </strong>{" "}
-          (novo diagnóstico na mesma PJ — não é um novo cadastro de empresa).
+        <p className="mt-2 text-muted-foreground text-xs leading-relaxed">
+          Agora vamos registrar o{" "}
+          <strong className="text-foreground font-medium">{proximo}º ciclo de maturidade</strong> — uma
+          nova leitura da prontidão para a Reforma do Consumo, com histórico preservado e comparável ao
+          ciclo anterior. Não é um novo cadastro: é a evolução do mesmo acompanhamento.
         </p>
       </div>
     );
@@ -68,15 +73,20 @@ export function WizardEmpresaNovoCicloBanner({
         className="rounded-md border border-border/80 bg-muted/30 px-3 py-3 text-sm leading-relaxed"
         role="status"
       >
-        <strong className="font-semibold text-foreground">Novo ciclo de diagnóstico</strong>
-        {razao ? (
-          <>
-            {" "}
-            para <strong className="font-semibold">{razao}</strong>
-          </>
-        ) : null}
-        . Os dados abaixo referem-se à mesma empresa do painel; ao concluir, será criado um novo ciclo
-        numerado automaticamente.
+        <p className="text-foreground">
+          <strong className="font-semibold">Vamos abrir um novo ciclo de maturidade</strong>
+          {razao ? (
+            <>
+              {" "}
+              para <strong className="font-semibold">{razao}</strong>
+            </>
+          ) : null}
+          .
+        </p>
+        <p className="mt-2 text-muted-foreground text-xs leading-relaxed">
+          Confirme os dados abaixo e avance: ao concluir, o resultado entra no histórico da empresa na
+          plataforma, com numeração automática e comparável aos ciclos anteriores.
+        </p>
       </div>
     );
   }

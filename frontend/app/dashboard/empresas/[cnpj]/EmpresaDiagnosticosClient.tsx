@@ -13,6 +13,7 @@ import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
+import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import { idDiagnosticoBaselineQuadroEmpresa } from "@/lib/painel/diagnostico_empresa_ordem";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
@@ -167,10 +168,17 @@ export default function EmpresaDiagnosticosClient({
 
         {!semSessao && (
           <div>
-            <Button asChild className="w-full sm:w-auto">
-              <Link href={buildWizardUrlNovaDiagnosticoEmpresa(cnpjNormalizado, tituloEmpresa)}>
-                Novo ciclo de diagnóstico
-              </Link>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() =>
+                navegarRefazerDiagnosticoPainel(
+                  router,
+                  buildWizardUrlNovaDiagnosticoEmpresa(cnpjNormalizado, tituloEmpresa),
+                )
+              }
+            >
+              Novo ciclo de diagnóstico
             </Button>
           </div>
         )}

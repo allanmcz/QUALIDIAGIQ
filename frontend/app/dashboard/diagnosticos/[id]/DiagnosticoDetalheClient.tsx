@@ -7,7 +7,13 @@ import { RefreshCw } from "lucide-react";
 
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
-import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
+import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
+import {
+  fetchDiagnosticosResumoTodasPaginasPorEmpresa,
+  type DiagnosticoResumoApi,
+} from "@/lib/api/lista_diagnosticos";
+import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
+import { idDiagnosticoBaselineQuadroEmpresa } from "@/lib/painel/diagnostico_empresa_ordem";
 import { hrefPrivacidadePainel } from "@/lib/painel/privacidade_diagnostico_query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +28,7 @@ import {
   buildEmpresaDiagnosticosHref,
   buildWizardUrlNovaDiagnosticoEmpresa,
 } from "@/lib/dashboard/empresa_diagnostico_urls";
+import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import { clearPendingDiagnosticoFromStorage } from "@/lib/wizard/pending_diagnostico";
 import { clearWizardDraft } from "@/lib/wizard/wizard_draft";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
@@ -151,6 +158,35 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
     ];
   }, [listaEmpresa, data]);
 
+  const cnpjParaLista = (data?.empresa_cnpj ?? "").replace(/\D/g, "");
+
+  /** Lista e detalhe do quadro no pai — evita setState no pai durante render do filho. */
+  useEffect(() => {
+    if (cnpjParaLista.length !== 14 || !temSessaoPainelParaApiCliente()) return;
+    let cancel = false;
+    void fetchDiagnosticosResumoTodasPaginasPorEmpresa(cnpjParaLista).then((rows) => {
+      if (!cancel) setListaEmpresa(rows);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [cnpjParaLista, data?.id]);
+
+  useEffect(() => {
+    if (!listaEmpresa?.length) return;
+    const baselineId = idDiagnosticoBaselineQuadroEmpresa(listaEmpresa);
+    if (!baselineId) return;
+    let cancel = false;
+    void fetchDiagnosticoDetalhe(baselineId).then((d) => {
+      if (!cancel) {
+        setDetalhesEmpresa((prev) => (prev[baselineId] ? prev : { ...prev, [d.id]: d }));
+      }
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [listaEmpresa]);
+
   if (!data) {
     return (
       <div className="container py-10 text-muted-foreground">
@@ -245,10 +281,18 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <Button asChild variant="default" size="sm">
-                <Link href={buildWizardUrlNovaDiagnosticoEmpresa(cnpjDigits, data.empresa_razao_social)}>
-                  Novo ciclo de diagnóstico
-                </Link>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() =>
+                  navegarRefazerDiagnosticoPainel(
+                    router,
+                    buildWizardUrlNovaDiagnosticoEmpresa(cnpjDigits, data.empresa_razao_social),
+                  )
+                }
+              >
+                Novo ciclo de diagnóstico
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
@@ -277,8 +321,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
               expandirDiagnosticoId={data.id}
               diagnosticoSemeado={data}
               usarExpandNaQuery={false}
-              onDiagnosticosAlterados={setListaEmpresa}
-              onDetalhesPrefetch={(d) => setDetalhesEmpresa((prev) => ({ ...prev, ...d }))}
               onListaDetalheAtualizado={aoDetalheEmpresaAtualizado}
             />
           </CardContent>
