@@ -15,6 +15,8 @@ import {
 type Props = {
   diagnosticoId: string;
   diagnosticoStatus: string;
+  /** Âncora HTML do cartão (painel centralizado vs. legado na ficha). */
+  cardId?: string;
 };
 
 const MIN_MOTIVO = 10;
@@ -22,7 +24,11 @@ const MIN_MOTIVO = 10;
 /**
  * Cadeia append-only de retificações (ADR-012 §5) — não altera o diagnóstico WORM original.
  */
-export function RetificacaoDiagnosticoCard({ diagnosticoId, diagnosticoStatus }: Props) {
+export function RetificacaoDiagnosticoCard({
+  diagnosticoId,
+  diagnosticoStatus,
+  cardId = "priv-retificacoes",
+}: Props) {
   const [linhas, setLinhas] = useState<DiagnosticoRetificacaoHttp[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -75,7 +81,7 @@ export function RetificacaoDiagnosticoCard({ diagnosticoId, diagnosticoStatus }:
   };
 
   return (
-    <Card id="diag-retificacoes" className="mb-10 scroll-mt-24">
+    <Card id={cardId} className="mb-10 scroll-mt-24">
         <CardHeader>
         <CardTitle className="text-lg">Retificações (compliance / LGPD)</CardTitle>
       </CardHeader>

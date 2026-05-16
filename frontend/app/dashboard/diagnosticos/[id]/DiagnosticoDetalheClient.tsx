@@ -8,8 +8,7 @@ import { RefreshCw } from "lucide-react";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
-import { PrivacidadeDiagnosticoCard } from "@/components/painel/PrivacidadeDiagnosticoCard";
-import { RetificacaoDiagnosticoCard } from "@/components/painel/RetificacaoDiagnosticoCard";
+import { hrefPrivacidadePainel } from "@/lib/painel/privacidade_diagnostico_query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -182,10 +181,14 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           aria-label="Atalhos para seções desta ficha"
         >
           <Button variant="outline" size="sm" asChild>
-            <Link href="#diag-privacidade-lgpd">LGPD</Link>
+            <Link href={hrefPrivacidadePainel({ diagnosticoId: data.id, secao: "lgpd" })}>
+              Privacidade LGPD
+            </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link href="#diag-retificacoes">Retificações</Link>
+            <Link href={hrefPrivacidadePainel({ diagnosticoId: data.id, secao: "retificacoes" })}>
+              Retificações
+            </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="#diag-explicacao-score-llm">Explicação IA</Link>
@@ -234,10 +237,6 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
           </div>
         </div>
       </div>
-
-      <PrivacidadeDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
-
-      <RetificacaoDiagnosticoCard diagnosticoId={data.id} diagnosticoStatus={data.status} />
 
       {temCnpj14 ? (
         <Card className="mb-10" id="painel-diagnosticos-mesma-empresa">

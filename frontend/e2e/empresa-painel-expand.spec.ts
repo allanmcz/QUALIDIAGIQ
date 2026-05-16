@@ -239,7 +239,7 @@ test.describe("Painel empresa — expandir linha", () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test("atalho LGPD no menu Ações abre ficha com âncora (mock)", async ({ page }) => {
+  test("atalho LGPD no menu Ações abre painel centralizado (mock)", async ({ page }) => {
     await installPainelEmpresaApiMocks(page);
     await loginPainelE2E(page);
 
@@ -254,10 +254,14 @@ test.describe("Painel empresa — expandir linha", () => {
     await page.getByRole("button", { name: "Ações ▾" }).first().click();
     await page.getByRole("menu").getByRole("menuitem", { name: "LGPD" }).click();
 
-    await expect(page).toHaveURL(new RegExp(`/dashboard/diagnosticos/${DIAG_ID}`));
-    const cardLgpd = page.locator("#diag-privacidade-lgpd");
-    await expect(cardLgpd).toBeVisible({ timeout: 15_000 });
-    await expect(cardLgpd.locator('[data-slot="card-title"]').first()).toContainText("Privacidade LGPD");
+    await expect(page).toHaveURL(
+      new RegExp(`/dashboard/privacidade\\?.*diagnostico_id=${DIAG_ID}`),
+    );
+    await expect(page.getByRole("heading", { name: "Privacidade LGPD" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("heading", { name: "Nova solicitação" })).toBeVisible();
+    await expect(page.locator("#priv-lgpd-registrar")).toBeVisible();
   });
 
   test("expandir mostra explicação score LLM e histórico (perfil avançado)", async ({ page }) => {

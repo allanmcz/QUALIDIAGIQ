@@ -33,6 +33,7 @@ import {
   type DiagnosticoResumoApi,
 } from "@/lib/api/lista_diagnosticos";
 import { patchPainelEstadoCicloDiagnostico } from "@/lib/api/patch_painel_estado_ciclo";
+import { hrefPrivacidadePainel } from "@/lib/painel/privacidade_diagnostico_query";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
@@ -484,7 +485,10 @@ export function EmpresaDiagnosticosListaPainel({
                                 <span className="block px-3 py-2 text-muted-foreground">PDF indisponível</span>
                               )}
                               <Link
-                                href={`${detailHref}#diag-retificacoes`}
+                                href={hrefPrivacidadePainel({
+                                  diagnosticoId: diag.id,
+                                  secao: "retificacoes",
+                                })}
                                 role="menuitem"
                                 className="block px-3 py-2 hover:bg-muted/60"
                                 onClick={() => setAcoesMenuDiagId(null)}
@@ -492,7 +496,10 @@ export function EmpresaDiagnosticosListaPainel({
                                 Retificações
                               </Link>
                               <Link
-                                href={`${detailHref}#diag-privacidade-lgpd`}
+                                href={hrefPrivacidadePainel({
+                                  diagnosticoId: diag.id,
+                                  secao: "lgpd",
+                                })}
                                 role="menuitem"
                                 className="block px-3 py-2 hover:bg-muted/60"
                                 onClick={() => setAcoesMenuDiagId(null)}
