@@ -253,31 +253,25 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             </div>
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
               Ranking (M05), matriz de impacto e autoconferência ABNT (M12) são por diagnóstico — use{" "}
-              <strong className="font-medium text-foreground">Expandir</strong> na linha. O quadro de
-              implantação abaixo é <strong className="font-medium text-foreground">único por empresa</strong>
+              <strong className="font-medium text-foreground">Expandir</strong> na linha. Gaps consolidados e
+              plano de implantação ficam{" "}
+              <strong className="font-medium text-foreground">no bloco abaixo</strong>
               {temCnpj14 ? (
                 <>
                   {" "}
-                  (
+                  (ou na{" "}
                   <Link
                     href={buildEmpresaDiagnosticosHref(cnpjDigits, data.empresa_razao_social, {
-                      hash: "empresa-quadro-implantacao-principal",
+                      hash: "empresa-implantacao-bloco",
                     })}
                     className="text-primary font-medium underline"
                   >
-                    vista dedicada por CNPJ
+                    vista por CNPJ
                   </Link>
                   ).
                 </>
               ) : null}
             </p>
-            <div className="mb-8">
-              <EmpresaQuadroImplantacaoTopo
-                listaPainel={listaParaQuadro}
-                detalhesPorId={detalhesEmpresaComAtual}
-                onDataAtualizado={aoDetalheEmpresaAtualizado}
-              />
-            </div>
             <EmpresaDiagnosticosListaPainel
               cnpjNormalizado={cnpjDigits}
               expandirDiagnosticoId={data.id}
@@ -289,6 +283,14 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
             />
           </CardContent>
         </Card>
+      ) : null}
+
+      {temCnpj14 && listaParaQuadro?.length ? (
+        <EmpresaQuadroImplantacaoTopo
+          listaPainel={listaParaQuadro}
+          detalhesPorId={detalhesEmpresaComAtual}
+          onDataAtualizado={aoDetalheEmpresaAtualizado}
+        />
       ) : null}
 
       {data.cronograma && data.cronograma.length > 0 && (

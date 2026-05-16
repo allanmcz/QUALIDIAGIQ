@@ -8,6 +8,7 @@ import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPa
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
@@ -93,7 +94,7 @@ export default function EmpresaDiagnosticosClient({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "").trim();
-    if (hash !== "empresa-quadro-implantacao-principal") return;
+    if (hash !== "empresa-quadro-implantacao-principal" && hash !== "empresa-implantacao-bloco") return;
     const timer = window.setTimeout(() => {
       document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 400);
@@ -174,7 +175,28 @@ export default function EmpresaDiagnosticosClient({
           </div>
         )}
 
-        {!semSessao && (
+        {!semSessao ? (
+          <Card className="mb-10" id="painel-diagnosticos-empresa">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Diagnósticos desta empresa no painel</CardTitle>
+              <CardDescription>
+                Cada linha é um ciclo. Use <strong className="font-medium text-foreground">Expandir</strong> para
+                ranking de gaps (M05), matriz de impacto e autoconferência ABNT (M12) daquele diagnóstico.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmpresaDiagnosticosListaPainel
+                cnpjNormalizado={cnpjNormalizado}
+                usarExpandNaQuery
+                onDiagnosticosAlterados={aoDiagnosticosPainel}
+                onListaDetalheAtualizado={aoDetalheAtualizado}
+                onDetalhesPrefetch={aoDetalhesPrefetch}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {!semSessao ? (
           <EmpresaQuadroImplantacaoTopo
             listaPainel={listaPainel}
             detalhesPorId={detalhesPorId}
@@ -182,15 +204,7 @@ export default function EmpresaDiagnosticosClient({
             erro={quadroErro}
             onDataAtualizado={aoDetalheAtualizado}
           />
-        )}
-
-        <EmpresaDiagnosticosListaPainel
-          cnpjNormalizado={cnpjNormalizado}
-          usarExpandNaQuery
-          onDiagnosticosAlterados={aoDiagnosticosPainel}
-          onListaDetalheAtualizado={aoDetalheAtualizado}
-          onDetalhesPrefetch={aoDetalhesPrefetch}
-        />
+        ) : null}
       </div>
     </div>
   );
