@@ -222,7 +222,9 @@ test.describe("Painel empresa — expandir linha", () => {
     await page.getByRole("button", { name: "Ações ▾" }).first().click();
     await expect(page.getByRole("menu").getByRole("menuitem", { name: "Retificações" })).toBeVisible();
     await expect(page.getByRole("menu").getByRole("menuitem", { name: "LGPD" })).toBeVisible();
-    await expect(page.getByRole("menu").getByRole("menuitem", { name: "Ficha completa" })).toBeVisible();
+    await expect(
+      page.getByRole("menu").getByRole("menuitem", { name: "Abrir ficha do diagnóstico" }),
+    ).toBeVisible();
   });
 
   test("expandir mostra ranking ou radar (mock)", async ({ page }) => {

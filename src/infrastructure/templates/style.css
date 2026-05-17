@@ -169,3 +169,7 @@ h3 {
 .footer-note strong {
     color: #0d1b4b;
 }
+
+tr.row-highlight td {
+    background-color: #fffbeb;
+}

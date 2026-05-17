@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Comparação de questionários — {{ empresa_razao }}</title>
+</head>
+<body>
+    <div class="pdf-header-brand">
+        <img src="assets/QDI-NB1-logo-completo.jpg" alt="QualiDiagIQ" class="pdf-logo" width="200" height="56" />
+    </div>
+
+    <h1>Comparação de questionários entre ciclos</h1>
+    <p class="muted"><em>QualiDiagIQ — evolução das respostas por código de pergunta (LC 214/2025).</em></p>
+
+    <div class="header-info">
+        <p><strong>Empresa:</strong> {{ empresa_razao }}{% if empresa_cnpj %} (CNPJ: {{ empresa_cnpj }}){% endif %}</p>
+        <p><strong>Gerado em:</strong> {{ data_geracao }}</p>
+        <p><strong>Ciclos comparados:</strong> {{ diagnosticos|length }}</p>
+    </div>
+
+    <table class="dimensoes-table">
+        <thead>
+            <tr>
+                <th style="width:7rem">Código</th>
+                <th>Pergunta</th>
+                {% for col in colunas %}
+                <th style="width:11rem">{{ col.rotulo }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for linha in linhas %}
+            <tr{% if linha.destaque_mudanca %} class="row-highlight"{% endif %}>
+                <td class="mono small">{{ linha.pergunta_codigo }}</td>
+                <td>
+                    {{ linha.texto_pergunta }}
+                    {% if linha.base_legal %}
+                    <br /><span class="muted small">{{ linha.base_legal }}</span>
+                    {% endif %}
+                </td>
+                {% for col in colunas %}
+                {% set v = linha.valores.get(col.id) %}
+                <td>
+                    <strong>{{ v.valor_exibicao if v else "—" }}</strong>
+                    {% if v and v.excluida_calculo %}
+                    <span class="muted small"> (fora cálculo)</span>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

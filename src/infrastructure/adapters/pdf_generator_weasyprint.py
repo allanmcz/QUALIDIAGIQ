@@ -86,16 +86,59 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             piores_dimensoes=piores_template,
         )
 
-        css_path = str(self.templates_dir / "style.css")
+        pdf_bytes = await self._render_html_bytes(html_out, diagnostico)
+        record_pdf_generation(outcome="success")
+        return pdf_bytes
 
-        # Importante: geração corre em thread — ``structlog`` context não propaga; capturamos aqui.
+    async def gerar_pdf_questionario_respostas(
+        self,
+        diagnostico: Diagnostico,
+        respostas: list[dict[str, object]],
+    ) -> bytes:
+        """Espelho do questionário — template dedicado (distinto do relatório executivo M04)."""
+        template = self.jinja_env.get_template("questionario_respostas.html")
+        agora = datetime.now(UTC)
+        data_geracao = formatar_data_geracao_pdf(
+            getattr(diagnostico, "locale_relatorio", "pt-BR") or "pt-BR",
+            agora,
+        )
+        fin = diagnostico.finalizado_em
+        html_out = template.render(
+            empresa_razao=diagnostico.empresa.razao_social,
+            empresa_cnpj=diagnostico.empresa.cnpj or "",
+            diagnostico_id=str(diagnostico.id),
+            finalizado_em=(
+                fin.astimezone(UTC).strftime("%d/%m/%Y %H:%M UTC") if fin is not None else "—"
+            ),
+            data_geracao=data_geracao,
+            hash_evidencia=diagnostico.hash_evidencia or "",
+            respostas=respostas,
+        )
+        pdf_bytes = await self._render_html_bytes(html_out, diagnostico)
+        record_pdf_generation(outcome="success")
+        return pdf_bytes
+
+    async def gerar_pdf_comparacao_questionario(
+        self,
+        comparacao: dict[str, object],
+        *,
+        contexto_diagnostico: Diagnostico,
+    ) -> bytes:
+        """Exportação PDF da matriz comparar-questionario."""
+        template = self.jinja_env.get_template("comparacao_questionario.html")
+        agora = datetime.now(UTC)
+        locale = getattr(contexto_diagnostico, "locale_relatorio", "pt-BR") or "pt-BR"
+        data_geracao = formatar_data_geracao_pdf(locale, agora)
+        ctx = _contexto_template_comparacao(comparacao, data_geracao=data_geracao)
+        html_out = template.render(**ctx)
+        pdf_bytes = await self._render_html_bytes(html_out, contexto_diagnostico)
+        record_pdf_generation(outcome="success")
+        return pdf_bytes
+
+    async def _render_html_bytes(self, html_out: str, diagnostico: Diagnostico) -> bytes:
+        css_path = str(self.templates_dir / "style.css")
         _ctx = get_contextvars()
         http_tid = _ctx.get("http_trace_id") if isinstance(_ctx, dict) else None
-
-        # WeasyPrint processa o HTML e o CSS
-        # Importante: Geração ocorre em thread bloqueante nativa, em prod
-        # idealmente encapsulada em asyncio.to_thread, mas aqui WeasyPrint é rápido o suficiente
-        # para testes, though wrap for safety
 
         import asyncio
 
@@ -103,7 +146,6 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             try:
                 from weasyprint import CSS, HTML
 
-                # base_url: file URI para WeasyPrint resolver `assets/...` no template
                 base_url = self.templates_dir.resolve().as_uri() + "/"
                 return bytes(
                     HTML(string=html_out, base_url=base_url).write_pdf(
@@ -111,8 +153,6 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
                     )
                 )
             except Exception as e:
-                # Caso a biblioteca não consiga carregar no ambiente local devido a dependências OS
-                # Retorna um PDF dummy (ou bytes simples) para não quebrar testes E2E
                 logger.warning(
                     "weasyprint_indisponivel_pdf_mock",
                     erro=str(e),
@@ -126,18 +166,83 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
 
         timeout_s = float(get_settings().pdf_render_timeout_seconds)
         try:
-            pdf_bytes = await asyncio.wait_for(asyncio.to_thread(_render), timeout=timeout_s)
+            return bytes(
+                await asyncio.wait_for(asyncio.to_thread(_render), timeout=timeout_s)
+            )
         except TimeoutError:
             record_pdf_generation(outcome="timeout")
-            logger.error(
-                "weasyprint_timeout_render",
-                timeout_segundos=timeout_s,
-                diagnostico_id=str(diagnostico.id),
-                tenant_id=str(diagnostico.tenant_id),
-                http_trace_id=http_tid,
-            )
             raise RuntimeError(
-                f"Timeout ao gerar PDF (>{timeout_s}s). Ajuste QDI_PDF_RENDER_TIMEOUT_SECONDS ou infra WeasyPrint."
+                f"Timeout ao gerar PDF (>{timeout_s}s). Ajuste QDI_PDF_RENDER_TIMEOUT_SECONDS."
             ) from None
-        record_pdf_generation(outcome="success")
-        return bytes(pdf_bytes)
+
+
+def _contexto_template_comparacao(
+    comparacao: dict[str, object],
+    *,
+    data_geracao: str,
+) -> dict[str, object]:
+    """Normaliza payload da API para o template Jinja de comparação."""
+    meta_raw = comparacao.get("diagnosticos")
+    linhas_raw = comparacao.get("linhas")
+    if not isinstance(meta_raw, list) or not isinstance(linhas_raw, list):
+        raise ValueError("Payload de comparação inválido para PDF")
+
+    colunas: list[dict[str, str]] = []
+    for m in meta_raw:
+        if not isinstance(m, dict):
+            continue
+        did = str(m.get("diagnostico_id", ""))
+        fin = m.get("finalizado_em")
+        data_txt = "—"
+        if isinstance(fin, str) and fin:
+            try:
+                dt = datetime.fromisoformat(fin.replace("Z", "+00:00"))
+                data_txt = dt.astimezone(UTC).strftime("%d/%m/%y")
+            except ValueError:
+                data_txt = fin[:10]
+        n_int = m.get("numero_interno_grupo")
+        n = f"#{n_int}" if n_int is not None else did[:8]
+        score = m.get("score_geral")
+        score_txt = f"{float(score):.1f}" if score is not None else "—"
+        colunas.append({"id": did, "rotulo": f"{n} · {data_txt} · {score_txt}"})
+
+    diag_ids = [c["id"] for c in colunas]
+    linhas_pdf: list[dict[str, object]] = []
+    for linha in linhas_raw:
+        if not isinstance(linha, dict):
+            continue
+        valores_in = linha.get("valores_por_diagnostico")
+        valores_out: dict[str, dict[str, object]] = {}
+        exibicoes: list[str] = []
+        if isinstance(valores_in, dict):
+            for did in diag_ids:
+                v = valores_in.get(did)
+                if isinstance(v, dict):
+                    txt = str(v.get("valor_exibicao", "—"))
+                    valores_out[did] = {
+                        "valor_exibicao": txt,
+                        "excluida_calculo": bool(v.get("excluida_calculo")),
+                    }
+                    exibicoes.append(txt)
+                else:
+                    valores_out[did] = {"valor_exibicao": "—", "excluida_calculo": False}
+                    exibicoes.append("—")
+        destaque = len(exibicoes) > 1 and len(set(exibicoes)) > 1
+        linhas_pdf.append(
+            {
+                "pergunta_codigo": str(linha.get("pergunta_codigo", "")),
+                "texto_pergunta": str(linha.get("texto_pergunta", "")),
+                "base_legal": linha.get("base_legal"),
+                "valores": valores_out,
+                "destaque_mudanca": destaque,
+            }
+        )
+
+    return {
+        "empresa_razao": str(comparacao.get("empresa_razao_social", "")),
+        "empresa_cnpj": str(comparacao.get("empresa_cnpj", "")),
+        "data_geracao": data_geracao,
+        "diagnosticos": meta_raw,
+        "colunas": colunas,
+        "linhas": linhas_pdf,
+    }

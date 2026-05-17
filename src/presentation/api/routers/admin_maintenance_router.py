@@ -17,8 +17,15 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from src.application.use_cases.backfill_respostas_questionario import (
+    BackfillRespostasQuestionario,
+    ComandoBackfillRespostasQuestionario,
+)
 from src.infrastructure.config.settings import get_settings
-from src.presentation.api.dependencies import require_perfil_manutencao_plataforma
+from src.presentation.api.dependencies import (
+    get_backfill_respostas_questionario_use_case,
+    require_perfil_manutencao_plataforma,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -34,6 +41,33 @@ class CleanupIdempotencyResponse(BaseModel):
 
     deleted_count: int = Field(ge=0, description="Linhas removidas de idempotency_responses.")
     executed_at: str = Field(description="Instante de execução (ISO 8601).")
+
+
+class BackfillRespostasQuestionarioRequest(BaseModel):
+    """Parâmetros do backfill de respostas materializadas."""
+
+    limite: int = Field(default=50, ge=1, le=500, description="Máximo de diagnósticos a processar.")
+    janela_horas_rascunho: int = Field(
+        default=48,
+        ge=1,
+        le=168,
+        description="Janela temporal para casar rascunho self-service consumido.",
+    )
+
+
+class BackfillRespostasDetalheSchema(BaseModel):
+    diagnostico_id: str
+    status: str
+    motivo: str | None = None
+    total_respostas: int | None = None
+
+
+class BackfillRespostasQuestionarioResponse(BaseModel):
+    processados: int = Field(ge=0)
+    preenchidos: int = Field(ge=0)
+    sem_fonte: int = Field(ge=0)
+    erros: int = Field(ge=0)
+    detalhes: list[BackfillRespostasDetalheSchema]
 
 
 def _rate_limit_ok(tenant_id: uuid.UUID) -> bool:
@@ -119,6 +153,52 @@ async def cleanup_idempotency(
         deleted_count=deleted_count,
         executed_at=executed_at_iso,
     )
+
+
+@router.post(
+    "/backfill-respostas-questionario",
+    response_model=BackfillRespostasQuestionarioResponse,
+    summary="Backfill de respostas do questionário (legado)",
+    description=(
+        "Preenche ``diagnostico_resposta_questionario`` para diagnósticos finalizados sem linhas, "
+        "reidratando de rascunhos self-service consumidos (e-mail + CNPJ + janela temporal). "
+        "Diagnósticos criados só pelo painel sem rascunho ficam em ``sem_fonte``."
+    ),
+)
+async def backfill_respostas_questionario(
+    payload: BackfillRespostasQuestionarioRequest,
+    current: Annotated[
+        tuple[uuid.UUID, uuid.UUID, str],
+        Depends(require_perfil_manutencao_plataforma),
+    ],
+    use_case: Annotated[
+        BackfillRespostasQuestionario,
+        Depends(get_backfill_respostas_questionario_use_case),
+    ],
+) -> BackfillRespostasQuestionarioResponse:
+    _, tenant_id, perfil = current
+    settings = get_settings()
+    if not settings.sync_database_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="DATABASE_URL não configurado — backfill exige Postgres.",
+        )
+    logger.info(
+        "backfill_respostas_questionario_inicio",
+        tenant_id=str(tenant_id),
+        perfil_conta=perfil,
+        limite=payload.limite,
+    )
+    resultado = await use_case.execute(
+        ComandoBackfillRespostasQuestionario(
+            tenant_id=tenant_id,
+            limite=payload.limite,
+            janela_horas_rascunho=payload.janela_horas_rascunho,
+        )
+    )
+    from dataclasses import asdict
+
+    return BackfillRespostasQuestionarioResponse.model_validate(asdict(resultado))
 
 
 __all__ = ["router"]

@@ -1002,6 +1002,48 @@ class DiagnosticoQuestionarioRespostasResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
 
+class ComparacaoQuestionarioDiagnosticoMetaSchema(BaseModel):
+    """Metadados de um ciclo na comparação."""
+
+    diagnostico_id: str
+    finalizado_em: str | None = None
+    score_geral: float | None = None
+    numero_interno_grupo: int | None = None
+    total_respostas: int = 0
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class ComparacaoQuestionarioValorSchema(BaseModel):
+    valor_exibicao: str
+    pontuacao_item: float | None = None
+    excluida_calculo: bool = False
+    ordem_exibicao: int | None = None
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class ComparacaoQuestionarioLinhaSchema(BaseModel):
+    pergunta_codigo: str
+    texto_pergunta: str
+    dimensao: str
+    base_legal: str | None = None
+    valores_por_diagnostico: dict[str, ComparacaoQuestionarioValorSchema]
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class ComparacaoQuestionarioResponse(BaseModel):
+    """Matriz pergunta × diagnósticos selecionados (evolução entre ciclos)."""
+
+    empresa_cnpj: str
+    empresa_razao_social: str
+    diagnosticos: list[ComparacaoQuestionarioDiagnosticoMetaSchema]
+    linhas: list[ComparacaoQuestionarioLinhaSchema]
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class DiagnosticoResumoSchema(BaseModel):
     """Item resumido para listagem do tenant (P7 — painel)."""
 

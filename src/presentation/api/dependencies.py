@@ -56,6 +56,12 @@ get_explicar_score_llm_use_case = _deps_infra.get_explicar_score_llm_use_case
 _cnpj_consulta_service_optional = _deps_infra._cnpj_consulta_service_optional
 get_consultar_cnpj_use_case = _deps_infra.get_consultar_cnpj_use_case
 get_buscar_cnae_subclasses_use_case = _deps_infra.get_buscar_cnae_subclasses_use_case
+get_comparar_questionario_diagnosticos_use_case = (
+    _deps_infra.get_comparar_questionario_diagnosticos_use_case
+)
+get_backfill_respostas_questionario_use_case = (
+    _deps_infra.get_backfill_respostas_questionario_use_case
+)
 get_realizar_diagnostico_use_case = _deps_infra.get_realizar_diagnostico_use_case
 
 # LGPD titular, export portável, retificações WORM, vínculo lead, mutações painel / plano.

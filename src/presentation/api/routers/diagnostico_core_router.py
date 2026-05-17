@@ -11,6 +11,7 @@ from typing import Annotated
 from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime)
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, status
+from fastapi.responses import Response
 
 from src.application.errors import EliminacaoEmpresaSomenteWormError
 from src.application.ports.diagnostico_retificacao_port import DiagnosticoRetificacaoRegisto
@@ -21,6 +22,10 @@ from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
 from src.application.use_cases.listar_retificacoes_diagnostico import (
     ComandoListarRetificacoesDiagnostico,
     ListarRetificacoesDiagnostico,
+)
+from src.application.use_cases.comparar_questionario_diagnosticos import (
+    ComandoCompararQuestionario,
+    CompararQuestionarioDiagnosticos,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.application.use_cases.registrar_retificacao_diagnostico import (
@@ -33,16 +38,20 @@ from src.domain.value_objects.cnpj_brasil import (
     normalizar_cnpj_apenas_digitos,
 )
 from src.presentation.api.dependencies import (
+    get_comparar_questionario_diagnosticos_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
     get_eliminar_diagnosticos_empresa_painel_use_case,
     get_listar_retificacoes_diagnostico_use_case,
+    get_pdf_generator,
     get_realizar_diagnostico_use_case,
     get_registrar_retificacao_diagnostico_use_case,
 )
+from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
+    ComparacaoQuestionarioResponse,
     DiagnosticoQuestionarioRespostasResponse,
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
@@ -282,6 +291,131 @@ async def registrar_retificacao_diagnostico(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     return _retificacao_para_http(r)
+
+
+@router.get(
+    "/comparar-questionario",
+    response_model=ComparacaoQuestionarioResponse,
+    summary="Comparar questionário entre diagnósticos",
+    description=(
+        "Alinha respostas por ``pergunta_codigo`` entre 2 e 5 diagnósticos da mesma empresa (mesmo tenant). "
+        "Query ``ids``: UUIDs separados por vírgula."
+    ),
+)
+async def comparar_questionario_diagnosticos(
+    ids: Annotated[str, Query(description="UUIDs de diagnósticos separados por vírgula (2 a 5).")],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        CompararQuestionarioDiagnosticos,
+        Depends(get_comparar_questionario_diagnosticos_use_case),
+    ],
+) -> ComparacaoQuestionarioResponse:
+    _, tenant_id, _ = current
+    raw_ids = [p.strip() for p in ids.split(",") if p.strip()]
+    try:
+        uuid_ids = tuple(UUID(x) for x in raw_ids)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Parâmetro ids contém UUID inválido.",
+        ) from exc
+    try:
+        resultado = await use_case.execute(
+            ComandoCompararQuestionario(tenant_id=tenant_id, diagnostico_ids=uuid_ids)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return ComparacaoQuestionarioResponse.model_validate(resultado)
+
+
+@router.get(
+    "/comparar-questionario/pdf",
+    summary="PDF da comparação de questionários",
+    description="Gera PDF WeasyPrint com a matriz de comparação (2 a 5 diagnósticos, mesmo CNPJ).",
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def pdf_comparar_questionario(
+    ids: Annotated[str, Query(description="UUIDs de diagnósticos separados por vírgula (2 a 5).")],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        CompararQuestionarioDiagnosticos,
+        Depends(get_comparar_questionario_diagnosticos_use_case),
+    ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
+) -> Response:
+    _, tenant_id, _ = current
+    raw_ids = [p.strip() for p in ids.split(",") if p.strip()]
+    try:
+        uuid_ids = tuple(UUID(x) for x in raw_ids)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Parâmetro ids contém UUID inválido.",
+        ) from exc
+    try:
+        resultado = await use_case.execute(
+            ComandoCompararQuestionario(tenant_id=tenant_id, diagnostico_ids=uuid_ids)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    ref = await repo.buscar_por_id(uuid_ids[0], tenant_id)
+    if ref is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Diagnóstico não encontrado")
+    try:
+        pdf_bytes = await pdf_generator.gerar_pdf_comparacao_questionario(
+            resultado,
+            contexto_diagnostico=ref,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)) from e
+    cnpj = str(resultado.get("empresa_cnpj", "") or uuid_ids[0].hex[:8]).replace("/", "")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="qdi-comparacao-questionario-{cnpj}.pdf"',
+        },
+    )
+
+
+@router.get(
+    "/{diagnostico_id}/questionario-respostas/pdf",
+    summary="PDF do questionário respondido",
+    description="Gera PDF WeasyPrint com espelho pergunta/resposta (requer respostas materializadas).",
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def pdf_questionario_respostas(
+    diagnostico_id: UUID,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    pdf_generator: Annotated[WeasyPrintPdfGenerator, Depends(get_pdf_generator)],
+) -> Response:
+    _, tenant_id, _ = current
+    diagnostico = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not diagnostico:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Diagnóstico não encontrado")
+    respostas = await repo.listar_respostas_questionario(diagnostico_id, tenant_id)
+    if not respostas:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "Este diagnóstico não possui respostas materializadas "
+                "(ciclos anteriores à versão com questionário persistido)."
+            ),
+        )
+    try:
+        pdf_bytes = await pdf_generator.gerar_pdf_questionario_respostas(diagnostico, respostas)
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)) from e
+    nome = (diagnostico.empresa.cnpj or str(diagnostico_id)[:8]).replace("/", "")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="qdi-questionario-{nome}.pdf"',
+        },
+    )
 
 
 @router.get(

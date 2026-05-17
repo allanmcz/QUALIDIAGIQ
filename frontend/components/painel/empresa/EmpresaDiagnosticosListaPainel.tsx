@@ -36,6 +36,10 @@ import {
   hrefRelatorioPdfAbsoluto,
 } from "@/lib/api/fetch_diagnostico_detalhe";
 import {
+  abrirPdfQuestionarioDiagnostico,
+  MAX_DIAGNOSTICOS_COMPARACAO,
+} from "@/lib/api/questionario_painel";
+import {
   DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX,
   fetchDiagnosticosResumo,
   fetchDiagnosticosResumoTodasPaginasPorEmpresa,
@@ -65,6 +69,9 @@ const HASHES_QUE_ABREM_LINHA = new Set([
 
 const GRID_COLS_EMPRESA =
   "sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_minmax(11rem,13rem)]";
+
+const GRID_COLS_EMPRESA_COM_SELECAO =
+  "sm:grid-cols-[2.25rem_minmax(0,1fr)_5rem_7rem_6rem_minmax(11rem,13rem)]";
 
 /** Garante linha na grelha quando o GET por CNPJ omite o registo em vista (ex.: `empresa_cnpj` vazio na lista). */
 function resumoApiDesdeDetalheSemeado(d: DiagnosticoDetalheApi): DiagnosticoResumoApi {
@@ -105,6 +112,9 @@ export type EmpresaDiagnosticosListaPainelProps = {
   onListaDetalheAtualizado?: (d: DiagnosticoDetalheApi) => void;
   /** Pré-carga em lote dos detalhes (quadro no topo da página empresa). */
   onDetalhesPrefetch?: (detalhes: Record<string, DiagnosticoDetalheApi>) => void;
+  /** Coluna de checkboxes para comparar questionário entre ciclos. */
+  selecaoComparacaoIds?: string[];
+  onToggleSelecaoComparacao?: (diagnosticoId: string, marcado: boolean) => void;
 };
 
 export function EmpresaDiagnosticosListaPainel({
@@ -116,7 +126,12 @@ export function EmpresaDiagnosticosListaPainel({
   onDiagnosticosAlterados,
   onListaDetalheAtualizado,
   onDetalhesPrefetch,
+  selecaoComparacaoIds = [],
+  onToggleSelecaoComparacao,
 }: EmpresaDiagnosticosListaPainelProps) {
+  const comSelecao = Boolean(onToggleSelecaoComparacao);
+  const gridCols = comSelecao ? GRID_COLS_EMPRESA_COM_SELECAO : GRID_COLS_EMPRESA;
+  const selecaoSet = useMemo(() => new Set(selecaoComparacaoIds), [selecaoComparacaoIds]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoResumoApi[] | null>(null);
@@ -136,6 +151,7 @@ export function EmpresaDiagnosticosListaPainel({
   /** Menu «Ações» — portal em `document.body` (Card shadcn usa `overflow-hidden`). */
   const [acoesMenuDiagId, setAcoesMenuDiagId] = useState<string | null>(null);
   const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
+  const [pdfQuestionarioCarregando, setPdfQuestionarioCarregando] = useState(false);
   /** Lote de prefetch a notificar ao pai após commit (evita setState no pai durante render do filho). */
   const [prefetchLotePai, setPrefetchLotePai] = useState<Record<string, DiagnosticoDetalheApi> | null>(
     null,
@@ -471,6 +487,25 @@ export function EmpresaDiagnosticosListaPainel({
               ) : (
                 <span className="block px-3 py-2 text-muted-foreground">PDF indisponível</span>
               )}
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-3 py-2 hover:bg-muted/60 disabled:opacity-50"
+                disabled={pdfQuestionarioCarregando}
+                onClick={() => {
+                  fecharMenuAcoes();
+                  setPdfQuestionarioCarregando(true);
+                  void abrirPdfQuestionarioDiagnostico(diag.id)
+                    .catch((e) => {
+                      window.alert(
+                        e instanceof Error ? e.message : "Não foi possível gerar o PDF do questionário.",
+                      );
+                    })
+                    .finally(() => setPdfQuestionarioCarregando(false));
+                }}
+              >
+                Questionário (PDF)
+              </button>
               <Link
                 href={hrefPrivacidadePainel({ diagnosticoId: diag.id, secao: "retificacoes" })}
                 role="menuitem"
@@ -501,7 +536,7 @@ export function EmpresaDiagnosticosListaPainel({
                 className="block px-3 py-2 hover:bg-muted/60"
                 onClick={fecharMenuAcoes}
               >
-                Ficha completa
+                Abrir ficha do diagnóstico
               </Link>
               {diag.plano === "avancado" ? (
                 <button
@@ -581,8 +616,11 @@ export function EmpresaDiagnosticosListaPainel({
       {!semSessao && !carregando && linhasGrelha.length > 0 && (
         <div className="rounded-xl border bg-card/40">
           <div
-            className={`hidden sm:grid ${GRID_COLS_EMPRESA} sm:gap-3 sm:items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/30`}
+            className={`hidden sm:grid ${gridCols} sm:gap-3 sm:items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/30`}
           >
+            {comSelecao ? (
+              <span className="sr-only">Comparar</span>
+            ) : null}
             <span>Empresa / ciclo</span>
             <span className="text-center">Score</span>
             <span className="text-center">Ciclo</span>
@@ -609,8 +647,25 @@ export function EmpresaDiagnosticosListaPainel({
               return (
                 <li key={diag.id} className={menuAcoesAberto ? "relative z-20" : "relative z-0"}>
                   <div
-                    className={`px-3 py-4 sm:px-4 space-y-3 sm:space-y-0 sm:grid ${GRID_COLS_EMPRESA} sm:gap-3 sm:items-center`}
+                    className={`px-3 py-4 sm:px-4 space-y-3 sm:space-y-0 sm:grid ${gridCols} sm:gap-3 sm:items-center`}
                   >
+                    {comSelecao ? (
+                      <div className="flex items-center justify-center sm:justify-start">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-input"
+                          aria-label={`Selecionar para comparar ${diag.empresa_razao_social}`}
+                          checked={selecaoSet.has(diag.id)}
+                          disabled={
+                            !selecaoSet.has(diag.id) &&
+                            selecaoSet.size >= MAX_DIAGNOSTICOS_COMPARACAO
+                          }
+                          onChange={(e) =>
+                            onToggleSelecaoComparacao?.(diag.id, e.target.checked)
+                          }
+                        />
+                      </div>
+                    ) : null}
                     <div className="min-w-0">
                       <Link
                         href={detailHref}

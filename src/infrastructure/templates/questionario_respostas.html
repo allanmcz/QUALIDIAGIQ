@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Questionário — {{ empresa_razao }}</title>
+</head>
+<body>
+    <div class="pdf-header-brand">
+        <img src="assets/QDI-NB1-logo-completo.jpg" alt="QualiDiagIQ" class="pdf-logo" width="200" height="56" />
+    </div>
+
+    <h1>Espelho do questionário respondido</h1>
+    <p class="muted"><em>QualiDiagIQ — evidência das declarações no diagnóstico (LC 214/2025; ABNT NBR 17301:2026).</em></p>
+
+    <div class="header-info">
+        <p><strong>Empresa:</strong> {{ empresa_razao }}{% if empresa_cnpj %} (CNPJ: {{ empresa_cnpj }}){% endif %}</p>
+        <p><strong>Diagnóstico:</strong> {{ diagnostico_id }}</p>
+        <p><strong>Finalizado em:</strong> {{ finalizado_em }}</p>
+        <p><strong>Gerado em:</strong> {{ data_geracao }}</p>
+        {% if hash_evidencia %}
+        <p class="small muted"><strong>Hash evidência:</strong> <span class="mono">{{ hash_evidencia }}</span></p>
+        {% endif %}
+    </div>
+
+    <h2>Respostas ({{ respostas|length }} perguntas)</h2>
+    <table class="dimensoes-table">
+        <thead>
+            <tr>
+                <th style="width:3rem">Seq.</th>
+                <th style="width:7rem">Código</th>
+                <th>Pergunta</th>
+                <th style="width:12rem">Resposta</th>
+                <th style="width:5rem">Pts.</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in respostas %}
+            <tr>
+                <td class="tabular-nums">{{ r.ordem_exibicao + 1 }}</td>
+                <td class="mono small">{{ r.pergunta_codigo }}</td>
+                <td>
+                    {{ r.texto_pergunta }}
+                    {% if r.base_legal %}
+                    <br /><span class="muted small">{{ r.base_legal }}</span>
+                    {% endif %}
+                </td>
+                <td><strong>{{ r.valor_exibicao }}</strong>{% if r.excluida_calculo %} <span class="muted">(fora do cálculo)</span>{% endif %}</td>
+                <td class="tabular-nums">{% if r.pontuacao_item is not none %}{{ "%.0f"|format(r.pontuacao_item) }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

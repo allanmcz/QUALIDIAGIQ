@@ -395,6 +395,58 @@ def get_buscar_cnae_subclasses_use_case() -> BuscarCnaeSubclasses:
     return BuscarCnaeSubclasses(repo=repo)
 
 
+def get_comparar_questionario_diagnosticos_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> "CompararQuestionarioDiagnosticos":
+    from src.application.use_cases.comparar_questionario_diagnosticos import (
+        CompararQuestionarioDiagnosticos,
+    )
+
+    return CompararQuestionarioDiagnosticos(repo=repo)
+
+
+def get_backfill_respostas_questionario_use_case() -> "BackfillRespostasQuestionario":
+    import asyncio
+
+    from src.application.use_cases.backfill_respostas_questionario import (
+        BackfillRespostasQuestionario,
+    )
+    from src.infrastructure.config.settings import get_settings
+    from src.infrastructure.repositories.postgres_backfill_respostas_questionario_sync import (
+        buscar_payload_rascunho_para_backfill_sync,
+        listar_diagnosticos_sem_respostas_sync,
+        persistir_linhas_backfill_sync,
+    )
+
+    settings = get_settings()
+    dsn = settings.sync_database_url or ""
+
+    async def listar(tenant_id, *, limite: int):
+        return await asyncio.to_thread(
+            listar_diagnosticos_sem_respostas_sync, dsn, tenant_id, limite=limite
+        )
+
+    async def buscar_payload(did, tid, *, janela_horas: int):
+        return await asyncio.to_thread(
+            buscar_payload_rascunho_para_backfill_sync,
+            dsn,
+            did,
+            tid,
+            janela_horas=janela_horas,
+        )
+
+    async def persistir(did, tid, linhas):
+        return await asyncio.to_thread(
+            persistir_linhas_backfill_sync, dsn, did, tid, linhas
+        )
+
+    return BackfillRespostasQuestionario(
+        listar_sem_respostas=listar,
+        buscar_payload_rascunho=buscar_payload,
+        persistir_linhas=persistir,
+    )
+
+
 def get_realizar_diagnostico_use_case(
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
     score_use_case: Annotated[CalcularScoreUseCase, Depends(get_calcular_score_use_case)],

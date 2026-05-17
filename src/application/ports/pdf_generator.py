@@ -24,3 +24,22 @@ class PdfGeneratorPort(ABC):
         Retorna os bytes do arquivo gerado.
         """
         pass
+
+    @abstractmethod
+    async def gerar_pdf_questionario_respostas(
+        self,
+        diagnostico: Diagnostico,
+        respostas: list[dict[str, object]],
+    ) -> bytes:
+        """PDF com espelho pergunta a resposta (questionário materializado)."""
+        pass
+
+    @abstractmethod
+    async def gerar_pdf_comparacao_questionario(
+        self,
+        comparacao: dict[str, object],
+        *,
+        contexto_diagnostico: Diagnostico,
+    ) -> bytes:
+        """PDF tabular da comparação entre 2–5 ciclos (mesma empresa)."""
+        pass

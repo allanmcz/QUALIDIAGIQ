@@ -25,6 +25,14 @@ class MockPdfGenerator:
         _ = explicacao_score_llm_texto
         return b"%PDF-1.4\nmock"
 
+    async def gerar_pdf_questionario_respostas(self, diagnostico, respostas) -> bytes:
+        _ = diagnostico, respostas
+        return b"%PDF-1.4\nmock-questionario"
+
+    async def gerar_pdf_comparacao_questionario(self, comparacao, *, contexto_diagnostico) -> bytes:
+        _ = comparacao, contexto_diagnostico
+        return b"%PDF-1.4\nmock-comparacao"
+
 
 class MockStorageService:
     async def upload_pdf(

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPainelButton";
+import { EmpresaComparacaoQuestionarioDialog } from "@/components/painel/empresa/EmpresaComparacaoQuestionarioDialog";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,10 @@ import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import { idDiagnosticoBaselineQuadroEmpresa } from "@/lib/painel/diagnostico_empresa_ordem";
+import {
+  MAX_DIAGNOSTICOS_COMPARACAO,
+  MIN_DIAGNOSTICOS_COMPARACAO,
+} from "@/lib/api/questionario_painel";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 function mascaraCnpj14(d: string): string {
@@ -45,6 +50,19 @@ export default function EmpresaDiagnosticosClient({
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DiagnosticoDetalheApi>>({});
   const [quadroCarregando, setQuadroCarregando] = useState(false);
   const [quadroErro, setQuadroErro] = useState<string | null>(null);
+  const [selecaoComparacaoIds, setSelecaoComparacaoIds] = useState<string[]>([]);
+  const [comparacaoAberta, setComparacaoAberta] = useState(false);
+
+  const toggleSelecaoComparacao = useCallback((diagnosticoId: string, marcado: boolean) => {
+    setSelecaoComparacaoIds((prev) => {
+      if (marcado) {
+        if (prev.includes(diagnosticoId)) return prev;
+        if (prev.length >= MAX_DIAGNOSTICOS_COMPARACAO) return prev;
+        return [...prev, diagnosticoId];
+      }
+      return prev.filter((id) => id !== diagnosticoId);
+    });
+  }, []);
 
   const baselineId = useMemo(
     () => (listaPainel?.length ? idDiagnosticoBaselineQuadroEmpresa(listaPainel) : null),
@@ -167,7 +185,7 @@ export default function EmpresaDiagnosticosClient({
         </div>
 
         {!semSessao && (
-          <div>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             <Button
               type="button"
               className="w-full sm:w-auto"
@@ -180,6 +198,18 @@ export default function EmpresaDiagnosticosClient({
             >
               Novo ciclo de diagnóstico
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={selecaoComparacaoIds.length < MIN_DIAGNOSTICOS_COMPARACAO}
+              onClick={() => setComparacaoAberta(true)}
+            >
+              Comparar questionário
+              {selecaoComparacaoIds.length > 0
+                ? ` (${selecaoComparacaoIds.length}/${MAX_DIAGNOSTICOS_COMPARACAO})`
+                : ""}
+            </Button>
           </div>
         )}
 
@@ -188,8 +218,10 @@ export default function EmpresaDiagnosticosClient({
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Diagnósticos desta empresa no painel</CardTitle>
               <CardDescription>
-                Cada linha é um ciclo. Use <strong className="font-medium text-foreground">Expandir</strong> para
-                ranking de gaps (M05), matriz de impacto e autoconferência ABNT (M12) daquele diagnóstico.
+                Cada linha é um ciclo. Marque até {MAX_DIAGNOSTICOS_COMPARACAO} linhas e use{" "}
+                <strong className="font-medium text-foreground">Comparar questionário</strong> para ver a
+                evolução das respostas. Use <strong className="font-medium text-foreground">Expandir</strong>{" "}
+                para ranking (M05), matriz e M12.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -199,6 +231,8 @@ export default function EmpresaDiagnosticosClient({
                 onDiagnosticosAlterados={aoDiagnosticosPainel}
                 onListaDetalheAtualizado={aoDetalheAtualizado}
                 onDetalhesPrefetch={aoDetalhesPrefetch}
+                selecaoComparacaoIds={selecaoComparacaoIds}
+                onToggleSelecaoComparacao={toggleSelecaoComparacao}
               />
             </CardContent>
           </Card>
@@ -214,6 +248,13 @@ export default function EmpresaDiagnosticosClient({
           />
         ) : null}
       </div>
+
+      <EmpresaComparacaoQuestionarioDialog
+        open={comparacaoAberta}
+        onOpenChange={setComparacaoAberta}
+        diagnosticoIds={selecaoComparacaoIds}
+        onLimparSelecao={() => setSelecaoComparacaoIds([])}
+      />
     </div>
   );
 }
