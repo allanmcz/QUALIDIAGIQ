@@ -14,6 +14,7 @@ from typing import Any
 from uuid import NAMESPACE_OID, UUID, uuid4, uuid5
 
 from src.application.services.consultoria_service import ConsultoriaService
+from src.application.services.texto_acao_exibicao import limpar_sufixo_lacuna_score_acao
 from src.domain.entities.diagnostico import Diagnostico
 from src.domain.services.calculador_plano_acao import (
     computar_criticidade,
@@ -148,7 +149,7 @@ def derivar_plano_painel_materializado(
                     frente_indice=fi,
                     acao_indice=aj,
                     frente_nome=frente.nome,
-                    texto_acao=acao.descricao,
+                    texto_acao=limpar_sufixo_lacuna_score_acao(acao.descricao),
                     responsavel_sugerido=acao.responsavel,
                     prazo_sugerido_texto=acao.prazo,
                     criticidade=acao.criticidade,
@@ -164,6 +165,8 @@ def derivar_plano_painel_materializado(
                 )
             )
             d_acao = asdict(acao)
+            if isinstance(d_acao.get("descricao"), str):
+                d_acao["descricao"] = limpar_sufixo_lacuna_score_acao(d_acao["descricao"])
             d_acao.pop("dimensao_gap", None)
             d_acao["plano_acao_id"] = str(aid)
             d_acao["chave_quadro_legado"] = f"f{fi}_a{aj}"

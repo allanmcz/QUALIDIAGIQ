@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Archive, ArchiveRestore } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ type Props = {
   arquivada?: boolean;
   onConcluido?: (mensagem: string) => void;
   variant?: "outline" | "secondary" | "ghost";
+  size?: ButtonProps["size"];
   className?: string;
 };
 
@@ -38,6 +39,7 @@ export function ArquivarEmpresaPainelButton({
   arquivada = false,
   onConcluido,
   variant = "outline",
+  size,
   className,
 }: Props) {
   const [aberto, setAberto] = useState(false);
@@ -68,6 +70,7 @@ export function ArquivarEmpresaPainelButton({
         <Button
           type="button"
           variant={variant}
+          size={size}
           className={className}
           onClick={() => setErro(null)}
         >

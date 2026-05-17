@@ -20,6 +20,16 @@ export type QuadroEdicaoAcao = {
   descricao_personalizada: string;
 };
 
+/** Remove sufixo legado M07 («— lacuna «Contábil» (score 17.9/100).») do texto canônico. */
+const SUFIXO_LACUNA_SCORE_RE =
+  /\s*—\s*lacuna\s*«[^»]+»\s*\(score\s*[\d.,]+\s*\/\s*100\)\.?$/iu;
+
+export function limparSufixoLacunaScoreAcao(texto: string): string {
+  const t = (texto ?? "").trim();
+  if (!t) return t;
+  return t.replace(SUFIXO_LACUNA_SCORE_RE, "").trim();
+}
+
 export function defaultQuadroEdicaoAcao(): QuadroEdicaoAcao {
   return {
     prazo_meta: "",

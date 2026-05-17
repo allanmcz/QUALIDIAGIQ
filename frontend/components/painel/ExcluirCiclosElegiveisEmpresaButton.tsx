@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ type Props = {
   razaoSocial: string;
   onExcluido?: (mensagem: string) => void;
   variant?: "outline" | "destructive" | "ghost";
+  size?: ButtonProps["size"];
   className?: string;
 };
 
@@ -36,6 +37,7 @@ export function ExcluirCiclosElegiveisEmpresaButton({
   razaoSocial,
   onExcluido,
   variant = "outline",
+  size,
   className,
 }: Props) {
   const [aberto, setAberto] = useState(false);
@@ -62,6 +64,7 @@ export function ExcluirCiclosElegiveisEmpresaButton({
         <Button
           type="button"
           variant={variant}
+          size={size}
           className={className}
           onClick={() => setErro(null)}
         >

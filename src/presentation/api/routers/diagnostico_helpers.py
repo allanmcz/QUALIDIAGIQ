@@ -21,6 +21,9 @@ from fastapi import HTTPException, Request, status
 
 from src.application.ports.email_service import EmailServicePort
 from src.application.services.consultoria_service import ConsultoriaService
+from src.application.services.texto_acao_exibicao import (
+    sanitizar_descricoes_checklist_serializado,
+)
 from src.application.services.explicacao_score_publica import (
     texto_explicacao_score_para_leitura_publica,
 )
@@ -246,7 +249,7 @@ async def _montar_diagnostico_response(
 
     blob = await repo.buscar_plano_painel_serializado(diagnostico.id, diagnostico.tenant_id)
     if blob is not None:
-        checklist_data = list(blob.checklist)
+        checklist_data = sanitizar_descricoes_checklist_serializado(list(blob.checklist))
         matriz_data = list(blob.matriz_impacto)
         cronograma_data = list(blob.cronograma)
         versao_plano = blob.versao_plano
@@ -264,7 +267,9 @@ async def _montar_diagnostico_response(
         )
         matriz_entities = ConsultoriaService.gerar_matriz_impacto(diagnostico)
         cronograma_data = ConsultoriaService.gerar_cronograma_cinco_fases()
-        checklist_data = [asdict(f) for f in checklist_entities]
+        checklist_data = sanitizar_descricoes_checklist_serializado(
+            [asdict(f) for f in checklist_entities]
+        )
         matriz_data = [asdict(m) for m in matriz_entities]
         versao_plano = int(getattr(diagnostico, "versao_plano", 1) or 1)
     h_aud, v_aud = _campos_auditoria_http(diagnostico)

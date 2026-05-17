@@ -26,6 +26,7 @@ import {
   atualizarEstadoKanbanCard,
   listarComentariosKanban,
 } from "@/lib/api/plano_acao_kanban";
+import { limparSufixoLacunaScoreAcao } from "@/lib/painel/quadro_implantacao_utils";
 import type { AcaoChecklistDetalhe } from "@/types/diagnostico_detalhe";
 import type {
   PlanoAcaoComentarioApi,
@@ -156,7 +157,7 @@ export function PlanoAcaoKanbanCardDetalheModal({
             <span className="text-muted-foreground font-normal tabular-nums mr-2">
               #{card.ordem_kanban + 1}
             </span>
-            {card.texto_acao}
+            {limparSufixoLacunaScoreAcao(card.texto_acao)}
           </DialogTitle>
           <DialogDescription className="text-left">
             {card.frente_nome}
@@ -168,7 +169,7 @@ export function PlanoAcaoKanbanCardDetalheModal({
         <div className="space-y-4 text-sm">
           <div className="rounded-md border bg-muted/30 p-3 space-y-1">
             <p className="font-medium text-foreground">Texto original do motor</p>
-            <p className="text-muted-foreground">{card.texto_acao}</p>
+            <p className="text-muted-foreground">{limparSufixoLacunaScoreAcao(card.texto_acao)}</p>
             {card.base_legal ? (
               <p className="text-xs text-muted-foreground">Base: {card.base_legal}</p>
             ) : null}

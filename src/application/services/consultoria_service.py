@@ -12,23 +12,13 @@ from dataclasses import dataclass
 from src.domain.entities.diagnostico import Diagnostico, PorteEmpresa
 from src.domain.value_objects.score import Dimensao, ScoreCompleto
 
-_ROTULO_DIMENSAO_PT: dict[Dimensao, str] = {
-    Dimensao.FISCAL: "Fiscal",
-    Dimensao.ESTRATEGICA: "Estratégica",
-    Dimensao.CONTABIL: "Contábil",
-    Dimensao.FINANCEIRA: "Financeira",
-    Dimensao.OPERACIONAL: "Operacional",
-    Dimensao.TECNOLOGICA: "Tecnológica",
-    Dimensao.COMPLIANCE_ABNT: "Conformidade ABNT NBR 17301",
-}
-
-# M07 — três ações concretas por dimensão em lacuna (texto {rotulo} + {score_fmt}).
+# M07 — três ações concretas por dimensão em lacuna (texto canônico sem sufixo de score na UI).
 _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     Dimensao.FISCAL: [
         (
             "Auditar cadastro fiscal (NCM, CFOP/CST e campos ligados à classificação tributária, "
             "incluindo preparação para cClassTrib — NT 2025.002) nos itens/serviços que concentram "
-            "≥80% do faturamento — lacuna «{rotulo}» (score {score_fmt}/100).",
+            "≥80% do faturamento.",
             "Fiscal / Cadastro",
             "30 dias",
             "NT 2025.002; LC 214/2025 arts. 12-15",
@@ -53,8 +43,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     Dimensao.FINANCEIRA: [
         (
             "Construir modelo mensal de fluxo de caixa com abas de sensibilidade CBS/IBS "
-            "(alíquota de referência + bandas) confrontando com a referência atual de PIS/COFINS/ICMS — "
-            "lacuna «{rotulo}» (score {score_fmt}/100).",
+            "(alíquota de referência + bandas) confrontando com a referência atual de PIS/COFINS/ICMS.",
             "Controladoria / Planejamento financeiro",
             "30 dias",
             "LC 214/2025 arts. 28-32; EC 132/2023",
@@ -79,7 +68,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     Dimensao.CONTABIL: [
         (
             "Parametrizar plano de contas auxiliares e rotinas para segregar bases de CBS/IBS "
-            "sem perder rastreabilidade perante o SPED — lacuna «{rotulo}» (score {score_fmt}/100).",
+            "sem perder rastreabilidade perante o SPED.",
             "Contabilidade",
             "30 dias",
             "LC 214/2025 (transparência contábil e escrituração)",
@@ -103,7 +92,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
         (
             "Submeter à diretoria um dossiê executivo (até 5 páginas) com os compromissos da reforma "
             "(margem, capital de giro, investimentos em capital em TI e fiscal) e três cenários "
-            "quantificados — lacuna «{rotulo}» (score {score_fmt}/100).",
+            "quantificados.",
             "Diretoria / Estratégia",
             "30 dias",
             "EC 132/2023; LC 214/2025 art. 5º",
@@ -127,7 +116,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
         (
             "Documentar procedimento operacional padronizado (POP) ponta a ponta "
             "(pedido → faturamento → logística → devolução) com pontos de controle fiscal, metas de "
-            "prazo e qualidade acordadas e evidências — lacuna «{rotulo}» (score {score_fmt}/100).",
+            "prazo e qualidade acordadas e evidências.",
             "Operações / Qualidade",
             "30 dias",
             "ABNT NBR 17301:2026 cap. 7",
@@ -151,7 +140,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
         (
             "Publicar roteiro técnico de entregas de versão do ERP/módulo fiscal (atualização NT 2025.002, "
             "interfaces com as SEFAZ, retenção de XML) com dependências e janela de congelamento de "
-            "alterações — lacuna «{rotulo}» (score {score_fmt}/100).",
+            "alterações.",
             "TI / Arquitetura",
             "30 dias",
             "NT 2025.002",
@@ -175,8 +164,7 @@ _LACUNAS_ACOES_POR_DIMENSAO: dict[Dimensao, list[tuple[str, str, str, str]]] = {
     Dimensao.COMPLIANCE_ABNT: [
         (
             "Executar análise formal de lacunas face aos controles da ABNT NBR 17301:2026 (caps. 5 a 9) "
-            "e registrar achados priorizados em matriz causa e impacto — lacuna «{rotulo}» "
-            "(score {score_fmt}/100).",
+            "e registrar achados priorizados em matriz causa e impacto.",
             "Conformidade / Auditoria interna",
             "45 dias",
             "ABNT NBR 17301:2026",
@@ -245,14 +233,12 @@ class ConsultoriaService:
         piores = sorted(score.score_por_dimensao.items(), key=lambda kv: kv[1].valor)[:3]
         acoes: list[AcaoChecklist] = []
         for dim_idx, (dim, sn) in enumerate(piores, start=1):
-            rotulo = _ROTULO_DIMENSAO_PT.get(dim, dim.value.replace("_", " "))
-            score_fmt = f"{sn.valor:.1f}"
             crit = "Crítica" if sn.valor < 45.0 else "Alta"
             templates = _LACUNAS_ACOES_POR_DIMENSAO.get(dim)
             if not templates:
                 continue
             for tpl_idx, tpl in enumerate(templates):
-                desc = tpl[0].format(rotulo=rotulo, score_fmt=score_fmt)
+                desc = tpl[0]
                 # Ordem estável na frente M07: pior dimensão (1-3), depois sub-ação (1-3).
                 prioridade = (dim_idx - 1) * len(templates) + tpl_idx + 1
                 acoes.append(

@@ -24,6 +24,7 @@ const CABECALHOS_REPASSE = [
   "authorization",
   "content-type",
   "idempotency-key",
+  "if-match",
   "accept",
   "accept-language",
   "x-rascunho-token",

@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { ehChaveQuadroUuid, resolverChaveQuadroSalvar } from "@/lib/painel/quadro_implantacao_utils";
+import {
+  ehChaveQuadroUuid,
+  limparSufixoLacunaScoreAcao,
+  resolverChaveQuadroSalvar,
+} from "@/lib/painel/quadro_implantacao_utils";
 
 const PLANO_ID = "33333333-3333-4333-a333-333333333331";
+
+describe("limparSufixoLacunaScoreAcao", () => {
+  it("remove sufixo legado M07", () => {
+    expect(
+      limparSufixoLacunaScoreAcao(
+        "Parametrizar SPED — lacuna «Contábil» (score 17.9/100).",
+      ),
+    ).toBe("Parametrizar SPED");
+  });
+});
 
 describe("resolverChaveQuadroSalvar", () => {
   it("prefere chave do contexto checklist", () => {

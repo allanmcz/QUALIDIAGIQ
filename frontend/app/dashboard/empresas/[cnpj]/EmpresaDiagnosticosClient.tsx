@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Info } from "lucide-react";
 
 import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresaPainelButton";
 import { EmpresaPainelArquivoBanner } from "@/components/painel/EmpresaPainelArquivoBanner";
@@ -13,6 +14,7 @@ import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/Empr
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
@@ -30,16 +32,6 @@ function mascaraCnpj14(d: string): string {
   const c = d.replace(/\D/g, "");
   if (c.length !== 14) return d;
   return c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-}
-
-function pickLatestDiagnosticId(rows: DiagnosticoResumoApi[]): string | null {
-  if (!rows.length) return null;
-  const sorted = [...rows].sort((a, b) => {
-    const da = new Date(a.finalizado_em ?? a.criado_em).getTime();
-    const db = new Date(b.finalizado_em ?? b.criado_em).getTime();
-    return db - da;
-  });
-  return sorted[0]?.id ?? null;
 }
 
 export default function EmpresaDiagnosticosClient({
@@ -145,7 +137,13 @@ export default function EmpresaDiagnosticosClient({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "").trim();
-    if (hash !== "empresa-quadro-implantacao-principal" && hash !== "empresa-implantacao-bloco") return;
+    if (
+      hash !== "empresa-quadro-implantacao-principal" &&
+      hash !== "empresa-implantacao-bloco" &&
+      hash !== "empresa-kanban-plano-titulo"
+    ) {
+      return;
+    }
     const timer = window.setTimeout(() => {
       document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 400);
@@ -159,11 +157,6 @@ export default function EmpresaDiagnosticosClient({
     if (primeiro && primeiro.length >= 3) return primeiro;
     return `Empresa · CNPJ ${mascaraCnpj14(cnpjNormalizado)}`;
   }, [razaoSocialHint, listaPainel, cnpjNormalizado]);
-
-  const latestId = useMemo(
-    () => (listaPainel?.length ? pickLatestDiagnosticId(listaPainel) : null),
-    [listaPainel],
-  );
 
   const sublinhaCounts =
     listaPainel === null && !semSessao ? " · …" : listaPainel != null ? ` · ${listaPainel.length} diagnóstico(s) no painel` : "";
@@ -186,16 +179,13 @@ export default function EmpresaDiagnosticosClient({
             </p>
           </div>
           {!semSessao && (
-            <div className="flex flex-col gap-2 sm:items-end">
-              <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
-                {latestId ? (
-                  <Button variant="secondary" size="sm" className="w-full sm:w-auto" asChild>
-                    <Link href={`/dashboard/diagnosticos/${latestId}#m06-cronograma-tabela-heading`}>
-                      Plano de ação (empresa)
-                    </Link>
-                  </Button>
-                ) : null}
-                <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+              <div
+                className="flex w-full flex-nowrap items-center justify-end gap-2 overflow-x-auto"
+                role="toolbar"
+                aria-label="Ações da empresa no painel"
+              >
+                <Button variant="outline" size="sm" className="shrink-0 whitespace-nowrap" asChild>
                   <Link href="/dashboard/privacidade">LGPD e direitos do titular</Link>
                 </Button>
                 <ArquivarEmpresaPainelButton
@@ -203,7 +193,8 @@ export default function EmpresaDiagnosticosClient({
                   razaoSocial={tituloEmpresa}
                   arquivada={empresaArquivada}
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  size="sm"
+                  className="shrink-0 whitespace-nowrap"
                   onConcluido={(mensagem) => {
                     setMsgOperacao(mensagem);
                     void fetchEmpresaArquivoStatus(cnpjNormalizado).then((s) =>
@@ -215,17 +206,35 @@ export default function EmpresaDiagnosticosClient({
                   cnpj14={cnpjNormalizado}
                   razaoSocial={tituloEmpresa}
                   variant="outline"
-                  className="w-full sm:w-auto text-destructive hover:text-destructive"
+                  size="sm"
+                  className="shrink-0 whitespace-nowrap text-destructive hover:text-destructive"
                   onExcluido={(mensagem) => {
                     setMsgOperacao(mensagem);
                     router.refresh();
                   }}
                 />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground"
+                      aria-label="Ajuda sobre plano consolidado, remover ciclos e arquivar empresa"
+                    >
+                      <Info className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    align="end"
+                    className="max-w-md text-left text-xs leading-relaxed"
+                  >
+                    Plano e cronograma consolidados abrem no diagnóstico mais recente. Remova apenas ciclos não
+                    finalizados; arquivar oculta a empresa na listagem geral sem apagar evidências WORM.
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <p className="text-xs text-muted-foreground max-w-md sm:text-right">
-                Plano e cronograma consolidados abrem no diagnóstico mais recente. Remova apenas ciclos não finalizados;
-                arquivar oculta a empresa na listagem geral sem apagar evidências WORM.
-              </p>
               {msgOperacao ? (
                 <p
                   className={

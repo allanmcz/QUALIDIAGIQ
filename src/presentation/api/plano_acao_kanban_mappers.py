@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from src.application.services.texto_acao_exibicao import limpar_sufixo_lacuna_score_acao
 from src.application.ports.plano_acao_kanban_port import (
     PlanoAcaoComentarioRegistro,
     PlanoAcaoKanbanBoard,
@@ -21,7 +22,7 @@ def card_para_schema(card: PlanoAcaoKanbanCard) -> PlanoAcaoKanbanCardSchema:
         frente_indice=card.frente_indice,
         frente_nome=card.frente_nome,
         acao_indice=card.acao_indice,
-        texto_acao=card.texto_acao,
+        texto_acao=limpar_sufixo_lacuna_score_acao(card.texto_acao),
         responsavel_sugerido=card.responsavel_sugerido,
         prioridade_motor=card.prioridade_motor,
         criticidade=card.criticidade,

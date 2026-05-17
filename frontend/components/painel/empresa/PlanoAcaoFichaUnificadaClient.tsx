@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,6 +34,7 @@ import {
   chavesQuadroIniciais,
   defaultQuadroEdicaoAcao,
   formatarMetaPrazoPtBr,
+  limparSufixoLacunaScoreAcao,
   resolverChaveQuadroSalvar,
   type QuadroEdicaoAcao,
 } from "@/lib/painel/quadro_implantacao_utils";
@@ -142,7 +143,8 @@ export function PlanoAcaoFichaUnificadaClient({
   const tituloExibido = useMemo(() => {
     const custom = quadroEdicao.descricao_personalizada.trim();
     if (custom) return custom;
-    return card?.texto_acao ?? acaoCtx?.acao.descricao ?? "Ação do plano";
+    const canonico = card?.texto_acao ?? acaoCtx?.acao.descricao ?? "";
+    return limparSufixoLacunaScoreAcao(canonico) || "Ação do plano";
   }, [quadroEdicao.descricao_personalizada, card, acaoCtx]);
 
   const voltaHref = buildVoltaEmpresaHref(cnpj14, razaoSocialHint, "empresa-quadro-implantacao-principal");
@@ -197,6 +199,17 @@ export function PlanoAcaoFichaUnificadaClient({
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  /** Ao abrir ou trocar de ação, mostra o cabeçalho da ficha (não herda scroll da página anterior). */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [planoAcaoId, diagnosticoId]);
+
+  useEffect(() => {
+    if (carregando || typeof window === "undefined") return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [carregando, planoAcaoId]);
 
   const exibirMsg = (texto: string, tipo: "erro" | "aviso" | "sucesso" = "aviso") => {
     setMsgTipo(tipo);
@@ -306,25 +319,30 @@ export function PlanoAcaoFichaUnificadaClient({
   }
 
   return (
-    <div className="container py-10 max-w-4xl">
+    <div className="container max-w-4xl pb-10 pt-6">
       <div className="flex flex-col gap-6">
-        <div className="space-y-2">
-          <Link href={voltaHref} className="text-sm text-primary hover:underline inline-block">
-            ← Voltar à implantação da empresa
-          </Link>
-          <div className="flex flex-wrap items-start gap-2">
-            <Badge variant="outline" className="tabular-nums">
-              #{card.ordem_kanban + 1}
-            </Badge>
-            <Badge variant="secondary">{labelStatusExecucao(card.status_execucao)}</Badge>
-            {card.arquivado ? <Badge variant="outline">Arquivado</Badge> : null}
+        <header
+          id="ficha-acao-cabecalho"
+          className="sticky top-16 z-30 -mx-4 border-b border-border/60 bg-slate-50/95 px-4 py-4 backdrop-blur-sm supports-[backdrop-filter]:bg-slate-50/85"
+        >
+          <div className="space-y-2">
+            <Link href={voltaHref} className="text-sm text-primary hover:underline inline-block">
+              ← Voltar à implantação da empresa
+            </Link>
+            <div className="flex flex-wrap items-start gap-2">
+              <Badge variant="outline" className="tabular-nums">
+                #{card.ordem_kanban + 1}
+              </Badge>
+              <Badge variant="secondary">{labelStatusExecucao(card.status_execucao)}</Badge>
+              {card.arquivado ? <Badge variant="outline">Arquivado</Badge> : null}
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">{tituloExibido}</h1>
+            <p className="text-sm text-muted-foreground">
+              {card.frente_nome}
+              {razaoSocialHint ? ` · ${razaoSocialHint}` : ""} · CNPJ {mascaraCnpj14(cnpj14)}
+            </p>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">{tituloExibido}</h1>
-          <p className="text-sm text-muted-foreground">
-            {card.frente_nome}
-            {razaoSocialHint ? ` · ${razaoSocialHint}` : ""} · CNPJ {mascaraCnpj14(cnpj14)}
-          </p>
-        </div>
+        </header>
 
         {msg ? (
           <p
@@ -343,12 +361,8 @@ export function PlanoAcaoFichaUnificadaClient({
         ) : null}
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Referência do motor (somente leitura)</CardTitle>
-            <CardDescription>Texto e metadados gerados na materialização M07/M08.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>{card.texto_acao}</p>
+          <CardContent className="space-y-2 text-sm pt-6">
+            <p>{limparSufixoLacunaScoreAcao(card.texto_acao)}</p>
             {card.base_legal ? (
               <p className="text-muted-foreground text-xs">Base legal: {card.base_legal}</p>
             ) : null}
@@ -380,7 +394,6 @@ export function PlanoAcaoFichaUnificadaClient({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Planejamento (quadro da empresa)</CardTitle>
-            <CardDescription>Título exibido na grelha e prazo meta de implantação.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1 sm:col-span-2">
@@ -392,7 +405,7 @@ export function PlanoAcaoFichaUnificadaClient({
                   setQuadroEdicao((q) => ({ ...q, descricao_personalizada: e.target.value }))
                 }
                 disabled={!editavel}
-                placeholder={card.texto_acao}
+                placeholder={limparSufixoLacunaScoreAcao(card.texto_acao)}
               />
             </div>
             <div className="space-y-1">
@@ -416,9 +429,6 @@ export function PlanoAcaoFichaUnificadaClient({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Execução operacional (Kanban)</CardTitle>
-            <CardDescription>
-              Status, responsável e prazo de execução — refletidos na grelha e nas colunas do Kanban.
-            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
@@ -486,7 +496,6 @@ export function PlanoAcaoFichaUnificadaClient({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Comentários auditáveis</CardTitle>
-            <CardDescription>Histórico imutável (append-only) com autor e data.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <ul className="space-y-2 max-h-56 overflow-y-auto">

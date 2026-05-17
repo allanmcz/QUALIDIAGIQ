@@ -1,24 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlanoAcaoAcoesMenu } from "@/components/painel/empresa/PlanoAcaoAcoesMenu";
 import { buildPlanoAcaoFichaHref } from "@/lib/dashboard/plano_acao_ficha_urls";
-import {
-  cabecalhosAuthPainelOpcional,
-  getApiUrlForFetch,
-  temSessaoPainelParaApiCliente,
-} from "@/lib/api/config";
 import { cn } from "@/lib/utils";
-import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 import { labelStatusExecucao } from "@/lib/painel/status_execucao_labels";
 import {
   chavesQuadroIniciais,
   defaultQuadroEdicaoAcao,
   formatarMetaPrazoPtBr,
+  limparSufixoLacunaScoreAcao,
   linhasQuadroGrid,
   type QuadroEdicaoAcao,
 } from "@/lib/painel/quadro_implantacao_utils";
@@ -56,40 +51,21 @@ export function QuadroImplantacaoGrid({
   data,
   editavel,
   avisoSomenteLeitura,
-  onDataAtualizado,
+  onDataAtualizado: _onDataAtualizado,
   id = "empresa-quadro-implantacao",
   className,
 }: Props) {
-  const versaoOtimistaRef = useRef<number | null>(data.versao_otimista ?? null);
   const [localData, setLocalData] = useState(data);
   const [quadroEdits, setQuadroEdits] = useState<Record<string, QuadroEdicaoAcao>>({});
 
   useEffect(() => {
     setLocalData(data);
-    if (data.versao_otimista != null) versaoOtimistaRef.current = data.versao_otimista;
   }, [data]);
 
   useEffect(() => {
     if (!localData.checklist) return;
     setQuadroEdits(chavesQuadroIniciais(localData.checklist, localData.quadro_implantacao_anotacoes));
   }, [localData.id, localData.checklist, localData.quadro_implantacao_anotacoes]);
-
-  const refetchDetalhe = useCallback(async () => {
-    const base = getApiUrlForFetch().replace(/\/$/, "");
-    const res = await fetch(`${base}/diagnosticos/${diagnosticoId}`, {
-      headers: { Accept: "application/json", ...cabecalhosAuthPainelOpcional() },
-      cache: "no-store",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      if (encerrarSessaoPainelSe401(res.status)) return;
-      return;
-    }
-    const json = (await res.json()) as DiagnosticoDetalheApi;
-    if (json.versao_otimista != null) versaoOtimistaRef.current = json.versao_otimista;
-    setLocalData(json);
-    onDataAtualizado?.(json);
-  }, [diagnosticoId, onDataAtualizado]);
 
   const linhas = linhasQuadroGrid(localData.checklist);
   const mostrarOperacoes = localData.status === "finalizado";
@@ -118,27 +94,39 @@ export function QuadroImplantacaoGrid({
           </p>
         ) : null}
         {linhas.length > 0 ? (
-        <table className="w-full text-sm border-collapse min-w-[960px]">
+        <table className="w-full text-sm border-collapse table-fixed min-w-[52rem]">
+          <colgroup>
+            <col className="w-[3rem]" />
+            <col />
+            <col className="w-[9.5rem]" />
+            <col className="w-[5.5rem]" />
+            <col className="w-[6.5rem]" />
+            <col className="w-[5.5rem]" />
+            <col className="w-[5.5rem]" />
+            <col className="w-[3.5rem]" />
+            {mostrarOperacoes ? <col className="w-[7.5rem]" /> : null}
+          </colgroup>
           <thead>
             <tr className="border-b bg-muted/30">
-              <th className="text-center py-2 px-2 font-semibold w-12 tabular-nums">Seq.</th>
-              <th className="text-left py-2 px-2 font-semibold">Frente</th>
-              <th className="text-left py-2 px-2 font-semibold min-w-[200px]">Ação</th>
+              <th className="text-center py-2 px-2 font-semibold tabular-nums">Seq.</th>
+              <th className="text-left py-2 px-3 font-semibold">Ação</th>
               <th className="text-left py-2 px-2 font-semibold">Responsável</th>
-              <th className="text-left py-2 px-2 font-semibold">Criticidade</th>
-              <th className="text-left py-2 px-2 font-semibold">Status oper.</th>
-              <th className="text-left py-2 px-2 font-semibold">Prazo meta</th>
-              <th className="text-left py-2 px-2 font-semibold">Prazo oper.</th>
-              <th className="text-left py-2 px-2 font-semibold min-w-[100px]">Coment.</th>
+              <th className="text-center py-2 px-2 font-semibold">Critic.</th>
+              <th className="text-center py-2 px-2 font-semibold">Status</th>
+              <th className="text-center py-2 px-2 font-semibold whitespace-nowrap">Prazo meta</th>
+              <th className="text-center py-2 px-2 font-semibold whitespace-nowrap">Prazo oper.</th>
+              <th className="text-center py-2 px-2 font-semibold">Com.</th>
               {mostrarOperacoes ? (
-                <th className="text-left py-2 px-2 font-semibold w-[7.5rem]">Operações</th>
+                <th className="text-center py-2 px-2 font-semibold">Ações</th>
               ) : null}
             </tr>
           </thead>
           <tbody>
-            {linhas.map(({ frente, acao, qk, sequencia }) => {
+            {linhas.map(({ acao, qk, sequencia }) => {
               const qv = quadroEdits[qk] ?? defaultQuadroEdicaoAcao();
-              const titulo = (qv.descricao_personalizada || "").trim() || acao.descricao;
+              const titulo =
+                (qv.descricao_personalizada || "").trim() ||
+                limparSufixoLacunaScoreAcao(acao.descricao);
               const pid = planoAcaoIdDaLinha(acao, qk);
               const card = pid ? cardsPorPlanoId[pid] : undefined;
               const fichaHref =
@@ -153,8 +141,7 @@ export function QuadroImplantacaoGrid({
                   <td className="py-3 px-2 text-center text-xs font-semibold tabular-nums text-muted-foreground">
                     {sequencia}
                   </td>
-                  <td className="py-3 px-2 text-xs text-muted-foreground max-w-[8rem]">{frente}</td>
-                  <td className="py-3 px-2">
+                  <td className="py-3 px-3 min-w-0">
                     {fichaHref ? (
                       <Link
                         href={fichaHref}
@@ -166,48 +153,50 @@ export function QuadroImplantacaoGrid({
                       <p className="font-medium leading-snug">{titulo}</p>
                     )}
                     {qv.descricao_personalizada.trim() ? (
-                      <p className="text-xs text-muted-foreground mt-1">Motor: {acao.descricao}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Motor: {limparSufixoLacunaScoreAcao(acao.descricao)}
+                      </p>
                     ) : null}
                     {acao.base_legal ? (
                       <p className="text-xs text-muted-foreground mt-0.5">{acao.base_legal}</p>
                     ) : null}
                   </td>
-                  <td className="py-3 px-2 text-xs">
+                  <td className="py-3 px-2 text-xs leading-snug align-top">
                     {card?.responsavel_operacional?.trim() ||
                       card?.responsavel_sugerido?.trim() ||
                       acao.responsavel ||
                       "—"}
                   </td>
-                  <td className="py-3 px-2">
+                  <td className="py-3 px-2 text-center align-top">
                     <Badge
                       variant={acao.criticidade === "Crítica" ? "destructive" : "secondary"}
-                      className="text-[10px]"
+                      className="text-[10px] whitespace-nowrap"
                     >
                       {acao.criticidade}
                     </Badge>
                   </td>
-                  <td className="py-3 px-2 text-xs">
+                  <td className="py-3 px-2 text-xs text-center align-top">
                     {card ? (
-                      <Badge variant="outline" className="text-[10px] font-normal">
+                      <Badge variant="outline" className="text-[10px] font-normal max-w-full truncate">
                         {labelStatusExecucao(card.status_execucao)}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-2 text-xs tabular-nums">
+                  <td className="py-3 px-2 text-xs tabular-nums text-center align-top whitespace-nowrap">
                     {qv.prazo_meta.trim() ? formatarMetaPrazoPtBr(qv.prazo_meta) : "—"}
                   </td>
-                  <td className="py-3 px-2 text-xs tabular-nums">
+                  <td className="py-3 px-2 text-xs tabular-nums text-center align-top whitespace-nowrap">
                     {card?.prazo_operacional
                       ? formatarMetaPrazoPtBr(card.prazo_operacional)
                       : "—"}
                   </td>
-                  <td className="py-3 px-2 text-xs tabular-nums text-muted-foreground">
+                  <td className="py-3 px-2 text-xs tabular-nums text-muted-foreground text-center align-top">
                     {card?.comentarios_total ?? (qv.comentarios.length > 0 ? qv.comentarios.length : "—")}
                   </td>
                   {mostrarOperacoes && pid ? (
-                    <td className="py-3 px-2">
+                    <td className="py-3 px-2 text-center align-top">
                       <PlanoAcaoAcoesMenu
                         cnpj14={cnpj14}
                         diagnosticoId={diagnosticoId}
