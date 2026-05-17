@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { PAINEL_ACCESS_TOKEN_COOKIE } from "@/lib/auth/painel_access_cookie";
 import { resolveApiUpstreamBase } from "@/lib/server/api_proxy_upstream";
+import { timeoutProxyMsForRequest } from "@/lib/server/api_proxy_timeout";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -65,14 +66,6 @@ function montarCabecalhos(request: NextRequest): Headers {
     }
   }
   return h;
-}
-
-/** Timeout ms para pedidos ao upstream (env opcional). */
-function timeoutProxyMs(): number {
-  const bruto = process.env.API_PROXY_TIMEOUT_MS?.trim();
-  const n = bruto ? Number.parseInt(bruto, 10) : NaN;
-  if (Number.isFinite(n) && n > 0) return Math.min(n, 120_000);
-  return 30_000;
 }
 
 /** QDI-H-036 — em produção não expor host interno / stack ao browser. */
@@ -143,7 +136,7 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
        * → «Failed to fetch» sem resposta HTTP legível no painel.
        */
       redirect: "follow",
-      signal: AbortSignal.timeout(timeoutProxyMs()),
+      signal: AbortSignal.timeout(timeoutProxyMsForRequest(request.method, pathSuffix)),
     };
 
     if (!["GET", "HEAD"].includes(request.method)) {
@@ -192,7 +185,7 @@ async function proxy(request: NextRequest, segments: string[] | undefined): Prom
           metodo: request.method,
           upstream_base: base,
           caminho: pathSuffix || "/",
-          timeout_ms: timeoutProxyMs(),
+          timeout_ms: timeoutProxyMsForRequest(request.method, pathSuffix),
           erro: msg,
         }),
       );

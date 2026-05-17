@@ -586,6 +586,12 @@ class EmpresaArquivoStatusHttpResponse(BaseModel):
     arquivado: bool
 
 
+class CnpjsArquivadosPainelHttpResponse(BaseModel):
+    """GET /diagnosticos/cnpjs-arquivados — CNPJs ocultos da listagem principal."""
+
+    cnpjs: list[str] = Field(default_factory=list)
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 

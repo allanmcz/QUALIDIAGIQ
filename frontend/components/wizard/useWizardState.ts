@@ -43,6 +43,7 @@ import {
   wizardDraftHasProgress,
   type WizardDraftV1,
 } from "@/lib/wizard/wizard_draft";
+import { limparIdempotencyKeyPostDiagnostico } from "@/lib/wizard/post_diagnostico_idempotency";
 import { fetchCnaeSubclasses, type CnaeSubclasseItem } from "@/lib/api/cnae";
 import { DEFAULT_WIZARD_FORM_VALUES, TOTAL_STEPS } from "@/lib/wizard/wizardFormDefaults";
 import {
@@ -60,7 +61,9 @@ import {
 import { WIZARD_FORCE_NOVO_CICLO_KEY } from "@/lib/dashboard/refazer_diagnostico_painel";
 import {
   parseWizardModoEmpresaFromSearchParams,
+  WIZARD_MODO_NOVA_EMPRESA,
   WIZARD_MODO_NOVO_CICLO,
+  WIZARD_QUERY_MODO,
   type WizardModoEmpresa,
 } from "@/lib/wizard/wizard_modo_empresa";
 
@@ -477,6 +480,7 @@ export function useWizardState() {
 
   const handleCacheReiniciar = useCallback(() => {
     clearWizardDraft();
+    limparIdempotencyKeyPostDiagnostico();
     clearPendingDiagnosticoFromStorage();
     reset({ ...DEFAULT_WIZARD_FORM_VALUES });
     setStep(1);
@@ -503,9 +507,8 @@ export function useWizardState() {
       return;
     }
 
-    const parsedModo = parseWizardModoEmpresaFromSearchParams(
-      new URLSearchParams(window.location.search),
-    );
+    const searchParams = new URLSearchParams(window.location.search);
+    const parsedModo = parseWizardModoEmpresaFromSearchParams(searchParams);
     const forceNovoCiclo =
       typeof window !== "undefined" &&
       window.sessionStorage.getItem(WIZARD_FORCE_NOVO_CICLO_KEY) === "1";
@@ -517,17 +520,27 @@ export function useWizardState() {
       }
     }
     const isNovoCicloPainel = parsedModo.modo === WIZARD_MODO_NOVO_CICLO || forceNovoCiclo;
-    /** Painel — novo ciclo: não perguntar «continuar rascunho»; limpar cache local e abrir formulário limpo. */
-    if (isNovoCicloPainel) {
+    /** Atalho do painel «Nova empresa» — só quando `modo=nova_empresa` está na URL (não o default de `/wizard`). */
+    const isNovaEmpresaPainel =
+      searchParams.get(WIZARD_QUERY_MODO) === WIZARD_MODO_NOVA_EMPRESA;
+    /** Painel — novo ciclo ou nova empresa: não perguntar «continuar rascunho»; limpar cache local. */
+    if (isNovoCicloPainel || isNovaEmpresaPainel) {
       clearWizardDraft();
+      limparIdempotencyKeyPostDiagnostico();
       clearPendingDiagnosticoFromStorage();
       skipPersistRef.current = false;
       wizardQueryEmpresaPrefillAppliedRef.current = false;
       perfilUltimoCicloPrefillAppliedRef.current = false;
       consultaCnpjAutoNovoCicloRef.current = false;
-      setWizardModoEmpresa(WIZARD_MODO_NOVO_CICLO);
-      setQueryRazaoEmpresaPainel(parsedModo.razaoSocial);
-      setQueryCnpjEmpresaPainel(parsedModo.cnpj14);
+      if (isNovaEmpresaPainel) {
+        setWizardModoEmpresa(WIZARD_MODO_NOVA_EMPRESA);
+        setQueryRazaoEmpresaPainel("");
+        setQueryCnpjEmpresaPainel("");
+      } else {
+        setWizardModoEmpresa(WIZARD_MODO_NOVO_CICLO);
+        setQueryRazaoEmpresaPainel(parsedModo.razaoSocial);
+        setQueryCnpjEmpresaPainel(parsedModo.cnpj14);
+      }
       setCacheResumePrompt(null);
       setDraftHydrated(true);
       return;

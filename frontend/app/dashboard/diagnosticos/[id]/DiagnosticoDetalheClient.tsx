@@ -329,6 +329,8 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
 
       {temCnpj14 && listaParaQuadro?.length ? (
         <EmpresaQuadroImplantacaoTopo
+          cnpj14={cnpjDigits}
+          razaoSocialHint={data.empresa_razao_social ?? ""}
           listaPainel={listaParaQuadro}
           detalhesPorId={detalhesEmpresaComAtual}
           onDataAtualizado={aoDetalheEmpresaAtualizado}

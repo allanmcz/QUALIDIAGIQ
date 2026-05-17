@@ -24,9 +24,11 @@ from uuid import UUID, uuid4
 
 import structlog
 
+from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.services.cnpj_consulta_mapeamento import mesclar_empresa_com_sugestao_cnpj
 from src.application.services.cnpj_consulta_service import CnpjConsultaService
+from src.application.services.diagnostico_resposta_materializacao import derivar_respostas_e_linhas
 from src.application.services.llm_tier_observabilidade import tier_observabilidade_de_plano_str
 from src.domain.entities.diagnostico import (
     Diagnostico,
@@ -34,8 +36,6 @@ from src.domain.entities.diagnostico import (
     PlanoDiagnostico,
     Respondente,
 )
-from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
-from src.application.services.diagnostico_resposta_materializacao import derivar_respostas_e_linhas
 from src.domain.ports.llm_gateway import LlmGateway, LlmGatewayRequest
 from src.domain.value_objects.llm_task_type import LlmTaskType
 
@@ -60,6 +60,7 @@ def _locale_relatorio_pdf_normalizado(raw: str) -> str:
 
 if TYPE_CHECKING:
     from src.application.ports.email_service import EmailServicePort
+    from src.application.ports.empresa_painel_arquivo_port import EmpresaPainelArquivoPort
     from src.application.ports.llm_service import LlmServicePort
     from src.application.ports.pdf_generator import PdfGeneratorPort
     from src.application.ports.storage_service import StorageServicePort
@@ -113,6 +114,7 @@ class RealizarDiagnostico:
         llm_service: LlmServicePort | None = None,
         base_normativa_port: BaseNormativaPort | None = None,
         cnpj_consulta_service: CnpjConsultaService | None = None,
+        empresa_painel_arquivo_port: EmpresaPainelArquivoPort | None = None,
     ) -> None:
         self.repo = repo
         self.calcular_score_use_case = calcular_score_use_case
@@ -123,6 +125,7 @@ class RealizarDiagnostico:
         self.llm_service = llm_service
         self.base_normativa_port = base_normativa_port
         self._cnpj_consulta_service = cnpj_consulta_service
+        self._empresa_painel_arquivo_port = empresa_painel_arquivo_port
 
     async def execute(self, comando: ComandoRealizarDiagnostico) -> ResultadoDiagnostico:
         """Executa o pipeline completo do diagnóstico."""
@@ -306,6 +309,17 @@ class RealizarDiagnostico:
             cnpj_consulta_id=consulta_cnpj_uuid,
             linhas_resposta_questionario=linhas_resposta,
         )
+
+        if self._empresa_painel_arquivo_port is not None and empresa_efetiva.cnpj:
+            from src.application.services.empresa_painel_desarquivar import (
+                desarquivar_empresa_painel_se_necessario,
+            )
+
+            await desarquivar_empresa_painel_se_necessario(
+                self._empresa_painel_arquivo_port,
+                tenant_id=comando.tenant_id,
+                empresa_cnpj=empresa_efetiva.cnpj,
+            )
 
         logger.info(
             "diagnostico_criado",

@@ -40,8 +40,6 @@ import {
   MAX_DIAGNOSTICOS_COMPARACAO,
 } from "@/lib/api/questionario_painel";
 import {
-  DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX,
-  fetchDiagnosticosResumo,
   fetchDiagnosticosResumoTodasPaginasPorEmpresa,
   type DiagnosticoResumoApi,
 } from "@/lib/api/lista_diagnosticos";
@@ -57,7 +55,6 @@ import {
 } from "@/lib/painel/painel_estado_ciclo_labels";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
-const PREFETCH_CONCORRENCIA = 4;
 
 /** Âncoras na ficha expandida — só abrem a linha com hash (não auto-expandir ao carregar). */
 const HASHES_QUE_ABREM_LINHA = new Set([
@@ -125,7 +122,6 @@ export function EmpresaDiagnosticosListaPainel({
   cabecalhoSlot,
   onDiagnosticosAlterados,
   onListaDetalheAtualizado,
-  onDetalhesPrefetch,
   selecaoComparacaoIds = [],
   onToggleSelecaoComparacao,
 }: EmpresaDiagnosticosListaPainelProps) {
@@ -140,8 +136,8 @@ export function EmpresaDiagnosticosListaPainel({
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DiagnosticoDetalheApi>>(() =>
     diagnosticoSemeado ? { [diagnosticoSemeado.id]: diagnosticoSemeado } : {},
   );
-  const [prefetchErro, setPrefetchErro] = useState<string | null>(null);
   const [linhaAbertaId, setLinhaAbertaId] = useState<string | null>(null);
+  const [detalheCarregandoId, setDetalheCarregandoId] = useState<string | null>(null);
   /** Diálogo «Mudar estado» — só um por grelha (abre com o id do diagnóstico alvo). */
   const [painelEstadoDialogDiagId, setPainelEstadoDialogDiagId] = useState<string | null>(null);
   const [painelEstadoDraft, setPainelEstadoDraft] = useState<PainelEstadoCicloApi | null>(null);
@@ -152,12 +148,7 @@ export function EmpresaDiagnosticosListaPainel({
   const [acoesMenuDiagId, setAcoesMenuDiagId] = useState<string | null>(null);
   const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
   const [pdfQuestionarioCarregando, setPdfQuestionarioCarregando] = useState(false);
-  /** Lote de prefetch a notificar ao pai após commit (evita setState no pai durante render do filho). */
-  const [prefetchLotePai, setPrefetchLotePai] = useState<Record<string, DiagnosticoDetalheApi> | null>(
-    null,
-  );
   const onDiagnosticosAlteradosRef = useRef(onDiagnosticosAlterados);
-  const onDetalhesPrefetchRef = useRef(onDetalhesPrefetch);
   const onListaDetalheAtualizadoRef = useRef(onListaDetalheAtualizado);
 
   useEffect(() => {
@@ -165,21 +156,8 @@ export function EmpresaDiagnosticosListaPainel({
   }, [onDiagnosticosAlterados]);
 
   useEffect(() => {
-    onDetalhesPrefetchRef.current = onDetalhesPrefetch;
-  }, [onDetalhesPrefetch]);
-
-  useEffect(() => {
     onListaDetalheAtualizadoRef.current = onListaDetalheAtualizado;
   }, [onListaDetalheAtualizado]);
-
-  useEffect(() => {
-    if (!prefetchLotePai) return;
-    const lote = prefetchLotePai;
-    startTransition(() => {
-      onDetalhesPrefetchRef.current?.(lote);
-    });
-    setPrefetchLotePai(null);
-  }, [prefetchLotePai]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -230,13 +208,7 @@ export function EmpresaDiagnosticosListaPainel({
       setCarregando(true);
       setErro(null);
       try {
-        let rows = await fetchDiagnosticosResumoTodasPaginasPorEmpresa(cnpjNormalizado);
-        if (rows.length === 0) {
-          const todos = await fetchDiagnosticosResumo(DIAGNOSTICOS_RESUMO_PAGE_SIZE_MAX, 0);
-          rows = todos.filter(
-            (d) => (d.empresa_cnpj ?? "").replace(/\D/g, "") === cnpjNormalizado,
-          );
-        }
+        const rows = await fetchDiagnosticosResumoTodasPaginasPorEmpresa(cnpjNormalizado);
         if (!cancel) setDiagnosticos(rows);
       } catch (e) {
         if (!cancel) setErro(e instanceof Error ? e.message : "Falha ao carregar diagnósticos.");
@@ -250,36 +222,33 @@ export function EmpresaDiagnosticosListaPainel({
     };
   }, [cnpjNormalizado]);
 
+  /** Detalhe sob demanda ao expandir linha (evita N× GET pesado no load da página empresa). */
   useEffect(() => {
-    if (!diagnosticos?.length || !temSessaoPainelParaApiCliente()) return;
-    let cancel = false;
-    const ids = diagnosticos.map((d) => d.id);
-    setPrefetchErro(null);
+    if (!linhaAbertaId || !temSessaoPainelParaApiCliente()) return;
+    if (detalhesPorId[linhaAbertaId]) return;
 
-    (async () => {
-      const next: Record<string, DiagnosticoDetalheApi> = {};
-      for (let i = 0; i < ids.length; i += PREFETCH_CONCORRENCIA) {
-        if (cancel) return;
-        const chunk = ids.slice(i, i + PREFETCH_CONCORRENCIA);
-        const settled = await Promise.allSettled(chunk.map((id) => fetchDiagnosticoDetalhe(id)));
-        if (cancel) return;
-        settled.forEach((r, j) => {
-          const id = chunk[j];
-          if (r.status === "fulfilled") next[id] = r.value;
-        });
-      }
-      if (!cancel && Object.keys(next).length > 0) {
-        setDetalhesPorId((prev) => ({ ...prev, ...next }));
-        setPrefetchLotePai(next);
-      }
-    })().catch(() => {
-      if (!cancel) setPrefetchErro("Pré-carga de detalhes incompleta — expanda uma linha ou recarregue.");
-    });
+    let cancel = false;
+    setDetalheCarregandoId(linhaAbertaId);
+    void fetchDiagnosticoDetalhe(linhaAbertaId)
+      .then((d) => {
+        if (!cancel) {
+          setDetalhesPorId((prev) => ({ ...prev, [d.id]: d }));
+          startTransition(() => {
+            onListaDetalheAtualizadoRef.current?.(d);
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancel) setErro("Não foi possível carregar o detalhe deste ciclo. Tente novamente.");
+      })
+      .finally(() => {
+        if (!cancel) setDetalheCarregandoId(null);
+      });
 
     return () => {
       cancel = true;
     };
-  }, [diagnosticos]);
+  }, [linhaAbertaId, detalhesPorId]);
 
   const fecharMenuAcoes = useCallback(() => {
     setAcoesMenuDiagId(null);
@@ -592,12 +561,6 @@ export function EmpresaDiagnosticosListaPainel({
         >
           {erro}
         </div>
-      )}
-
-      {prefetchErro && !erro && (
-        <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
-          {prefetchErro}
-        </p>
       )}
 
       {!semSessao && carregando && (

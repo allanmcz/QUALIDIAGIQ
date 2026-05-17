@@ -72,7 +72,10 @@ from src.infrastructure.repositories.postgres_normativa_score_macro_repository i
     PostgresNormativaScoreMacroRepository,
 )
 from src.presentation.api.deps_auth_supabase import get_supabase_client
-from src.presentation.api.deps_repositories_core import get_diagnostico_repository
+from src.presentation.api.deps_repositories_core import (
+    get_diagnostico_repository,
+    get_empresa_painel_arquivo_port,
+)
 from src.presentation.api.jwt_llm_tier_context import llm_tier_context_from_authorization
 
 logger = structlog.get_logger(__name__)
@@ -469,4 +472,5 @@ def get_realizar_diagnostico_use_case(
         llm_gateway=llm_gateway,
         base_normativa_port=base_normativa_port,
         cnpj_consulta_service=_cnpj_consulta_service_optional(),
+        empresa_painel_arquivo_port=get_empresa_painel_arquivo_port(),
     )

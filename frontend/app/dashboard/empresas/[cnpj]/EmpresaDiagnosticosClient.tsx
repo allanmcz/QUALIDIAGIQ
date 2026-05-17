@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresaPainelButton";
+import { EmpresaPainelArquivoBanner } from "@/components/painel/EmpresaPainelArquivoBanner";
 import { ExcluirCiclosElegiveisEmpresaButton } from "@/components/painel/ExcluirCiclosElegiveisEmpresaButton";
 import { fetchEmpresaArquivoStatus } from "@/lib/api/arquivar_empresa_painel";
 import { EmpresaComparacaoQuestionarioDialog } from "@/components/painel/empresa/EmpresaComparacaoQuestionarioDialog";
@@ -218,14 +219,20 @@ export default function EmpresaDiagnosticosClient({
                   {msgOperacao}
                 </p>
               ) : null}
-              {empresaArquivada ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400 max-w-md sm:text-right">
-                  Esta empresa está arquivada no painel — visível aqui pelo link direto.
-                </p>
-              ) : null}
             </div>
           )}
         </div>
+
+        {!semSessao && empresaArquivada ? (
+          <EmpresaPainelArquivoBanner
+            cnpj14={cnpjNormalizado}
+            razaoSocial={tituloEmpresa}
+            onDesarquivada={(mensagem) => {
+              setMsgOperacao(mensagem);
+              setEmpresaArquivada(false);
+            }}
+          />
+        ) : null}
 
         {!semSessao && (
           <div className="flex flex-col sm:flex-row flex-wrap gap-2">
@@ -283,6 +290,8 @@ export default function EmpresaDiagnosticosClient({
 
         {!semSessao ? (
           <EmpresaQuadroImplantacaoTopo
+            cnpj14={cnpjNormalizado}
+            razaoSocialHint={tituloEmpresa}
             listaPainel={listaPainel}
             detalhesPorId={detalhesPorId}
             carregando={quadroCarregando}

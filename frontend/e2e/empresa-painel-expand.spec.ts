@@ -7,6 +7,8 @@ import { painelInterceptarUrlApiDiagnosticos } from "./helpers/painel_api_diagno
 /** Smoke handoff P3 — grelha empresa + expandir (API mockada; sem backend real). */
 const DIAG_ID = "22222222-2222-4222-a222-222222222222";
 const CNPJ14 = "12345678000195";
+/** Primeira linha do plano — alinhada ao card Kanban mockado. */
+const PLANO_ACAO_ID_1 = "33333333-3333-4333-a333-333333333331";
 
 const narrativaLlm = {
   text: "Priorize a dimensão fiscal (42/100) antes da transição CBS/IBS (LC 214/2025).",
@@ -38,7 +40,35 @@ function buildAbnt10Acoes() {
     prazo: "—",
     criticidade: "Média",
     prioridade: i + 1,
+    plano_acao_id:
+      i === 0
+        ? PLANO_ACAO_ID_1
+        : `33333333-3333-4333-b333-${String(i).padStart(12, "0")}`,
   }));
+}
+
+function buildKanbanBoardMock() {
+  const acoes = buildAbnt10Acoes();
+  return {
+    diagnostico_id: DIAG_ID,
+    cards: acoes.map((acao, ordem) => ({
+      plano_acao_id: acao.plano_acao_id,
+      diagnostico_id: DIAG_ID,
+      frente_indice: 0,
+      frente_nome: "ABNT NBR 17301 — 10 controlos M12",
+      acao_indice: ordem,
+      texto_acao: acao.descricao,
+      responsavel_sugerido: acao.responsavel,
+      prioridade_motor: acao.prioridade,
+      criticidade: acao.criticidade,
+      chave_quadro_legado: `f0_a${ordem}`,
+      status_execucao: ordem === 0 ? "em_andamento" : "pendente",
+      ordem_kanban: ordem,
+      arquivado: false,
+      comentarios_total: 0,
+      subtarefas_total: 0,
+    })),
+  };
 }
 
 const listaItem = {
@@ -169,6 +199,37 @@ async function installPainelEmpresaApiMocks(
       });
       return;
     }
+
+    if (
+      rest.length >= 3 &&
+      rest[0] === DIAG_ID &&
+      rest[1] === "plano-acao" &&
+      rest[2] === "kanban" &&
+      method === "GET"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildKanbanBoardMock()),
+      });
+      return;
+    }
+
+    if (
+      rest.length >= 4 &&
+      rest[0] === DIAG_ID &&
+      rest[1] === "plano-acao" &&
+      rest[3] === "comentarios" &&
+      method === "GET"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -199,16 +260,53 @@ test.describe("Painel empresa — expandir linha", () => {
     await expect(page.getByText("Autoconferência ABNT — 10 controles")).not.toBeVisible();
   });
 
+  test("grelha abre ficha unificada da ação pelo título (mock)", async ({ page }) => {
+    await installPainelEmpresaApiMocks(page);
+    await loginPainelE2E(page);
+
+    await page.goto(`/dashboard/empresas/${CNPJ14}`);
+    const quadro = page.locator("#empresa-quadro-implantacao-principal");
+    await expect(quadro).toBeVisible({ timeout: 15_000 });
+    await quadro.getByRole("link", { name: "Controle ABNT M12 #1 (E2E)", exact: true }).click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/dashboard/empresas/${CNPJ14}/acao/${PLANO_ACAO_ID_1}`),
+    );
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Controle ABNT M12 #1 (E2E)", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Salvar alterações" })).toBeVisible();
+    await expect(page.getByText("Referência do motor")).toBeVisible();
+    await expect(page.getByText("Em andamento")).toBeVisible();
+  });
+
+  test("menu Ações da grelha abre ficha unificada (mock)", async ({ page }) => {
+    await installPainelEmpresaApiMocks(page);
+    await loginPainelE2E(page);
+
+    await page.goto(`/dashboard/empresas/${CNPJ14}`);
+    const quadro = page.locator("#empresa-quadro-implantacao-principal");
+    await expect(quadro).toBeVisible({ timeout: 15_000 });
+    await quadro.getByRole("button", { name: "Ações" }).first().click();
+    await page.getByRole("menuitem", { name: "Abrir ficha da ação" }).click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/dashboard/empresas/${CNPJ14}/acao/${PLANO_ACAO_ID_1}`),
+    );
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Controle ABNT M12 #1 (E2E)", exact: true }),
+    ).toBeVisible();
+  });
+
   test("vista empresa mostra quadro de implantação em grelha (mock)", async ({ page }) => {
     await installPainelEmpresaApiMocks(page);
     await loginPainelE2E(page);
 
     await page.goto(`/dashboard/empresas/${CNPJ14}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Quadro de implantação da empresa/i })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.locator("#empresa-quadro-implantacao-principal table")).toBeVisible();
+    const quadro = page.locator("#empresa-quadro-implantacao-principal");
+    await expect(quadro).toBeVisible({ timeout: 15_000 });
+    await expect(quadro.locator("table")).toBeVisible();
     await expect(page.getByText(/Controle ABNT M12 #1/i).first()).toBeVisible();
   });
 
@@ -254,7 +352,9 @@ test.describe("Painel empresa — expandir linha", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Ações ▾" }).first().click();
-    await page.getByRole("menu").getByRole("menuitem", { name: "LGPD" }).click();
+    const lgpdHref = await page.getByRole("menuitem", { name: "LGPD" }).getAttribute("href");
+    expect(lgpdHref).toMatch(/privacidade/);
+    await page.goto(lgpdHref!);
 
     await expect(page).toHaveURL(
       new RegExp(`/dashboard/privacidade\\?.*diagnostico_id=${DIAG_ID}`),
@@ -262,8 +362,8 @@ test.describe("Painel empresa — expandir linha", () => {
     await expect(page.getByRole("heading", { name: "Privacidade LGPD" })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByRole("heading", { name: "Nova solicitação" })).toBeVisible();
-    await expect(page.locator("#priv-lgpd-registrar")).toBeVisible();
+    await expect(page.locator("#priv-lgpd-registrar")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Nova solicitação")).toBeVisible();
   });
 
   test("expandir mostra explicação score LLM e histórico (perfil avançado)", async ({ page }) => {

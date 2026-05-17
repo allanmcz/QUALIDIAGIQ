@@ -134,4 +134,20 @@ test.describe("Wizard — retomada de cache (localStorage)", () => {
     const draftRestante = await page.evaluate((k) => window.localStorage.getItem(k), STORAGE_WIZARD_DRAFT);
     expect(draftRestante).toBeNull();
   });
+
+  test("modo=nova_empresa (painel): não exibe diálogo e limpa rascunho local", async ({ page }) => {
+    await page.addInitScript((payload: { key: string; value: string }) => {
+      window.localStorage.setItem(payload.key, payload.value);
+    }, { key: STORAGE_WIZARD_DRAFT, value: JSON.stringify(draftComProgresso) });
+
+    await page.goto("/wizard?modo=nova_empresa");
+
+    const dialog = page.getByRole("dialog", {
+      name: /Diagnóstico em andamento neste navegador/i,
+    });
+    await expect(dialog).toBeHidden();
+
+    const draftRestante = await page.evaluate((k) => window.localStorage.getItem(k), STORAGE_WIZARD_DRAFT);
+    expect(draftRestante).toBeNull();
+  });
 });

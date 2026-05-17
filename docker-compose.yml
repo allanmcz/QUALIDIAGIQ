@@ -151,6 +151,9 @@ services:
     # Web: proxy same-origin (/api-backend → api:8000). NEXT_PUBLIC_* vem do Compose; no host (npm run dev) use .env.local se precisar.
     environment:
       API_PROXY_TARGET: http://api:8000
+      # POST /diagnosticos/ (PDF + LLM) excede 30 s — ver lib/server/api_proxy_timeout.ts
+      API_PROXY_TIMEOUT_MS: "60000"
+      API_PROXY_TIMEOUT_DIAGNOSTICO_MS: "180000"
       NEXT_PUBLIC_API_URL: /api-backend
       NEXT_PUBLIC_LGPD_DPO_EMAIL: allan@tributolab.com.br
       NEXT_PUBLIC_LGPD_DPO_NOME: "Allan Marcio"

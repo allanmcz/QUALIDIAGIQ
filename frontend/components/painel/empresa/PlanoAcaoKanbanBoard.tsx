@@ -1,68 +1,53 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { MessageSquare, ListChecks } from "lucide-react";
 
-import { PlanoAcaoKanbanCardDetalheModal } from "@/components/painel/empresa/PlanoAcaoKanbanCardDetalheModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { COLUNAS_KANBAN, buscarKanbanPlanoAcao } from "@/lib/api/plano_acao_kanban";
+import { buildPlanoAcaoFichaHref } from "@/lib/dashboard/plano_acao_ficha_urls";
+import { COLUNAS_KANBAN } from "@/lib/api/plano_acao_kanban";
+import {
+  chavesQuadroIniciais,
+  formatarMetaPrazoPtBr,
+} from "@/lib/painel/quadro_implantacao_utils";
 import { cn } from "@/lib/utils";
-import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
-import type { DiagnosticoDetalheApi, AcaoChecklistDetalhe } from "@/types/diagnostico_detalhe";
+import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 import type { PlanoAcaoKanbanCardApi } from "@/types/plano_acao_kanban";
 
 type Props = {
+  cnpj14: string;
+  razaoSocial?: string;
   diagnosticoId: string;
   detalhe: DiagnosticoDetalheApi;
+  cardsPorPlanoId: Record<string, PlanoAcaoKanbanCardApi>;
+  onKanbanAlterado?: () => void;
   editavel: boolean;
 };
 
-function mapAcoesPorPlanoId(detalhe: DiagnosticoDetalheApi): Map<string, AcaoChecklistDetalhe> {
-  const map = new Map<string, AcaoChecklistDetalhe>();
-  for (const frente of detalhe.checklist ?? []) {
-    for (const acao of frente.acoes) {
-      if (acao.plano_acao_id) map.set(acao.plano_acao_id, acao);
-    }
-  }
-  return map;
+function tituloExibidoCard(card: PlanoAcaoKanbanCardApi, detalhe: DiagnosticoDetalheApi): string {
+  const edits = chavesQuadroIniciais(detalhe.checklist, detalhe.quadro_implantacao_anotacoes);
+  const custom = edits[card.plano_acao_id]?.descricao_personalizada?.trim();
+  return custom || card.texto_acao;
 }
 
-export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props) {
-  const [cards, setCards] = useState<PlanoAcaoKanbanCardApi[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const [cardDetalhe, setCardDetalhe] = useState<PlanoAcaoKanbanCardApi | null>(null);
-  const [modalAberto, setModalAberto] = useState(false);
+export function PlanoAcaoKanbanBoard({
+  cnpj14,
+  razaoSocial,
+  diagnosticoId,
+  detalhe,
+  cardsPorPlanoId,
+  editavel,
+}: Props) {
+  const router = useRouter();
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
 
-  const acoesPorId = useMemo(() => mapAcoesPorPlanoId(detalhe), [detalhe]);
-
-  const recarregar = useCallback(async () => {
-    if (!temSessaoPainelParaApiCliente() || detalhe.status !== "finalizado") {
-      setCards([]);
-      setCarregando(false);
-      return;
-    }
-    setCarregando(true);
-    setErro(null);
-    try {
-      const board = await buscarKanbanPlanoAcao(diagnosticoId, {
-        incluirArquivados: mostrarArquivados,
-      });
-      setCards(board?.cards ?? []);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível carregar o Kanban.");
-      setCards([]);
-    } finally {
-      setCarregando(false);
-    }
-  }, [diagnosticoId, detalhe.status, mostrarArquivados]);
-
-  useEffect(() => {
-    void recarregar();
-  }, [recarregar]);
+  const cards = useMemo(() => {
+    const todos = Object.values(cardsPorPlanoId);
+    return mostrarArquivados ? todos : todos.filter((c) => !c.arquivado);
+  }, [cardsPorPlanoId, mostrarArquivados]);
 
   const cardsPorColuna = useMemo(() => {
     const grupos: Record<string, PlanoAcaoKanbanCardApi[]> = {};
@@ -74,9 +59,14 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
     return grupos;
   }, [cards]);
 
-  const abrirDetalhe = (card: PlanoAcaoKanbanCardApi) => {
-    setCardDetalhe(card);
-    setModalAberto(true);
+  const abrirFicha = (card: PlanoAcaoKanbanCardApi) => {
+    router.push(
+      buildPlanoAcaoFichaHref(cnpj14, card.plano_acao_id, {
+        diagnosticoId,
+        razaoSocial,
+        hashVolta: "empresa-kanban-plano-titulo",
+      }),
+    );
   };
 
   if (detalhe.status !== "finalizado") {
@@ -99,9 +89,8 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
             Execução do plano — Kanban
           </h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-            Acompanhamento operacional sobre as ações materializadas (status, responsável, prazo e
-            comentários auditáveis). A grelha acima mantém o quadro único por empresa; aqui você move a
-            execução.
+            Clique num card para abrir a ficha unificada (planejamento + status operacional). A grelha
+            acima mostra os mesmos dados em formato tabular.
           </p>
         </div>
         <Button
@@ -114,18 +103,7 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
         </Button>
       </div>
 
-      {carregando ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          A carregar Kanban…
-        </p>
-      ) : null}
-      {erro ? (
-        <p className="text-sm text-destructive" role="alert">
-          {erro}
-        </p>
-      ) : null}
-
-      {!carregando && !erro && cards.length === 0 ? (
+      {cards.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           Nenhum card no plano — confirme a materialização M07/M08 do ciclo de referência.
         </p>
@@ -148,7 +126,7 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
                     "cursor-pointer shadow-sm hover:border-primary/40 transition-colors",
                     card.arquivado && "opacity-60",
                   )}
-                  onClick={() => abrirDetalhe(card)}
+                  onClick={() => abrirFicha(card)}
                 >
                   <CardContent className="p-3 space-y-2">
                     <div className="flex items-start gap-2">
@@ -156,7 +134,7 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
                         #{card.ordem_kanban + 1}
                       </Badge>
                       <p className="text-sm font-medium leading-snug line-clamp-3 flex-1 min-w-0">
-                        {card.texto_acao}
+                        {tituloExibidoCard(card, detalhe)}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{card.frente_nome}</p>
@@ -176,7 +154,11 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
                       <span className="truncate max-w-[55%]">
                         {card.responsavel_operacional || card.responsavel_sugerido || "—"}
                       </span>
-                      <span>{card.prazo_operacional ?? "—"}</span>
+                      <span>
+                        {card.prazo_operacional
+                          ? formatarMetaPrazoPtBr(card.prazo_operacional)
+                          : "—"}
+                      </span>
                     </div>
                     <div className="flex gap-3 text-muted-foreground">
                       <span className="inline-flex items-center gap-1 text-xs">
@@ -195,20 +177,6 @@ export function PlanoAcaoKanbanBoard({ diagnosticoId, detalhe, editavel }: Props
           </div>
         ))}
       </div>
-
-      <PlanoAcaoKanbanCardDetalheModal
-        open={modalAberto}
-        onOpenChange={setModalAberto}
-        diagnosticoId={diagnosticoId}
-        card={cardDetalhe}
-        editavel={editavel}
-        acaoChecklist={cardDetalhe ? acoesPorId.get(cardDetalhe.plano_acao_id) : null}
-        onCardAtualizado={(c) => {
-          setCards((prev) => prev.map((x) => (x.plano_acao_id === c.plano_acao_id ? c : x)));
-          setCardDetalhe(c);
-        }}
-        onArquivado={() => void recarregar()}
-      />
     </section>
   );
 }

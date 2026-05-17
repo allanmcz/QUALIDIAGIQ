@@ -6,7 +6,12 @@ import {
   isLikelyNetworkFetchFailure,
   mensagemConectividadeApiParaUsuario,
   mensagemErroHttp,
+  mensagemErroPostDiagnostico,
 } from "./http_errors";
+import {
+  limparIdempotencyKeyPostDiagnostico,
+  obterIdempotencyKeyPostDiagnostico,
+} from "@/lib/wizard/post_diagnostico_idempotency";
 
 /**
  * Cria diagnóstico na API FastAPI — persistência em PostgreSQL (Supabase), isolada por `tenant_id` do JWT (RLS).
@@ -20,10 +25,7 @@ export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
     );
   }
 
-  const idempotencyKey =
-    typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const idempotencyKey = obterIdempotencyKeyPostDiagnostico();
 
   const base = getApiUrlForFetch().replace(/\/$/, "");
 
@@ -44,12 +46,14 @@ export async function postDiagnostico(payload: DiagnosticoPayloadArmazenado) {
       if (encerrarSessaoPainelSe401(res.status)) {
         throw new Error("Sessão expirada — a abrir o login.");
       }
-      throw new Error(mensagemErroHttp(res.status, raw));
+      throw new Error(mensagemErroPostDiagnostico(res.status, raw));
     }
     try {
-      return JSON.parse(raw) as unknown;
+      const parsed = JSON.parse(raw) as unknown;
+      limparIdempotencyKeyPostDiagnostico();
+      return parsed;
     } catch {
-      throw new Error(mensagemErroHttp(res.status, raw));
+      throw new Error(mensagemErroPostDiagnostico(res.status, raw));
     }
   } catch (error) {
     console.error("Falha ao enviar diagnóstico:", error);

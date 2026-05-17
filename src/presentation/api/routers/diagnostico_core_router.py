@@ -66,6 +66,7 @@ from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
     ArquivarEmpresaPainelHttpResponse,
     ArquivarEmpresaPainelRequest,
+    CnpjsArquivadosPainelHttpResponse,
     ComparacaoQuestionarioResponse,
     DiagnosticoQuestionarioRespostasResponse,
     DiagnosticoResponse,
@@ -148,6 +149,72 @@ async def listar_diagnosticos(
             if not d.empresa.cnpj or d.empresa.cnpj not in arquivados
         ]
     return [diagnostico_helpers._para_resumo(d) for d in rows]
+
+
+@router.get(
+    "/cnpjs-arquivados",
+    response_model=CnpjsArquivadosPainelHttpResponse,
+    summary="Listar CNPJs arquivados no painel",
+    description="CNPJs (14 dígitos) ocultos da listagem geral do tenant atual.",
+)
+async def listar_cnpjs_arquivados_painel(
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    arquivo_port: Annotated[EmpresaPainelArquivoPort, Depends(get_empresa_painel_arquivo_port)],
+) -> CnpjsArquivadosPainelHttpResponse:
+    _, tenant_id, _ = current
+    cnpjs = sorted(await arquivo_port.listar_cnpjs_arquivados(tenant_id))
+    return CnpjsArquivadosPainelHttpResponse(cnpjs=cnpjs)
+
+
+@router.post(
+    "/empresa/{empresa_cnpj}/desarquivar",
+    response_model=ArquivarEmpresaPainelHttpResponse,
+    summary="Desarquivar empresa no painel",
+    description=(
+        "Atalho para restaurar a empresa na listagem principal (equivalente a "
+        "PATCH /arquivo com ``arquivado: false``). Novo diagnóstico também desarquiva automaticamente."
+    ),
+)
+async def desarquivar_empresa_painel(
+    empresa_cnpj: str,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[ArquivarEmpresaPainel, Depends(get_arquivar_empresa_painel_use_case)],
+) -> ArquivarEmpresaPainelHttpResponse:
+    user_id, tenant_id, _ = current
+    norm = normalizar_cnpj_apenas_digitos(empresa_cnpj)
+    try:
+        exigir_cnpj_vazio_ou_com_dv_ok(norm)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    try:
+        resultado = await use_case.execute(
+            ComandoArquivarEmpresaPainel(
+                tenant_id=tenant_id,
+                actor_user_id=user_id,
+                empresa_cnpj=norm,
+                arquivado=False,
+            )
+        )
+    except EmpresaPainelArquivoTabelaAusenteError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Recurso de arquivo de empresa indisponível: aplique a migration 0053 "
+                "(make migrate) no Postgres do ambiente."
+            ),
+        ) from e
+    msg = "Empresa restaurada na listagem do painel."
+    if not resultado.estado_alterado:
+        msg = "Empresa já estava visível no painel."
+    return ArquivarEmpresaPainelHttpResponse(
+        empresa_cnpj=resultado.empresa_cnpj,
+        arquivado=resultado.arquivado,
+        estado_alterado=resultado.estado_alterado,
+        mensagem=msg,
+    )
 
 
 @router.get(

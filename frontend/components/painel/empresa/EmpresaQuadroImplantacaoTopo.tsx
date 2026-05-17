@@ -1,10 +1,15 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+
 import { EmpresaImplantacaoResumoDepartamentosCard } from "@/components/painel/empresa/EmpresaImplantacaoResumoDepartamentosCard";
 import { PlanoAcaoKanbanBoard } from "@/components/painel/empresa/PlanoAcaoKanbanBoard";
 import { QuadroImplantacaoGrid } from "@/components/painel/empresa/QuadroImplantacaoGrid";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buscarKanbanPlanoAcao } from "@/lib/api/plano_acao_kanban";
+import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
+import type { PlanoAcaoKanbanCardApi } from "@/types/plano_acao_kanban";
 import {
   escolherDetalheQuadroEmpresa,
   quadroImplantacaoEditavel,
@@ -13,6 +18,8 @@ import { linhasQuadroGrid } from "@/lib/painel/quadro_implantacao_utils";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
 
 type Props = {
+  cnpj14: string;
+  razaoSocialHint?: string;
   listaPainel: DiagnosticoResumoApi[] | null;
   detalhesPorId: Record<string, DiagnosticoDetalheApi | undefined>;
   carregando?: boolean;
@@ -24,16 +31,48 @@ type Props = {
  * Quadros 3 (gaps) + 4 (plano de implantação) — bloco único por CNPJ, abaixo da listagem de ciclos.
  */
 export function EmpresaQuadroImplantacaoTopo({
+  cnpj14,
+  razaoSocialHint = "",
   listaPainel,
   detalhesPorId,
   carregando = false,
   erro = null,
   onDataAtualizado,
 }: Props) {
-  if (!listaPainel?.length) return null;
-
-  const quadroDetalhe = escolherDetalheQuadroEmpresa(listaPainel, detalhesPorId);
+  const quadroDetalhe = listaPainel?.length
+    ? escolherDetalheQuadroEmpresa(listaPainel, detalhesPorId)
+    : null;
   const temLinhas = quadroDetalhe ? linhasQuadroGrid(quadroDetalhe.checklist).length > 0 : false;
+  const [cardsPorPlanoId, setCardsPorPlanoId] = useState<Record<string, PlanoAcaoKanbanCardApi>>({});
+
+  const recarregarKanban = useCallback(async () => {
+    if (!quadroDetalhe || quadroDetalhe.status !== "finalizado") {
+      setCardsPorPlanoId({});
+      return;
+    }
+    if (!temSessaoPainelParaApiCliente()) return;
+    try {
+      const board = await buscarKanbanPlanoAcao(quadroDetalhe.id, { incluirArquivados: true });
+      const map: Record<string, PlanoAcaoKanbanCardApi> = {};
+      for (const c of board?.cards ?? []) {
+        map[c.plano_acao_id] = c;
+      }
+      setCardsPorPlanoId(map);
+    } catch {
+      setCardsPorPlanoId({});
+    }
+  }, [quadroDetalhe]);
+
+  useEffect(() => {
+    void recarregarKanban();
+  }, [recarregarKanban]);
+
+  const aoDetalheAtualizado = (d: DiagnosticoDetalheApi) => {
+    onDataAtualizado?.(d);
+    void recarregarKanban();
+  };
+
+  if (!listaPainel?.length) return null;
 
   return (
     <Card className="mb-10" id="empresa-implantacao-bloco">
@@ -95,6 +134,9 @@ export function EmpresaQuadroImplantacaoTopo({
               </div>
               <QuadroImplantacaoGrid
                 diagnosticoId={quadroDetalhe.id}
+                cnpj14={cnpj14}
+                razaoSocial={razaoSocialHint}
+                cardsPorPlanoId={cardsPorPlanoId}
                 data={quadroDetalhe}
                 editavel={quadroImplantacaoEditavel(quadroDetalhe.id, listaPainel, quadroDetalhe.status)}
                 avisoSomenteLeitura={
@@ -103,7 +145,7 @@ export function EmpresaQuadroImplantacaoTopo({
                     ? "Quadro da empresa em consulta: a edição fica concentrada no ciclo de referência da empresa."
                     : undefined
                 }
-                onDataAtualizado={onDataAtualizado}
+                onDataAtualizado={aoDetalheAtualizado}
                 id="empresa-quadro-implantacao-principal"
               />
               {!temLinhas ? (
@@ -114,8 +156,12 @@ export function EmpresaQuadroImplantacaoTopo({
               ) : null}
 
               <PlanoAcaoKanbanBoard
+                cnpj14={cnpj14}
+                razaoSocial={razaoSocialHint}
                 diagnosticoId={quadroDetalhe.id}
                 detalhe={quadroDetalhe}
+                cardsPorPlanoId={cardsPorPlanoId}
+                onKanbanAlterado={recarregarKanban}
                 editavel={quadroImplantacaoEditavel(
                   quadroDetalhe.id,
                   listaPainel,

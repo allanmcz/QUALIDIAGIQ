@@ -16,6 +16,7 @@ import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/li
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
 import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresaPainelButton";
+import { fetchCnpjsArquivadosPainel } from "@/lib/api/arquivar_empresa_painel";
 import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { buildWizardUrlNovaEmpresa } from "@/lib/wizard/wizard_modo_empresa";
 
@@ -24,11 +25,23 @@ export default function PainelDiagnosticosPage() {
   const ajudaImportarOtp =
     "Use apenas se você concluiu o assistente sem conta na plataforma e confirmou o resultado por código no e-mail. A importação procura diagnósticos gratuitos vinculados ao mesmo e-mail do seu login atual. Se você já estava com sessão iniciada e usou «Nova empresa», os itens já aparecem na lista abaixo — não precisam de importação.";
   const [itens, setItens] = useState<DiagnosticoResumoApi[] | null>(null);
+  const [carregandoLista, setCarregandoLista] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [msgVinculo, setMsgVinculo] = useState<string | null>(null);
   const [msgArquivo, setMsgArquivo] = useState<string | null>(null);
   const [verArquivadas, setVerArquivadas] = useState(false);
+  const [cnpjsArquivados, setCnpjsArquivados] = useState<Set<string>>(new Set());
   const [vinculando, setVinculando] = useState(false);
+
+  const recarregarCnpjsArquivados = async () => {
+    if (!temSessaoPainelParaApiCliente()) return;
+    try {
+      const lista = await fetchCnpjsArquivadosPainel();
+      setCnpjsArquivados(new Set(lista));
+    } catch {
+      setCnpjsArquivados(new Set());
+    }
+  };
 
   useEffect(() => {
     let cancel = false;
@@ -36,18 +49,27 @@ export default function PainelDiagnosticosPage() {
       if (!temSessaoPainelParaApiCliente()) {
         setErro(null);
         setItens([]);
+        setCarregandoLista(false);
         return;
       }
+      setCarregandoLista(true);
+      setErro(null);
       try {
         const rows = await fetchDiagnosticosResumo(100, 0, {
           incluirArquivadas: verArquivadas,
         });
         if (!cancel) setItens(rows);
+        if (verArquivadas && !cancel) {
+          const lista = await fetchCnpjsArquivadosPainel();
+          if (!cancel) setCnpjsArquivados(new Set(lista));
+        }
       } catch (e) {
         if (!cancel) setErro(e instanceof Error ? e.message : "Falha ao carregar diagnósticos.");
+      } finally {
+        if (!cancel) setCarregandoLista(false);
       }
     }
-    load();
+    void load();
     return () => {
       cancel = true;
     };
@@ -189,7 +211,11 @@ export default function PainelDiagnosticosPage() {
               variant={verArquivadas ? "secondary" : "outline"}
               size="sm"
               onClick={() => {
-                setVerArquivadas((v) => !v);
+                setVerArquivadas((v) => {
+                  const next = !v;
+                  if (next) void recarregarCnpjsArquivados();
+                  return next;
+                });
                 setMsgArquivo(null);
               }}
             >
@@ -198,7 +224,15 @@ export default function PainelDiagnosticosPage() {
           </div>
         )}
 
-        {!semSessao && !erro && itens !== null && itens.length === 0 && (
+        {!semSessao && carregandoLista && itens === null && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Carregando diagnósticos">
+            {[1, 2, 3].map((k) => (
+              <div key={k} className="h-48 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        )}
+
+        {!semSessao && !erro && !carregandoLista && itens !== null && itens.length === 0 && (
           <p
             className="text-muted-foreground text-sm leading-relaxed max-w-2xl"
             role="status"
@@ -295,12 +329,14 @@ export default function PainelDiagnosticosPage() {
                         <ArquivarEmpresaPainelButton
                           cnpj14={cnpj14}
                           razaoSocial={diag.empresa_razao_social}
+                          arquivada={cnpjsArquivados.has(cnpj14)}
                           variant="outline"
                           className="w-full"
                           onConcluido={(mensagem) => {
                             setMsgVinculo(null);
                             setMsgArquivo(mensagem);
                             setErro(null);
+                            void recarregarCnpjsArquivados();
                             void recarregarLista();
                           }}
                         />

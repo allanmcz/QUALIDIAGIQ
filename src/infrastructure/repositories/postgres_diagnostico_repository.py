@@ -97,6 +97,56 @@ def _painel_estado_ciclo_de_row(row: dict[str, Any]) -> str:
     )
 
 
+_COLUNAS_LISTAGEM_PAINEL = """
+    id, tenant_id,
+    empresa_cnpj, empresa_razao_social,
+    status, plano, score_geral,
+    criado_em, finalizado_em, relatorio_pdf_url,
+    numero_interno_grupo, versao_otimista, painel_estado_ciclo
+"""
+
+
+def _row_dict_para_entity_listagem(row: dict[str, Any]) -> Diagnostico:
+    """
+    Hidrata entidade mínima para GET /diagnosticos/ (resumo do painel).
+
+    Evita ler/parsear JSONB pesado (``score_completo``, quadro, LLM) na listagem.
+    """
+    raw_created = row.get("criado_em")
+    criado_em = (
+        datetime.fromisoformat(str(raw_created).replace("Z", "+00:00")) if raw_created else None
+    )
+    raw_fin = row.get("finalizado_em")
+    finalizado_em = datetime.fromisoformat(str(raw_fin).replace("Z", "+00:00")) if raw_fin else None
+
+    return Diagnostico(
+        id=UUID(str(row["id"])),
+        tenant_id=UUID(str(row["tenant_id"])),
+        empresa=EmpresaInfo(
+            cnpj=str(row.get("empresa_cnpj") or ""),
+            razao_social=str(row.get("empresa_razao_social") or ""),
+            porte=PorteEmpresa.MEDIO,
+            regime=RegimeTributario.LUCRO_PRESUMIDO,
+            cnae_principal="6201500",
+            uf="SP",
+            setor_macro=SetorMacro.SERVICOS,
+        ),
+        respondente=Respondente(email="listagem@placeholder.qdi"),
+        status=StatusDiagnostico(str(row["status"])),
+        plano=PlanoDiagnostico(str(row.get("plano", "gratuito"))),
+        criado_em=criado_em if criado_em is not None else datetime.now(UTC),
+        finalizado_em=finalizado_em,
+        score_geral=row.get("score_geral"),
+        relatorio_pdf_url=row.get("relatorio_pdf_url"),
+        score_completo_snapshot=None,
+        versao_otimista=int(row.get("versao_otimista") or 1),
+        numero_interno_grupo=(
+            int(raw_nim) if (raw_nim := row.get("numero_interno_grupo")) is not None else None
+        ),
+        painel_estado_ciclo=_painel_estado_ciclo_de_row(row),
+    )
+
+
 def _row_dict_para_entity(row: dict[str, Any]) -> Diagnostico:
     """Converte uma linha ``RealDict`` em entidade de domínio (paridade com Supabase)."""
     raw_created = row.get("criado_em")
@@ -479,6 +529,27 @@ def _eliminar_empresa_sync(
         conn.close()
 
 
+def _listar_resumo_sync(
+    dsn: str,
+    tenant_id: UUID,
+    limit: int,
+    offset: int,
+    empresa_cnpj: str | None = None,
+    *,
+    excluir_empresas_arquivadas: bool = False,
+) -> list[Diagnostico]:
+    """Listagem do painel — colunas mínimas (sem JSONB de score completo / quadro)."""
+    return _listar_sync(
+        dsn,
+        tenant_id,
+        limit,
+        offset,
+        empresa_cnpj,
+        excluir_empresas_arquivadas=excluir_empresas_arquivadas,
+        apenas_colunas_resumo=True,
+    )
+
+
 def _listar_sync(
     dsn: str,
     tenant_id: UUID,
@@ -487,6 +558,7 @@ def _listar_sync(
     empresa_cnpj: str | None = None,
     *,
     excluir_empresas_arquivadas: bool = False,
+    apenas_colunas_resumo: bool = False,
 ) -> list[Diagnostico]:
     filtro_arquivo = ""
     if excluir_empresas_arquivadas and not empresa_cnpj:
@@ -500,13 +572,16 @@ def _listar_sync(
                 )
               )
         """
+    colunas = _COLUNAS_LISTAGEM_PAINEL if apenas_colunas_resumo else "*"
+    para_entity = _row_dict_para_entity_listagem if apenas_colunas_resumo else _row_dict_para_entity
+
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             if empresa_cnpj:
                 cur.execute(
-                    """
-                    SELECT * FROM diagnosticos
+                    f"""
+                    SELECT {colunas} FROM diagnosticos
                     WHERE tenant_id = %s AND empresa_cnpj = %s
                     ORDER BY criado_em DESC
                     LIMIT %s OFFSET %s
@@ -515,7 +590,7 @@ def _listar_sync(
                 )
             else:
                 sql_com_arquivo = f"""
-                    SELECT * FROM diagnosticos
+                    SELECT {colunas} FROM diagnosticos
                     WHERE tenant_id = %s
                     {filtro_arquivo}
                     ORDER BY criado_em DESC
@@ -531,8 +606,8 @@ def _listar_sync(
 
                     if filtro_arquivo and erro_tabela_empresa_painel_arquivo_ausente(exc):
                         cur.execute(
-                            """
-                            SELECT * FROM diagnosticos
+                            f"""
+                            SELECT {colunas} FROM diagnosticos
                             WHERE tenant_id = %s
                             ORDER BY criado_em DESC
                             LIMIT %s OFFSET %s
@@ -542,7 +617,7 @@ def _listar_sync(
                     else:
                         raise
             rows = cur.fetchall()
-        return [_row_dict_para_entity(cast("dict[str, Any]", dict(r))) for r in rows]
+        return [para_entity(cast("dict[str, Any]", dict(r))) for r in rows]
     finally:
         conn.close()
 
@@ -822,7 +897,7 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
         excluir_empresas_arquivadas: bool = False,
     ) -> list[Diagnostico]:
         return await asyncio.to_thread(
-            _listar_sync,
+            _listar_resumo_sync,
             self._dsn,
             tenant_id,
             limit,

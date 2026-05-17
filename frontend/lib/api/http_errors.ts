@@ -62,3 +62,17 @@ export function mensagemErroHttp(status: number, corpoTexto: string): string {
   }
   return trimmed.length > 400 ? `${trimmed.slice(0, 400)}…` : trimmed;
 }
+
+/**
+ * Mensagem quando o proxy BFF expira ou falha no POST de diagnóstico (o upstream pode ter concluído).
+ */
+export function mensagemErroPostDiagnostico(status: number, corpoTexto: string): string {
+  const base = mensagemErroHttp(status, corpoTexto);
+  if (status === 502 || status === 504) {
+    return (
+      `${base} Se o assistente ficou em «Enviando…» por muito tempo, o diagnóstico pode já estar no painel ` +
+      "«Diagnósticos» — confira antes de enviar de novo."
+    );
+  }
+  return base;
+}
