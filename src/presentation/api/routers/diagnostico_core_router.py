@@ -8,29 +8,29 @@ Responsabilidade: CRUD principal autenticado do diagnóstico (listar, criar, obt
 from __future__ import annotations
 
 from typing import Annotated
-from uuid import UUID  # noqa: TC003 - tipo usado em assinatura FastAPI (runtime)
+from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import Response
 
 from src.application.errors import EliminacaoEmpresaSomenteWormError
 from src.application.ports.diagnostico_retificacao_port import DiagnosticoRetificacaoRegisto
+from src.application.ports.empresa_painel_arquivo_port import EmpresaPainelArquivoPort
 from src.application.use_cases.arquivar_empresa_painel import (
     ArquivarEmpresaPainel,
     ComandoArquivarEmpresaPainel,
+)
+from src.application.use_cases.comparar_questionario_diagnosticos import (
+    ComandoCompararQuestionario,
+    CompararQuestionarioDiagnosticos,
 )
 from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
     ComandoEliminarDiagnosticosEmpresaPainel,
     EliminarDiagnosticosEmpresaPainel,
 )
-from src.application.ports.empresa_painel_arquivo_port import EmpresaPainelArquivoPort
 from src.application.use_cases.listar_retificacoes_diagnostico import (
     ComandoListarRetificacoesDiagnostico,
     ListarRetificacoesDiagnostico,
-)
-from src.application.use_cases.comparar_questionario_diagnosticos import (
-    ComandoCompararQuestionario,
-    CompararQuestionarioDiagnosticos,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
 from src.application.use_cases.registrar_retificacao_diagnostico import (
@@ -41,6 +41,13 @@ from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.cnpj_brasil import (
     exigir_cnpj_vazio_ou_com_dv_ok,
     normalizar_cnpj_apenas_digitos,
+)
+from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
+from src.infrastructure.repositories.postgres_diagnostico_repository import (
+    PostgresDiagnosticoRepository,
+)
+from src.infrastructure.repositories.postgres_empresa_painel_arquivo_sync import (
+    EmpresaPainelArquivoTabelaAusenteError,
 )
 from src.presentation.api.dependencies import (
     get_arquivar_empresa_painel_use_case,
@@ -54,20 +61,16 @@ from src.presentation.api.dependencies import (
     get_realizar_diagnostico_use_case,
     get_registrar_retificacao_diagnostico_use_case,
 )
-from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
-from src.infrastructure.repositories.postgres_diagnostico_repository import (
-    PostgresDiagnosticoRepository,
-)
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
+    ArquivarEmpresaPainelHttpResponse,
+    ArquivarEmpresaPainelRequest,
     ComparacaoQuestionarioResponse,
     DiagnosticoQuestionarioRespostasResponse,
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
     DiagnosticoRetificacaoHttpResponse,
-    ArquivarEmpresaPainelHttpResponse,
-    ArquivarEmpresaPainelRequest,
     EliminarEmpresaDiagnosticoHttpResponse,
     EmpresaArquivoStatusHttpResponse,
     IniciarDiagnosticoPainelRequest,
@@ -195,14 +198,23 @@ async def arquivar_empresa_painel(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
-    resultado = await use_case.execute(
-        ComandoArquivarEmpresaPainel(
-            tenant_id=tenant_id,
-            actor_user_id=user_id,
-            empresa_cnpj=norm,
-            arquivado=payload.arquivado,
+    try:
+        resultado = await use_case.execute(
+            ComandoArquivarEmpresaPainel(
+                tenant_id=tenant_id,
+                actor_user_id=user_id,
+                empresa_cnpj=norm,
+                arquivado=payload.arquivado,
+            )
         )
-    )
+    except EmpresaPainelArquivoTabelaAusenteError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Recurso de arquivo de empresa indisponível: aplique a migration 0053 "
+                "(make migrate) no Postgres do ambiente."
+            ),
+        ) from e
     if payload.arquivado:
         msg = (
             "Empresa arquivada no painel. Os diagnósticos permanecem acessíveis pelo link direto "

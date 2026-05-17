@@ -505,7 +505,7 @@ def _listar_sync(
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             if empresa_cnpj:
                 cur.execute(
-                    f"""
+                    """
                     SELECT * FROM diagnosticos
                     WHERE tenant_id = %s AND empresa_cnpj = %s
                     ORDER BY criado_em DESC
@@ -514,16 +514,33 @@ def _listar_sync(
                     (str(tenant_id), empresa_cnpj, limit, offset),
                 )
             else:
-                cur.execute(
-                    f"""
+                sql_com_arquivo = f"""
                     SELECT * FROM diagnosticos
                     WHERE tenant_id = %s
                     {filtro_arquivo}
                     ORDER BY criado_em DESC
                     LIMIT %s OFFSET %s
-                    """,
-                    (str(tenant_id), limit, offset),
-                )
+                """
+                params = (str(tenant_id), limit, offset)
+                try:
+                    cur.execute(sql_com_arquivo, params)
+                except Exception as exc:
+                    from src.infrastructure.repositories.postgres_empresa_painel_arquivo_compat import (
+                        erro_tabela_empresa_painel_arquivo_ausente,
+                    )
+
+                    if filtro_arquivo and erro_tabela_empresa_painel_arquivo_ausente(exc):
+                        cur.execute(
+                            """
+                            SELECT * FROM diagnosticos
+                            WHERE tenant_id = %s
+                            ORDER BY criado_em DESC
+                            LIMIT %s OFFSET %s
+                            """,
+                            params,
+                        )
+                    else:
+                        raise
             rows = cur.fetchall()
         return [_row_dict_para_entity(cast("dict[str, Any]", dict(r))) for r in rows]
     finally:

@@ -8,6 +8,14 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from src.infrastructure.repositories.postgres_empresa_painel_arquivo_compat import (
+    erro_tabela_empresa_painel_arquivo_ausente,
+)
+
+
+class EmpresaPainelArquivoTabelaAusenteError(RuntimeError):
+    """Migration 0053 não aplicada — arquivo de empresa indisponível."""
+
 
 def definir_arquivado_sync(
     dsn: str,
@@ -44,8 +52,12 @@ def definir_arquivado_sync(
                 mudou = cur.rowcount == 1
         conn.commit()
         return mudou
-    except Exception:
+    except Exception as exc:
         conn.rollback()
+        if erro_tabela_empresa_painel_arquivo_ausente(exc):
+            raise EmpresaPainelArquivoTabelaAusenteError(
+                "Tabela empresa_painel_arquivo ausente — execute make migrate (0053)."
+            ) from exc
         raise
     finally:
         conn.close()
@@ -57,15 +69,20 @@ def esta_arquivada_sync(dsn: str, tenant_id: UUID, empresa_cnpj: str) -> bool:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT 1 FROM empresa_painel_arquivo
-                WHERE tenant_id = %s AND empresa_cnpj = %s
-                LIMIT 1
-                """,
-                (str(tenant_id), empresa_cnpj),
-            )
-            return cur.fetchone() is not None
+            try:
+                cur.execute(
+                    """
+                    SELECT 1 FROM empresa_painel_arquivo
+                    WHERE tenant_id = %s AND empresa_cnpj = %s
+                    LIMIT 1
+                    """,
+                    (str(tenant_id), empresa_cnpj),
+                )
+                return cur.fetchone() is not None
+            except Exception as exc:
+                if erro_tabela_empresa_painel_arquivo_ausente(exc):
+                    return False
+                raise
     finally:
         conn.close()
 
@@ -76,13 +93,18 @@ def listar_cnpjs_arquivados_sync(dsn: str, tenant_id: UUID) -> frozenset[str]:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT empresa_cnpj FROM empresa_painel_arquivo
-                WHERE tenant_id = %s
-                """,
-                (str(tenant_id),),
-            )
-            return frozenset(str(r[0]) for r in cur.fetchall())
+            try:
+                cur.execute(
+                    """
+                    SELECT empresa_cnpj FROM empresa_painel_arquivo
+                    WHERE tenant_id = %s
+                    """,
+                    (str(tenant_id),),
+                )
+                return frozenset(str(r[0]) for r in cur.fetchall())
+            except Exception as exc:
+                if erro_tabela_empresa_painel_arquivo_ausente(exc):
+                    return frozenset()
+                raise
     finally:
         conn.close()
