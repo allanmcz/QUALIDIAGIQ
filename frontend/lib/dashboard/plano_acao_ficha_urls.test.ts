@@ -39,4 +39,12 @@ describe("plano_acao_ficha_urls", () => {
       "#empresa-kanban-plano-titulo",
     );
   });
+
+  it("buildVoltaEmpresaHref com ficha salva", () => {
+    const href = buildVoltaEmpresaHref("11222333000181", "X", "empresa-quadro-implantacao-principal", {
+      fichaSalva: true,
+    });
+    expect(href).toContain("ficha_salva=1");
+    expect(href).toContain("#empresa-quadro-implantacao-principal");
+  });
 });

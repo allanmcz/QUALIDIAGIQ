@@ -90,6 +90,10 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         record_pdf_generation(outcome="success")
         return pdf_bytes
 
+    def _folhas_estilo_pdf(self, *extras: str) -> list[str]:
+        """Base partilhada + folhas específicas por tipo de PDF (ordem importa no WeasyPrint)."""
+        return ["style.css", *extras]
+
     async def gerar_pdf_questionario_respostas(
         self,
         diagnostico: Diagnostico,
@@ -114,7 +118,11 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
             hash_evidencia=diagnostico.hash_evidencia or "",
             respostas=respostas,
         )
-        pdf_bytes = await self._render_html_bytes(html_out, diagnostico)
+        pdf_bytes = await self._render_html_bytes(
+            html_out,
+            diagnostico,
+            stylesheet_names=self._folhas_estilo_pdf("questionario_pdf.css"),
+        )
         record_pdf_generation(outcome="success")
         return pdf_bytes
 
@@ -131,12 +139,23 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
         data_geracao = formatar_data_geracao_pdf(locale, agora)
         ctx = _contexto_template_comparacao(comparacao, data_geracao=data_geracao)
         html_out = template.render(**ctx)
-        pdf_bytes = await self._render_html_bytes(html_out, contexto_diagnostico)
+        pdf_bytes = await self._render_html_bytes(
+            html_out,
+            contexto_diagnostico,
+            stylesheet_names=self._folhas_estilo_pdf("comparacao_questionario_pdf.css"),
+        )
         record_pdf_generation(outcome="success")
         return pdf_bytes
 
-    async def _render_html_bytes(self, html_out: str, diagnostico: Diagnostico) -> bytes:
-        css_path = str(self.templates_dir / "style.css")
+    async def _render_html_bytes(
+        self,
+        html_out: str,
+        diagnostico: Diagnostico,
+        *,
+        stylesheet_names: list[str] | None = None,
+    ) -> bytes:
+        folhas = stylesheet_names or ["style.css"]
+        css_paths = [str(self.templates_dir / nome) for nome in folhas]
         _ctx = get_contextvars()
         http_tid = _ctx.get("http_trace_id") if isinstance(_ctx, dict) else None
 
@@ -149,7 +168,7 @@ class WeasyPrintPdfGenerator(PdfGeneratorPort):
                 base_url = self.templates_dir.resolve().as_uri() + "/"
                 return bytes(
                     HTML(string=html_out, base_url=base_url).write_pdf(
-                        stylesheets=[CSS(filename=css_path)]
+                        stylesheets=[CSS(filename=p) for p in css_paths]
                     )
                 )
             except Exception as e:

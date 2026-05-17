@@ -1,0 +1,88 @@
+/**
+ * PDF espelho do questionário — A4 retrato (impressão / arquivo).
+ * Carregado após style.css; sobrescreve @page e tipografia da tabela.
+ */
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 10mm 16mm 10mm;
+    @top-right {
+        content: "QualiDiagIQ — Questionário respondido";
+        font-size: 8pt;
+        color: #374151;
+    }
+    @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 8pt;
+        color: #374151;
+    }
+}
+
+body.pdf-questionario {
+    font-size: 10pt;
+    line-height: 1.4;
+}
+
+body.pdf-questionario h1 {
+    font-size: 18pt;
+}
+
+body.pdf-questionario h2 {
+    font-size: 13pt;
+    margin-top: 18px;
+}
+
+body.pdf-questionario .header-info {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+}
+
+body.pdf-questionario .dimensoes-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 8.5pt;
+    margin-top: 12px;
+}
+
+body.pdf-questionario .dimensoes-table th,
+body.pdf-questionario .dimensoes-table td {
+    padding: 5px 4px;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+body.pdf-questionario .dimensoes-table th {
+    font-size: 8pt;
+    line-height: 1.25;
+}
+
+body.pdf-questionario .dimensoes-table tr {
+    page-break-inside: avoid;
+}
+
+body.pdf-questionario .col-seq {
+    width: 6%;
+}
+
+body.pdf-questionario .col-codigo {
+    width: 11%;
+}
+
+body.pdf-questionario .col-pergunta {
+    width: 52%;
+}
+
+body.pdf-questionario .col-resposta {
+    width: 22%;
+}
+
+body.pdf-questionario .col-pontos {
+    width: 9%;
+}
+
+body.pdf-questionario .mono {
+    font-family: "DejaVu Sans Mono", "Liberation Mono", monospace;
+    font-size: 7.5pt;
+}

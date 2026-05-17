@@ -48,10 +48,35 @@ export function formatarMetaPrazoPtBr(iso: string): string {
 
 export function chaveQuadroParaAcao(acao: AcaoChecklistQuadro, i: number, j: number): string {
   const pid = (acao.plano_acao_id || "").trim();
-  if (pid.length >= 32 && /^[0-9a-f-]+$/i.test(pid)) {
+  if (ehChaveQuadroUuid(pid)) {
     return pid;
   }
+  const legado = (acao.chave_quadro_legado || "").trim();
+  if (legado) return legado;
   return `f${i}_a${j}`;
+}
+
+/** Chave persistida no PATCH do quadro — UUID do plano ou legado ``f{i}_a{j}``. */
+export function ehChaveQuadroUuid(chave: string): boolean {
+  const v = chave.trim();
+  return v.length >= 32 && /^[0-9a-f-]+$/i.test(v);
+}
+
+/**
+ * Resolve a chave usada em ``quadro_implantacao_anotacoes`` ao gravar a ficha unificada.
+ * Evita retorno silencioso quando o checklist HTTP ainda não traz ``plano_acao_id``.
+ */
+export function resolverChaveQuadroSalvar(opts: {
+  planoAcaoId: string;
+  chaveDeAcaoCtx?: string | null;
+  chaveQuadroLegado?: string | null;
+}): string | null {
+  const ctx = opts.chaveDeAcaoCtx?.trim();
+  if (ctx) return ctx;
+  const pid = opts.planoAcaoId.trim();
+  if (ehChaveQuadroUuid(pid)) return pid;
+  const leg = opts.chaveQuadroLegado?.trim();
+  return leg || null;
 }
 
 export function chavesQuadroIniciais(

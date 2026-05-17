@@ -6,6 +6,8 @@ import { parseCnpjFromRouteSegment } from "@/lib/dashboard/empresa_diagnostico_u
 
 export const QUERY_DIAGNOSTICO_ID = "diagnostico_id";
 export const QUERY_RAZAO_SOCIAL = "razao_social";
+/** Query ao voltar da ficha após gravar com sucesso. */
+export const QUERY_FICHA_SALVA = "ficha_salva";
 
 export type PlanoAcaoFichaHrefOpts = {
   diagnosticoId: string;
@@ -35,11 +37,13 @@ export function buildVoltaEmpresaHref(
   cnpj14: string,
   razaoSocial?: string,
   hash?: string,
+  opts?: { fichaSalva?: boolean },
 ): string {
   const c = cnpj14.replace(/\D/g, "");
   const q = new URLSearchParams();
   const r = (razaoSocial ?? "").trim();
   if (r.length >= 3) q.set("razao_social", r);
+  if (opts?.fichaSalva) q.set(QUERY_FICHA_SALVA, "1");
   const qs = q.toString();
   const base = qs ? `/dashboard/empresas/${c}?${qs}` : `/dashboard/empresas/${c}`;
   const h = hash?.replace(/^#/, "").trim();

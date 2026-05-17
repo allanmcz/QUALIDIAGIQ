@@ -1,7 +1,7 @@
 /* Paleta QualiDiagIQ / Tributiq — LC 214/2025 contexto Reforma do Consumo */
 
 @page {
-    size: A4;
+    size: A4 portrait;
     margin: 18mm 16mm 22mm 16mm;
     @top-right {
         content: "QualiDiagIQ — Diagnóstico Tributário";

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Comparação de questionários — {{ empresa_razao }}</title>
 </head>
-<body>
+<body class="pdf-comparacao-questionario">
     <div class="pdf-header-brand">
         <img src="assets/QDI-NB1-logo-completo.jpg" alt="QualiDiagIQ" class="pdf-logo" width="200" height="56" />
     </div>
@@ -19,12 +19,19 @@
     </div>
 
     <table class="dimensoes-table">
+        <colgroup>
+            <col class="col-codigo" />
+            <col class="col-pergunta" />
+            {% for col in colunas %}
+            <col class="col-ciclo" />
+            {% endfor %}
+        </colgroup>
         <thead>
             <tr>
-                <th style="width:7rem">Código</th>
+                <th>Código</th>
                 <th>Pergunta</th>
                 {% for col in colunas %}
-                <th style="width:11rem">{{ col.rotulo }}</th>
+                <th>{{ col.rotulo }}</th>
                 {% endfor %}
             </tr>
         </thead>

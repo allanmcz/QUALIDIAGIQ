@@ -1,0 +1,59 @@
+/**
+ * PDF comparação de questionários entre ciclos — A4 retrato.
+ */
+
+@page {
+    size: A4 portrait;
+    margin: 10mm 8mm 14mm 8mm;
+    @top-right {
+        content: "QualiDiagIQ — Comparação de questionários";
+        font-size: 7.5pt;
+        color: #374151;
+    }
+    @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 7.5pt;
+        color: #374151;
+    }
+}
+
+body.pdf-comparacao-questionario {
+    font-size: 9pt;
+    line-height: 1.35;
+}
+
+body.pdf-comparacao-questionario h1 {
+    font-size: 16pt;
+}
+
+body.pdf-comparacao-questionario .dimensoes-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 7pt;
+}
+
+body.pdf-comparacao-questionario .dimensoes-table th,
+body.pdf-comparacao-questionario .dimensoes-table td {
+    padding: 4px 3px;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+body.pdf-comparacao-questionario .dimensoes-table th {
+    font-size: 6.5pt;
+    line-height: 1.2;
+}
+
+body.pdf-comparacao-questionario .col-codigo {
+    width: 10%;
+}
+
+body.pdf-comparacao-questionario .col-pergunta {
+    width: 28%;
+}
+
+body.pdf-comparacao-questionario .col-ciclo {
+    width: auto;
+}

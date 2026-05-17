@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Questionário — {{ empresa_razao }}</title>
 </head>
-<body>
+<body class="pdf-questionario">
     <div class="pdf-header-brand">
         <img src="assets/QDI-NB1-logo-completo.jpg" alt="QualiDiagIQ" class="pdf-logo" width="200" height="56" />
     </div>
@@ -24,13 +24,20 @@
 
     <h2>Respostas ({{ respostas|length }} perguntas)</h2>
     <table class="dimensoes-table">
+        <colgroup>
+            <col class="col-seq" />
+            <col class="col-codigo" />
+            <col class="col-pergunta" />
+            <col class="col-resposta" />
+            <col class="col-pontos" />
+        </colgroup>
         <thead>
             <tr>
-                <th style="width:3rem">Seq.</th>
-                <th style="width:7rem">Código</th>
+                <th>Seq.</th>
+                <th>Código</th>
                 <th>Pergunta</th>
-                <th style="width:12rem">Resposta</th>
-                <th style="width:5rem">Pts.</th>
+                <th>Resposta</th>
+                <th>Pts.</th>
             </tr>
         </thead>
         <tbody>

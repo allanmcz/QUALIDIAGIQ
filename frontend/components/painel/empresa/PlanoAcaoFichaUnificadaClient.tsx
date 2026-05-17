@@ -34,6 +34,7 @@ import {
   chavesQuadroIniciais,
   defaultQuadroEdicaoAcao,
   formatarMetaPrazoPtBr,
+  resolverChaveQuadroSalvar,
   type QuadroEdicaoAcao,
 } from "@/lib/painel/quadro_implantacao_utils";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
@@ -47,9 +48,9 @@ function mascaraCnpj14(d: string): string {
 }
 
 function acharAcaoChecklist(
-  checklist: DiagnosticoResumoApi[] | null,
   detalhe: Awaited<ReturnType<typeof fetchDiagnosticoDetalhe>> | null,
   planoAcaoId: string,
+  card: PlanoAcaoKanbanCardApi | null,
 ): { acao: AcaoChecklistDetalhe; chaveQuadro: string } | null {
   if (!detalhe?.checklist) return null;
   for (let i = 0; i < detalhe.checklist.length; i++) {
@@ -57,7 +58,10 @@ function acharAcaoChecklist(
     for (let j = 0; j < frente.acoes.length; j++) {
       const acao = frente.acoes[j]!;
       const pid = (acao.plano_acao_id ?? "").trim();
-      if (pid === planoAcaoId) {
+      const bateId = pid === planoAcaoId;
+      const bateIndice =
+        card != null && card.frente_indice === i && card.acao_indice === j;
+      if (bateId || bateIndice) {
         return {
           acao,
           chaveQuadro: chaveQuadroParaAcao(
@@ -67,6 +71,7 @@ function acharAcaoChecklist(
               prazo: acao.prazo,
               criticidade: acao.criticidade,
               plano_acao_id: acao.plano_acao_id,
+              chave_quadro_legado: acao.chave_quadro_legado,
             },
             i,
             j,
@@ -75,7 +80,6 @@ function acharAcaoChecklist(
       }
     }
   }
-  void checklist;
   return null;
 }
 
@@ -98,6 +102,7 @@ export function PlanoAcaoFichaUnificadaClient({
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgTipo, setMsgTipo] = useState<"erro" | "aviso" | "sucesso">("aviso");
   const [salvando, setSalvando] = useState(false);
 
   const [detalhe, setDetalhe] = useState<Awaited<ReturnType<typeof fetchDiagnosticoDetalhe>> | null>(
@@ -115,8 +120,18 @@ export function PlanoAcaoFichaUnificadaClient({
   const [novoComentario, setNovoComentario] = useState("");
 
   const acaoCtx = useMemo(
-    () => acharAcaoChecklist(listaPainel, detalhe, planoAcaoId),
-    [listaPainel, detalhe, planoAcaoId],
+    () => acharAcaoChecklist(detalhe, planoAcaoId, card),
+    [detalhe, planoAcaoId, card],
+  );
+
+  const chaveQuadroSalvar = useMemo(
+    () =>
+      resolverChaveQuadroSalvar({
+        planoAcaoId,
+        chaveDeAcaoCtx: acaoCtx?.chaveQuadro,
+        chaveQuadroLegado: card?.chave_quadro_legado,
+      }),
+    [planoAcaoId, acaoCtx?.chaveQuadro, card?.chave_quadro_legado],
   );
 
   const editavel = useMemo(() => {
@@ -159,10 +174,15 @@ export function PlanoAcaoFichaUnificadaClient({
       setBloqueio(encontrado.bloqueio_motivo ?? "");
       setDescricaoOp(encontrado.descricao_operacional ?? "");
 
-      const ctx = acharAcaoChecklist(listaPainel, d, planoAcaoId);
-      if (ctx && d.checklist) {
+      const ctx = acharAcaoChecklist(d, planoAcaoId, encontrado);
+      const chave = resolverChaveQuadroSalvar({
+        planoAcaoId,
+        chaveDeAcaoCtx: ctx?.chaveQuadro,
+        chaveQuadroLegado: encontrado.chave_quadro_legado,
+      });
+      if (chave && d.checklist) {
         const mapa = chavesQuadroIniciais(d.checklist, d.quadro_implantacao_anotacoes);
-        setQuadroEdicao(mapa[ctx.chaveQuadro] ?? defaultQuadroEdicaoAcao());
+        setQuadroEdicao(mapa[chave] ?? mapa[encontrado.chave_quadro_legado] ?? defaultQuadroEdicaoAcao());
       }
 
       const coms = await listarComentariosKanban(diagnosticoId, planoAcaoId);
@@ -178,11 +198,33 @@ export function PlanoAcaoFichaUnificadaClient({
     void carregar();
   }, [carregar]);
 
+  const exibirMsg = (texto: string, tipo: "erro" | "aviso" | "sucesso" = "aviso") => {
+    setMsgTipo(tipo);
+    setMsg(texto);
+    requestAnimationFrame(() => {
+      document.getElementById("ficha-acao-feedback")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   const salvarTudo = async () => {
-    if (!editavel || !detalhe || !card || !acaoCtx) return;
+    if (!detalhe || !card) {
+      exibirMsg("Dados da ação incompletos — recarregue a página.", "erro");
+      return;
+    }
+    if (!editavel) {
+      exibirMsg("Este quadro está em modo somente leitura.", "aviso");
+      return;
+    }
+    if (!chaveQuadroSalvar) {
+      exibirMsg(
+        "Não foi possível identificar a chave do quadro para gravar o planejamento. Recarregue ou contacte o suporte.",
+        "erro",
+      );
+      return;
+    }
     const v = detalhe.versao_otimista;
     if (v == null) {
-      setMsg("Versão otimista indisponível — recarregue a página.");
+      exibirMsg("Versão otimista indisponível — recarregue a página.", "erro");
       return;
     }
     setSalvando(true);
@@ -190,13 +232,13 @@ export function PlanoAcaoFichaUnificadaClient({
     try {
       const quadroResult = await salvarQuadroAcao(
         diagnosticoId,
-        acaoCtx.chaveQuadro,
+        chaveQuadroSalvar,
         quadroEdicao,
         v,
       );
       if (!quadroResult.ok) {
         if (quadroResult.conflitoVersao) await carregar();
-        setMsg(quadroResult.mensagem);
+        exibirMsg(quadroResult.mensagem, "erro");
         return;
       }
       setDetalhe(quadroResult.detalhe);
@@ -215,14 +257,15 @@ export function PlanoAcaoFichaUnificadaClient({
       if (novoComentario.trim()) {
         await adicionarComentarioKanban(diagnosticoId, planoAcaoId, novoComentario.trim());
         setNovoComentario("");
-        const coms = await listarComentariosKanban(diagnosticoId, planoAcaoId);
-        setComentarios(coms);
       }
 
-      setMsg("Alterações gravadas com sucesso.");
-      router.refresh();
+      router.push(
+        buildVoltaEmpresaHref(cnpj14, razaoSocialHint, "empresa-quadro-implantacao-principal", {
+          fichaSalva: true,
+        }),
+      );
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Falha ao gravar.");
+      exibirMsg(e instanceof Error ? e.message : "Falha ao gravar.", "erro");
     } finally {
       setSalvando(false);
     }
@@ -235,7 +278,7 @@ export function PlanoAcaoFichaUnificadaClient({
       await arquivarKanbanCard(diagnosticoId, planoAcaoId, !card.arquivado);
       router.push(voltaHref);
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Falha ao arquivar.");
+      exibirMsg(e instanceof Error ? e.message : "Falha ao arquivar.", "erro");
     } finally {
       setSalvando(false);
     }
@@ -284,7 +327,17 @@ export function PlanoAcaoFichaUnificadaClient({
         </div>
 
         {msg ? (
-          <p className="text-sm border rounded-md p-3 bg-primary/5" role="status">
+          <p
+            id="ficha-acao-feedback"
+            className={
+              msgTipo === "erro"
+                ? "text-sm border rounded-md p-3 border-destructive/40 bg-destructive/10 text-destructive"
+                : msgTipo === "sucesso"
+                  ? "text-sm border rounded-md p-3 border-emerald-600/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
+                  : "text-sm border rounded-md p-3 bg-amber-500/10 border-amber-600/30 text-amber-950 dark:text-amber-100"
+            }
+            role={msgTipo === "erro" ? "alert" : "status"}
+          >
             {msg}
           </p>
         ) : null}

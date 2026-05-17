@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresaPainelButton";
@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
+import { QUERY_FICHA_SALVA } from "@/lib/dashboard/plano_acao_ficha_urls";
 import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import { idDiagnosticoBaselineQuadroEmpresa } from "@/lib/painel/diagnostico_empresa_ordem";
@@ -49,6 +50,7 @@ export default function EmpresaDiagnosticosClient({
   razaoSocialHint: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [listaPainel, setListaPainel] = useState<DiagnosticoResumoApi[] | null>(null);
   const [detalhesPorId, setDetalhesPorId] = useState<Record<string, DiagnosticoDetalheApi>>({});
   const [quadroCarregando, setQuadroCarregando] = useState(false);
@@ -87,6 +89,16 @@ export default function EmpresaDiagnosticosClient({
   }, []);
 
   const semSessao = !temSessaoPainelParaApiCliente();
+
+  useEffect(() => {
+    if (searchParams.get(QUERY_FICHA_SALVA) !== "1") return;
+    setMsgOperacao("Alterações da ficha gravadas com sucesso.");
+    const url = new URL(window.location.href);
+    url.searchParams.delete(QUERY_FICHA_SALVA);
+    const qs = url.searchParams.toString();
+    const path = `${url.pathname}${qs ? `?${qs}` : ""}${url.hash}`;
+    router.replace(path, { scroll: false });
+  }, [searchParams, router]);
 
   useEffect(() => {
     if (semSessao) return;
@@ -215,7 +227,14 @@ export default function EmpresaDiagnosticosClient({
                 arquivar oculta a empresa na listagem geral sem apagar evidências WORM.
               </p>
               {msgOperacao ? (
-                <p className="text-xs text-primary max-w-md sm:text-right" role="status">
+                <p
+                  className={
+                    msgOperacao.includes("ficha gravadas")
+                      ? "text-sm max-w-md sm:text-right border rounded-md p-2 border-emerald-600/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
+                      : "text-xs text-primary max-w-md sm:text-right"
+                  }
+                  role="status"
+                >
                   {msgOperacao}
                 </p>
               ) : null}

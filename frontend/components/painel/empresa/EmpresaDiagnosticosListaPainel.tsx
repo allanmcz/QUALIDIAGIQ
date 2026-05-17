@@ -584,9 +584,9 @@ export function EmpresaDiagnosticosListaPainel({
             {comSelecao ? (
               <span className="sr-only">Comparar</span>
             ) : null}
-            <span>Empresa / ciclo</span>
+            <span>Ciclo</span>
             <span className="text-center">Score</span>
-            <span className="text-center">Ciclo</span>
+            <span className="text-center">Estado</span>
             <span className="text-center">Data</span>
             <span className="text-center">Ações</span>
           </div>
@@ -651,7 +651,7 @@ export function EmpresaDiagnosticosListaPainel({
                       <span>{pct != null ? `${pct.toFixed(1)}` : "—"}</span>
                     </div>
                     <div className="flex flex-col items-stretch gap-1 sm:flex sm:justify-center sm:items-center">
-                      <span className="text-xs text-muted-foreground sm:hidden">Ciclo</span>
+                      <span className="text-xs text-muted-foreground sm:hidden">Estado</span>
                       <Badge variant="outline" className="font-normal w-fit mx-auto sm:mx-0">
                         {rotuloPainelEstadoCiclo(cicloAtual)}
                       </Badge>
