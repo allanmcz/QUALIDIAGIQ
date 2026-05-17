@@ -66,3 +66,5 @@ Analogia com Oracle/Winthor: o `Modelfile` funciona como parametro global do sis
 | `12_como_transformar_fontes_em_contexto.md` | Como usar aulas, legislacao, PDFs e anotacoes como fontes |
 | `13_catalogo_de_fontes_qdi.md` | Modelo de catalogo para controlar origem, confiabilidade e vigencia |
 | `14_pipeline_fontes_para_rag.md` | Pipeline pratico para preparar fontes para RAG local |
+| `15_ensino_supervisionado.md` | Como ensinar o agente com correcao humana, rubricas e promocao de memoria |
+| `16_caderno_treino_supervisionado.md` | Modelo de caderno para perguntas, respostas esperadas e correcoes |
