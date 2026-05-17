@@ -21,8 +21,16 @@ from src.application.ports.lgpd_anonimizacao_executor_port import LgpdAnonimizac
 from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
 from src.application.ports.plano_acao_kanban_port import PlanoAcaoKanbanPort
+from src.application.ports.empresa_painel_arquivo_port import EmpresaPainelArquivoPort
+from src.application.use_cases.arquivar_empresa_painel import ArquivarEmpresaPainel
 from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
     EliminarDiagnosticosEmpresaPainel,
+)
+from src.infrastructure.adapters.memoria_empresa_painel_arquivo_adapter import (
+    MemoriaEmpresaPainelArquivoAdapter,
+)
+from src.infrastructure.adapters.postgres_empresa_painel_arquivo_adapter import (
+    PostgresEmpresaPainelArquivoAdapter,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.infrastructure.adapters.noop_diagnostico_mutacao_audit_adapter import (
@@ -94,6 +102,19 @@ def get_diagnostico_repository() -> DiagnosticoRepository:
 def get_eliminar_diagnosticos_empresa_painel_use_case() -> EliminarDiagnosticosEmpresaPainel:
     """Exclusão administrativa por CNPJ (painel consultor)."""
     return EliminarDiagnosticosEmpresaPainel(repo=get_diagnostico_repository())
+
+
+def get_empresa_painel_arquivo_port() -> EmpresaPainelArquivoPort:
+    """Postgres quando há DSN; memória em CI Playwright / testes."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn:
+        return PostgresEmpresaPainelArquivoAdapter(dsn=dsn)
+    return MemoriaEmpresaPainelArquivoAdapter()
+
+
+def get_arquivar_empresa_painel_use_case() -> ArquivarEmpresaPainel:
+    return ArquivarEmpresaPainel(arquivo_port=get_empresa_painel_arquivo_port())
 
 
 def get_diagnostico_mutacao_audit_port() -> DiagnosticoMutacaoAuditPort:

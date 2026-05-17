@@ -90,10 +90,24 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         offset: int = 0,
         *,
         empresa_cnpj: str | None = None,
+        excluir_empresas_arquivadas: bool = False,
     ) -> list[Diagnostico]:
+        from src.infrastructure.adapters.memoria_empresa_painel_arquivo_adapter import (
+            MemoriaEmpresaPainelArquivoAdapter,
+        )
+
         items = [d for d in self._rows.values() if d.tenant_id == tenant_id]
         if empresa_cnpj:
             items = [d for d in items if d.empresa.cnpj == empresa_cnpj]
+        elif excluir_empresas_arquivadas:
+            arquivados = await MemoriaEmpresaPainelArquivoAdapter().listar_cnpjs_arquivados(
+                tenant_id
+            )
+            items = [
+                d
+                for d in items
+                if not d.empresa.cnpj or d.empresa.cnpj not in arquivados
+            ]
         items.sort(key=lambda d: d.criado_em, reverse=True)
         return items[offset : offset + limit]
 

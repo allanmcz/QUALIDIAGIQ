@@ -15,10 +15,15 @@ from fastapi.responses import Response
 
 from src.application.errors import EliminacaoEmpresaSomenteWormError
 from src.application.ports.diagnostico_retificacao_port import DiagnosticoRetificacaoRegisto
+from src.application.use_cases.arquivar_empresa_painel import (
+    ArquivarEmpresaPainel,
+    ComandoArquivarEmpresaPainel,
+)
 from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
     ComandoEliminarDiagnosticosEmpresaPainel,
     EliminarDiagnosticosEmpresaPainel,
 )
+from src.application.ports.empresa_painel_arquivo_port import EmpresaPainelArquivoPort
 from src.application.use_cases.listar_retificacoes_diagnostico import (
     ComandoListarRetificacoesDiagnostico,
     ListarRetificacoesDiagnostico,
@@ -38,16 +43,21 @@ from src.domain.value_objects.cnpj_brasil import (
     normalizar_cnpj_apenas_digitos,
 )
 from src.presentation.api.dependencies import (
+    get_arquivar_empresa_painel_use_case,
     get_comparar_questionario_diagnosticos_use_case,
     get_current_user_tenant,
     get_diagnostico_repository,
     get_eliminar_diagnosticos_empresa_painel_use_case,
+    get_empresa_painel_arquivo_port,
     get_listar_retificacoes_diagnostico_use_case,
     get_pdf_generator,
     get_realizar_diagnostico_use_case,
     get_registrar_retificacao_diagnostico_use_case,
 )
 from src.infrastructure.adapters.pdf_generator_weasyprint import WeasyPrintPdfGenerator
+from src.infrastructure.repositories.postgres_diagnostico_repository import (
+    PostgresDiagnosticoRepository,
+)
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
@@ -56,7 +66,10 @@ from src.presentation.api.schemas import (
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
     DiagnosticoRetificacaoHttpResponse,
+    ArquivarEmpresaPainelHttpResponse,
+    ArquivarEmpresaPainelRequest,
     EliminarEmpresaDiagnosticoHttpResponse,
+    EmpresaArquivoStatusHttpResponse,
     IniciarDiagnosticoPainelRequest,
     RegistrarRetificacaoDiagnosticoRequest,
 )
@@ -83,6 +96,7 @@ def _retificacao_para_http(r: DiagnosticoRetificacaoRegisto) -> DiagnosticoRetif
 async def listar_diagnosticos(
     current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
     repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    arquivo_port: Annotated[EmpresaPainelArquivoPort, Depends(get_empresa_painel_arquivo_port)],
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
     empresa_cnpj: Annotated[
@@ -94,6 +108,10 @@ async def listar_diagnosticos(
             ),
         ),
     ] = None,
+    incluir_arquivadas: Annotated[
+        bool,
+        Query(description="Se true, inclui empresas (CNPJ) arquivadas na listagem geral."),
+    ] = False,
 ) -> list[DiagnosticoResumoSchema]:
     """Lista diagnósticos do tenant atual (ordenacao: mais recentes primeiro na camada repo/DB)."""
     _, tenant_id, _ = current
@@ -111,20 +129,108 @@ async def listar_diagnosticos(
                     detail=str(exc),
                 ) from exc
             filtro_cnpj = norm
+    excluir_arquivadas = filtro_cnpj is None and not incluir_arquivadas
     rows = await repo.listar_por_tenant(
-        tenant_id, limit=limit, offset=offset, empresa_cnpj=filtro_cnpj
+        tenant_id,
+        limit=limit,
+        offset=offset,
+        empresa_cnpj=filtro_cnpj,
+        excluir_empresas_arquivadas=excluir_arquivadas,
     )
+    if excluir_arquivadas and not isinstance(repo, PostgresDiagnosticoRepository):
+        arquivados = await arquivo_port.listar_cnpjs_arquivados(tenant_id)
+        rows = [
+            d
+            for d in rows
+            if not d.empresa.cnpj or d.empresa.cnpj not in arquivados
+        ]
     return [diagnostico_helpers._para_resumo(d) for d in rows]
+
+
+@router.get(
+    "/empresa/{empresa_cnpj}/arquivo",
+    response_model=EmpresaArquivoStatusHttpResponse,
+    summary="Estado de arquivo da empresa no painel",
+)
+async def status_arquivo_empresa_painel(
+    empresa_cnpj: str,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    arquivo_port: Annotated[EmpresaPainelArquivoPort, Depends(get_empresa_painel_arquivo_port)],
+) -> EmpresaArquivoStatusHttpResponse:
+    _, tenant_id, _ = current
+    norm = normalizar_cnpj_apenas_digitos(empresa_cnpj)
+    try:
+        exigir_cnpj_vazio_ou_com_dv_ok(norm)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    arquivado = await arquivo_port.esta_arquivada(tenant_id, norm)
+    return EmpresaArquivoStatusHttpResponse(empresa_cnpj=norm, arquivado=arquivado)
+
+
+@router.patch(
+    "/empresa/{empresa_cnpj}/arquivo",
+    response_model=ArquivarEmpresaPainelHttpResponse,
+    summary="Arquivar ou restaurar empresa no painel",
+    description=(
+        "Oculta ou restaura a empresa (CNPJ) na listagem principal do painel. "
+        "Não apaga diagnósticos finalizados (WORM). Exclusão de ciclos não finalizados "
+        "permanece em DELETE /diagnosticos/empresa/{cnpj} dentro da vista da empresa."
+    ),
+)
+async def arquivar_empresa_painel(
+    empresa_cnpj: str,
+    payload: ArquivarEmpresaPainelRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[ArquivarEmpresaPainel, Depends(get_arquivar_empresa_painel_use_case)],
+) -> ArquivarEmpresaPainelHttpResponse:
+    user_id, tenant_id, _ = current
+    norm = normalizar_cnpj_apenas_digitos(empresa_cnpj)
+    try:
+        exigir_cnpj_vazio_ou_com_dv_ok(norm)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    resultado = await use_case.execute(
+        ComandoArquivarEmpresaPainel(
+            tenant_id=tenant_id,
+            actor_user_id=user_id,
+            empresa_cnpj=norm,
+            arquivado=payload.arquivado,
+        )
+    )
+    if payload.arquivado:
+        msg = (
+            "Empresa arquivada no painel. Os diagnósticos permanecem acessíveis pelo link direto "
+            "ou em «Ver empresas arquivadas»."
+        )
+        if not resultado.estado_alterado:
+            msg = "Empresa já estava arquivada."
+    else:
+        msg = "Empresa restaurada na listagem do painel."
+        if not resultado.estado_alterado:
+            msg = "Empresa já estava visível no painel."
+    return ArquivarEmpresaPainelHttpResponse(
+        empresa_cnpj=resultado.empresa_cnpj,
+        arquivado=resultado.arquivado,
+        estado_alterado=resultado.estado_alterado,
+        mensagem=msg,
+    )
 
 
 @router.delete(
     "/empresa/{empresa_cnpj}",
     response_model=EliminarEmpresaDiagnosticoHttpResponse,
-    summary="Excluir diagnósticos elegíveis da empresa (CNPJ)",
+    summary="Excluir ciclos não finalizados da empresa (CNPJ)",
     description=(
         "Remove fisicamente todos os diagnósticos do tenant com o CNPJ informado que ainda "
         "não estão ``finalizado`` (em andamento, cancelado ou expirado). "
         "Diagnósticos **finalizados** permanecem (WORM — ADR-012); use Privacidade LGPD por ciclo. "
+        "Recomendado na vista da empresa, não na listagem geral. "
         "**Headers:** JWT + ``Idempotency-Key``."
     ),
 )

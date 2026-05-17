@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPainelButton";
+import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresaPainelButton";
+import { ExcluirCiclosElegiveisEmpresaButton } from "@/components/painel/ExcluirCiclosElegiveisEmpresaButton";
+import { fetchEmpresaArquivoStatus } from "@/lib/api/arquivar_empresa_painel";
 import { EmpresaComparacaoQuestionarioDialog } from "@/components/painel/empresa/EmpresaComparacaoQuestionarioDialog";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
@@ -51,6 +53,8 @@ export default function EmpresaDiagnosticosClient({
   const [quadroCarregando, setQuadroCarregando] = useState(false);
   const [quadroErro, setQuadroErro] = useState<string | null>(null);
   const [selecaoComparacaoIds, setSelecaoComparacaoIds] = useState<string[]>([]);
+  const [empresaArquivada, setEmpresaArquivada] = useState(false);
+  const [msgOperacao, setMsgOperacao] = useState<string | null>(null);
   const [comparacaoAberta, setComparacaoAberta] = useState(false);
 
   const toggleSelecaoComparacao = useCallback((diagnosticoId: string, marcado: boolean) => {
@@ -82,6 +86,21 @@ export default function EmpresaDiagnosticosClient({
   }, []);
 
   const semSessao = !temSessaoPainelParaApiCliente();
+
+  useEffect(() => {
+    if (semSessao) return;
+    let cancel = false;
+    void fetchEmpresaArquivoStatus(cnpjNormalizado)
+      .then((s) => {
+        if (!cancel) setEmpresaArquivada(s.arquivado);
+      })
+      .catch(() => {
+        if (!cancel) setEmpresaArquivada(false);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [cnpjNormalizado, semSessao]);
 
   /** Garante GET do baseline se o prefetch da lista ainda não trouxe o detalhe. */
   useEffect(() => {
@@ -166,20 +185,44 @@ export default function EmpresaDiagnosticosClient({
                 <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                   <Link href="/dashboard/privacidade">LGPD e direitos do titular</Link>
                 </Button>
-                <ExcluirEmpresaPainelButton
+                <ArquivarEmpresaPainelButton
+                  cnpj14={cnpjNormalizado}
+                  razaoSocial={tituloEmpresa}
+                  arquivada={empresaArquivada}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onConcluido={(mensagem) => {
+                    setMsgOperacao(mensagem);
+                    void fetchEmpresaArquivoStatus(cnpjNormalizado).then((s) =>
+                      setEmpresaArquivada(s.arquivado),
+                    );
+                  }}
+                />
+                <ExcluirCiclosElegiveisEmpresaButton
                   cnpj14={cnpjNormalizado}
                   razaoSocial={tituloEmpresa}
                   variant="outline"
                   className="w-full sm:w-auto text-destructive hover:text-destructive"
-                  onExcluido={() => {
-                    router.push("/dashboard/diagnosticos");
+                  onExcluido={(mensagem) => {
+                    setMsgOperacao(mensagem);
+                    router.refresh();
                   }}
                 />
               </div>
               <p className="text-xs text-muted-foreground max-w-md sm:text-right">
-                Plano e cronograma consolidados abrem no diagnóstico mais recente. A área LGPD reúne solicitações e
-                portabilidade dos dados.
+                Plano e cronograma consolidados abrem no diagnóstico mais recente. Remova apenas ciclos não finalizados;
+                arquivar oculta a empresa na listagem geral sem apagar evidências WORM.
               </p>
+              {msgOperacao ? (
+                <p className="text-xs text-primary max-w-md sm:text-right" role="status">
+                  {msgOperacao}
+                </p>
+              ) : null}
+              {empresaArquivada ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400 max-w-md sm:text-right">
+                  Esta empresa está arquivada no painel — visível aqui pelo link direto.
+                </p>
+              ) : null}
             </div>
           )}
         </div>

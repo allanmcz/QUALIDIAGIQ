@@ -485,13 +485,27 @@ def _listar_sync(
     limit: int,
     offset: int,
     empresa_cnpj: str | None = None,
+    *,
+    excluir_empresas_arquivadas: bool = False,
 ) -> list[Diagnostico]:
+    filtro_arquivo = ""
+    if excluir_empresas_arquivadas and not empresa_cnpj:
+        filtro_arquivo = """
+              AND (
+                COALESCE(empresa_cnpj, '') = ''
+                OR NOT EXISTS (
+                    SELECT 1 FROM empresa_painel_arquivo epa
+                    WHERE epa.tenant_id = diagnosticos.tenant_id
+                      AND epa.empresa_cnpj = diagnosticos.empresa_cnpj
+                )
+              )
+        """
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             if empresa_cnpj:
                 cur.execute(
-                    """
+                    f"""
                     SELECT * FROM diagnosticos
                     WHERE tenant_id = %s AND empresa_cnpj = %s
                     ORDER BY criado_em DESC
@@ -501,9 +515,10 @@ def _listar_sync(
                 )
             else:
                 cur.execute(
-                    """
+                    f"""
                     SELECT * FROM diagnosticos
                     WHERE tenant_id = %s
+                    {filtro_arquivo}
                     ORDER BY criado_em DESC
                     LIMIT %s OFFSET %s
                     """,
@@ -787,9 +802,16 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
         offset: int = 0,
         *,
         empresa_cnpj: str | None = None,
+        excluir_empresas_arquivadas: bool = False,
     ) -> list[Diagnostico]:
         return await asyncio.to_thread(
-            _listar_sync, self._dsn, tenant_id, limit, offset, empresa_cnpj
+            _listar_sync,
+            self._dsn,
+            tenant_id,
+            limit,
+            offset,
+            empresa_cnpj,
+            excluir_empresas_arquivadas=excluir_empresas_arquivadas,
         )
 
     async def eliminar_diagnosticos_empresa_eliminaveis(

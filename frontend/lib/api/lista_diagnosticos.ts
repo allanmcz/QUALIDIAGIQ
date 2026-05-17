@@ -30,6 +30,8 @@ export type DiagnosticoResumoApi = {
 export type FetchDiagnosticosResumoOpts = {
   /** Filtra pela coluna `empresa_cnpj` (14 dígitos); omitir = todos do tenant. */
   empresaCnpj14?: string;
+  /** Inclui empresas arquivadas na listagem geral (painel). */
+  incluirArquivadas?: boolean;
 };
 
 /**
@@ -82,6 +84,9 @@ export async function fetchDiagnosticosResumo(
   const cnpj = opts?.empresaCnpj14?.replace(/\D/g, "").trim();
   if (cnpj && cnpj.length === 14) {
     params.set("empresa_cnpj", cnpj);
+  }
+  if (opts?.incluirArquivadas) {
+    params.set("incluir_arquivadas", "true");
   }
   const qs = params.toString();
   /** Sem barra final no path do browser — Next faz 308; o proxy normaliza para `/diagnosticos/` no upstream. */

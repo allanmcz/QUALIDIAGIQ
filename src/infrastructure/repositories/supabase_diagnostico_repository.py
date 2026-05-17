@@ -99,7 +99,9 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         offset: int = 0,
         *,
         empresa_cnpj: str | None = None,
+        excluir_empresas_arquivadas: bool = False,
     ) -> list[Diagnostico]:
+        _ = excluir_empresas_arquivadas
         """Listagem paginada por tenant."""
         stid = str(tenant_id)
 

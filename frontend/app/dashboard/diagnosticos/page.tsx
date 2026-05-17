@@ -15,7 +15,7 @@ import {
 import { fetchDiagnosticosResumo, type DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { postVincularLeadsSelfService } from "@/lib/api/vincular_leads_self_service";
-import { ExcluirEmpresaPainelButton } from "@/components/painel/ExcluirEmpresaPainelButton";
+import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresaPainelButton";
 import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { buildWizardUrlNovaEmpresa } from "@/lib/wizard/wizard_modo_empresa";
 
@@ -26,7 +26,8 @@ export default function PainelDiagnosticosPage() {
   const [itens, setItens] = useState<DiagnosticoResumoApi[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [msgVinculo, setMsgVinculo] = useState<string | null>(null);
-  const [msgExclusao, setMsgExclusao] = useState<string | null>(null);
+  const [msgArquivo, setMsgArquivo] = useState<string | null>(null);
+  const [verArquivadas, setVerArquivadas] = useState(false);
   const [vinculando, setVinculando] = useState(false);
 
   useEffect(() => {
@@ -38,7 +39,9 @@ export default function PainelDiagnosticosPage() {
         return;
       }
       try {
-        const rows = await fetchDiagnosticosResumo();
+        const rows = await fetchDiagnosticosResumo(100, 0, {
+          incluirArquivadas: verArquivadas,
+        });
         if (!cancel) setItens(rows);
       } catch (e) {
         if (!cancel) setErro(e instanceof Error ? e.message : "Falha ao carregar diagnósticos.");
@@ -48,12 +51,14 @@ export default function PainelDiagnosticosPage() {
     return () => {
       cancel = true;
     };
-  }, []);
+  }, [verArquivadas]);
 
   const recarregarLista = async () => {
     if (!temSessaoPainelParaApiCliente()) return;
     try {
-      const rows = await fetchDiagnosticosResumo();
+      const rows = await fetchDiagnosticosResumo(100, 0, {
+        incluirArquivadas: verArquivadas,
+      });
       setItens(rows);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha ao carregar diagnósticos.");
@@ -167,13 +172,29 @@ export default function PainelDiagnosticosPage() {
           </div>
         )}
 
-        {!semSessao && msgExclusao && (
+        {!semSessao && msgArquivo && (
           <div
             className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm text-foreground"
             role="status"
             aria-live="polite"
           >
-            {msgExclusao}
+            {msgArquivo}
+          </div>
+        )}
+
+        {!semSessao && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant={verArquivadas ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                setVerArquivadas((v) => !v);
+                setMsgArquivo(null);
+              }}
+            >
+              {verArquivadas ? "Ocultar empresas arquivadas" : "Ver empresas arquivadas"}
+            </Button>
           </div>
         )}
 
@@ -271,14 +292,14 @@ export default function PainelDiagnosticosPage() {
                     </Link>
                     {cnpj14 ? (
                       <div className="mt-4 pt-3 border-t border-border/60">
-                        <ExcluirEmpresaPainelButton
+                        <ArquivarEmpresaPainelButton
                           cnpj14={cnpj14}
                           razaoSocial={diag.empresa_razao_social}
                           variant="outline"
-                          className="w-full text-destructive hover:text-destructive"
-                          onExcluido={(mensagem) => {
+                          className="w-full"
+                          onConcluido={(mensagem) => {
                             setMsgVinculo(null);
-                            setMsgExclusao(mensagem);
+                            setMsgArquivo(mensagem);
                             setErro(null);
                             void recarregarLista();
                           }}

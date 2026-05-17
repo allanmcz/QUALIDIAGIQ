@@ -59,12 +59,14 @@ class DiagnosticoRepository(ABC):
         offset: int = 0,
         *,
         empresa_cnpj: str | None = None,
+        excluir_empresas_arquivadas: bool = False,
     ) -> list[Diagnostico]:
         """
         Lista diagnósticos de um tenant, paginado.
 
         Args:
             empresa_cnpj: Se informado, apenas linhas com esse CNPJ normalizado (14 dígitos).
+            excluir_empresas_arquivadas: Oculta CNPJs marcados em ``empresa_painel_arquivo``.
         """
         ...
 

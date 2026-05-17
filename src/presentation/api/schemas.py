@@ -568,6 +568,24 @@ class EliminarEmpresaDiagnosticoHttpResponse(BaseModel):
     mensagem: str
 
 
+class ArquivarEmpresaPainelRequest(BaseModel):
+    """PATCH /diagnosticos/empresa/{cnpj}/arquivo — ocultar ou restaurar no painel."""
+
+    arquivado: bool = Field(description="True para arquivar; False para restaurar na listagem.")
+
+
+class ArquivarEmpresaPainelHttpResponse(BaseModel):
+    empresa_cnpj: str
+    arquivado: bool
+    estado_alterado: bool
+    mensagem: str
+
+
+class EmpresaArquivoStatusHttpResponse(BaseModel):
+    empresa_cnpj: str
+    arquivado: bool
+
+
 class QuestionarioPerguntaItemSchema(BaseModel):
     """Item do catálogo filtrado pelo perfil (motor adaptativo)."""
 
