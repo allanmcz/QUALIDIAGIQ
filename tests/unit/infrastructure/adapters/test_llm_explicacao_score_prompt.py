@@ -42,7 +42,7 @@ class TestMontarPromptExplicacaoScore:
             },
         )
         prompt = montar_prompt_explicacao_score(req)
-        assert "Pesos aplicados por dimensão" in prompt
+        assert "Pesos macro aplicados por dimensão" in prompt
         assert "peso 1.5" in prompt
-        assert "Referências normativas" in prompt
-        assert "LC 214/2025 art. 9º" in prompt
+        assert "parecer" in prompt.lower()
+        assert "EC 132/2023" in prompt

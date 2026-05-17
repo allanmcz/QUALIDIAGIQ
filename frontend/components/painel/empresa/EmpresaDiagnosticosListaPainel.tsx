@@ -2,7 +2,7 @@
 
 /**
  * Lista de diagnósticos da mesma PJ no tenant — M05/M12 na expansão.
- * Partilhado entre `/dashboard/empresas/[cnpj]` e `/dashboard/diagnosticos/[id]`.
+ * Vista unificada por CNPJ em `/dashboard/empresas/[cnpj]` (rota canónica da empresa no painel).
  */
 
 import Link from "next/link";
@@ -46,7 +46,11 @@ import {
 import { patchPainelEstadoCicloDiagnostico } from "@/lib/api/patch_painel_estado_ciclo";
 import { hrefPrivacidadePainel } from "@/lib/painel/privacidade_diagnostico_query";
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
-import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
+import {
+  buildEmpresaHrefCiclo,
+  buildWizardUrlNovaDiagnosticoEmpresa,
+  QUERY_EXPAND_DIAGNOSTICO,
+} from "@/lib/dashboard/empresa_diagnostico_urls";
 import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import {
   PAINEL_ESTADO_CICLO_VALORES,
@@ -112,6 +116,10 @@ export type EmpresaDiagnosticosListaPainelProps = {
   /** Coluna de checkboxes para comparar questionário entre ciclos. */
   selecaoComparacaoIds?: string[];
   onToggleSelecaoComparacao?: (diagnosticoId: string, marcado: boolean) => void;
+  /** Notifica a página pai quando a linha expandida muda (barra «ciclo em foco»). */
+  onLinhaAbertaIdChange?: (diagnosticoId: string | null) => void;
+  /** Incrementar após desarquivar empresa — força novo GET da lista por CNPJ. */
+  recarregarToken?: number;
 };
 
 export function EmpresaDiagnosticosListaPainel({
@@ -122,8 +130,11 @@ export function EmpresaDiagnosticosListaPainel({
   cabecalhoSlot,
   onDiagnosticosAlterados,
   onListaDetalheAtualizado,
+  onDetalhesPrefetch,
   selecaoComparacaoIds = [],
   onToggleSelecaoComparacao,
+  onLinhaAbertaIdChange,
+  recarregarToken = 0,
 }: EmpresaDiagnosticosListaPainelProps) {
   const comSelecao = Boolean(onToggleSelecaoComparacao);
   const gridCols = comSelecao ? GRID_COLS_EMPRESA_COM_SELECAO : GRID_COLS_EMPRESA;
@@ -172,21 +183,43 @@ export function EmpresaDiagnosticosListaPainel({
     setDetalhesPorId((prev) => ({ ...prev, [diagnosticoSemeado.id]: diagnosticoSemeado }));
   }, [diagnosticoSemeado]);
 
+  const sincronizarExpandNaQuery = useCallback(
+    (id: string | null) => {
+      if (!usarExpandNaQuery || typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      if (id) url.searchParams.set(QUERY_EXPAND_DIAGNOSTICO, id);
+      else url.searchParams.delete(QUERY_EXPAND_DIAGNOSTICO);
+      const qs = url.searchParams.toString();
+      router.replace(`${url.pathname}${qs ? `?${qs}` : ""}${url.hash}`, { scroll: false });
+    },
+    [usarExpandNaQuery, router],
+  );
+
+  const alterarLinhaAberta = useCallback(
+    (id: string | null) => {
+      setLinhaAbertaId(id);
+      sincronizarExpandNaQuery(id);
+      onLinhaAbertaIdChange?.(id);
+    },
+    [sincronizarExpandNaQuery, onLinhaAbertaIdChange],
+  );
+
   /** Deep link `?expand=` (view por CNPJ). */
   useEffect(() => {
     if (!usarExpandNaQuery) return;
-    const expandId = searchParams.get("expand")?.trim();
+    const expandId = searchParams.get(QUERY_EXPAND_DIAGNOSTICO)?.trim();
     if (!expandId || !diagnosticos?.some((d) => d.id === expandId)) return;
     setLinhaAbertaId(expandId);
-  }, [usarExpandNaQuery, searchParams, diagnosticos]);
+    onLinhaAbertaIdChange?.(expandId);
+  }, [usarExpandNaQuery, searchParams, diagnosticos, onLinhaAbertaIdChange]);
 
   /** Ficha ou empresa: expande só com âncora (#) apontando para secção dentro do painel expandido. */
   useEffect(() => {
     if (!hashLocal || !HASHES_QUE_ABREM_LINHA.has(hashLocal)) return;
     const sid = expandirDiagnosticoId?.trim();
     if (!sid || !diagnosticos?.some((d) => d.id === sid)) return;
-    setLinhaAbertaId(sid);
-  }, [hashLocal, expandirDiagnosticoId, diagnosticos]);
+    alterarLinhaAberta(sid);
+  }, [hashLocal, expandirDiagnosticoId, diagnosticos, alterarLinhaAberta]);
 
   useEffect(() => {
     if (!linhaAbertaId || typeof window === "undefined") return;
@@ -220,7 +253,7 @@ export function EmpresaDiagnosticosListaPainel({
     return () => {
       cancel = true;
     };
-  }, [cnpjNormalizado]);
+  }, [cnpjNormalizado, recarregarToken]);
 
   /** Detalhe sob demanda ao expandir linha (evita N× GET pesado no load da página empresa). */
   useEffect(() => {
@@ -423,7 +456,11 @@ export function EmpresaDiagnosticosListaPainel({
     diagMenuAberto
       ? (() => {
           const diag = diagMenuAberto;
-          const detailHref = `/dashboard/diagnosticos/${diag.id}`;
+          const detailHref = buildEmpresaHrefCiclo(
+            cnpjNormalizado,
+            diag.empresa_razao_social,
+            diag.id,
+          );
           const detalhePrefetch = detalhesPorId[diag.id];
           const pdfHref = hrefRelatorioPdfAbsoluto(
             detalhePrefetch?.relatorio_pdf_url ?? diag.relatorio_pdf_url ?? null,
@@ -492,7 +529,9 @@ export function EmpresaDiagnosticosListaPainel({
                 LGPD
               </Link>
               <Link
-                href={`${detailHref}#diag-explicacao-score-llm`}
+                href={buildEmpresaHrefCiclo(cnpjNormalizado, diag.empresa_razao_social, diag.id, {
+                  hash: "diag-explicacao-score-llm",
+                })}
                 role="menuitem"
                 className="block px-3 py-2 hover:bg-muted/60"
                 onClick={fecharMenuAcoes}
@@ -505,7 +544,7 @@ export function EmpresaDiagnosticosListaPainel({
                 className="block px-3 py-2 hover:bg-muted/60"
                 onClick={fecharMenuAcoes}
               >
-                Abrir ficha do diagnóstico
+                Abrir ciclo na vista da empresa
               </Link>
               {diag.plano === "avancado" ? (
                 <button
@@ -577,7 +616,8 @@ export function EmpresaDiagnosticosListaPainel({
       )}
 
       {!semSessao && !carregando && linhasGrelha.length > 0 && (
-        <div className="rounded-xl border bg-card/40">
+        <div className="rounded-xl border bg-card/40 overflow-x-auto min-w-0">
+          <div className="min-w-[42rem]">
           <div
             className={`hidden sm:grid ${gridCols} sm:gap-3 sm:items-center px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/30`}
           >
@@ -600,7 +640,11 @@ export function EmpresaDiagnosticosListaPainel({
                 year: "numeric",
               });
               const aberto = linhaAbertaId === diag.id;
-              const detailHref = `/dashboard/diagnosticos/${diag.id}`;
+              const detailHref = buildEmpresaHrefCiclo(
+            cnpjNormalizado,
+            diag.empresa_razao_social,
+            diag.id,
+          );
               const detalhePrefetch = detalhesPorId[diag.id];
               const cicloAtual =
                 diag.painel_estado_ciclo ?? detalhePrefetch?.painel_estado_ciclo ?? undefined;
@@ -664,6 +708,7 @@ export function EmpresaDiagnosticosListaPainel({
                       <span>{quando}</span>
                     </div>
                     <div className="flex flex-col gap-1.5 w-full sm:items-end overflow-visible">
+                      <span className="text-xs font-medium text-muted-foreground sm:hidden">Ações</span>
                       <div className="flex flex-wrap gap-1.5 w-full justify-end items-center">
                         <div className="relative shrink-0" data-acao-menu={diag.id}>
                           <Button
@@ -686,7 +731,7 @@ export function EmpresaDiagnosticosListaPainel({
                           aria-expanded={aberto}
                           aria-controls={`empresa-expand-${diag.id}`}
                           onClick={() =>
-                            setLinhaAbertaId((cur) => (cur === diag.id ? null : diag.id))
+                            alterarLinhaAberta(aberto ? null : diag.id)
                           }
                         >
                           <ChevronDown
@@ -712,6 +757,7 @@ export function EmpresaDiagnosticosListaPainel({
               );
             })}
           </ul>
+          </div>
         </div>
       )}
       {menuAcoesPortal}

@@ -104,3 +104,24 @@ async def test_langgraph_ollama_excecao_inesperada_devolve_fallback_amigavel() -
         out = await adapter.gerar_recomendacao("Ctx", "Base")
 
         assert "indisponibilidade temporária" in out.lower()
+
+
+@pytest.mark.asyncio
+async def test_langgraph_ollama_excecao_modo_explicacao_score_propaga() -> None:
+    """Explicação do score — timeout/erro não deve mascarar-se como parecer."""
+    with patch(
+        "src.infrastructure.adapters.llm_langgraph_ollama.ChatOllama",
+    ) as mock_cls:
+        mock_llm = MagicMock()
+        mock_cls.return_value = mock_llm
+
+        adapter = LangGraphOllamaLlmAdapter(
+            ollama_url="http://127.0.0.1:11434",
+            model="llama3",
+        )
+        grafo = MagicMock()
+        grafo.ainvoke = AsyncMock(side_effect=RuntimeError("timeout simulado"))
+        adapter._graph = grafo
+
+        with pytest.raises(RuntimeError, match="timeout simulado"):
+            await adapter.gerar_recomendacao("prompt explicacao", PROMPT_MODO_TEXTO_LIVRE)

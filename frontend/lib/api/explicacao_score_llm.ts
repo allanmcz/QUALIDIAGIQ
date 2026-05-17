@@ -7,7 +7,11 @@
 import { encerrarSessaoPainelSe401 } from "@/lib/auth/painel_session";
 
 import { cabecalhosAuthPainelOpcional, getApiUrlForFetch, temSessaoPainelParaApiCliente } from "./config";
-import { isLikelyNetworkFetchFailure, mensagemConectividadeApiParaUsuario } from "./http_errors";
+import {
+  isLikelyNetworkFetchFailure,
+  mensagemConectividadeApiParaUsuario,
+  mensagemErroPostExplicacaoScore,
+} from "./http_errors";
 
 /** Espelha `ExplicarScoreLlmHttpResponse` / `ExplicacaoScoreLlmPersistidaSchema` da API. */
 export type ExplicacaoScoreLlmHttp = {
@@ -65,9 +69,8 @@ export async function postExplicacaoScoreLlm(
       if (encerrarSessaoPainelSe401(res.status)) {
         throw new Error("Sessão expirada — a abrir o login.");
       }
-      const err = await res.json().catch(() => ({}));
-      const detail = (err as { detail?: string }).detail ?? res.statusText;
-      throw new Error(typeof detail === "string" ? detail : `Erro ${res.status}`);
+      const corpo = await res.text();
+      throw new Error(mensagemErroPostExplicacaoScore(res.status, corpo));
     }
     return res.json() as Promise<ExplicacaoScoreLlmHttp>;
   } catch (e) {

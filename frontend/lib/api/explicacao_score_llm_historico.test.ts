@@ -46,4 +46,33 @@ describe("textoExibicaoExplicacao", () => {
     };
     expect(textoExibicaoExplicacao(item)).toBe("Sem citação Lexiq.");
   });
+
+  it("traduz feature_disabled para mensagem acionável", () => {
+    const item: ExplicacaoScoreLlmHttp = {
+      ...base,
+      blocked_by_guardrail: true,
+      guardrail_reason: "feature_disabled",
+    };
+    expect(textoExibicaoExplicacao(item)).toContain("LLM_ROUTER_ENABLED");
+  });
+
+  it("avisa quando texto vazio sem guardrail", () => {
+    expect(textoExibicaoExplicacao({ ...base, text: "  " })).toContain("Ollama");
+  });
+
+  it("não trata fallback de indisponibilidade como parecer", () => {
+    const item: ExplicacaoScoreLlmHttp = {
+      ...base,
+      text:
+        "Devido a indisponibilidade temporária do serviço de IA, a recomendação personalizada não pôde ser gerada no momento.",
+    };
+    expect(textoExibicaoExplicacao(item)).toContain("parecer válido");
+  });
+
+  it("exibe parecer longo com citação", () => {
+    const parecer =
+      "Na minha leitura, o score indica maturidade intermediária na transição CBS/IBS. " +
+      "A dimensão fiscal merece atenção imediata. Base: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026.";
+    expect(textoExibicaoExplicacao({ ...base, text: parecer })).toBe(parecer);
+  });
 });

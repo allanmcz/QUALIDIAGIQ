@@ -89,7 +89,8 @@ class TestLlmGatewayRouter:
         resp = await router.complete(req)
         assert resp.blocked_by_guardrail is False
         assert "68.5" in resp.text
-        assert "motor QDI" in resp.text
+        assert "Parecer" in resp.text
+        assert "EC 132/2023" in resp.text
 
     @pytest.mark.asyncio
     async def test_flag_desligado_bloqueia(self) -> None:

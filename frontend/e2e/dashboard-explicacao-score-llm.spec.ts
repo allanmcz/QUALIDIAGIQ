@@ -7,6 +7,20 @@ import { painelInterceptarUrlApiDiagnosticos } from "./helpers/painel_api_diagno
 const DIAG_ID = "33333333-3333-4333-a333-333333333333";
 const CNPJ14 = "12345678000195";
 
+const listaItem = {
+  id: DIAG_ID,
+  empresa_razao_social: "Empresa E2E Explicação LLM",
+  empresa_cnpj: CNPJ14,
+  status: "finalizado",
+  plano: "gratuito",
+  score_geral: 52,
+  criado_em: "2026-05-11T10:00:00Z",
+  finalizado_em: "2026-05-11T10:30:00Z",
+  relatorio_pdf_url: null,
+  versao_otimista: 1,
+  painel_estado_ciclo: "realizado",
+};
+
 const narrativaAnterior = {
   text: "Versão anterior da narrativa fiscal.",
   provider: "fake",
@@ -73,6 +87,19 @@ async function loginPainel(page: Page): Promise<void> {
   await page.getByLabel(/^Senha$/i).fill("qualquer-senha");
   await page.getByRole("button", { name: /Entrar no Dashboard/i }).click();
   await page.waitForURL("**/dashboard/**", { timeout: 20_000 });
+}
+
+/** Rota legada redireciona para vista unificada por CNPJ com ciclo expandido. */
+async function abrirVistaEmpresaUnificada(
+  page: Page,
+  opts?: { viaRedirectLegado?: boolean },
+): Promise<void> {
+  if (opts?.viaRedirectLegado) {
+    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await expect(page).toHaveURL(new RegExp(`/dashboard/empresas/${CNPJ14}.*expand=${DIAG_ID}`));
+    return;
+  }
+  await page.goto(`/dashboard/empresas/${CNPJ14}?expand=${DIAG_ID}`);
 }
 
 type InstallMocksOpts = {
@@ -176,6 +203,15 @@ async function installMocks(page: Page, opts: InstallMocksOpts) {
       return;
     }
 
+    if (rest.length === 0 && method === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([listaItem]),
+      });
+      return;
+    }
+
     if (rest.length === 1 && rest[0] === DIAG_ID && method === "GET") {
       await route.fulfill({
         status: 200,
@@ -187,6 +223,26 @@ async function installMocks(page: Page, opts: InstallMocksOpts) {
       return;
     }
 
+    if (
+      rest.length >= 3 &&
+      rest[0] === DIAG_ID &&
+      rest[1] === "plano-acao" &&
+      rest[2] === "kanban" &&
+      method === "GET"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ diagnostico_id: DIAG_ID, cards: [] }),
+      });
+      return;
+    }
+
+    if (rest.length >= 2 && rest[rest.length - 1] === "retificacoes" && method === "GET") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+      return;
+    }
+
     await route.continue();
   });
 }
@@ -195,7 +251,7 @@ test.describe("Painel — explicação score LLM", () => {
   test("hidrata narrativa persistida ao abrir ficha", async ({ page }) => {
     await installMocks(page, { explicacaoInicial: narrativaLlm });
     await loginPainel(page);
-    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await abrirVistaEmpresaUnificada(page, { viaRedirectLegado: true });
     await expect(page.getByRole("region", { name: "Texto da explicação do score" })).toContainText(
       "dimensão fiscal",
     );
@@ -205,7 +261,7 @@ test.describe("Painel — explicação score LLM", () => {
   test("exibe gerações anteriores no histórico colapsável", async ({ page }) => {
     await installMocks(page, { explicacaoInicial: narrativaLlm });
     await loginPainel(page);
-    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await abrirVistaEmpresaUnificada(page);
     await expect(page.getByText("Gerações anteriores (1)")).toBeVisible();
     await page.getByText("Gerações anteriores (1)").click();
     await expect(page.getByText("Versão anterior da narrativa fiscal.")).toBeVisible();
@@ -214,7 +270,7 @@ test.describe("Painel — explicação score LLM", () => {
   test("gerar explicação via POST mockado", async ({ page }) => {
     await installMocks(page, { explicacaoInicial: null });
     await loginPainel(page);
-    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await abrirVistaEmpresaUnificada(page);
     await page.getByRole("button", { name: "Gerar explicação" }).click();
     await expect(page.getByRole("region", { name: "Texto da explicação do score" })).toContainText(
       "dimensão fiscal",
@@ -236,7 +292,7 @@ test.describe("Painel — explicação score LLM", () => {
       await route.continue();
     });
     await loginPainel(page);
-    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await abrirVistaEmpresaUnificada(page);
     await expect(
       page.getByText(/Explicação do score por IA está disponível no/i),
     ).toBeVisible();
@@ -253,7 +309,7 @@ test.describe("Painel — explicação score LLM", () => {
       planoDiagnostico: "gratuito",
     });
     await loginPainel(page);
-    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await abrirVistaEmpresaUnificada(page);
     await expect(
       page.getByText(/Explicação do score por IA está disponível no/i),
     ).toBeVisible();
@@ -271,7 +327,7 @@ test.describe("Painel — explicação score LLM", () => {
       planoDiagnostico: "avancado",
     });
     await loginPainel(page);
-    await page.goto(`/dashboard/diagnosticos/${DIAG_ID}`);
+    await abrirVistaEmpresaUnificada(page);
     await expect(page.getByText(/Faça upgrade para desbloquear/i)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Gerar explicação" })).toBeVisible();
     await page.getByRole("button", { name: "Gerar explicação" }).click();

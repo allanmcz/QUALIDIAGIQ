@@ -259,11 +259,15 @@ export default function PainelDiagnosticosPage() {
                 { day: "2-digit", month: "2-digit", year: "numeric" },
               );
 
-              const detailHref = `/dashboard/diagnosticos/${diag.id}`;
               const cnpj14 =
                 diag.empresa_cnpj && diag.empresa_cnpj.replace(/\D/g, "").length === 14
                   ? diag.empresa_cnpj.replace(/\D/g, "")
                   : null;
+              const empresaHref = cnpj14
+                ? buildEmpresaDiagnosticosHref(cnpj14, diag.empresa_razao_social, {
+                    expandDiagnosticoId: diag.id,
+                  })
+                : `/dashboard/diagnosticos/${diag.id}`;
 
               return (
                 <Card
@@ -272,7 +276,7 @@ export default function PainelDiagnosticosPage() {
                 >
                   <CardHeader className="pb-2 space-y-2">
                     <div className="flex justify-between items-start gap-2">
-                      <Link href={detailHref} className="min-w-0 group">
+                      <Link href={empresaHref} className="min-w-0 group">
                         <CardTitle className="text-lg leading-snug group-hover:text-primary transition-colors">
                           {diag.empresa_razao_social}
                         </CardTitle>
@@ -286,20 +290,20 @@ export default function PainelDiagnosticosPage() {
                     </p>
                     {cnpj14 ? (
                       <Link
-                        href={buildEmpresaDiagnosticosHref(cnpj14, diag.empresa_razao_social)}
+                        href={empresaHref}
                         className="text-xs font-medium text-primary hover:underline inline-block w-fit"
                       >
                         Ver todos os diagnósticos da empresa
                       </Link>
                     ) : null}
                     <CardDescription>
-                      <Link href={detailHref} className="hover:underline">
+                      <Link href={empresaHref} className="hover:underline">
                         {diag.status === "finalizado" ? "Finalizado" : diag.status.replace("_", " ")} · {quando}
                       </Link>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1">
-                    <Link href={detailHref} className="block">
+                    <Link href={empresaHref} className="block">
                       <div className="flex flex-col gap-1 mt-2">
                         <span className="text-sm font-medium text-muted-foreground">Score geral</span>
                         {pct != null ? (

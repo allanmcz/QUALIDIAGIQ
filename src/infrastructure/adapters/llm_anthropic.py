@@ -12,7 +12,8 @@ from anthropic import AsyncAnthropic
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.ports.llm_service import LlmServicePort
-from src.application.services.lexiq_guardrail import filtrar_resposta_recomendacao_llm
+from src.application.services.lexiq_guardrail import aplicar_guardrail_saida_llm
+from src.infrastructure.adapters.llm_prompt_modo import PROMPT_MODO_TEXTO_LIVRE
 from src.infrastructure.adapters.llm_recomendacao_prompt import montar_prompt_recomendacao
 from src.infrastructure.observability.qdi_otel_metrics import record_llm_recommendation
 
@@ -51,7 +52,11 @@ class AnthropicLlmAdapter(LlmServicePort):
         self._rag_threshold = float(rag_similarity_threshold)
 
     async def gerar_recomendacao(self, contexto_empresa: str, base_normativa: str) -> str:
-        prompt = montar_prompt_recomendacao(contexto_empresa, base_normativa)
+        prompt = (
+            contexto_empresa.strip()
+            if base_normativa == PROMPT_MODO_TEXTO_LIVRE
+            else montar_prompt_recomendacao(contexto_empresa, base_normativa)
+        )
         try:
             msg = await self._client.messages.create(
                 model=self._model,
@@ -60,8 +65,9 @@ class AnthropicLlmAdapter(LlmServicePort):
                 messages=[{"role": "user", "content": prompt}],
             )
             out = _extrair_texto_resposta(msg)
-            result = await filtrar_resposta_recomendacao_llm(
+            result = await aplicar_guardrail_saida_llm(
                 out,
+                modo_explicacao_score=base_normativa == PROMPT_MODO_TEXTO_LIVRE,
                 base_normativa_port=self._normativa_port,
                 rag_threshold=self._rag_threshold,
             )
@@ -75,6 +81,8 @@ class AnthropicLlmAdapter(LlmServicePort):
                 modelo=self._model,
                 exc_info=True,
             )
+            if base_normativa == PROMPT_MODO_TEXTO_LIVRE:
+                raise
             return (
                 "Devido a indisponibilidade temporária do serviço de IA, a recomendação "
                 "personalizada não pôde ser gerada no momento."

@@ -17,9 +17,12 @@ class FakeLlmAdapter:
         """Gera texto sintético que satisfaz guardrails mínimos de citação."""
         if request.task_type == LlmTaskType.EXPLICACAO_SCORE:
             score = request.input_data.get("score_geral", request.input_data.get("score"))
+            dim = request.input_data.get("dimensao_mais_critica", "fiscal")
             return (
-                f"Explicação sintética (fake): o score já calculado pelo motor QDI foi {score}. "
-                "Não é recálculo nem substituição do motor determinístico."
+                f"Parecer (fake): com score {score}/100, a prontidão à Reforma do Consumo é moderada. "
+                f"A dimensão {dim} concentra o maior risco imediato — recomendo plano de adequação "
+                "fiscal-operacional antes de 2026. "
+                "Base normativa: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026."
             )
         if request.task_type == LlmTaskType.ANALISE_NORMATIVA_RAG:
             partes = [f"Conforme {e.dispositivo} ({e.fonte})." for e in request.evidencias]

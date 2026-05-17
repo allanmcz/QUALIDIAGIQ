@@ -15,6 +15,7 @@ from dataclasses import dataclass
 import structlog
 
 from src.application.ports.base_normativa_port import BaseNormativaPort, ChunkNormativo
+from src.application.services.explicacao_score_llm_saida import parecer_explicacao_score_substantivo
 
 logger = structlog.get_logger(__name__)
 
@@ -81,6 +82,78 @@ async def validar_ancora_normativa_rag(
 
     cit = tuple(chunks[:top_k])
     return ValidacaoLexiq(aceito=True, citacoes=cit)
+
+
+# Rodapé canónico quando o modelo (ex.: llama3) omite citação literal — preserva o parecer.
+_RODAPE_ANCORAS_EXPLICACAO_SCORE = (
+    "\n\n— Base normativa desta leitura: EC 132/2023; LC 214/2025; ABNT NBR 17301:2026."
+)
+
+_MIN_CARACTERES_PARECER_EXPLICACAO_SCORE = 80
+
+
+async def filtrar_resposta_explicacao_score_llm(
+    texto: str,
+    *,
+    base_normativa_port: BaseNormativaPort | None = None,
+    rag_threshold: float = 0.65,
+) -> str:
+    """
+    Pós-processamento da narrativa «explicação do score» (painel).
+
+    Diferente da recomendação da finalização: não substitui parecer substantivo
+    por mensagem de rejeição quando falta âncora regex — acrescenta rodapé normativo.
+    Texto vazio ou genérico demais continua rejeitado.
+    """
+    out = (texto or "").strip()
+    if not parecer_explicacao_score_substantivo(out):
+        if out.startswith("Recomendação não exibida:"):
+            return out
+        return mensagem_rejeicao_guardrail()
+
+    if base_normativa_port is not None:
+        try:
+            validado = await validar_ancora_normativa_rag(
+                out,
+                base_normativa_port,
+                threshold=rag_threshold,
+            )
+            if validado.aceito:
+                return out
+            logger.info(
+                "lexiq_explicacao_score_rag_rejeitou",
+                motivo=validado.motivo,
+                usa_fallback_regex=True,
+            )
+        except Exception as exc:
+            logger.warning("lexiq_explicacao_score_rag_erro", erro=str(exc), exc_info=True)
+
+    if texto_tem_ancora_normativa(out):
+        return out
+
+    logger.info("lexiq_explicacao_score_apendice_ancoras", motivo="sem_regex_no_texto")
+    return out + _RODAPE_ANCORAS_EXPLICACAO_SCORE
+
+
+async def aplicar_guardrail_saida_llm(
+    texto: str,
+    *,
+    modo_explicacao_score: bool,
+    base_normativa_port: BaseNormativaPort | None = None,
+    rag_threshold: float = 0.65,
+) -> str:
+    """Escolhe guardrail de recomendação final vs. parecer explicativo do score."""
+    if modo_explicacao_score:
+        return await filtrar_resposta_explicacao_score_llm(
+            texto,
+            base_normativa_port=base_normativa_port,
+            rag_threshold=rag_threshold,
+        )
+    return await filtrar_resposta_recomendacao_llm(
+        texto,
+        base_normativa_port=base_normativa_port,
+        rag_threshold=rag_threshold,
+    )
 
 
 async def filtrar_resposta_recomendacao_llm(

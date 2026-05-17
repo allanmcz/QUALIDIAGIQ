@@ -29,6 +29,10 @@ function normalizarPathSuffix(pathSuffix: string): string {
   return trimmed.replace(/\/+$/, "") || "/";
 }
 
+/** POST narrativa LLM sobre score (Ollama pode exceder 30 s, sobretudo na 1.ª inferência). */
+const RE_EXPLICACAO_SCORE_LLM =
+  /^\/diagnosticos\/[0-9a-f-]{36}\/explicacao-score-llm$/i;
+
 /** Rotas cujo upstream pode demorar (PDF, LLM, materialização de plano). */
 export function isProxyRotaDiagnosticoLonga(method: string, pathSuffix: string): boolean {
   const m = method.toUpperCase();
@@ -38,6 +42,7 @@ export function isProxyRotaDiagnosticoLonga(method: string, pathSuffix: string):
   if (p === "/diagnosticos/self-service") return true;
   if (p.endsWith("/rascunho-self-service/concluir")) return true;
   if (/^\/diagnosticos\/[0-9a-f-]{36}\/retificacao$/i.test(p)) return true;
+  if (RE_EXPLICACAO_SCORE_LLM.test(p)) return true;
   return false;
 }
 

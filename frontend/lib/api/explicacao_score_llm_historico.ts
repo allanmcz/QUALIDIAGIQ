@@ -25,9 +25,37 @@ export function historicoAnterioresAExibicao(
   );
 }
 
+import { parecerExplicacaoScoreSubstantivo } from "./explicacao_score_llm_parecer";
+
+const MOTIVO_GUARDRAIL_PT: Record<string, string> = {
+  feature_disabled:
+    "Explicação por IA desactivada no servidor (LLM_ROUTER_ENABLED). Active o router LLM em dev ou contacte o suporte.",
+  circuit_breaker_open:
+    "Serviço de IA temporariamente indisponível (circuit breaker). Aguarde alguns minutos e tente novamente.",
+  adapter_exception:
+    "O Ollama não concluiu a geração (timeout ou erro). Verifique `make dev` e `OLLAMA_TIMEOUT_SECONDS` (≥ 120 s) e tente «Gerar novamente».",
+  parecer_nao_substantivo:
+    "A IA não devolveu um parecer válido sobre o score. Tente «Gerar novamente» — a 1.ª inferência pode levar até 2 minutos.",
+};
+
 export function textoExibicaoExplicacao(item: ExplicacaoScoreLlmHttp): string {
   if (item.blocked_by_guardrail && item.guardrail_reason) {
-    return item.guardrail_reason;
+    const chave = item.guardrail_reason.trim();
+    return MOTIVO_GUARDRAIL_PT[chave] ?? chave;
   }
-  return item.text?.trim() || "—";
+  const texto = item.text?.trim();
+  if (texto && parecerExplicacaoScoreSubstantivo(texto)) return texto;
+  if (texto?.startsWith("Recomendação não exibida:")) {
+    return texto;
+  }
+  if (texto) {
+    return MOTIVO_GUARDRAIL_PT.parecer_nao_substantivo;
+  }
+  return "A IA não devolveu texto. Tente «Gerar novamente» ou verifique o Ollama no servidor.";
+}
+
+/** True quando há parecer consultivo exibível (não erro de adapter/guardrail). */
+export function explicacaoScoreTemParecerExibivel(item: ExplicacaoScoreLlmHttp): boolean {
+  if (item.blocked_by_guardrail) return false;
+  return parecerExplicacaoScoreSubstantivo(item.text);
 }

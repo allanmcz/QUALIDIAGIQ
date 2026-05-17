@@ -20,6 +20,7 @@ import {
   type ExplicacaoScoreLlmHttp,
 } from "@/lib/api/explicacao_score_llm";
 import {
+  explicacaoScoreTemParecerExibivel,
   historicoAnterioresAExibicao,
   textoExibicaoExplicacao,
 } from "@/lib/api/explicacao_score_llm_historico";
@@ -121,8 +122,13 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
     setErro(null);
     try {
       const out = await postExplicacaoScoreLlm(diagnosticoId);
+      if (!explicacaoScoreTemParecerExibivel(out)) {
+        setResposta(null);
+        setErro(textoExibicaoExplicacao(out));
+        return;
+      }
       setResposta(out);
-      await carregarHistorico();
+      void carregarHistorico();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha ao gerar explicação.");
     } finally {
@@ -154,7 +160,8 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
     [historico, resposta],
   );
 
-  const textoExibido = resposta ? textoExibicaoExplicacao(resposta) : "";
+  const parecerOk = resposta ? explicacaoScoreTemParecerExibivel(resposta) : false;
+  const textoExibido = resposta && parecerOk ? textoExibicaoExplicacao(resposta) : "";
 
   const rotuloGerado = formatarGeradoEmPtBr(resposta?.gerado_em);
 
@@ -166,18 +173,12 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
           Explicação do score (IA)
         </CardTitle>
         <CardDescription>
-          Narrativa sobre o score geral já calculado pelo motor auditável (0–100). Com guardrails e
-          política de roteamento LLM (ADR-022); não altera o valor numérico. Não substitui a
-          recomendação gerada na finalização do diagnóstico.
+          O modelo lê o diagnóstico finalizado (scores por dimensão, porte, regime) e redige um
+          parecer consultivo em português — não recalcula o 0–100. Com guardrails Lexiq (ADR-022).
+          Não substitui a recomendação gerada na finalização do diagnóstico.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {erro ? (
-          <p className="text-sm text-destructive" role="alert">
-            {erro}
-          </p>
-        ) : null}
-
         {!podeAcessar ? (
           <p className="text-sm text-muted-foreground">
             Explicação do score por IA está disponível no <strong>plano avançado</strong> da conta na
@@ -188,30 +189,43 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
             Disponível quando o diagnóstico está <strong>finalizado</strong> com score persistido.
           </p>
         ) : (
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            disabled={carregando}
-            onClick={() => void gerar()}
-            className="gap-2"
-          >
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              disabled={carregando}
+              onClick={() => void gerar()}
+              className="gap-2"
+              aria-busy={carregando}
+            >
+              {carregando ? (
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+              ) : (
+                <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+              {resposta ? "Gerar novamente" : "Gerar explicação"}
+            </Button>
             {carregando ? (
-              <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-            ) : (
-              <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-            )}
-            {resposta ? "Gerar novamente" : "Gerar explicação"}
-          </Button>
+              <p className="text-sm text-muted-foreground" role="status">
+                A gerar narrativa com IA — pode levar até 2 minutos na primeira vez (Ollama).
+              </p>
+            ) : null}
+          </div>
         )}
 
-        {podeAcessar && resposta ? (
+        {erro ? (
+          <p
+            className="text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2"
+            role="alert"
+          >
+            {erro}
+          </p>
+        ) : null}
+
+        {podeAcessar && resposta && parecerOk ? (
           <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-            {resposta.blocked_by_guardrail ? (
-              <Badge variant="destructive">Bloqueado por guardrail</Badge>
-            ) : (
-              <Badge variant="secondary">Resposta gerada</Badge>
-            )}
+            <Badge variant="secondary">Parecer gerado</Badge>
             {rotuloGerado ? (
               <p className="text-xs text-muted-foreground">Última geração: {rotuloGerado}</p>
             ) : null}

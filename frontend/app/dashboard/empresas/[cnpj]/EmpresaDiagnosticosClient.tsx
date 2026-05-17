@@ -9,9 +9,11 @@ import { ArquivarEmpresaPainelButton } from "@/components/painel/ArquivarEmpresa
 import { EmpresaPainelArquivoBanner } from "@/components/painel/EmpresaPainelArquivoBanner";
 import { ExcluirCiclosElegiveisEmpresaButton } from "@/components/painel/ExcluirCiclosElegiveisEmpresaButton";
 import { fetchEmpresaArquivoStatus } from "@/lib/api/arquivar_empresa_painel";
+import { EmpresaCicloEmFocoBar } from "@/components/painel/empresa/EmpresaCicloEmFocoBar";
 import { EmpresaComparacaoQuestionarioDialog } from "@/components/painel/empresa/EmpresaComparacaoQuestionarioDialog";
 import { EmpresaDiagnosticosListaPainel } from "@/components/painel/empresa/EmpresaDiagnosticosListaPainel";
 import { EmpresaQuadroImplantacaoTopo } from "@/components/painel/empresa/EmpresaQuadroImplantacaoTopo";
+import { DiagnosticoCronogramaM06Card } from "@/components/painel/empresa/DiagnosticoCronogramaM06Card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -19,7 +21,10 @@ import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
 import { QUERY_FICHA_SALVA } from "@/lib/dashboard/plano_acao_ficha_urls";
-import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
+import {
+  buildWizardUrlNovaDiagnosticoEmpresa,
+  QUERY_EXPAND_DIAGNOSTICO,
+} from "@/lib/dashboard/empresa_diagnostico_urls";
 import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import { idDiagnosticoBaselineQuadroEmpresa } from "@/lib/painel/diagnostico_empresa_ordem";
 import {
@@ -49,8 +54,12 @@ export default function EmpresaDiagnosticosClient({
   const [quadroErro, setQuadroErro] = useState<string | null>(null);
   const [selecaoComparacaoIds, setSelecaoComparacaoIds] = useState<string[]>([]);
   const [empresaArquivada, setEmpresaArquivada] = useState(false);
+  const [listaRecarregarToken, setListaRecarregarToken] = useState(0);
   const [msgOperacao, setMsgOperacao] = useState<string | null>(null);
   const [comparacaoAberta, setComparacaoAberta] = useState(false);
+  const [cicloEmFocoId, setCicloEmFocoId] = useState<string | null>(
+    () => searchParams.get(QUERY_EXPAND_DIAGNOSTICO)?.trim() || null,
+  );
 
   const toggleSelecaoComparacao = useCallback((diagnosticoId: string, marcado: boolean) => {
     setSelecaoComparacaoIds((prev) => {
@@ -79,6 +88,15 @@ export default function EmpresaDiagnosticosClient({
   const aoDetalheAtualizado = useCallback((d: DiagnosticoDetalheApi) => {
     setDetalhesPorId((prev) => ({ ...prev, [d.id]: d }));
   }, []);
+
+  const aoEmpresaDesarquivada = useCallback((mensagem: string) => {
+    setMsgOperacao(mensagem);
+    setEmpresaArquivada(false);
+    setListaRecarregarToken((t) => t + 1);
+    void fetchEmpresaArquivoStatus(cnpjNormalizado)
+      .then((s) => setEmpresaArquivada(s.arquivado))
+      .catch(() => setEmpresaArquivada(false));
+  }, [cnpjNormalizado]);
 
   const semSessao = !temSessaoPainelParaApiCliente();
 
@@ -133,6 +151,23 @@ export default function EmpresaDiagnosticosClient({
       cancel = true;
     };
   }, [baselineId, semSessao, detalhesPorId[baselineId ?? ""], aoDetalheAtualizado]);
+
+  useEffect(() => {
+    const expandId = searchParams.get(QUERY_EXPAND_DIAGNOSTICO)?.trim();
+    if (expandId) setCicloEmFocoId(expandId);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!cicloEmFocoId || semSessao || detalhesPorId[cicloEmFocoId]) return;
+    void fetchDiagnosticoDetalhe(cicloEmFocoId).then(aoDetalheAtualizado).catch(() => undefined);
+  }, [cicloEmFocoId, semSessao, detalhesPorId, aoDetalheAtualizado]);
+
+  const cicloEmFocoDetalhe = cicloEmFocoId ? detalhesPorId[cicloEmFocoId] : undefined;
+  const cicloEmFocoResumo = useMemo(
+    () => listaPainel?.find((d) => d.id === cicloEmFocoId) ?? null,
+    [listaPainel, cicloEmFocoId],
+  );
+  const baselineDetalhe = baselineId ? detalhesPorId[baselineId] : undefined;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -196,10 +231,15 @@ export default function EmpresaDiagnosticosClient({
                   size="sm"
                   className="shrink-0 whitespace-nowrap"
                   onConcluido={(mensagem) => {
+                    if (empresaArquivada) {
+                      aoEmpresaDesarquivada(mensagem);
+                      return;
+                    }
                     setMsgOperacao(mensagem);
-                    void fetchEmpresaArquivoStatus(cnpjNormalizado).then((s) =>
-                      setEmpresaArquivada(s.arquivado),
-                    );
+                    void fetchEmpresaArquivoStatus(cnpjNormalizado).then((s) => {
+                      setEmpresaArquivada(s.arquivado);
+                      if (!s.arquivado) setListaRecarregarToken((t) => t + 1);
+                    });
                   }}
                 />
                 <ExcluirCiclosElegiveisEmpresaButton
@@ -255,11 +295,12 @@ export default function EmpresaDiagnosticosClient({
           <EmpresaPainelArquivoBanner
             cnpj14={cnpjNormalizado}
             razaoSocial={tituloEmpresa}
-            onDesarquivada={(mensagem) => {
-              setMsgOperacao(mensagem);
-              setEmpresaArquivada(false);
-            }}
+            onDesarquivada={aoEmpresaDesarquivada}
           />
+        ) : null}
+
+        {!semSessao && cicloEmFocoDetalhe ? (
+          <EmpresaCicloEmFocoBar detalhe={cicloEmFocoDetalhe} resumo={cicloEmFocoResumo} />
         ) : null}
 
         {!semSessao && (
@@ -299,18 +340,21 @@ export default function EmpresaDiagnosticosClient({
                 Cada linha é um ciclo. Marque até {MAX_DIAGNOSTICOS_COMPARACAO} linhas e use{" "}
                 <strong className="font-medium text-foreground">Comparar questionário</strong> para ver a
                 evolução das respostas. Use <strong className="font-medium text-foreground">Expandir</strong>{" "}
-                para ranking (M05), matriz e M12.
+                para ranking (M05), matriz, M12 e explicação IA. Gaps consolidados, plano de implantação e
+                cronograma ficam nos blocos abaixo.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-visible">
               <EmpresaDiagnosticosListaPainel
                 cnpjNormalizado={cnpjNormalizado}
+                recarregarToken={listaRecarregarToken}
                 usarExpandNaQuery
                 onDiagnosticosAlterados={aoDiagnosticosPainel}
                 onListaDetalheAtualizado={aoDetalheAtualizado}
                 onDetalhesPrefetch={aoDetalhesPrefetch}
                 selecaoComparacaoIds={selecaoComparacaoIds}
                 onToggleSelecaoComparacao={toggleSelecaoComparacao}
+                onLinhaAbertaIdChange={setCicloEmFocoId}
               />
             </CardContent>
           </Card>
@@ -326,6 +370,10 @@ export default function EmpresaDiagnosticosClient({
             erro={quadroErro}
             onDataAtualizado={aoDetalheAtualizado}
           />
+        ) : null}
+
+        {!semSessao && baselineDetalhe?.cronograma?.length ? (
+          <DiagnosticoCronogramaM06Card cronograma={baselineDetalhe.cronograma} />
         ) : null}
       </div>
 

@@ -76,3 +76,23 @@ export function mensagemErroPostDiagnostico(status: number, corpoTexto: string):
   }
   return base;
 }
+
+/**
+ * Mensagem quando o proxy expira ou o Ollama demora na explicação do score (POST LLM).
+ */
+export function mensagemErroPostExplicacaoScore(status: number, corpoTexto: string): string {
+  const base = mensagemErroHttp(status, corpoTexto);
+  if (status === 502 || status === 504) {
+    return (
+      `${base} A geração por IA pode levar até 2 minutos (Ollama local). ` +
+      "Confira se o serviço Ollama está activo (`make dev`, `make ollama-pull`) e tente de novo."
+    );
+  }
+  if (status === 429) {
+    return `${base} Limite diário de explicações por IA atingido para esta conta.`;
+  }
+  if (status === 403) {
+    return `${base} É necessário plano avançado na conta ou diagnóstico com plano avançado.`;
+  }
+  return base;
+}

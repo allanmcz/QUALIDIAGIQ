@@ -32,12 +32,28 @@ export function buildWizardUrlNovaDiagnosticoEmpresa(cnpj14: string, razaoSocial
   return `/wizard?${q.toString()}`;
 }
 
+/** Query `?expand=` — ciclo com linha expandida na vista unificada por CNPJ. */
+export const QUERY_EXPAND_DIAGNOSTICO = "expand";
+
 type EmpresaDiagnosticosHrefOpts = {
   /** Abre a linha expandida na grelha (M05, M12, etc.). */
   expandDiagnosticoId?: string;
   /** Âncora no painel expandido (ex.: `empresa-m12-autoconf`). */
   hash?: string;
 };
+
+/** Atalho para um ciclo na página canónica da empresa (`/dashboard/empresas/{cnpj}`). */
+export function buildEmpresaHrefCiclo(
+  cnpj14: string,
+  razaoSocial: string,
+  diagnosticoId: string,
+  opts?: Pick<EmpresaDiagnosticosHrefOpts, "hash">,
+): string {
+  return buildEmpresaDiagnosticosHref(cnpj14, razaoSocial, {
+    expandDiagnosticoId: diagnosticoId,
+    hash: opts?.hash,
+  });
+}
 
 /** Path da grelha de diagnósticos da empresa (CNPJ só dígitos). */
 export function buildEmpresaDiagnosticosHref(
@@ -53,7 +69,7 @@ export function buildEmpresaDiagnosticosHref(
     q.set("razao_social", r);
   }
   if (opts?.expandDiagnosticoId) {
-    q.set("expand", opts.expandDiagnosticoId);
+    q.set(QUERY_EXPAND_DIAGNOSTICO, opts.expandDiagnosticoId);
   }
   const qs = q.toString();
   const path = qs ? `${base}?${qs}` : base;

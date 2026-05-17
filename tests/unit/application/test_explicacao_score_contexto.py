@@ -46,10 +46,15 @@ class TestMontarCamposExtrasExplicacaoScore:
                 Dimensao.FISCAL: ScoreNumerico(valor=40.0, peso_total_aplicado=1.5),
             },
         )
+        d.score_geral = 60.0
         extras = montar_campos_extras_explicacao_score(d)
         assert extras["score_por_dimensao"] == {"fiscal": 40.0}
         assert extras["pesos_por_dimensao"] == {"fiscal": 1.5}
         assert extras["empresa_uf"] == "SP"
+        assert extras["empresa_razao_social"] == "ACME"
+        assert extras["nivel_maturidade"] == "intermediario"
+        assert extras["dimensao_mais_critica"] == "Fiscal"
+        assert extras["score_dimensao_mais_critica"] == 40.0
 
     def test_inclui_faixa_faturamento_quando_informada(self) -> None:
         d = Diagnostico(
@@ -74,8 +79,12 @@ class TestSnapshotExplicacaoScoreLlm:
     """Serialização para JSONB."""
 
     def test_snapshot_contem_metadados(self) -> None:
+        parecer = (
+            "Parecer: score moderado na transição. Priorize fiscal e ERP. "
+            "EC 132/2023; LC 214/2025; ABNT NBR 17301:2026."
+        )
         out = LlmGatewayResponse(
-            text="ok",
+            text=parecer,
             provider="fake",
             model="m",
             policy_version="v1",
@@ -84,9 +93,26 @@ class TestSnapshotExplicacaoScoreLlm:
         snap = snapshot_explicacao_score_llm_de_resposta(
             out, trace_id="tr-1", gerado_em_iso="2026-05-15T10:00:00+00:00"
         )
-        assert snap["text"] == "ok"
+        assert snap["text"] == parecer
+        assert snap["blocked_by_guardrail"] is False
         assert snap["trace_id"] == "tr-1"
         assert snap["gerado_em"] == "2026-05-15T10:00:00+00:00"
+
+    def test_snapshot_marca_bloqueio_quando_fallback_adapter(self) -> None:
+        out = LlmGatewayResponse(
+            text=(
+                "Devido a indisponibilidade temporária do serviço de IA, a recomendação "
+                "personalizada não pôde ser gerada no momento."
+            ),
+            provider="langgraph_ollama",
+            model="llama3",
+            policy_version="v1",
+        )
+        snap = snapshot_explicacao_score_llm_de_resposta(
+            out, trace_id="tr-2", gerado_em_iso="2026-05-15T10:00:00+00:00"
+        )
+        assert snap["blocked_by_guardrail"] is True
+        assert snap["guardrail_reason"] == "parecer_nao_substantivo"
 
     def test_rejeita_tipo_invalido(self) -> None:
         with pytest.raises(TypeError):

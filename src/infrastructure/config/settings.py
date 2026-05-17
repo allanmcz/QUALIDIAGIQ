@@ -177,11 +177,14 @@ class Settings(BaseSettings):
         description="Nome do modelo no Ollama (ex.: llama3, mistral).",
     )
     ollama_timeout_seconds: float = Field(
-        default=30.0,
+        default=120.0,
         ge=1.0,
         le=600.0,
         validation_alias=AliasChoices("OLLAMA_TIMEOUT_SECONDS"),
-        description="Timeout (segundos) nas chamadas ao Ollama — REST direta ou cliente LangChain.",
+        description=(
+            "Timeout (segundos) nas chamadas ao Ollama — REST direta ou cliente LangChain. "
+            "Explicação do score no painel costuma exigir ≥ 120 s em dev (llama3 local)."
+        ),
     )
 
     llm_backend: Literal["langgraph_ollama", "http_ollama", "anthropic", "openai"] = Field(
