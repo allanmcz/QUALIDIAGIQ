@@ -275,7 +275,7 @@ export default function DiagnosticoDetalheClient({ id }: { id: string }) {
       </div>
 
       {temCnpj14 ? (
-        <Card className="mb-10" id="painel-diagnosticos-mesma-empresa">
+        <Card className="mb-10 overflow-visible" id="painel-diagnosticos-mesma-empresa">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Diagnósticos desta empresa no painel</CardTitle>
           </CardHeader>

@@ -20,6 +20,7 @@ from src.application.ports.lead_diagnostico_vinculo_port import (
 from src.application.ports.lgpd_anonimizacao_executor_port import LgpdAnonimizacaoExecutorPort
 from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
+from src.application.ports.plano_acao_kanban_port import PlanoAcaoKanbanPort
 from src.application.use_cases.eliminar_diagnosticos_empresa_painel import (
     EliminarDiagnosticosEmpresaPainel,
 )
@@ -41,6 +42,9 @@ from src.infrastructure.adapters.postgres_lgpd_eliminacao_executor_adapter impor
 )
 from src.infrastructure.adapters.postgres_lgpd_titular_solicitacao_adapter import (
     PostgresLgpdTitularSolicitacaoAdapter,
+)
+from src.infrastructure.adapters.postgres_plano_acao_kanban_adapter import (
+    PostgresPlanoAcaoKanbanAdapter,
 )
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.diagnosticos.memoria_lead_diagnostico_vinculo import (
@@ -118,6 +122,18 @@ def get_lead_diagnostico_vinculo_port() -> LeadDiagnosticoVinculoPort:
             tenant_self_service=settings.self_service_tenant_id,
         )
     return NopLeadDiagnosticoVinculoAdapter()
+
+
+def get_plano_acao_kanban_port() -> PlanoAcaoKanbanPort:
+    """Port Kanban operacional do plano — exige DSN síncrono."""
+    settings = get_settings()
+    dsn = settings.sync_database_url
+    if dsn is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Kanban do plano indisponível sem DATABASE_URL síncrono.",
+        )
+    return PostgresPlanoAcaoKanbanAdapter(dsn_sync=dsn)
 
 
 def get_lgpd_titular_solicitacao_port() -> LgpdTitularSolicitacaoPort:

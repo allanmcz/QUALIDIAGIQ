@@ -26,6 +26,7 @@ get_eliminar_diagnosticos_empresa_painel_use_case = (
 )
 get_diagnostico_mutacao_audit_port = _deps_repositories_core.get_diagnostico_mutacao_audit_port
 get_lead_diagnostico_vinculo_port = _deps_repositories_core.get_lead_diagnostico_vinculo_port
+get_plano_acao_kanban_port = _deps_repositories_core.get_plano_acao_kanban_port
 get_lgpd_titular_solicitacao_port = _deps_repositories_core.get_lgpd_titular_solicitacao_port
 get_lgpd_anonimizacao_executor_port = _deps_repositories_core.get_lgpd_anonimizacao_executor_port
 get_lgpd_eliminacao_executor_port = _deps_repositories_core.get_lgpd_eliminacao_executor_port
@@ -97,5 +98,14 @@ get_criar_subtarefa_plano_diagnostico_use_case = (
 get_atualizar_subtarefa_plano_diagnostico_use_case = (
     _deps_lgpd.get_atualizar_subtarefa_plano_diagnostico_use_case
 )
+get_listar_kanban_plano_acao_use_case = _deps_lgpd.get_listar_kanban_plano_acao_use_case
+get_atualizar_estado_operacional_plano_acao_use_case = (
+    _deps_lgpd.get_atualizar_estado_operacional_plano_acao_use_case
+)
+get_adicionar_comentario_plano_acao_use_case = (
+    _deps_lgpd.get_adicionar_comentario_plano_acao_use_case
+)
+get_arquivar_plano_acao_kanban_use_case = _deps_lgpd.get_arquivar_plano_acao_kanban_use_case
+get_listar_comentarios_plano_acao_use_case = _deps_lgpd.get_listar_comentarios_plano_acao_use_case
 
 logger = structlog.get_logger(__name__)

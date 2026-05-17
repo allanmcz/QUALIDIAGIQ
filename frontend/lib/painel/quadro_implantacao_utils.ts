@@ -7,6 +7,7 @@ export type AcaoChecklistQuadro = {
   criticidade: string;
   base_legal?: string | null;
   prioridade?: number;
+  ordem_exibicao?: number;
   plano_acao_id?: string;
   chave_quadro_legado?: string;
 };
@@ -25,6 +26,17 @@ export function defaultQuadroEdicaoAcao(): QuadroEdicaoAcao {
     comentarios: [],
     descricao_personalizada: "",
   };
+}
+
+/** Número humano da sequência (1 = primeira ação do plano). */
+export function rotuloSequenciaAcao(
+  ordemExibicao: number | null | undefined,
+  indiceFallback: number,
+): number {
+  if (typeof ordemExibicao === "number" && Number.isFinite(ordemExibicao)) {
+    return ordemExibicao + 1;
+  }
+  return indiceFallback + 1;
 }
 
 export function formatarMetaPrazoPtBr(iso: string): string {
@@ -72,12 +84,35 @@ export function chavesQuadroIniciais(
 /** Linhas achatadas para a grelha (frente + ação + chave). */
 export function linhasQuadroGrid(
   checklist: FrenteChecklistQuadro[] | null | undefined,
-): Array<{ frente: string; acao: AcaoChecklistQuadro; i: number; j: number; qk: string }> {
+): Array<{
+  frente: string;
+  acao: AcaoChecklistQuadro;
+  i: number;
+  j: number;
+  qk: string;
+  sequencia: number;
+}> {
   if (!checklist) return [];
-  const rows: Array<{ frente: string; acao: AcaoChecklistQuadro; i: number; j: number; qk: string }> = [];
+  const rows: Array<{
+    frente: string;
+    acao: AcaoChecklistQuadro;
+    i: number;
+    j: number;
+    qk: string;
+    sequencia: number;
+  }> = [];
+  let indiceGlobal = 0;
   checklist.forEach((f, i) => {
     f.acoes.forEach((acao, j) => {
-      rows.push({ frente: f.nome, acao, i, j, qk: chaveQuadroParaAcao(acao, i, j) });
+      rows.push({
+        frente: f.nome,
+        acao,
+        i,
+        j,
+        qk: chaveQuadroParaAcao(acao, i, j),
+        sequencia: rotuloSequenciaAcao(acao.ordem_exibicao, indiceGlobal),
+      });
+      indiceGlobal += 1;
     });
   });
   return rows;

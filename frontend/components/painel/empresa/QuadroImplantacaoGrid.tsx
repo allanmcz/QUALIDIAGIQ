@@ -206,6 +206,7 @@ export function QuadroImplantacaoGrid({
         <table className="w-full text-sm border-collapse min-w-[960px]">
           <thead>
             <tr className="border-b bg-muted/30">
+              <th className="text-center py-2 px-2 font-semibold w-12 tabular-nums">Seq.</th>
               <th className="text-left py-2 px-2 font-semibold">Frente</th>
               <th className="text-left py-2 px-2 font-semibold min-w-[200px]">Ação</th>
               <th className="text-left py-2 px-2 font-semibold">Responsável</th>
@@ -218,11 +219,14 @@ export function QuadroImplantacaoGrid({
             </tr>
           </thead>
           <tbody>
-            {linhas.map(({ frente, acao, qk }) => {
+            {linhas.map(({ frente, acao, qk, sequencia }) => {
               const qv = quadroEdits[qk] ?? defaultQuadroEdicaoAcao();
               const titulo = (qv.descricao_personalizada || "").trim() || acao.descricao;
               return (
                 <tr key={qk} className="border-b border-muted/80 align-top">
+                  <td className="py-3 px-2 text-center text-xs font-semibold tabular-nums text-muted-foreground">
+                    {sequencia}
+                  </td>
                   <td className="py-3 px-2 text-xs text-muted-foreground max-w-[8rem]">{frente}</td>
                   <td className="py-3 px-2">
                     <p className="font-medium leading-snug">{titulo}</p>

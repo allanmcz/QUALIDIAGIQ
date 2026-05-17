@@ -1,6 +1,7 @@
 "use client";
 
 import { EmpresaImplantacaoResumoDepartamentosCard } from "@/components/painel/empresa/EmpresaImplantacaoResumoDepartamentosCard";
+import { PlanoAcaoKanbanBoard } from "@/components/painel/empresa/PlanoAcaoKanbanBoard";
 import { QuadroImplantacaoGrid } from "@/components/painel/empresa/QuadroImplantacaoGrid";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DiagnosticoResumoApi } from "@/lib/api/lista_diagnosticos";
@@ -111,6 +112,16 @@ export function EmpresaQuadroImplantacaoTopo({
                   está finalizado e que o plano M07/M08 foi materializado na API.
                 </p>
               ) : null}
+
+              <PlanoAcaoKanbanBoard
+                diagnosticoId={quadroDetalhe.id}
+                detalhe={quadroDetalhe}
+                editavel={quadroImplantacaoEditavel(
+                  quadroDetalhe.id,
+                  listaPainel,
+                  quadroDetalhe.status,
+                )}
+              />
             </section>
           </>
         ) : !carregando && !erro ? (

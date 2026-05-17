@@ -184,7 +184,7 @@ export default function EmpresaDiagnosticosClient({
         )}
 
         {!semSessao ? (
-          <Card className="mb-10" id="painel-diagnosticos-empresa">
+          <Card className="mb-10 overflow-visible" id="painel-diagnosticos-empresa">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Diagnósticos desta empresa no painel</CardTitle>
               <CardDescription>

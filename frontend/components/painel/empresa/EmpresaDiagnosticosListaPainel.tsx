@@ -8,7 +8,16 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, RefreshCw } from "lucide-react";
 
 import EmpresaDiagnosticoExpandedPanel from "@/components/painel/empresa/EmpresaDiagnosticoExpandedPanel";
@@ -124,8 +133,9 @@ export function EmpresaDiagnosticosListaPainel({
   const [painelEstadoSaving, setPainelEstadoSaving] = useState(false);
   const [painelEstadoErr, setPainelEstadoErr] = useState<string | null>(null);
   const [hashLocal, setHashLocal] = useState("");
-  /** Menu «Ações» por linha — evita `<details>` cortado por `overflow-hidden` do contentor. */
+  /** Menu «Ações» — portal em `document.body` (Card shadcn usa `overflow-hidden`). */
   const [acoesMenuDiagId, setAcoesMenuDiagId] = useState<string | null>(null);
+  const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
   /** Lote de prefetch a notificar ao pai após commit (evita setState no pai durante render do filho). */
   const [prefetchLotePai, setPrefetchLotePai] = useState<Record<string, DiagnosticoDetalheApi> | null>(
     null,
@@ -255,23 +265,66 @@ export function EmpresaDiagnosticosListaPainel({
     };
   }, [diagnosticos]);
 
+  const fecharMenuAcoes = useCallback(() => {
+    setAcoesMenuDiagId(null);
+    setMenuAnchorRect(null);
+  }, []);
+
+  const toggleMenuAcoes = useCallback(
+    (ev: React.MouseEvent<HTMLButtonElement>, diagId: string) => {
+      ev.stopPropagation();
+      if (acoesMenuDiagId === diagId) {
+        fecharMenuAcoes();
+        return;
+      }
+      setMenuAnchorRect(ev.currentTarget.getBoundingClientRect());
+      setAcoesMenuDiagId(diagId);
+    },
+    [acoesMenuDiagId, fecharMenuAcoes],
+  );
+
   useEffect(() => {
     if (!acoesMenuDiagId) return;
     const fechar = (ev: MouseEvent) => {
       const alvo = ev.target;
       if (!(alvo instanceof Node)) return;
-      const root = document.querySelector(`[data-acao-menu="${acoesMenuDiagId}"]`);
-      if (root?.contains(alvo)) return;
-      setAcoesMenuDiagId(null);
+      const btnRoot = document.querySelector(`[data-acao-menu="${acoesMenuDiagId}"]`);
+      const portalRoot = document.querySelector(
+        `[data-acao-menu-portal="${acoesMenuDiagId}"]`,
+      );
+      if (btnRoot?.contains(alvo) || portalRoot?.contains(alvo)) return;
+      fecharMenuAcoes();
+    };
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") fecharMenuAcoes();
     };
     const timer = window.setTimeout(() => {
       document.addEventListener("click", fechar);
+      document.addEventListener("keydown", onKey);
     }, 0);
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener("click", fechar);
+      document.removeEventListener("keydown", onKey);
     };
-  }, [acoesMenuDiagId]);
+  }, [acoesMenuDiagId, fecharMenuAcoes]);
+
+  useLayoutEffect(() => {
+    if (!acoesMenuDiagId) return;
+    const reposicionar = () => {
+      const btn = document.querySelector<HTMLButtonElement>(
+        `[data-acao-menu="${acoesMenuDiagId}"] button`,
+      );
+      if (btn) setMenuAnchorRect(btn.getBoundingClientRect());
+    };
+    const fecharScroll = () => fecharMenuAcoes();
+    window.addEventListener("resize", reposicionar);
+    window.addEventListener("scroll", fecharScroll, true);
+    return () => {
+      window.removeEventListener("resize", reposicionar);
+      window.removeEventListener("scroll", fecharScroll, true);
+    };
+  }, [acoesMenuDiagId, fecharMenuAcoes]);
 
   useEffect(() => {
     if (!painelEstadoDialogDiagId || !temSessaoPainelParaApiCliente()) return;
@@ -373,6 +426,116 @@ export function EmpresaDiagnosticosListaPainel({
 
   const semSessao = !temSessaoPainelParaApiCliente();
 
+  const diagMenuAberto = useMemo(
+    () => linhasGrelha.find((d) => d.id === acoesMenuDiagId) ?? null,
+    [linhasGrelha, acoesMenuDiagId],
+  );
+
+  const menuAcoesPortal =
+    typeof document !== "undefined" &&
+    acoesMenuDiagId &&
+    menuAnchorRect &&
+    diagMenuAberto
+      ? (() => {
+          const diag = diagMenuAberto;
+          const detailHref = `/dashboard/diagnosticos/${diag.id}`;
+          const detalhePrefetch = detalhesPorId[diag.id];
+          const pdfHref = hrefRelatorioPdfAbsoluto(
+            detalhePrefetch?.relatorio_pdf_url ?? diag.relatorio_pdf_url ?? null,
+          );
+          const cicloAtual =
+            diag.painel_estado_ciclo ?? detalhePrefetch?.painel_estado_ciclo ?? undefined;
+          return createPortal(
+            <div
+              role="menu"
+              data-acao-menu-portal={diag.id}
+              className="fixed z-[200] min-w-[14rem] max-h-[min(70vh,24rem)] overflow-y-auto rounded-md border bg-popover py-1 text-sm text-popover-foreground shadow-lg"
+              style={{
+                top: menuAnchorRect.bottom + 4,
+                left: menuAnchorRect.right,
+                transform: "translateX(-100%)",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {pdfHref ? (
+                <a
+                  href={pdfHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  role="menuitem"
+                  className="block px-3 py-2 hover:bg-muted/60"
+                  onClick={fecharMenuAcoes}
+                >
+                  Relatório PDF
+                </a>
+              ) : (
+                <span className="block px-3 py-2 text-muted-foreground">PDF indisponível</span>
+              )}
+              <Link
+                href={hrefPrivacidadePainel({ diagnosticoId: diag.id, secao: "retificacoes" })}
+                role="menuitem"
+                className="block px-3 py-2 hover:bg-muted/60"
+                onClick={fecharMenuAcoes}
+              >
+                Retificações
+              </Link>
+              <Link
+                href={hrefPrivacidadePainel({ diagnosticoId: diag.id, secao: "lgpd" })}
+                role="menuitem"
+                className="block px-3 py-2 hover:bg-muted/60"
+                onClick={fecharMenuAcoes}
+              >
+                LGPD
+              </Link>
+              <Link
+                href={`${detailHref}#diag-explicacao-score-llm`}
+                role="menuitem"
+                className="block px-3 py-2 hover:bg-muted/60"
+                onClick={fecharMenuAcoes}
+              >
+                Explicação IA (score)
+              </Link>
+              <Link
+                href={detailHref}
+                role="menuitem"
+                className="block px-3 py-2 hover:bg-muted/60"
+                onClick={fecharMenuAcoes}
+              >
+                Ficha completa
+              </Link>
+              {diag.plano === "avancado" ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="w-full text-left px-3 py-2 hover:bg-muted/60 flex items-center gap-2"
+                  onClick={() => {
+                    fecharMenuAcoes();
+                    aoRefazerDiagnostico(diag.empresa_razao_social);
+                  }}
+                >
+                  <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Novo ciclo de diagnóstico
+                </button>
+              ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full text-left px-3 py-2 hover:bg-muted/60 border-t mt-1 pt-2"
+                onClick={() => {
+                  fecharMenuAcoes();
+                  setPainelEstadoErr(null);
+                  setPainelEstadoDraft((cicloAtual as PainelEstadoCicloApi) ?? "realizado");
+                  setPainelEstadoDialogDiagId(diag.id);
+                }}
+              >
+                Mudar estado…
+              </button>
+            </div>,
+            document.body,
+          );
+        })()
+      : null;
+
   return (
     <div className="flex flex-col gap-6">
       {cabecalhoSlot}
@@ -438,7 +601,6 @@ export function EmpresaDiagnosticosListaPainel({
               const aberto = linhaAbertaId === diag.id;
               const detailHref = `/dashboard/diagnosticos/${diag.id}`;
               const detalhePrefetch = detalhesPorId[diag.id];
-              const pdfHref = hrefRelatorioPdfAbsoluto(detalhePrefetch?.relatorio_pdf_url ?? diag.relatorio_pdf_url ?? null);
               const cicloAtual =
                 diag.painel_estado_ciclo ?? detalhePrefetch?.painel_estado_ciclo ?? undefined;
 
@@ -493,101 +655,10 @@ export function EmpresaDiagnosticosListaPainel({
                             className="h-8 text-xs px-3"
                             aria-haspopup="menu"
                             aria-expanded={menuAcoesAberto}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAcoesMenuDiagId((cur) => (cur === diag.id ? null : diag.id));
-                            }}
+                            onClick={(e) => toggleMenuAcoes(e, diag.id)}
                           >
                             Ações ▾
                           </Button>
-                          {menuAcoesAberto ? (
-                            <div
-                              role="menu"
-                              data-acao-links
-                              className="absolute right-0 top-full mt-1 z-50 min-w-[14rem] rounded-md border bg-popover py-1 text-sm text-popover-foreground shadow-lg"
-                              onMouseDown={(e) => e.stopPropagation()}
-                            >
-                              {pdfHref ? (
-                                <a
-                                  href={pdfHref}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  role="menuitem"
-                                  className="block px-3 py-2 hover:bg-muted/60"
-                                  onClick={() => setAcoesMenuDiagId(null)}
-                                >
-                                  Relatório PDF
-                                </a>
-                              ) : (
-                                <span className="block px-3 py-2 text-muted-foreground">PDF indisponível</span>
-                              )}
-                              <Link
-                                href={hrefPrivacidadePainel({
-                                  diagnosticoId: diag.id,
-                                  secao: "retificacoes",
-                                })}
-                                role="menuitem"
-                                className="block px-3 py-2 hover:bg-muted/60"
-                                onClick={() => setAcoesMenuDiagId(null)}
-                              >
-                                Retificações
-                              </Link>
-                              <Link
-                                href={hrefPrivacidadePainel({
-                                  diagnosticoId: diag.id,
-                                  secao: "lgpd",
-                                })}
-                                role="menuitem"
-                                className="block px-3 py-2 hover:bg-muted/60"
-                                onClick={() => setAcoesMenuDiagId(null)}
-                              >
-                                LGPD
-                              </Link>
-                              <Link
-                                href={`${detailHref}#diag-explicacao-score-llm`}
-                                role="menuitem"
-                                className="block px-3 py-2 hover:bg-muted/60"
-                                onClick={() => setAcoesMenuDiagId(null)}
-                              >
-                                Explicação IA (score)
-                              </Link>
-                              <Link
-                                href={detailHref}
-                                role="menuitem"
-                                className="block px-3 py-2 hover:bg-muted/60"
-                                onClick={() => setAcoesMenuDiagId(null)}
-                              >
-                                Ficha completa
-                              </Link>
-                              {diag.plano === "avancado" ? (
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  className="w-full text-left px-3 py-2 hover:bg-muted/60 flex items-center gap-2"
-                                  onClick={() => {
-                                    setAcoesMenuDiagId(null);
-                                    aoRefazerDiagnostico(diag.empresa_razao_social);
-                                  }}
-                                >
-                                  <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                  Novo ciclo de diagnóstico
-                                </button>
-                              ) : null}
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="w-full text-left px-3 py-2 hover:bg-muted/60 border-t mt-1 pt-2"
-                                onClick={() => {
-                                  setAcoesMenuDiagId(null);
-                                  setPainelEstadoErr(null);
-                                  setPainelEstadoDraft((cicloAtual as PainelEstadoCicloApi) ?? "realizado");
-                                  setPainelEstadoDialogDiagId(diag.id);
-                                }}
-                              >
-                                Mudar estado…
-                              </button>
-                            </div>
-                          ) : null}
                         </div>
                         <Button
                           type="button"
@@ -625,6 +696,7 @@ export function EmpresaDiagnosticosListaPainel({
           </ul>
         </div>
       )}
+      {menuAcoesPortal}
       <Dialog
         open={painelEstadoDialogDiagId !== null}
         onOpenChange={(next) => {

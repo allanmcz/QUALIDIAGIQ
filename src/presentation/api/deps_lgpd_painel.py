@@ -18,6 +18,7 @@ from src.application.ports.lead_diagnostico_vinculo_port import LeadDiagnosticoV
 from src.application.ports.lgpd_anonimizacao_executor_port import LgpdAnonimizacaoExecutorPort
 from src.application.ports.lgpd_eliminacao_executor_port import LgpdEliminacaoExecutorPort
 from src.application.ports.lgpd_titular_solicitacao_port import LgpdTitularSolicitacaoPort
+from src.application.ports.plano_acao_kanban_port import PlanoAcaoKanbanPort
 from src.application.use_cases.anexar_relatorio_otimista import AnexarRelatorioOtimista
 from src.application.use_cases.atualizar_checklist_m12_autoconf import AtualizarChecklistM12Autoconf
 from src.application.use_cases.atualizar_painel_estado_ciclo_diagnostico import (
@@ -42,6 +43,13 @@ from src.application.use_cases.listar_retificacoes_diagnostico import (
 from src.application.use_cases.listar_solicitacao_titular_lgpd import (
     ListarSolicitacaoTitularLgpd,
 )
+from src.application.use_cases.plano_acao_kanban import (
+    AdicionarComentarioPlanoAcao,
+    ArquivarPlanoAcaoKanban,
+    AtualizarEstadoOperacionalPlanoAcao,
+    ListarComentariosPlanoAcao,
+    ListarKanbanPlanoAcao,
+)
 from src.application.use_cases.plano_painel_subtarefa import (
     AtualizarSubtarefaPlanoDiagnostico,
     CriarSubtarefaPlanoDiagnostico,
@@ -64,6 +72,7 @@ from src.presentation.api.deps_repositories_core import (
     get_lgpd_anonimizacao_executor_port,
     get_lgpd_eliminacao_executor_port,
     get_lgpd_titular_solicitacao_port,
+    get_plano_acao_kanban_port,
 )
 
 
@@ -227,3 +236,42 @@ def get_atualizar_subtarefa_plano_diagnostico_use_case(
 ) -> AtualizarSubtarefaPlanoDiagnostico:
     """PATCH subtarefa do plano materializado."""
     return AtualizarSubtarefaPlanoDiagnostico(repo=repo)
+
+
+def get_listar_kanban_plano_acao_use_case(
+    kanban: Annotated[PlanoAcaoKanbanPort, Depends(get_plano_acao_kanban_port)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> ListarKanbanPlanoAcao:
+    """GET board Kanban do plano materializado."""
+    return ListarKanbanPlanoAcao(kanban=kanban, diagnostico_repo=repo)
+
+
+def get_atualizar_estado_operacional_plano_acao_use_case(
+    kanban: Annotated[PlanoAcaoKanbanPort, Depends(get_plano_acao_kanban_port)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> AtualizarEstadoOperacionalPlanoAcao:
+    """PATCH estado operacional do card Kanban."""
+    return AtualizarEstadoOperacionalPlanoAcao(kanban=kanban, diagnostico_repo=repo)
+
+
+def get_adicionar_comentario_plano_acao_use_case(
+    kanban: Annotated[PlanoAcaoKanbanPort, Depends(get_plano_acao_kanban_port)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> AdicionarComentarioPlanoAcao:
+    """POST comentário WORM no card Kanban."""
+    return AdicionarComentarioPlanoAcao(kanban=kanban, diagnostico_repo=repo)
+
+
+def get_arquivar_plano_acao_kanban_use_case(
+    kanban: Annotated[PlanoAcaoKanbanPort, Depends(get_plano_acao_kanban_port)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> ArquivarPlanoAcaoKanban:
+    """PATCH arquivar/desarquivar card Kanban."""
+    return ArquivarPlanoAcaoKanban(kanban=kanban, diagnostico_repo=repo)
+
+
+def get_listar_comentarios_plano_acao_use_case(
+    kanban: Annotated[PlanoAcaoKanbanPort, Depends(get_plano_acao_kanban_port)],
+) -> ListarComentariosPlanoAcao:
+    """GET comentários do card Kanban."""
+    return ListarComentariosPlanoAcao(kanban=kanban)

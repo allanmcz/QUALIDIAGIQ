@@ -18,7 +18,7 @@ export function rotuloPainelEstadoCiclo(valor: string | null | undefined): strin
     case "descartado":
       return "Descartado";
     case "finalizado":
-      return "Finalizado (consultoria)";
+      return "Finalizado";
     default:
       return valor?.trim() ? valor : "—";
   }

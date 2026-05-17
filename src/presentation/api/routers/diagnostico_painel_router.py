@@ -12,9 +12,12 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
+import psycopg2
+import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from src.application.errors import ConflitoVersaoOtimistaError, DiagnosticoNaoEncontradoError
+from src.application.ports.plano_acao_kanban_port import AtualizarEstadoKanbanInput
 from src.application.services.explicacao_score_contexto import (
     montar_campos_extras_explicacao_score,
     snapshot_explicacao_score_llm_de_resposta,
@@ -43,6 +46,19 @@ from src.application.use_cases.explicar_score_llm_use_case import (
     ComandoExplicarScoreLlm,
     ExplicarScoreLlmUseCase,
 )
+from src.application.use_cases.plano_acao_kanban import (
+    AdicionarComentarioPlanoAcao,
+    ArquivarPlanoAcaoKanban,
+    AtualizarEstadoOperacionalPlanoAcao,
+    ComandoAdicionarComentarioPlanoAcao,
+    ComandoArquivarPlanoAcaoKanban,
+    ComandoAtualizarEstadoOperacionalPlanoAcao,
+    ComandoListarComentariosPlanoAcao,
+    ComandoListarKanbanPlanoAcao,
+    ListarComentariosPlanoAcao,
+    ListarKanbanPlanoAcao,
+    PlanoAcaoKanbanNaoEncontradoError,
+)
 from src.application.use_cases.plano_painel_subtarefa import (
     AtualizarSubtarefaPlanoDiagnostico,
     ComandoAtualizarSubtarefaPlanoDiagnostico,
@@ -51,6 +67,7 @@ from src.application.use_cases.plano_painel_subtarefa import (
 )
 from src.domain.entities.diagnostico import StatusDiagnostico
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
+from src.domain.value_objects.status_execucao_plano_acao import StatusExecucaoPlanoAcao
 from src.infrastructure.config.settings import get_settings
 from src.infrastructure.llm.llm_quota_service import (
     LlmQuotaExcedidaError,
@@ -58,8 +75,11 @@ from src.infrastructure.llm.llm_quota_service import (
     registrar_uso_llm_sync,
 )
 from src.presentation.api.dependencies import (
+    get_adicionar_comentario_plano_acao_use_case,
     get_anexar_relatorio_otimista_use_case,
+    get_arquivar_plano_acao_kanban_use_case,
     get_atualizar_checklist_m12_autoconf_use_case,
+    get_atualizar_estado_operacional_plano_acao_use_case,
     get_atualizar_painel_estado_ciclo_use_case,
     get_atualizar_quadro_implantacao_use_case,
     get_atualizar_subtarefa_plano_diagnostico_use_case,
@@ -67,6 +87,22 @@ from src.presentation.api.dependencies import (
     get_current_user_tenant,
     get_diagnostico_repository,
     get_explicar_score_llm_use_case,
+    get_listar_comentarios_plano_acao_use_case,
+    get_listar_kanban_plano_acao_use_case,
+)
+from src.presentation.api.plano_acao_kanban_mappers import (
+    board_para_schema,
+    card_para_schema,
+    comentario_para_schema,
+)
+from src.presentation.api.plano_acao_kanban_schemas import (
+    PatchArquivarPlanoAcaoRequest,
+    PatchEstadoOperacionalPlanoAcaoRequest,
+    PlanoAcaoComentarioListaSchema,
+    PlanoAcaoComentarioSchema,
+    PlanoAcaoKanbanBoardSchema,
+    PlanoAcaoKanbanCardSchema,
+    PostComentarioPlanoAcaoRequest,
 )
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
@@ -82,6 +118,24 @@ from src.presentation.api.schemas import (
 )
 
 router = APIRouter()
+_logger_kanban = structlog.get_logger(__name__)
+
+
+def _http_erro_kanban_persistencia(exc: BaseException) -> HTTPException:
+    """Traduz falha Postgres do Kanban em resposta acionável (evita 500 opaco)."""
+    _logger_kanban.error("kanban_persistencia_falhou", erro=str(exc), exc_info=True)
+    detalhe = (
+        "Kanban do plano indisponível no banco. Execute `make migrate` "
+        "(migração 0051_kanban_plano_acao_operacional.sql) e recarregue a página."
+    )
+    if "diagnostico_plano_acao_estado" in str(exc) or "diagnostico_plano_acao_comentario" in str(
+        exc
+    ):
+        detalhe = (
+            "Tabelas do Kanban ainda não existem. Execute `make migrate` no projeto "
+            "e confirme que `0051_kanban_plano_acao_operacional.sql` foi aplicada."
+        )
+    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=detalhe)
 
 
 @router.patch(
@@ -449,6 +503,196 @@ async def atualizar_subtarefa_plano_diagnostico(
     return await diagnostico_helpers._montar_diagnostico_response(
         repo, d, perfil_conta=perfil_conta
     )
+
+
+@router.get(
+    "/{diagnostico_id}/plano-acao/kanban",
+    response_model=PlanoAcaoKanbanBoardSchema,
+    summary="Listar board Kanban do plano de ação",
+    description=(
+        "Retorna cards operacionais derivados de ``diagnostico_plano_acao`` com estado em "
+        "``diagnostico_plano_acao_estado``. Itens arquivados ficam ocultos por padrão."
+    ),
+)
+async def listar_kanban_plano_acao(
+    diagnostico_id: UUID,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[ListarKanbanPlanoAcao, Depends(get_listar_kanban_plano_acao_use_case)],
+    incluir_arquivados: bool = False,
+) -> PlanoAcaoKanbanBoardSchema:
+    """GET board — 4 colunas no frontend (sem DnD na Onda 1.0)."""
+    _, tenant_id, _perfil = current
+    try:
+        board = await use_case.execute(
+            ComandoListarKanbanPlanoAcao(
+                tenant_id=tenant_id,
+                diagnostico_id=diagnostico_id,
+                incluir_arquivados=incluir_arquivados,
+            )
+        )
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except psycopg2.Error as exc:
+        raise _http_erro_kanban_persistencia(exc) from exc
+    return board_para_schema(board)
+
+
+@router.patch(
+    "/{diagnostico_id}/plano-acao/{plano_acao_id}/estado-operacional",
+    response_model=PlanoAcaoKanbanCardSchema,
+    summary="Atualizar estado operacional do card Kanban",
+    description=(
+        "Persiste status, responsável, prazo e bloqueio em ``diagnostico_plano_acao_estado``. "
+        "Não altera o texto original do motor em ``diagnostico_plano_acao``."
+    ),
+)
+async def atualizar_estado_operacional_plano_acao(
+    diagnostico_id: UUID,
+    plano_acao_id: UUID,
+    payload: PatchEstadoOperacionalPlanoAcaoRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AtualizarEstadoOperacionalPlanoAcao,
+        Depends(get_atualizar_estado_operacional_plano_acao_use_case),
+    ],
+) -> PlanoAcaoKanbanCardSchema:
+    """PATCH estado operacional."""
+    _, tenant_id, _perfil = current
+    status_vo = (
+        StatusExecucaoPlanoAcao(payload.status_execucao) if payload.status_execucao else None
+    )
+    dados = AtualizarEstadoKanbanInput(
+        status_execucao=status_vo,
+        responsavel_operacional=payload.responsavel_operacional,
+        prazo_operacional=payload.prazo_operacional,
+        bloqueio_motivo=payload.bloqueio_motivo,
+        descricao_operacional=payload.descricao_operacional,
+        ordem_kanban=payload.ordem_kanban,
+        limpar_prazo=payload.limpar_prazo,
+        limpar_bloqueio=payload.limpar_bloqueio,
+    )
+    try:
+        card = await use_case.execute(
+            ComandoAtualizarEstadoOperacionalPlanoAcao(
+                tenant_id=tenant_id,
+                diagnostico_id=diagnostico_id,
+                plano_acao_id=plano_acao_id,
+                dados=dados,
+            )
+        )
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except PlanoAcaoKanbanNaoEncontradoError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return card_para_schema(card)
+
+
+@router.post(
+    "/{diagnostico_id}/plano-acao/{plano_acao_id}/comentarios",
+    response_model=PlanoAcaoComentarioSchema,
+    status_code=status.HTTP_201_CREATED,
+    summary="Adicionar comentário WORM ao card Kanban",
+    description=(
+        "Insert append-only com ``sha256_payload`` canónico. UPDATE/DELETE bloqueados no banco."
+    ),
+)
+async def adicionar_comentario_plano_acao(
+    diagnostico_id: UUID,
+    plano_acao_id: UUID,
+    payload: PostComentarioPlanoAcaoRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        AdicionarComentarioPlanoAcao,
+        Depends(get_adicionar_comentario_plano_acao_use_case),
+    ],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> PlanoAcaoComentarioSchema:
+    """POST comentário — Idempotency-Key obrigatório (middleware de replay)."""
+    user_id, tenant_id, perfil = current
+    _ = (idempotency_key, perfil)
+    autor_label = f"Consultor ({str(user_id)[:8]})"
+    try:
+        registro = await use_case.execute(
+            ComandoAdicionarComentarioPlanoAcao(
+                tenant_id=tenant_id,
+                diagnostico_id=diagnostico_id,
+                plano_acao_id=plano_acao_id,
+                autor_label=autor_label,
+                autor_email=None,
+                autor_user_id=user_id,
+                comentario=payload.comentario,
+            )
+        )
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except PlanoAcaoKanbanNaoEncontradoError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return comentario_para_schema(registro)
+
+
+@router.get(
+    "/{diagnostico_id}/plano-acao/{plano_acao_id}/comentarios",
+    response_model=PlanoAcaoComentarioListaSchema,
+    summary="Listar comentários do card Kanban",
+)
+async def listar_comentarios_plano_acao(
+    diagnostico_id: UUID,
+    plano_acao_id: UUID,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        ListarComentariosPlanoAcao,
+        Depends(get_listar_comentarios_plano_acao_use_case),
+    ],
+) -> PlanoAcaoComentarioListaSchema:
+    """GET comentários (mais recentes primeiro)."""
+    _, tenant_id, _perfil = current
+    itens = await use_case.execute(
+        ComandoListarComentariosPlanoAcao(
+            tenant_id=tenant_id,
+            diagnostico_id=diagnostico_id,
+            plano_acao_id=plano_acao_id,
+        )
+    )
+    return PlanoAcaoComentarioListaSchema(
+        itens=[comentario_para_schema(c) for c in itens],
+    )
+
+
+@router.patch(
+    "/{diagnostico_id}/plano-acao/{plano_acao_id}/arquivar",
+    response_model=PlanoAcaoKanbanCardSchema,
+    summary="Arquivar ou restaurar card Kanban",
+)
+async def arquivar_plano_acao_kanban(
+    diagnostico_id: UUID,
+    plano_acao_id: UUID,
+    payload: PatchArquivarPlanoAcaoRequest,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        ArquivarPlanoAcaoKanban,
+        Depends(get_arquivar_plano_acao_kanban_use_case),
+    ],
+) -> PlanoAcaoKanbanCardSchema:
+    """PATCH arquivar — remove da visão padrão sem apagar histórico."""
+    _, tenant_id, _perfil = current
+    try:
+        card = await use_case.execute(
+            ComandoArquivarPlanoAcaoKanban(
+                tenant_id=tenant_id,
+                diagnostico_id=diagnostico_id,
+                plano_acao_id=plano_acao_id,
+                arquivado=payload.arquivado,
+            )
+        )
+    except DiagnosticoNaoEncontradoError:
+        raise HTTPException(status_code=404, detail="Diagnóstico não encontrado") from None
+    except PlanoAcaoKanbanNaoEncontradoError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return card_para_schema(card)
 
 
 @router.patch("/{diagnostico_id}", response_model=DiagnosticoResponse)

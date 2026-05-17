@@ -96,6 +96,11 @@ ignore = [
 "src/domain/repositories/diagnostico_repository.py" = ["TC003"]
 # UUID/Callable em comandos e port — mesmo raciocínio que plano_painel_subtarefa.
 "src/application/ports/diagnostico_retificacao_port.py" = ["TC003"]
+"src/application/ports/plano_acao_kanban_port.py" = ["TC003"]
+"src/presentation/api/plano_acao_kanban_schemas.py" = ["TC003"]
+"src/application/services/plano_acao_comentario_hash.py" = ["TC003"]
+"src/application/use_cases/plano_acao_kanban.py" = ["TC003"]
+"src/infrastructure/adapters/postgres_plano_acao_kanban_adapter.py" = ["TC002", "TC003"]
 "src/application/use_cases/gerar_export_portabilidade_diagnostico.py" = ["TC003"]
 "src/application/use_cases/listar_retificacoes_diagnostico.py" = ["TC003"]
 "src/domain/services/diagnostico_retificacao_hash.py" = ["TC003"]

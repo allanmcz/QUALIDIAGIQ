@@ -158,6 +158,7 @@ def buscar_plano_painel_serializado_supabase(
                     "criticidade": r["criticidade"],
                     "base_legal": r.get("base_legal"),
                     "prioridade": int(r["prioridade_motor"]),
+                    "ordem_exibicao": int(r["ordem_exibicao"]),
                     "plano_acao_id": pid,
                     "chave_quadro_legado": f"f{int(r['frente_indice'])}_a{int(r['acao_indice'])}",
                     "subtarefas": st_list,

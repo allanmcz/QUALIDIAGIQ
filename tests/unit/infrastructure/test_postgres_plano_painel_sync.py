@@ -212,7 +212,9 @@ def test_buscar_plano_serializado_com_acao_e_sub(mock_connect: MagicMock) -> Non
     assert out is not None
     assert out.versao_plano == 1
     assert len(out.checklist) == 1
-    assert out.checklist[0]["acoes"][0]["plano_acao_id"] == aid
+    acao_http = out.checklist[0]["acoes"][0]
+    assert acao_http["plano_acao_id"] == aid
+    assert acao_http["ordem_exibicao"] == 1
 
 
 @patch.object(m.psycopg2, "connect")

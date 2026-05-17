@@ -11,6 +11,8 @@ export type AcaoChecklistDetalhe = {
   criticidade: string;
   base_legal?: string | null;
   prioridade?: number;
+  /** Sequência global do plano materializado (0 = primeira ação). */
+  ordem_exibicao?: number;
   plano_acao_id?: string;
   chave_quadro_legado?: string;
   subtarefas?: Array<{

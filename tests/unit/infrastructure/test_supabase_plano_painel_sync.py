@@ -434,6 +434,7 @@ def test_buscar_plano_supabase_com_dados() -> None:
     assert out is not None
     assert out.versao_plano == 1
     assert aid in out.subtarefas_por_acao
+    assert out.checklist[0]["acoes"][0]["ordem_exibicao"] == 1
 
 
 def test_del_tabela_versao_chama_cadeia() -> None:

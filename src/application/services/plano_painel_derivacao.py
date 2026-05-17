@@ -167,6 +167,7 @@ def derivar_plano_painel_materializado(
             d_acao.pop("dimensao_gap", None)
             d_acao["plano_acao_id"] = str(aid)
             d_acao["chave_quadro_legado"] = f"f{fi}_a{aj}"
+            d_acao["ordem_exibicao"] = ordem
             # Paridade com colunas 0049 (GET /diagnosticos/{id} e quadro de implantação).
             d_acao["fase_pdca"] = fase.value
             d_acao["horizonte_planejado"] = horiz.value
