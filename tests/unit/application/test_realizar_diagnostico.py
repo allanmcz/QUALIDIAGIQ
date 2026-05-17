@@ -12,9 +12,9 @@ import pytest
 from src.application.ports.base_normativa_port import ChunkNormativo
 from src.application.services.cnpj_consulta_service import ConsultaCnpjMaterializada
 from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
+from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
-    EntradaRespostaDiagnostico,
     RealizarDiagnostico,
 )
 from src.domain.entities.diagnostico import (

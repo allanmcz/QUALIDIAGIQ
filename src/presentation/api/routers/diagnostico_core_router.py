@@ -43,6 +43,7 @@ from src.presentation.api.dependencies import (
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
 from src.presentation.api.routers import diagnostico_helpers
 from src.presentation.api.schemas import (
+    DiagnosticoQuestionarioRespostasResponse,
     DiagnosticoResponse,
     DiagnosticoResumoSchema,
     DiagnosticoRetificacaoHttpResponse,
@@ -281,6 +282,33 @@ async def registrar_retificacao_diagnostico(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     return _retificacao_para_http(r)
+
+
+@router.get(
+    "/{diagnostico_id}/questionario-respostas",
+    response_model=DiagnosticoQuestionarioRespostasResponse,
+    summary="Listar respostas do questionário",
+    description=(
+        "Snapshot imutável das respostas por pergunta (tabela normalizada). "
+        "Permite comparar ciclos da mesma empresa via ``pergunta_codigo`` e evolução no painel."
+    ),
+)
+async def listar_questionario_respostas(
+    diagnostico_id: UUID,
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+) -> DiagnosticoQuestionarioRespostasResponse:
+    """Lista respostas materializadas na finalização do diagnóstico."""
+    _, tenant_id, _ = current
+    diagnostico = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not diagnostico:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Diagnóstico não encontrado")
+    itens = await repo.listar_respostas_questionario(diagnostico_id, tenant_id)
+    return DiagnosticoQuestionarioRespostasResponse(
+        diagnostico_id=diagnostico_id,
+        total=len(itens),
+        respostas=itens,
+    )
 
 
 @router.get("/{diagnostico_id}", response_model=DiagnosticoResponse)

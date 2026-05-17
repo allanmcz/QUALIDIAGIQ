@@ -36,9 +36,14 @@ from src.domain.entities.diagnostico import (
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
+from src.domain.value_objects.linha_resposta_questionario import LinhaRespostaQuestionario
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
+from src.infrastructure.repositories.postgres_diagnostico_resposta_sync import (
+    inserir_respostas_questionario_em_cursor,
+    listar_respostas_questionario_sync,
+)
 from src.infrastructure.repositories.postgres_plano_painel_sync import (
     atualizar_subtarefa_sync,
     buscar_plano_painel_serializado_sync,
@@ -331,6 +336,7 @@ def _salvar_e_materializar_plano_sync(
     *,
     historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
     cnpj_consulta_id: UUID | None = None,
+    linhas_resposta_questionario: tuple[LinhaRespostaQuestionario, ...] = (),
 ) -> PlanoPainelSerializado:
     """Transação única: UPSERT diagnóstico + substituição idempotente do plano ``versao_plano``."""
     vp = int(getattr(diagnostico, "versao_plano", 1) or 1)
@@ -350,6 +356,14 @@ def _salvar_e_materializar_plano_sync(
                 cnpj_consulta_id,
             )
         materializar_plano_em_conexao(conn, diagnostico, deriv)
+        if linhas_resposta_questionario:
+            with conn.cursor() as cur:
+                inserir_respostas_questionario_em_cursor(
+                    cur,
+                    diagnostico.id,
+                    diagnostico.tenant_id,
+                    linhas_resposta_questionario,
+                )
         conn.commit()
     except Exception:
         conn.rollback()
@@ -682,6 +696,7 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
         *,
         historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
         cnpj_consulta_id: UUID | None = None,
+        linhas_resposta_questionario: tuple[LinhaRespostaQuestionario, ...] = (),
     ) -> PlanoPainelSerializado:
         return await asyncio.to_thread(
             _salvar_e_materializar_plano_sync,
@@ -690,6 +705,19 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
             score_completo,
             historico_campos_empresa_cnpj=historico_campos_empresa_cnpj,
             cnpj_consulta_id=cnpj_consulta_id,
+            linhas_resposta_questionario=linhas_resposta_questionario,
+        )
+
+    async def listar_respostas_questionario(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> list[dict[str, Any]]:
+        return await asyncio.to_thread(
+            listar_respostas_questionario_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
         )
 
     async def buscar_plano_painel_serializado(

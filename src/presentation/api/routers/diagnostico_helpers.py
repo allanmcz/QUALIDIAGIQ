@@ -24,9 +24,9 @@ from src.application.services.consultoria_service import ConsultoriaService
 from src.application.services.explicacao_score_publica import (
     texto_explicacao_score_para_leitura_publica,
 )
+from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
-    EntradaRespostaDiagnostico,
     RealizarDiagnostico,
 )
 from src.domain.entities.diagnostico import (

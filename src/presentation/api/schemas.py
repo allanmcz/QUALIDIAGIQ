@@ -966,6 +966,42 @@ class ExplicacaoScoreLlmHistoricoListaSchema(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
 
+class DiagnosticoRespostaQuestionarioItemSchema(BaseModel):
+    """Uma resposta materializada do questionário adaptativo (snapshot imutável)."""
+
+    ordem_exibicao: int = Field(ge=0, description="Ordem no questionário aplicado (0 = primeira).")
+    pergunta_id: str
+    pergunta_codigo: str = Field(description="Código canónico (ex.: Q-FIS-001) — chave para comparar ciclos.")
+    dimensao: str
+    tipo_pergunta: str
+    texto_pergunta: str
+    peso: float = Field(ge=0)
+    base_legal: str | None = None
+    pilar_abnt: str | None = None
+    valor_bruto: Any = None
+    valor_exibicao: str
+    pontuacao_item: float | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+        description="Pontuação 0–100 da pergunta no motor; null se excluída (ex.: não se aplica).",
+    )
+    excluida_calculo: bool = False
+    criado_em: str | None = None
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class DiagnosticoQuestionarioRespostasResponse(BaseModel):
+    """Lista completa de respostas do diagnóstico — base para evolução entre ciclos da mesma empresa."""
+
+    diagnostico_id: UUID
+    total: int = Field(ge=0)
+    respostas: list[DiagnosticoRespostaQuestionarioItemSchema] = Field(default_factory=list)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class DiagnosticoResumoSchema(BaseModel):
     """Item resumido para listagem do tenant (P7 — painel)."""
 

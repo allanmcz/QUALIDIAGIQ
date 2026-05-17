@@ -29,6 +29,7 @@ from src.domain.entities.diagnostico import (
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.email import normalizar_email
+from src.domain.value_objects.linha_resposta_questionario import LinhaRespostaQuestionario
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
@@ -71,6 +72,7 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         self._planos: dict[tuple[UUID, UUID], PlanoPainelSerializado] = {}
         self._subs_por_chave: dict[tuple[UUID, UUID, UUID], list[dict[str, Any]]] = {}
         self._explicacao_historico: dict[tuple[UUID, UUID], list[dict[str, Any]]] = {}
+        self._respostas_questionario: dict[tuple[UUID, UUID], list[dict[str, Any]]] = {}
 
     async def salvar(self, diagnostico: Diagnostico) -> None:
         self._rows[diagnostico.id] = diagnostico
@@ -262,15 +264,43 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         *,
         historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
         cnpj_consulta_id: UUID | None = None,
+        linhas_resposta_questionario: tuple[LinhaRespostaQuestionario, ...] = (),
     ) -> PlanoPainelSerializado:
         _ = historico_campos_empresa_cnpj
         _ = cnpj_consulta_id
         self._rows[diagnostico.id] = diagnostico
+        if linhas_resposta_questionario:
+            self._respostas_questionario[(diagnostico.id, diagnostico.tenant_id)] = [
+                {
+                    "ordem_exibicao": ln.ordem_exibicao,
+                    "pergunta_id": str(ln.pergunta_id),
+                    "pergunta_codigo": ln.pergunta_codigo,
+                    "dimensao": ln.dimensao,
+                    "tipo_pergunta": ln.tipo_pergunta,
+                    "texto_pergunta": ln.texto_pergunta,
+                    "peso": ln.peso,
+                    "base_legal": ln.base_legal,
+                    "pilar_abnt": ln.pilar_abnt,
+                    "valor_bruto": ln.valor_bruto,
+                    "valor_exibicao": ln.valor_exibicao,
+                    "pontuacao_item": ln.pontuacao_item,
+                    "excluida_calculo": ln.excluida_calculo,
+                    "criado_em": datetime.now(UTC).isoformat(),
+                }
+                for ln in linhas_resposta_questionario
+            ]
         deriv = derivar_plano_painel_materializado(diagnostico, score_completo)
         self._planos[(diagnostico.id, diagnostico.tenant_id)] = deriv.serializado_http
         return self._merge_subtarefas_no_plano(
             deriv.serializado_http, diagnostico.id, diagnostico.tenant_id
         )
+
+    async def listar_respostas_questionario(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> list[dict[str, Any]]:
+        return list(self._respostas_questionario.get((diagnostico_id, tenant_id), []))
 
     async def buscar_plano_painel_serializado(
         self, diagnostico_id: UUID, tenant_id: UUID

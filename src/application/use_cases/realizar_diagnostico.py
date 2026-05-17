@@ -34,7 +34,8 @@ from src.domain.entities.diagnostico import (
     PlanoDiagnostico,
     Respondente,
 )
-from src.domain.entities.questionario import Pergunta, Resposta
+from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
+from src.application.services.diagnostico_resposta_materializacao import derivar_respostas_e_linhas
 from src.domain.ports.llm_gateway import LlmGateway, LlmGatewayRequest
 from src.domain.value_objects.llm_task_type import LlmTaskType
 
@@ -65,14 +66,6 @@ if TYPE_CHECKING:
     from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
     from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
     from src.domain.value_objects.score import ScoreCompleto
-
-
-@dataclass(frozen=True)
-class EntradaRespostaDiagnostico:
-    """Par pergunta aplicada + valor bruto — `diagnostico_id` preenchido dentro do use case."""
-
-    pergunta: Pergunta
-    valor_bruto: str | int | list[str]
 
 
 @dataclass(frozen=True)
@@ -178,20 +171,14 @@ class RealizarDiagnostico:
         diagnostico.registrar_aceite_termos_privacidade(datetime.now(UTC))
 
         perguntas_aplicadas = [e.pergunta for e in comando.entradas_resposta]
-        respostas = [
-            Resposta(
-                diagnostico_id=diagnostico.id,
-                pergunta_id=e.pergunta.id,
-                pergunta_tipo=e.pergunta.tipo,
-                valor_bruto=e.valor_bruto,
-            )
-            for e in comando.entradas_resposta
-        ]
+        respostas, linhas_resposta = derivar_respostas_e_linhas(
+            diagnostico.id, comando.entradas_resposta
+        )
 
         # 2. Calcula o Score usando o motor matemático determinístico
         score_completo = self.calcular_score_use_case.execute(
             perguntas=perguntas_aplicadas,
-            respostas=respostas,
+            respostas=list(respostas),
             data_referencia_normativa=datetime.now(UTC).date(),
         )
 
@@ -317,6 +304,7 @@ class RealizarDiagnostico:
             score_completo,
             historico_campos_empresa_cnpj=historico_cnpj or None,
             cnpj_consulta_id=consulta_cnpj_uuid,
+            linhas_resposta_questionario=linhas_resposta,
         )
 
         logger.info(

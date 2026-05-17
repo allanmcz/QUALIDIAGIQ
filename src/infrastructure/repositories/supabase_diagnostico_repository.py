@@ -337,10 +337,24 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         )
 
     def _salvar_e_materializar_thread(
-        self, diagnostico: Diagnostico, score_completo: ScoreCompleto
+        self,
+        diagnostico: Diagnostico,
+        score_completo: ScoreCompleto,
+        linhas_resposta_questionario: tuple[Any, ...],
     ) -> PlanoPainelSerializado:
+        from src.infrastructure.repositories.supabase_diagnostico_resposta_sync import (
+            inserir_respostas_questionario_supabase,
+        )
+
         payload = self._para_dict(diagnostico)
         self._client.table("diagnosticos").upsert(payload).execute()
+        if linhas_resposta_questionario:
+            inserir_respostas_questionario_supabase(
+                self._client,
+                diagnostico.id,
+                diagnostico.tenant_id,
+                linhas_resposta_questionario,  # type: ignore[arg-type]
+            )
         return materializar_plano_painel_supabase(self._client, diagnostico, score_completo)
 
     async def salvar_e_materializar_plano_painel(
@@ -350,11 +364,31 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
         *,
         historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
         cnpj_consulta_id: UUID | None = None,
+        linhas_resposta_questionario: tuple[Any, ...] = (),
     ) -> PlanoPainelSerializado:
         _ = historico_campos_empresa_cnpj
         _ = cnpj_consulta_id
         return await asyncio.to_thread(
-            self._salvar_e_materializar_thread, diagnostico, score_completo
+            self._salvar_e_materializar_thread,
+            diagnostico,
+            score_completo,
+            linhas_resposta_questionario,
+        )
+
+    async def listar_respostas_questionario(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> list[dict[str, Any]]:
+        from src.infrastructure.repositories.supabase_diagnostico_resposta_sync import (
+            listar_respostas_questionario_supabase,
+        )
+
+        return await asyncio.to_thread(
+            listar_respostas_questionario_supabase,
+            self._client,
+            diagnostico_id,
+            tenant_id,
         )
 
     async def buscar_plano_painel_serializado(

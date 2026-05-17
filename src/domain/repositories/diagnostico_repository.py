@@ -23,6 +23,7 @@ from typing import Any
 from uuid import UUID
 
 from src.domain.entities.diagnostico import Diagnostico
+from src.domain.value_objects.linha_resposta_questionario import LinhaRespostaQuestionario
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
@@ -188,6 +189,7 @@ class DiagnosticoRepository(ABC):
         *,
         historico_campos_empresa_cnpj: list[tuple[str, str | None, str]] | None = None,
         cnpj_consulta_id: UUID | None = None,
+        linhas_resposta_questionario: tuple[LinhaRespostaQuestionario, ...] = (),
     ) -> PlanoPainelSerializado:
         """
         Persiste o diagnóstico e materializa plano/matriz/cronograma na mesma transação (Postgres).
@@ -219,6 +221,21 @@ class DiagnosticoRepository(ABC):
 
         Returns:
             Snapshot gravado, ou None se nada foi feito (já materializado ou dados insuficientes).
+        """
+        ...
+
+    @abstractmethod
+    @abstractmethod
+    async def listar_respostas_questionario(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> list[dict[str, Any]]:
+        """
+        Lista respostas materializadas do questionário (ordem de exibição).
+
+        Returns:
+            Lista vazia se diagnóstico legado sem snapshot de respostas.
         """
         ...
 
