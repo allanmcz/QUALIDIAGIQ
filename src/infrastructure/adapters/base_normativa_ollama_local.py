@@ -14,15 +14,13 @@ import httpx
 import structlog
 
 from src.application.ports.base_normativa_port import BaseNormativaPort, ChunkNormativo
+from src.infrastructure.rag.catalogo_fontes_index import (
+    carregar_entradas_catalogo,
+    listar_entradas_piloto_ingestiveis,
+    resolver_entrada_por_caminho,
+)
 
 logger = structlog.get_logger(__name__)
-
-_MD_PILOTO_PADRAO: tuple[str, ...] = (
-    "docs/refs/01_PRD_BASE.md",
-    "docs/refs/02_MOSCOW_FEATURES.md",
-    "docs/refs/04_METODOLOGIA.md",
-    "docs/refs/05_QUESTIONARIO_v1.md",
-)
 
 _ADR_GLOB = ".github/adr/ADR-*.md"
 
@@ -56,16 +54,18 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 
 class _ChunkIndexado:
-    __slots__ = ("artigo", "embedding", "fonte", "texto")
+    __slots__ = ("artigo", "catalogo_id", "classe", "embedding", "texto")
 
     def __init__(
         self,
-        fonte: str,
+        catalogo_id: str,
+        classe: str | None,
         artigo: str,
         texto: str,
         embedding: list[float],
     ) -> None:
-        self.fonte = fonte
+        self.catalogo_id = catalogo_id
+        self.classe = classe
         self.artigo = artigo
         self.texto = texto
         self.embedding = embedding
@@ -83,14 +83,12 @@ class OllamaLocalBaseNormativaAdapter(BaseNormativaPort):
         ollama_base_url: str,
         *,
         embedding_model: str = "mxbai-embed-large:latest",
-        md_paths: tuple[str, ...] | None = None,
         incluir_adrs: bool = True,
         codigo_index_json: str | None = None,
         timeout_seconds: float = 120.0,
     ) -> None:
         self._embed_url = ollama_base_url.strip().rstrip("/") + "/api/embed"
         self._embedding_model = embedding_model.strip()
-        self._md_paths = md_paths or _MD_PILOTO_PADRAO
         self._incluir_adrs = incluir_adrs
         self._codigo_index_json = (codigo_index_json or "").strip()
         self._timeout = timeout_seconds
@@ -115,24 +113,20 @@ class OllamaLocalBaseNormativaAdapter(BaseNormativaPort):
             return [float(x) for x in emb]
         raise RuntimeError("Resposta Ollama /api/embed sem vetor.")
 
-    def _carregar_ficheiros(self) -> list[tuple[str, str, str]]:
-        """(fonte_id, artigo/caminho, texto_chunk)."""
+    def _carregar_ficheiros(self) -> list[tuple[str, str | None, str, str]]:
+        """(catalogo_id, classe, artigo/caminho, texto_chunk)."""
         root = _repo_root()
-        saida: list[tuple[str, str, str]] = []
-        for rel in self._md_paths:
-            path = root / rel
-            if not path.is_file():
-                logger.warning("rag_ollama_ficheiro_ausente", caminho=rel)
-                continue
-            fid = path.stem.upper().replace("-", "_")[:40]
+        saida: list[tuple[str, str | None, str, str]] = []
+        for ent, path in listar_entradas_piloto_ingestiveis():
+            rel = str(path.relative_to(root))
             for chunk in _chunk_md(path.read_text(encoding="utf-8", errors="replace")):
-                saida.append((fid, rel, chunk))
+                saida.append((ent.id, ent.classe, rel, chunk))
         if self._incluir_adrs:
             for path in sorted(root.glob(_ADR_GLOB)):
                 rel = str(path.relative_to(root))
                 fid = path.stem
                 for chunk in _chunk_md(path.read_text(encoding="utf-8", errors="replace")):
-                    saida.append((fid, rel, chunk))
+                    saida.append((fid, "B", rel, chunk))
         if self._codigo_index_json:
             cache = root / self._codigo_index_json
             if cache.is_file():
@@ -144,17 +138,22 @@ class OllamaLocalBaseNormativaAdapter(BaseNormativaPort):
                         for item in registos:
                             if not isinstance(item, dict):
                                 continue
-                            fonte = str(item.get("fonte") or "CODIGO")
                             artigo = str(item.get("artigo") or item.get("caminho") or "")
                             texto = str(item.get("texto") or "").strip()
-                            if texto:
-                                saida.append((fonte, artigo, texto))
+                            if not texto:
+                                continue
+                            ent = resolver_entrada_por_caminho(artigo)
+                            fid = ent.id if ent else str(item.get("fonte") or "CODIGO")
+                            classe = ent.classe if ent else "B"
+                            saida.append((fid, classe, artigo, texto))
                 except Exception as exc:
                     logger.warning(
                         "rag_ollama_cache_codigo_invalido",
                         caminho=self._codigo_index_json,
                         erro=str(exc),
                     )
+        if not saida and not carregar_entradas_catalogo():
+            logger.warning("rag_ollama_catalogo_vazio", acao="verificar catalogo_fontes.yml")
         return saida
 
     async def _garantir_indice(self) -> list[_ChunkIndexado]:
@@ -162,18 +161,18 @@ class OllamaLocalBaseNormativaAdapter(BaseNormativaPort):
             return self._indice
         registos = self._carregar_ficheiros()
         indice: list[_ChunkIndexado] = []
-        for fonte, artigo, texto in registos:
+        for catalogo_id, classe, artigo, texto in registos:
             try:
                 emb = await self._embedding_ollama(texto)
             except Exception as exc:
                 logger.warning(
                     "rag_ollama_embed_chunk_falhou",
-                    fonte=fonte,
+                    fonte=catalogo_id,
                     artigo=artigo,
                     erro=str(exc),
                 )
                 continue
-            indice.append(_ChunkIndexado(fonte, artigo, texto, emb))
+            indice.append(_ChunkIndexado(catalogo_id, classe, artigo, texto, emb))
         self._indice = indice
         logger.info("rag_ollama_indice_pronto", chunks=len(indice))
         return indice
@@ -209,8 +208,10 @@ class OllamaLocalBaseNormativaAdapter(BaseNormativaPort):
                 ChunkNormativo(
                     texto=ch.texto,
                     score=float(score),
-                    fonte=ch.fonte,
+                    fonte=ch.catalogo_id,
                     artigo=ch.artigo,
+                    catalogo_id=ch.catalogo_id,
+                    classe=ch.classe,
                 )
             )
         return out

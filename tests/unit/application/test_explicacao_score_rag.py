@@ -8,9 +8,12 @@ import pytest
 
 from src.application.ports.base_normativa_port import ChunkNormativo
 from src.application.services.explicacao_score_rag import (
+    RAG_STATUS_COM_FONTE,
+    RAG_STATUS_INSUFICIENTE,
     chunks_para_fontes_rag,
     determinar_rag_status,
     montar_query_rag_explicacao_score,
+    rag_recuperacao_insuficiente,
     recuperar_contexto_explicacao_score,
 )
 
@@ -29,18 +32,32 @@ class TestExplicacaoScoreRag:
 
     def test_determinar_rag_status_com_fonte(self) -> None:
         chunks = [ChunkNormativo(texto="x", score=0.7, fonte="PRD")]
-        assert determinar_rag_status(chunks, threshold=0.65) == "com_fonte"
+        assert determinar_rag_status(chunks, threshold=0.65) == RAG_STATUS_COM_FONTE
 
     def test_determinar_rag_status_insuficiente(self) -> None:
         chunks = [ChunkNormativo(texto="x", score=0.3, fonte="PRD")]
-        assert determinar_rag_status(chunks, threshold=0.65) == "base_insuficiente"
+        assert determinar_rag_status(chunks, threshold=0.65) == RAG_STATUS_INSUFICIENTE
+
+    def test_rag_recuperacao_insuficiente_true_para_status_fracos(self) -> None:
+        assert rag_recuperacao_insuficiente(RAG_STATUS_INSUFICIENTE) is True
+        assert rag_recuperacao_insuficiente("nao_recuperado") is True
+        assert rag_recuperacao_insuficiente(RAG_STATUS_COM_FONTE) is False
 
     def test_chunks_para_fontes_rag_limita_trecho(self) -> None:
         longo = "a" * 400
         fontes = chunks_para_fontes_rag(
-            [ChunkNormativo(texto=longo, score=0.8, fonte="F1", artigo="docs/x.md")]
+            [
+                ChunkNormativo(
+                    texto=longo,
+                    score=0.8,
+                    fonte="F1",
+                    catalogo_id="FONTE-001",
+                    artigo="docs/x.md",
+                )
+            ]
         )
         assert len(fontes) == 1
+        assert fontes[0]["fonte"] == "FONTE-001"
         trecho = str(fontes[0]["trecho"])
         assert trecho.endswith("…")
         assert len(trecho) <= 281
@@ -49,7 +66,16 @@ class TestExplicacaoScoreRag:
     async def test_recuperar_contexto_delega_ao_port(self) -> None:
         port = AsyncMock()
         port.buscar_contexto = AsyncMock(
-            return_value=[ChunkNormativo(texto="trecho", score=0.9, fonte="LC214", artigo="art.1")]
+            return_value=[
+                ChunkNormativo(
+                    texto="trecho",
+                    score=0.9,
+                    fonte="FONTE-002",
+                    catalogo_id="FONTE-002",
+                    classe="A",
+                    artigo="art.1",
+                )
+            ]
         )
         chunks, status, evs = await recuperar_contexto_explicacao_score(
             port,

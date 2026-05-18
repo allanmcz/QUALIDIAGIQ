@@ -92,3 +92,44 @@ class TestExplicacaoScoreLlmParaHttp:
         out = _explicacao_score_llm_para_http(d, perfil_conta="avancado")
         assert out is not None
         assert out.text == "ok"
+
+    def test_mapeia_fontes_rag_e_status(self) -> None:
+        d = _diag_min()
+        d.explicacao_score_llm = {
+            "text": "parecer",
+            "provider": "p",
+            "model": "m",
+            "policy_version": "v",
+            "blocked_by_guardrail": False,
+            "guardrail_status": "ok",
+            "rag_status": "com_fonte",
+            "fontes_rag": [
+                {
+                    "fonte": "FONTE-020",
+                    "dispositivo": "docs/refs/01_PRD_BASE.md",
+                    "score": 0.72,
+                    "trecho": "trecho piloto",
+                    "classe": "B",
+                }
+            ],
+        }
+        out = _explicacao_score_llm_para_http(d)
+        assert out is not None
+        assert out.rag_status == "com_fonte"
+        assert len(out.fontes_rag) == 1
+        assert out.fontes_rag[0].fonte == "FONTE-020"
+
+    def test_snapshot_antigo_sem_rag_usa_defaults(self) -> None:
+        d = _diag_min()
+        d.explicacao_score_llm = {
+            "text": "ok",
+            "provider": "p",
+            "model": "m",
+            "policy_version": "v",
+            "blocked_by_guardrail": False,
+            "guardrail_status": "ok",
+        }
+        out = _explicacao_score_llm_para_http(d)
+        assert out is not None
+        assert out.rag_status == "nao_aplicavel"
+        assert out.fontes_rag == []

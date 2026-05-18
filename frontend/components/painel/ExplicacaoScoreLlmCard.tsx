@@ -317,6 +317,15 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
                         <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
                           {textoExibicaoExplicacao(item)}
                         </p>
+                        {(item.fontes_rag ?? []).length > 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            Fontes:{" "}
+                            {(item.fontes_rag ?? [])
+                              .map((f) => f.fonte)
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        ) : null}
                         <p className="text-xs text-muted-foreground">
                           {item.provider} · {item.model}
                         </p>

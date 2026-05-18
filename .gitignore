@@ -21,6 +21,7 @@ dist/
 coverage.xml
 htmlcov/
 .tox/
+.cache/
 
 # Node / Next.js
 node_modules/

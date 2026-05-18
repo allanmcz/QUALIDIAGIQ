@@ -19,15 +19,15 @@ from uuid import UUID
 import structlog
 from fastapi import HTTPException, Request, status
 
+from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
 from src.application.ports.email_service import EmailServicePort
 from src.application.services.consultoria_service import ConsultoriaService
-from src.application.services.texto_acao_exibicao import (
-    sanitizar_descricoes_checklist_serializado,
-)
 from src.application.services.explicacao_score_publica import (
     texto_explicacao_score_para_leitura_publica,
 )
-from src.application.dto.entrada_resposta_diagnostico import EntradaRespostaDiagnostico
+from src.application.services.texto_acao_exibicao import (
+    sanitizar_descricoes_checklist_serializado,
+)
 from src.application.use_cases.realizar_diagnostico import (
     ComandoRealizarDiagnostico,
     RealizarDiagnostico,
@@ -346,21 +346,24 @@ def _explicacao_score_llm_para_http(
         gerado_em: datetime | None = None
         if gerado_raw is not None:
             gerado_em = datetime.fromisoformat(str(gerado_raw).replace("Z", "+00:00"))
-        return ExplicacaoScoreLlmPersistidaSchema(
-            text=str(raw.get("text", "")),
-            provider=str(raw.get("provider", "")),
-            model=str(raw.get("model", "")),
-            policy_version=str(raw.get("policy_version", "")),
-            input_tokens=int(raw.get("input_tokens") or 0),
-            output_tokens=int(raw.get("output_tokens") or 0),
-            estimated_cost_usd=float(raw.get("estimated_cost_usd") or 0.0),
-            latency_ms=int(raw.get("latency_ms") or 0),
-            blocked_by_guardrail=bool(raw.get("blocked_by_guardrail")),
-            guardrail_reason=raw.get("guardrail_reason"),
-            guardrail_status=str(raw.get("guardrail_status") or "ok"),
-            gerado_em=gerado_em,
-            trace_id=str(raw["trace_id"]) if raw.get("trace_id") else None,
-        )
+        payload = {
+            "text": str(raw.get("text", "")),
+            "provider": str(raw.get("provider", "")),
+            "model": str(raw.get("model", "")),
+            "policy_version": str(raw.get("policy_version", "")),
+            "input_tokens": int(raw.get("input_tokens") or 0),
+            "output_tokens": int(raw.get("output_tokens") or 0),
+            "estimated_cost_usd": float(raw.get("estimated_cost_usd") or 0.0),
+            "latency_ms": int(raw.get("latency_ms") or 0),
+            "blocked_by_guardrail": bool(raw.get("blocked_by_guardrail")),
+            "guardrail_reason": raw.get("guardrail_reason"),
+            "guardrail_status": str(raw.get("guardrail_status") or "ok"),
+            "gerado_em": gerado_em,
+            "trace_id": str(raw["trace_id"]) if raw.get("trace_id") else None,
+            "rag_status": str(raw.get("rag_status") or "nao_aplicavel"),
+            "fontes_rag": raw.get("fontes_rag") if isinstance(raw.get("fontes_rag"), list) else [],
+        }
+        return ExplicacaoScoreLlmPersistidaSchema.model_validate(payload)
     except (TypeError, ValueError):
         return None
 

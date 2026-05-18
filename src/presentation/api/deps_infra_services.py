@@ -386,11 +386,13 @@ def get_explicar_score_llm_use_case(
 ) -> ExplicarScoreLlmUseCase:
     """Narrativa sobre score via gateway + RAG Lexiq (Onda IA 1.1)."""
     settings = get_settings()
+    pv = settings.llm_router_policy_version.strip() or "2026-05-15-v1"
     return ExplicarScoreLlmUseCase(
         gateway=llm_gateway,
         base_normativa_port=build_base_normativa_port(),
         rag_similarity_threshold=float(settings.qdi_rag_similarity_threshold),
         rag_top_k=int(settings.qdi_rag_top_k),
+        policy_version=pv,
     )
 
 

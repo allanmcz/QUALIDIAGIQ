@@ -121,10 +121,40 @@ def test_build_base_normativa_pgvector_quando_dsn_e_openai(
     m.sync_database_url = "postgresql://x:y@127.0.0.1:1/db"
     m.openai_api_key = fk
     m.openai_embedding_model = "text-embedding-3-small"
+    m.qdi_rag_backend = "pgvector"
+    m.ollama_base_url = "http://127.0.0.1:11434"
+    m.ollama_embedding_model = "mxbai-embed-large:latest"
+    m.qdi_rag_incluir_adrs = True
+    m.qdi_rag_codigo_index_path = ".cache/test.json"
+    m.ollama_timeout_seconds = 30.0
 
     with patch("src.presentation.api.deps_infra_services.get_settings", return_value=m):
         port = deps.build_base_normativa_port()
     assert type(port).__name__ == "PgvectorBaseNormativaAdapter"
+
+
+def test_build_base_normativa_auto_compoe_pgvector_e_ollama(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x:y@127.0.0.1:1/db")
+
+    fk = MagicMock()
+    fk.get_secret_value.return_value = "sk-test-openai-xxxx"
+
+    m = MagicMock()
+    m.sync_database_url = "postgresql://x:y@127.0.0.1:1/db"
+    m.openai_api_key = fk
+    m.openai_embedding_model = "text-embedding-3-small"
+    m.qdi_rag_backend = "auto"
+    m.ollama_base_url = "http://127.0.0.1:11434"
+    m.ollama_embedding_model = "mxbai-embed-large:latest"
+    m.qdi_rag_incluir_adrs = False
+    m.qdi_rag_codigo_index_path = ""
+    m.ollama_timeout_seconds = 30.0
+
+    with patch("src.presentation.api.deps_infra_services.get_settings", return_value=m):
+        port = deps.build_base_normativa_port()
+    assert type(port).__name__ == "CompositeBaseNormativaAdapter"
 
 
 def test_get_llm_http_ollama_adapter() -> None:

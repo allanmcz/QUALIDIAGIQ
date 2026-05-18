@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Ingestão RAG — Markdown do ``dominio_fiscal/catalogo_fontes.yml`` → ``qdi_rag.documento_normativo``.
+Ingestão RAG — corpus do ``catalogo_fontes.yml`` → ``qdi_rag.documento_normativo``.
 
-Requer migração 0020, ``DATABASE_URL`` e ``OPENAI_API_KEY`` (1536 dims).
+Suporta Markdown direto e ficheiros extraídos (``dominio_fiscal/extraido/FONTE-xxx.md``).
+Para PDF/XLSX: executar antes ``scripts/extrair_fontes_catalogo_rag.py``.
 
 Uso:
-  PYTHONPATH=. python scripts/ingestao_rag_catalogo.py
   PYTHONPATH=. python scripts/ingestao_rag_catalogo.py --dry-run
+  OPENAI_API_KEY=... DATABASE_URL=... PYTHONPATH=. python scripts/ingestao_rag_catalogo.py
 """
 
 from __future__ import annotations
@@ -19,14 +20,16 @@ from datetime import date
 from pathlib import Path
 
 import asyncpg
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOGO = ROOT / "dominio_fiscal" / "catalogo_fontes.yml"
 
 from src.infrastructure.adapters.base_normativa_pgvector import (  # noqa: E402
     _embedding_openai,
     _vetor_para_sql_literal,
+)
+from src.infrastructure.rag.catalogo_fontes_index import (  # noqa: E402
+    caminho_ficheiro_ingestivel,
+    carregar_entradas_catalogo,
 )
 
 
@@ -49,11 +52,12 @@ def _chunk_text(text: str, max_chars: int = 1400, overlap: int = 120) -> list[st
     return out
 
 
-async def _ingest_fonte(
+async def _ingest_path(
     conn: asyncpg.Connection | None,
     *,
     fonte_id: str,
     caminho: Path,
+    caminho_relativo: str,
     api_key: str,
     model: str,
     vigencia: date,
@@ -61,9 +65,6 @@ async def _ingest_fonte(
 ) -> int:
     if not caminho.is_file():
         print(f"AVISO: ausente {caminho}", file=sys.stderr)
-        return 0
-    if caminho.suffix.lower() not in {".md", ".txt"}:
-        print(f"SKIP: formato não suportado {caminho}", file=sys.stderr)
         return 0
     raw = caminho.read_text(encoding="utf-8", errors="replace")
     n = 0
@@ -80,7 +81,7 @@ async def _ingest_fonte(
             VALUES ($1, $2, $3, $4::vector, $5)
             """,
             fonte_id,
-            str(caminho.relative_to(ROOT)),
+            caminho_relativo,
             chunk,
             literal,
             vigencia,
@@ -102,8 +103,6 @@ async def main() -> None:
         print("DATABASE_URL e OPENAI_API_KEY obrigatórios.", file=sys.stderr)
         sys.exit(1)
 
-    cat = yaml.safe_load(CATALOGO.read_text(encoding="utf-8"))
-    fontes = cat.get("fontes") or []
     vigencia = date(2025, 1, 1)
     conn: asyncpg.Connection | None = None
     if not args.dry_run:
@@ -111,24 +110,29 @@ async def main() -> None:
 
     total = 0
     try:
-        for item in fontes:
-            if args.somente_piloto and not item.get("piloto"):
+        for ent in carregar_entradas_catalogo():
+            if args.somente_piloto and not ent.piloto:
                 continue
-            rel = str(item.get("caminho") or "").strip()
-            if not rel:
+            path = caminho_ficheiro_ingestivel(ent)
+            if path is None:
+                print(
+                    f"SKIP: sem texto legível {ent.id} ({ent.caminho}) — extrair PDF/XLSX?",
+                    file=sys.stderr,
+                )
                 continue
-            fid = str(item.get("id") or item.get("fonte") or rel)
-            n = await _ingest_fonte(
+            rel = str(path.relative_to(ROOT))
+            n = await _ingest_path(
                 conn,
-                fonte_id=fid,
-                caminho=ROOT / rel,
+                fonte_id=ent.id,
+                caminho=path,
+                caminho_relativo=rel,
                 api_key=api_key,
                 model=model,
                 vigencia=vigencia,
                 dry_run=args.dry_run,
             )
             total += n
-            print(f"{fid}: {n} chunks")
+            print(f"{ent.id}: {n} chunks")
     finally:
         if conn is not None:
             await conn.close()

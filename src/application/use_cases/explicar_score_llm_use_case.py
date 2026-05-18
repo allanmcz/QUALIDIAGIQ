@@ -12,9 +12,12 @@ from uuid import UUID  # noqa: TC003 — dataclass de comando usa UUID em runtim
 
 from src.application.ports.base_normativa_port import BaseNormativaPort
 from src.application.services.explicacao_score_rag import (
+    RAG_STATUS_NAO_RECUPERADO,
     chunks_para_fontes_rag,
     formatar_rag_contexto_para_prompt,
+    rag_recuperacao_insuficiente,
     recuperar_contexto_explicacao_score,
+    resposta_bloqueada_base_normativa_insuficiente,
 )
 from src.domain.ports.llm_gateway import LlmGateway, LlmGatewayRequest, LlmGatewayResponse
 from src.domain.value_objects.llm_task_type import LlmTaskType
@@ -42,11 +45,13 @@ class ExplicarScoreLlmUseCase:
         base_normativa_port: BaseNormativaPort | None = None,
         rag_similarity_threshold: float = 0.65,
         rag_top_k: int = 4,
+        policy_version: str = "2026-05-15-v1",
     ) -> None:
         self._gateway = gateway
         self._base_normativa_port = base_normativa_port
         self._rag_threshold = float(rag_similarity_threshold)
         self._rag_top_k = max(1, min(int(rag_top_k), 10))
+        self._policy_version = policy_version.strip() or "2026-05-15-v1"
 
     async def execute(self, comando: ComandoExplicarScoreLlm) -> LlmGatewayResponse:
         """Recupera contexto RAG, invoca gateway e anexa fontes na resposta."""
@@ -67,6 +72,16 @@ class ExplicarScoreLlmUseCase:
             if chunks:
                 extras["rag_contexto"] = formatar_rag_contexto_para_prompt(chunks)
             extras["rag_status"] = rag_status
+
+            if rag_recuperacao_insuficiente(rag_status):
+                bloqueio = resposta_bloqueada_base_normativa_insuficiente(
+                    policy_version=self._policy_version,
+                )
+                return replace(
+                    bloqueio,
+                    rag_status=rag_status,
+                    fontes_rag=fontes if rag_status != RAG_STATUS_NAO_RECUPERADO else (),
+                )
 
         req = LlmGatewayRequest(
             tenant_id=str(comando.tenant_id),

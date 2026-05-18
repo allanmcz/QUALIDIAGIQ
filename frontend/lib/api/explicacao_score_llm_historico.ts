@@ -36,6 +36,8 @@ const MOTIVO_GUARDRAIL_PT: Record<string, string> = {
     "O Ollama não concluiu a geração (timeout ou erro). Verifique `make dev` e `OLLAMA_TIMEOUT_SECONDS` (≥ 120 s) e tente «Gerar novamente».",
   parecer_nao_substantivo:
     "A IA não devolveu um parecer válido sobre o score. Tente «Gerar novamente» — a 1.ª inferência pode levar até 2 minutos.",
+  rag_base_insuficiente:
+    "Base normativa insuficiente para explicação auditável. Execute a ingestão RAG ou ajuste o corpus antes de gerar novamente.",
 };
 
 export function textoExibicaoExplicacao(item: ExplicacaoScoreLlmHttp): string {

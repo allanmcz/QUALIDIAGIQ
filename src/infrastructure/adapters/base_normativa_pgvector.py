@@ -12,6 +12,7 @@ import httpx
 import structlog
 
 from src.application.ports.base_normativa_port import BaseNormativaPort, ChunkNormativo
+from src.infrastructure.rag.catalogo_fontes_index import resolver_entrada_por_caminho
 
 logger = structlog.get_logger(__name__)
 
@@ -112,12 +113,19 @@ class PgvectorBaseNormativaAdapter(BaseNormativaPort):
             score = float(row["score"])
             if score < float(threshold):
                 continue
+            fonte_raw = str(row["fonte"])
+            artigo_raw = str(row["artigo"]) if row["artigo"] is not None else None
+            ent = resolver_entrada_por_caminho(artigo_raw or "")
+            catalogo_id = fonte_raw if fonte_raw.startswith("FONTE-") else (ent.id if ent else fonte_raw)
+            classe = ent.classe if ent else None
             out.append(
                 ChunkNormativo(
                     texto=str(row["texto"]),
                     score=score,
-                    fonte=str(row["fonte"]),
-                    artigo=str(row["artigo"]) if row["artigo"] is not None else None,
+                    fonte=catalogo_id,
+                    artigo=artigo_raw,
+                    catalogo_id=catalogo_id,
+                    classe=classe,
                 )
             )
         return out

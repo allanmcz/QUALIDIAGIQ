@@ -44,6 +44,35 @@ if echo "$RESP" | grep -q "indisponibilidade temporária do serviço de IA"; the
   exit 1
 fi
 
+echo "→ Validar contrato RAG na resposta POST"
+printf '%s' "$RESP" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert 'rag_status' in d, 'campo rag_status ausente'
+rs = (d.get('rag_status') or '').strip()
+assert rs, 'rag_status vazio'
+fontes = d.get('fontes_rag')
+assert isinstance(fontes, list), 'fontes_rag deve ser lista'
+if rs == 'com_fonte':
+    assert len(fontes) >= 1, 'com_fonte exige fontes_rag'
+    assert (fontes[0].get('fonte') or '').startswith('FONTE-'), 'fonte deve ser FONTE-xxx'
+print(f'OK rag_status={rs} fontes={len(fontes)}')
+"
+
+echo "→ GET /diagnosticos/${DID} (explicacao_score_llm persistida)"
+GET_DIAG=$(curl -sS "${API}/diagnosticos/${DID}" -H "Authorization: Bearer ${TOKEN}")
+printf '%s' "$GET_DIAG" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+expl = d.get('explicacao_score_llm')
+if expl:
+    assert 'rag_status' in expl, 'GET sem rag_status'
+    assert 'fontes_rag' in expl, 'GET sem fontes_rag'
+    print('OK GET explicacao_score_llm com RAG')
+else:
+    print('AVISO: GET sem explicacao_score_llm (perfil/plano?)')
+"
+
 echo "→ GET /diagnosticos/${DID}/explicacao-score-llm/historico"
 curl -sS "${API}/diagnosticos/${DID}/explicacao-score-llm/historico" \
   -H "Authorization: Bearer ${TOKEN}" \

@@ -7,7 +7,8 @@ from uuid import uuid4
 
 import pytest
 
-from src.application.ports.base_normativa_port import ChunkNormativo
+from src.application.ports.base_normativa_port import BaseNormativaPort, ChunkNormativo
+from src.application.services.explicacao_score_rag import MENSAGEM_BASE_NORMATIVA_INSUFICIENTE
 from src.application.use_cases.explicar_score_llm_use_case import (
     ComandoExplicarScoreLlm,
     ExplicarScoreLlmUseCase,
@@ -132,3 +133,28 @@ class TestExplicarScoreLlmUseCase:
         assert len(req.evidencias) >= 1
         assert out.rag_status == "com_fonte"
         assert len(out.fontes_rag) == 1
+
+    @pytest.mark.asyncio
+    async def test_bloqueia_llm_quando_rag_base_insuficiente(self) -> None:
+        gw = AsyncMock()
+        port = AsyncMock(spec=BaseNormativaPort)
+        port.buscar_contexto = AsyncMock(
+            return_value=[
+                ChunkNormativo(
+                    texto="fraco",
+                    score=0.1,
+                    fonte="FONTE-020",
+                    catalogo_id="FONTE-020",
+                    classe="B",
+                )
+            ]
+        )
+        uc = ExplicarScoreLlmUseCase(gateway=gw, base_normativa_port=port, rag_similarity_threshold=0.65)
+        out = await uc.execute(
+            ComandoExplicarScoreLlm(tenant_id=uuid4(), trace_id="tr-block", score_geral=50.0)
+        )
+        gw.complete.assert_not_awaited()
+        assert out.blocked_by_guardrail is True
+        assert out.guardrail_reason == "rag_base_insuficiente"
+        assert MENSAGEM_BASE_NORMATIVA_INSUFICIENTE in out.text
+        assert out.rag_status == "base_insuficiente"

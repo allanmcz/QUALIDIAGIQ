@@ -19,6 +19,7 @@ export type FonteRagExplicacao = {
   dispositivo?: string | null;
   score?: number;
   trecho: string;
+  classe?: string | null;
 };
 
 /** Espelha `ExplicarScoreLlmHttpResponse` / `ExplicacaoScoreLlmPersistidaSchema` da API. */

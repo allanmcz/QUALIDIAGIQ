@@ -8,11 +8,17 @@ Monta consulta semântica, serializa chunks para prompt/UI e mapeia ``EvidenceRe
 from __future__ import annotations
 
 from src.application.ports.base_normativa_port import BaseNormativaPort, ChunkNormativo
+from src.domain.ports.llm_gateway import LlmGatewayResponse
 from src.domain.value_objects.evidence_ref import EvidenceRef
 
-_RAG_STATUS_COM_FONTE = "com_fonte"
-_RAG_STATUS_INSUFICIENTE = "base_insuficiente"
-_RAG_STATUS_NAO_RECUPERADO = "nao_recuperado"
+RAG_STATUS_COM_FONTE = "com_fonte"
+RAG_STATUS_INSUFICIENTE = "base_insuficiente"
+RAG_STATUS_NAO_RECUPERADO = "nao_recuperado"
+
+MENSAGEM_BASE_NORMATIVA_INSUFICIENTE = (
+    "Base normativa insuficiente para gerar explicação auditável. "
+    "Reexecute após ingestão das fontes oficiais ou revise o corpus RAG."
+)
 
 
 def montar_query_rag_explicacao_score(
@@ -45,8 +51,9 @@ def formatar_rag_contexto_para_prompt(chunks: list[ChunkNormativo]) -> str:
         "TRECHOS RECUPERADOS DA BASE DE CONHECIMENTO (use apenas como apoio; não invente dispositivo):",
     ]
     for i, ch in enumerate(chunks, start=1):
-        ref = ch.artigo or ch.fonte or f"fonte-{i}"
-        linhas.append(f"[{i}] ({ch.fonte} | {ref} | relevância {ch.score:.2f})")
+        ref_id = ch.catalogo_id or ch.fonte or f"fonte-{i}"
+        ref = ch.artigo or ref_id
+        linhas.append(f"[{i}] ({ref_id} | {ref} | relevância {ch.score:.2f})")
         linhas.append(ch.texto.strip()[:1200])
         linhas.append("")
     return "\n".join(linhas).strip()
@@ -56,10 +63,11 @@ def chunks_para_evidencias(chunks: list[ChunkNormativo]) -> tuple[EvidenceRef, .
     """Converte chunks recuperados em evidências rastreáveis (guardrail / auditoria)."""
     out: list[EvidenceRef] = []
     for ch in chunks[:4]:
-        dispositivo = (ch.artigo or ch.fonte or "trecho").strip()
+        ref_id = (ch.catalogo_id or ch.fonte or "trecho").strip()
+        dispositivo = (ch.artigo or ref_id).strip()
         out.append(
             EvidenceRef(
-                fonte=ch.fonte.strip() or "Lexiq",
+                fonte=ref_id or "Lexiq",
                 titulo=dispositivo,
                 dispositivo=dispositivo,
             )
@@ -73,14 +81,16 @@ def chunks_para_fontes_rag(chunks: list[ChunkNormativo]) -> tuple[dict[str, obje
     for ch in chunks[:6]:
         texto = ch.texto.strip()
         trecho = texto[:280] + ("…" if len(texto) > 280 else "")
-        registos.append(
-            {
-                "fonte": ch.fonte,
-                "dispositivo": ch.artigo,
-                "score": round(float(ch.score), 4),
-                "trecho": trecho,
-            }
-        )
+        ref_id = ch.catalogo_id or ch.fonte
+        item: dict[str, object] = {
+            "fonte": ref_id,
+            "dispositivo": ch.artigo,
+            "score": round(float(ch.score), 4),
+            "trecho": trecho,
+        }
+        if ch.classe:
+            item["classe"] = ch.classe
+        registos.append(item)
     return tuple(registos)
 
 
@@ -91,10 +101,33 @@ def determinar_rag_status(
 ) -> str:
     """Classifica se a recuperação atingiu confiança mínima."""
     if not chunks:
-        return _RAG_STATUS_NAO_RECUPERADO
+        return RAG_STATUS_NAO_RECUPERADO
     if float(chunks[0].score) >= float(threshold):
-        return _RAG_STATUS_COM_FONTE
-    return _RAG_STATUS_INSUFICIENTE
+        return RAG_STATUS_COM_FONTE
+    return RAG_STATUS_INSUFICIENTE
+
+
+def rag_recuperacao_insuficiente(rag_status: str) -> bool:
+    """True quando não há base citável suficiente (DP-006 — gate forte)."""
+    return rag_status in (RAG_STATUS_INSUFICIENTE, RAG_STATUS_NAO_RECUPERADO)
+
+
+def resposta_bloqueada_base_normativa_insuficiente(
+    *,
+    policy_version: str = "2026-05-15-v1",
+) -> LlmGatewayResponse:
+    """Resposta controlada sem chamar o LLM."""
+    return LlmGatewayResponse(
+        text=MENSAGEM_BASE_NORMATIVA_INSUFICIENTE,
+        provider="none",
+        model="none",
+        policy_version=policy_version,
+        blocked_by_guardrail=True,
+        guardrail_reason="rag_base_insuficiente",
+        guardrail_status="blocked",
+        rag_status=RAG_STATUS_INSUFICIENTE,
+        fontes_rag=(),
+    )
 
 
 async def recuperar_contexto_explicacao_score(

@@ -962,6 +962,7 @@ class FonteRagExplicacaoSchema(BaseModel):
     dispositivo: str | None = None
     score: float = 0.0
     trecho: str = ""
+    classe: str | None = Field(default=None, description="Classe A/B do catálogo quando disponível.")
 
     model_config = ConfigDict(str_strip_whitespace=True)
 

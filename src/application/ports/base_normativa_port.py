@@ -22,6 +22,9 @@ class ChunkNormativo:
     score: float
     fonte: str = ""
     artigo: str | None = None
+    #: ID do ``catalogo_fontes.yml`` (ex.: ``FONTE-020``) — DP-006.
+    catalogo_id: str | None = None
+    classe: str | None = None
 
 
 class BaseNormativaPort(ABC):
