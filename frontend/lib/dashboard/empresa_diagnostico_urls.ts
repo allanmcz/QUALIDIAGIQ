@@ -4,6 +4,8 @@
 
 import {
   WIZARD_MODO_NOVO_CICLO,
+  WIZARD_MODO_REFAZER_CICLO,
+  WIZARD_QUERY_DIAGNOSTICO_ID,
   WIZARD_QUERY_MODO,
 } from "@/lib/wizard/wizard_modo_empresa";
 
@@ -24,6 +26,23 @@ export function parseCnpjFromRouteSegment(segment: string): string | null {
 export function buildWizardUrlNovaDiagnosticoEmpresa(cnpj14: string, razaoSocial: string): string {
   const q = new URLSearchParams();
   q.set(WIZARD_QUERY_MODO, WIZARD_MODO_NOVO_CICLO);
+  q.set("empresa_cnpj", cnpj14.replace(/\D/g, ""));
+  const r = razaoSocial.trim();
+  if (r.length >= 3) {
+    q.set("empresa_razao_social", r);
+  }
+  return `/wizard?${q.toString()}`;
+}
+
+/** Assistente para refazer o questionário do **mesmo** ciclo (`diagnostico_id`). */
+export function buildWizardUrlRefazerQuestionarioCiclo(
+  cnpj14: string,
+  razaoSocial: string,
+  diagnosticoId: string,
+): string {
+  const q = new URLSearchParams();
+  q.set(WIZARD_QUERY_MODO, WIZARD_MODO_REFAZER_CICLO);
+  q.set(WIZARD_QUERY_DIAGNOSTICO_ID, diagnosticoId);
   q.set("empresa_cnpj", cnpj14.replace(/\D/g, ""));
   const r = razaoSocial.trim();
   if (r.length >= 3) {

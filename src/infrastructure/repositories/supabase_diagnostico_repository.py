@@ -39,6 +39,7 @@ from src.domain.entities.diagnostico import (
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.checklist_m12_likert import normalizar_checklist_m12_estado_bruto
+from src.domain.value_objects.linha_resposta_questionario import LinhaRespostaQuestionario
 from src.domain.value_objects.plano_painel_serializado import PlanoPainelSerializado
 from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoEliminacaoEmpresa
 from src.domain.value_objects.score import ScoreCompleto
@@ -392,6 +393,54 @@ class SupabaseDiagnosticoRepository(DiagnosticoRepository):
             diagnostico_id,
             tenant_id,
         )
+
+    async def proximo_refazer_lote_respostas(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> int:
+        from src.infrastructure.repositories.postgres_diagnostico_resposta_sync import (
+            proximo_refazer_lote_respostas_sync,
+        )
+
+        from src.infrastructure.config.settings import settings
+
+        dsn = settings.database_url_sync
+        if not dsn:
+            return 2
+        return await asyncio.to_thread(
+            proximo_refazer_lote_respostas_sync, dsn, diagnostico_id, tenant_id
+        )
+
+    async def inserir_respostas_questionario_refazer(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        linhas: tuple[LinhaRespostaQuestionario, ...],
+        *,
+        refazer_lote: int,
+    ) -> None:
+        from src.infrastructure.repositories.supabase_diagnostico_resposta_sync import (
+            inserir_respostas_questionario_supabase,
+        )
+
+        await asyncio.to_thread(
+            inserir_respostas_questionario_supabase,
+            self._client,
+            diagnostico_id,
+            tenant_id,
+            linhas,
+            refazer_lote=refazer_lote,
+        )
+
+    async def limpar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> None:
+        self._client.table("diagnosticos").update({"explicacao_score_llm": None}).eq(
+            "id", str(diagnostico_id)
+        ).eq("tenant_id", str(tenant_id)).execute()
 
     async def buscar_plano_painel_serializado(
         self, diagnostico_id: UUID, tenant_id: UUID

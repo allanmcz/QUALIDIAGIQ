@@ -1,4 +1,5 @@
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
+import type { PlanoAcaoKanbanCardApi } from "@/types/plano_acao_kanban";
 
 export type AcaoChecklistQuadro = {
   descricao: string;
@@ -69,7 +70,51 @@ export function chaveQuadroParaAcao(acao: AcaoChecklistQuadro, i: number, j: num
 /** Chave persistida no PATCH do quadro — UUID do plano ou legado ``f{i}_a{j}``. */
 export function ehChaveQuadroUuid(chave: string): boolean {
   const v = chave.trim();
-  return v.length >= 32 && /^[0-9a-f-]+$/i.test(v);
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) {
+    return true;
+  }
+  return v.length === 32 && /^[0-9a-f]+$/i.test(v);
+}
+
+const CHAVE_LEGADO_RE = /^f(\d+)_a(\d+)$/i;
+
+/** Resolve ``plano_acao_id`` para a grelha — checklist, chave legada ou cards do Kanban. */
+export function resolverPlanoAcaoIdParaLinha(
+  acao: AcaoChecklistQuadro,
+  qk: string,
+  cardsPorPlanoId: Record<string, PlanoAcaoKanbanCardApi>,
+): string | null {
+  const pid = (acao.plano_acao_id ?? "").trim();
+  if (ehChaveQuadroUuid(pid)) return pid;
+  if (ehChaveQuadroUuid(qk.trim())) return qk.trim();
+
+  const cards = Object.values(cardsPorPlanoId);
+  if (!cards.length) return null;
+
+  const legadoAcao = (acao.chave_quadro_legado ?? "").trim();
+  const legadoQk = qk.trim();
+
+  for (const alvo of [legadoAcao, legadoQk]) {
+    if (!alvo) continue;
+    const porLegado = cards.find((c) => c.chave_quadro_legado === alvo);
+    if (porLegado) return porLegado.plano_acao_id;
+  }
+
+  for (const alvo of [legadoAcao, legadoQk]) {
+    const m = CHAVE_LEGADO_RE.exec(alvo);
+    if (!m) continue;
+    const fi = Number(m[1]);
+    const aj = Number(m[2]);
+    const porIndice = cards.find((c) => c.frente_indice === fi && c.acao_indice === aj);
+    if (porIndice) return porIndice.plano_acao_id;
+  }
+
+  if (typeof acao.ordem_exibicao === "number") {
+    const porOrdem = cards.find((c) => c.ordem_kanban === acao.ordem_exibicao);
+    if (porOrdem) return porOrdem.plano_acao_id;
+  }
+
+  return null;
 }
 
 /**

@@ -227,7 +227,6 @@ class DiagnosticoRepository(ABC):
         ...
 
     @abstractmethod
-    @abstractmethod
     async def listar_respostas_questionario(
         self,
         diagnostico_id: UUID,
@@ -239,6 +238,36 @@ class DiagnosticoRepository(ABC):
         Returns:
             Lista vazia se diagnóstico legado sem snapshot de respostas.
         """
+        ...
+
+    @abstractmethod
+    async def proximo_refazer_lote_respostas(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> int:
+        """Próximo lote de snapshot de respostas (refazer questionário no mesmo ciclo)."""
+        ...
+
+    @abstractmethod
+    async def inserir_respostas_questionario_refazer(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        linhas: tuple[Any, ...],
+        *,
+        refazer_lote: int,
+    ) -> None:
+        """Append de respostas após refazer questionário (mesmo ``diagnostico_id``)."""
+        ...
+
+    @abstractmethod
+    async def limpar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> None:
+        """Remove snapshot LLM do score para forçar nova geração após refazer."""
         ...
 
     @abstractmethod

@@ -37,6 +37,7 @@ from src.domain.entities.diagnostico import (
     EmpresaInfo,
     PainelEstadoCicloDiagnostico,
     Respondente,
+    StatusDiagnostico,
 )
 from src.domain.repositories.diagnostico_repository import DiagnosticoRepository
 from src.domain.value_objects.score import ScoreCompleto
@@ -248,6 +249,14 @@ async def _montar_diagnostico_response(
     from dataclasses import asdict
 
     blob = await repo.buscar_plano_painel_serializado(diagnostico.id, diagnostico.tenant_id)
+    if blob is None:
+        blob = await repo.materializar_plano_painel_idempotente_backfill(
+            diagnostico.id, diagnostico.tenant_id
+        )
+        if blob is None and diagnostico.status == StatusDiagnostico.FINALIZADO:
+            blob = await repo.buscar_plano_painel_serializado(
+                diagnostico.id, diagnostico.tenant_id
+            )
     if blob is not None:
         checklist_data = sanitizar_descricoes_checklist_serializado(list(blob.checklist))
         matriz_data = list(blob.matriz_impacto)
@@ -413,6 +422,23 @@ def _conclusao_publica_row_para_schema(
     )
 
 
+def entradas_resposta_de_iniciar_diagnostico(
+    payload: IniciarDiagnosticoRequest,
+) -> list[EntradaRespostaDiagnostico]:
+    """Converte respostas HTTP em entradas do motor de score."""
+    banco = get_banco_perguntas_cached()
+    mapa_perguntas = {p.id: p for p in banco}
+    entradas: list[EntradaRespostaDiagnostico] = []
+    for resp_payload in payload.respostas:
+        pergunta = mapa_perguntas.get(resp_payload.pergunta_id)
+        if not pergunta:
+            raise HTTPException(
+                status_code=400, detail=f"Pergunta não encontrada: {resp_payload.pergunta_id}"
+            )
+        entradas.append(EntradaRespostaDiagnostico(pergunta=pergunta, valor_bruto=resp_payload.valor))
+    return entradas
+
+
 async def _executar_criar_diagnostico_core(
     *,
     tenant_id: UUID,
@@ -443,19 +469,7 @@ async def _executar_criar_diagnostico_core(
         ip_origem=respondente_ip_origem,
     )
 
-    banco = get_banco_perguntas_cached()
-    mapa_perguntas = {p.id: p for p in banco}
-
-    entradas_resposta: list[EntradaRespostaDiagnostico] = []
-    for resp_payload in payload.respostas:
-        pergunta = mapa_perguntas.get(resp_payload.pergunta_id)
-        if not pergunta:
-            raise HTTPException(
-                status_code=400, detail=f"Pergunta não encontrada: {resp_payload.pergunta_id}"
-            )
-        entradas_resposta.append(
-            EntradaRespostaDiagnostico(pergunta=pergunta, valor_bruto=resp_payload.valor)
-        )
+    entradas_resposta = entradas_resposta_de_iniciar_diagnostico(payload)
 
     plano_efetivo = _plano_efetivo_para_criacao(payload, perfil_limite)
 

@@ -15,6 +15,7 @@ import { WizardOfflineBanner } from "@/components/wizard/WizardOfflineBanner";
 import { WizardCacheResumeOverlay } from "@/components/wizard/WizardCacheResumeOverlay";
 import { WizardNavigationButtons } from "@/components/wizard/WizardNavigationButtons";
 import { WizardEmpresaNovoCicloBanner } from "@/components/wizard/WizardEmpresaNovoCicloBanner";
+import { WizardRefazerQuestionarioBanner } from "@/components/wizard/WizardRefazerQuestionarioBanner";
 import { WizardStepIdentificacao } from "@/components/wizard/steps/WizardStepIdentificacao";
 import { WizardStepPerfilEmpresa } from "@/components/wizard/steps/WizardStepPerfilEmpresa";
 import { WizardStepQuestionario } from "@/components/wizard/steps/WizardStepQuestionario";
@@ -91,13 +92,17 @@ export function WizardForm() {
             >
               <CardTitle className={cn("text-primary", w.step === 3 ? "text-xl md:text-2xl" : "text-2xl")}>
                 {w.step === 1 &&
-                  (w.exibirContextoNovoCiclo
+                  (w.exibirContextoRefazerCiclo
                     ? w.razaoSocialWizard
-                      ? `Novo ciclo — ${w.razaoSocialWizard}`
-                      : "Novo ciclo de diagnóstico"
-                    : w.hasToken
-                      ? "Empresa e respondente"
-                      : "Identificação inicial")}
+                      ? `Refazer questionário — ${w.razaoSocialWizard}`
+                      : "Refazer questionário"
+                    : w.exibirContextoNovoCiclo
+                      ? w.razaoSocialWizard
+                        ? `Novo ciclo — ${w.razaoSocialWizard}`
+                        : "Novo ciclo de diagnóstico"
+                      : w.hasToken
+                        ? "Empresa e respondente"
+                        : "Identificação inicial")}
                 {w.step === 2 &&
                   (w.exibirContextoNovoCiclo ? "Perfil da empresa (novo ciclo)" : "Perfil da empresa")}
                 {w.step === 3 && "Questionário adaptativo (Reforma + ABNT NBR 17301)"}
@@ -130,13 +135,16 @@ export function WizardForm() {
                 className={cn(w.step === 3 ? "flex flex-col flex-1 min-h-full gap-0" : "space-y-6")}
                 onSubmit={(e) => e.preventDefault()}
               >
+                {w.step === 1 && w.exibirContextoRefazerCiclo ? (
+                  <WizardRefazerQuestionarioBanner razaoSocial={w.razaoSocialWizard} />
+                ) : null}
                 {w.step === 1 && (
                   <WizardStepIdentificacao
                     register={w.register}
                     control={w.control}
                     errors={w.errors}
                     hasToken={w.hasToken}
-                    exibirContextoNovoCiclo={w.exibirContextoNovoCiclo}
+                    exibirContextoNovoCiclo={w.exibirContextoNovoCiclo || w.exibirContextoRefazerCiclo}
                     modoNovoCicloExplicito={w.modoNovoCicloExplicito}
                     razaoSocialWizard={w.razaoSocialWizard}
                     ciclosEmpresaPainel={w.ciclosEmpresaPainel}

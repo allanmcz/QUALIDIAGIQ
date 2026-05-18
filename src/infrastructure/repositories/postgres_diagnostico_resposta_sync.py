@@ -20,21 +20,24 @@ def inserir_respostas_questionario_em_cursor(
     diagnostico_id: UUID,
     tenant_id: UUID,
     linhas: tuple[LinhaRespostaQuestionario, ...],
+    *,
+    refazer_lote: int = 1,
 ) -> None:
     """INSERT em lote na mesma transação do diagnóstico (append-only)."""
     if not linhas:
         return
     did, tid = str(diagnostico_id), str(tenant_id)
+    lote = int(refazer_lote)
     for ln in linhas:
         cur.execute(
             """
             INSERT INTO diagnostico_resposta_questionario (
-                diagnostico_id, tenant_id, ordem_exibicao,
+                diagnostico_id, tenant_id, ordem_exibicao, refazer_lote,
                 pergunta_id, pergunta_codigo, dimensao, tipo_pergunta,
                 texto_pergunta, peso, base_legal, pilar_abnt,
                 valor_bruto, valor_exibicao, pontuacao_item, excluida_calculo
             ) VALUES (
-                %s, %s, %s,
+                %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s, %s,
                 %s, %s, %s, %s
@@ -44,6 +47,7 @@ def inserir_respostas_questionario_em_cursor(
                 did,
                 tid,
                 ln.ordem_exibicao,
+                lote,
                 str(ln.pergunta_id),
                 ln.pergunta_codigo,
                 ln.dimensao,
@@ -69,12 +73,69 @@ def _valor_bruto_json(valor: Any) -> Any:
     return json.loads(json.dumps(valor, ensure_ascii=False))
 
 
+def proximo_refazer_lote_respostas_sync(
+    dsn: str,
+    diagnostico_id: UUID,
+    tenant_id: UUID,
+) -> int:
+    """Próximo lote (1 = finalização original; 2+ = refazer questionário)."""
+    import psycopg2
+
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COALESCE(MAX(refazer_lote), 0) + 1
+                FROM diagnostico_resposta_questionario
+                WHERE diagnostico_id = %s AND tenant_id = %s
+                """,
+                (str(diagnostico_id), str(tenant_id)),
+            )
+            row = cur.fetchone()
+            return int(row[0]) if row else 1
+    finally:
+        conn.close()
+
+
+def inserir_respostas_questionario_refazer_sync(
+    dsn: str,
+    diagnostico_id: UUID,
+    tenant_id: UUID,
+    linhas: tuple[LinhaRespostaQuestionario, ...],
+    *,
+    refazer_lote: int,
+) -> None:
+    """INSERT de novo lote de respostas (refazer no mesmo ciclo)."""
+    import psycopg2
+
+    if not linhas:
+        return
+    conn = psycopg2.connect(dsn)
+    try:
+        conn.autocommit = False
+        with conn.cursor() as cur:
+            inserir_respostas_questionario_em_cursor(
+                cur,
+                diagnostico_id,
+                tenant_id,
+                linhas,
+                refazer_lote=refazer_lote,
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def listar_respostas_questionario_sync(
     dsn: str,
     diagnostico_id: UUID,
     tenant_id: UUID,
 ) -> list[dict[str, Any]]:
-    """Lista respostas ordenadas por ``ordem_exibicao``."""
+    """Lista a versão vigente de cada pergunta (maior ``refazer_lote``)."""
     import psycopg2
 
     conn = psycopg2.connect(dsn)
@@ -82,7 +143,7 @@ def listar_respostas_questionario_sync(
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT
+                SELECT DISTINCT ON (pergunta_codigo)
                     ordem_exibicao,
                     pergunta_id,
                     pergunta_codigo,
@@ -96,15 +157,20 @@ def listar_respostas_questionario_sync(
                     valor_exibicao,
                     pontuacao_item,
                     excluida_calculo,
-                    criado_em
+                    criado_em,
+                    refazer_lote
                 FROM diagnostico_resposta_questionario
                 WHERE diagnostico_id = %s AND tenant_id = %s
-                ORDER BY ordem_exibicao ASC
+                ORDER BY pergunta_codigo, refazer_lote DESC, ordem_exibicao ASC
                 """,
                 (str(diagnostico_id), str(tenant_id)),
             )
             rows = cur.fetchall()
-        return [_row_http(cast("dict[str, Any]", dict(r))) for r in rows]
+        ordenado = sorted(
+            [_row_http(cast("dict[str, Any]", dict(r))) for r in rows],
+            key=lambda x: int(x["ordem_exibicao"]),
+        )
+        return ordenado
     finally:
         conn.close()
 

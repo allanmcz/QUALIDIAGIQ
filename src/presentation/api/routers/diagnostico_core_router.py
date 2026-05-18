@@ -33,6 +33,10 @@ from src.application.use_cases.listar_retificacoes_diagnostico import (
     ListarRetificacoesDiagnostico,
 )
 from src.application.use_cases.realizar_diagnostico import RealizarDiagnostico
+from src.application.use_cases.refazer_questionario_diagnostico import (
+    ComandoRefazerQuestionarioDiagnostico,
+    RefazerQuestionarioDiagnostico,
+)
 from src.application.use_cases.registrar_retificacao_diagnostico import (
     ComandoRegistrarRetificacaoDiagnostico,
     RegistrarRetificacaoDiagnostico,
@@ -59,6 +63,7 @@ from src.presentation.api.dependencies import (
     get_listar_retificacoes_diagnostico_use_case,
     get_pdf_generator,
     get_realizar_diagnostico_use_case,
+    get_refazer_questionario_diagnostico_use_case,
     get_registrar_retificacao_diagnostico_use_case,
 )
 from src.presentation.api.openapi_examples import OPENAPI_EXAMPLES_POST_DIAGNOSTICO
@@ -75,6 +80,7 @@ from src.presentation.api.schemas import (
     EliminarEmpresaDiagnosticoHttpResponse,
     EmpresaArquivoStatusHttpResponse,
     IniciarDiagnosticoPainelRequest,
+    RefazerQuestionarioDiagnosticoResponse,
     RegistrarRetificacaoDiagnosticoRequest,
 )
 
@@ -476,6 +482,67 @@ async def registrar_retificacao_diagnostico(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     return _retificacao_para_http(r)
+
+
+@router.post(
+    "/{diagnostico_id}/refazer-questionario",
+    response_model=RefazerQuestionarioDiagnosticoResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Refazer questionário no mesmo ciclo",
+    description=(
+        "Recalcula o score e grava nova evidência em cadeia (retificação append-only) "
+        "sem criar novo `diagnostico_id`. Exige plano **avançado** e ciclo **finalizado**. "
+        "**Header:** `Idempotency-Key`."
+    ),
+)
+async def refazer_questionario_diagnostico(
+    diagnostico_id: UUID,
+    payload: Annotated[
+        IniciarDiagnosticoPainelRequest,
+        Body(openapi_examples=dict(OPENAPI_EXAMPLES_POST_DIAGNOSTICO)),
+    ],
+    current: Annotated[tuple[UUID, UUID, str], Depends(get_current_user_tenant)],
+    use_case: Annotated[
+        RefazerQuestionarioDiagnostico,
+        Depends(get_refazer_questionario_diagnostico_use_case),
+    ],
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> RefazerQuestionarioDiagnosticoResponse:
+    """Refaz o questionário do ciclo indicado (painel consultor)."""
+    _ = idempotency_key
+    user_id, tenant_id, _ = current
+    diagnostico = await repo.buscar_por_id(diagnostico_id, tenant_id)
+    if not diagnostico:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Diagnóstico não encontrado")
+    cnpj_payload = (payload.empresa.cnpj or "").replace(" ", "")
+    cnpj_diag = (diagnostico.empresa.cnpj or "").replace(" ", "")
+    if cnpj_payload and cnpj_diag and cnpj_payload != cnpj_diag:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CNPJ do corpo não coincide com o ciclo selecionado.",
+        )
+    try:
+        entradas = diagnostico_helpers.entradas_resposta_de_iniciar_diagnostico(payload)
+        resultado = await use_case.execute(
+            ComandoRefazerQuestionarioDiagnostico(
+                tenant_id=tenant_id,
+                actor_user_id=user_id,
+                diagnostico_id=diagnostico_id,
+                entradas_resposta=entradas,
+                aceite_termos_privacidade=payload.aceite_termos_privacidade,
+            )
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return RefazerQuestionarioDiagnosticoResponse(
+        diagnostico_id=resultado.diagnostico_id,
+        retificacao_id=resultado.retificacao_id,
+        score_geral=resultado.score_geral,
+        refazer_lote=resultado.refazer_lote,
+    )
 
 
 @router.get(

@@ -15,6 +15,7 @@ import {
   formatarMetaPrazoPtBr,
   limparSufixoLacunaScoreAcao,
   linhasQuadroGrid,
+  resolverPlanoAcaoIdParaLinha,
   type QuadroEdicaoAcao,
 } from "@/lib/painel/quadro_implantacao_utils";
 import type { DiagnosticoDetalheApi } from "@/types/diagnostico_detalhe";
@@ -34,13 +35,6 @@ type Props = {
   /** Classes Tailwind opcionais no cartão raiz (ex.: margem na vista empresa). */
   className?: string;
 };
-
-function planoAcaoIdDaLinha(acao: { plano_acao_id?: string }, qk: string): string | null {
-  const pid = (acao.plano_acao_id ?? "").trim();
-  if (pid.length >= 32 && /^[0-9a-f-]+$/i.test(pid)) return pid;
-  if (qk.length >= 32 && /^[0-9a-f-]+$/i.test(qk)) return qk;
-  return null;
-}
 
 /** Quadro de implantação em grelha — âmbito empresa (quadro único por CNPJ no tenant). */
 export function QuadroImplantacaoGrid({
@@ -127,7 +121,7 @@ export function QuadroImplantacaoGrid({
               const titulo =
                 (qv.descricao_personalizada || "").trim() ||
                 limparSufixoLacunaScoreAcao(acao.descricao);
-              const pid = planoAcaoIdDaLinha(acao, qk);
+              const pid = resolverPlanoAcaoIdParaLinha(acao, qk, cardsPorPlanoId);
               const card = pid ? cardsPorPlanoId[pid] : undefined;
               const fichaHref =
                 pid && mostrarOperacoes

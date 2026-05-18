@@ -1,0 +1,141 @@
+{
+  "executado_em": "2026-05-18T01:07:56.212403+00:00",
+  "ollama_url": "http://127.0.0.1:11434/api/generate",
+  "modelos": [
+    "llama3.2:latest",
+    "qdi-assistant:latest",
+    "qwen2.5-coder:14b"
+  ],
+  "runs": [
+    {
+      "modelo": "llama3.2:latest",
+      "pergunta_id": "P1",
+      "pergunta": "Explique em 6 frases o que e o QualiDiagIQ, qual o escopo do MVP e o que fica fora do MVP.",
+      "resposta": "O QualiDiagIQ é um programa de avaliação e diagnóstico de qualidade desenvolvido pela Organização Mundial da Saúde (OMS) para ajudar os países a melhorar a qualidade dos serviços de saúde. O escopo do MVP (Projeto de Maturidade) do QualiDiagIQ é avaliar e melhorar a capacidade dos países em realizar diagnósticos precisos e eficientes, com foco na melhoria da qualidade dos resultados clínicos.\n\nO que fica fora do MVP do QualiDiagIQ inclui:\n\n- Avaliação de outros aspectos da qualidade dos serviços de saúde, como a gestão dos recursos humanos, a gestão financeira e a gestão da informação;\n- Desenvolvimento de programas de treinamento e capacitação para os profissionais de saúde;\n- Implementação de sistemas de informação para melhorar a gestão dos dados clínicos;\n- Avaliação da eficácia dos programas de prevenção e controle de doenças.",
+      "elapsed_ms": 2183,
+      "total_duration_ns": 2168445541,
+      "eval_count": 218
+    },
+    {
+      "modelo": "llama3.2:latest",
+      "pergunta_id": "P2",
+      "pergunta": "No QDI, onde devo implementar uma regra pura de calculo de score tributario e onde devo implementar o caso de uso que salva o resultado?",
+      "resposta": "Para implementar uma regra pura de cálculo do score tributário sem utilizar a biblioteca QDI (Quantidade Diferida de Imposto), você pode seguir os seguintes passos:\n\n1. **Defina as regras**: Estabeleça as regras para calcular o score tributário, considerando fatores como:\n * Valor da propriedade\n * Valor do imóvel\n * Valor das obras realizadas\n * Outras despesas relacionadas ao imóvel (como impostos, taxas, etc.)\n2. **Crie uma classe ou estrutura**: Crie uma classe ou estrutura para representar o score tributário, incluindo os valores e as regras de cálculo.\n3. **Implemente a lógica de cálculo**: Implemente a lógica de cálculo do score tributário dentro da classe ou estrutura criada.\n\nPara implementar o caso de uso que salva o resultado, você pode seguir os seguintes passos:\n\n1. **Crie uma classe ou estrutura para armazenamento**: Crie uma classe ou estrutura para armazenar os resultados dos cálculos do score tributário.\n2. **Implemente a lógica de salvaguarda**: Implemente a lógica de salvaguarda dos resultados dentro da classe ou estrutura criada.\n\nAqui está um exemplo de como você pode implementar essas regras em Python:\n\n```python\nclass ScoreTributario:\n    def __init__(self, valor_propriedade, valor_imovel, valor_obras_realizadas):\n        self.valor_propriedade = valor_propriedade\n        self.valor_imovel = valor_imovel\n        self.valor_obras_realizadas = valor_obras_realizadas\n\n    def calcular_score(self):\n        # Regra de cálculo do",
+      "elapsed_ms": 3755,
+      "total_duration_ns": 3753193042,
+      "eval_count": 400
+    },
+    {
+      "modelo": "llama3.2:latest",
+      "pergunta_id": "P3",
+      "pergunta": "Responda com cautela: uma resposta sobre CBS/IBS pode ser aceita sem citacao de fonte normativa? Explique a politica correta.",
+      "resposta": "Olá! É importante abordar essa questão com cuidado, pois a resposta sobre o CBS (Constituição Brasileira da Saúde) e IBS (Irritabilidade do Intestino Bazo) pode ser complexa e depende de vários fatores.\n\nEm geral, é recomendável citar fontes normativas quando se trata de questões relacionadas a saúde, medicina ou políticas públicas. Isso porque as fontes normativas são consideradas autorizadas e confiáveis, e fornecem informações precisas e atualizadas sobre os assuntos em questão.\n\nNo caso do CBS, é importante notar que ele é um documento jurídico que estabelece as diretrizes para a organização e funcionamento dos serviços de saúde no Brasil. As fontes normativas que regulamentam o CBS incluem leis, regulamentos e decreto-leis aprovados pelo Congresso Nacional e sancionados pelo Presidente da República.\n\nJá o IBS é uma condição médica crônica que afeta o sistema digestivo. Embora não seja um documento jurídico, é importante citar fontes confiáveis e atualizadas sobre a condição, como artigos científicos, guias clínicos e estudos de pesquisa.\n\nA política correta é citar fontes normativas quando se trata de questões relacionadas a saúde e políticas públicas, e utilizar fontes confiáveis e atualizadas para informar sobre condições médicas. Isso ajuda a garantir a precisão e a credibilidade das informações fornecidas.\n\nAqui estão algumas dicas gerais para citar fontes normativas e confiáveis:\n\n* Leis e regulamentos aprovados pelo Congresso Nacional e sancionados pelo Presidente da República.\n* Decretos-leis e port",
+      "elapsed_ms": 3819,
+      "total_duration_ns": 3817034000,
+      "eval_count": 400
+    },
+    {
+      "modelo": "llama3.2:latest",
+      "pergunta_id": "P4",
+      "pergunta": "Se a base local nao tiver fonte primaria suficiente sobre uma regra tributaria, como o agente deve responder?",
+      "resposta": "Se a base local não tiver fonte primária suficiente sobre uma regra tributária, o agente deve seguir os seguintes passos:\n\n1. **Verificar se há outras fontes de informação**: Antes de tomar uma decisão, é importante verificar se há outras fontes de informação que possam fornecer mais informações sobre a regra tributária em questão.\n2. **Consultar a legislação**: O agente deve consultar a legislação tributária para ver se há alguma disposição que possa ajudar a esclarecer a interpretação da regra em questão.\n3. **Consultar a jurisprudência**: O agente também pode consultar a jurisprudência tributária para ver se há algum precedente judicial que possa ajudar a esclarecer a interpretação da regra em questão.\n4. **Fazer uma análise de caso**: Se não houver fontes primárias suficientes, o agente pode fazer uma análise de caso para tentar entender melhor a regra tributária e como ela se aplica ao caso específico.\n5. **Pedir orientação a um especialista**: Se o agente não tiver certeza sobre como interpretar a regra tributária, ele pode pedir orientação a um especialista em tributação ou a um advogado especializado na área.\n\nÉ importante lembrar que, se a base local não tiver fonte primária suficiente sobre uma regra tributária, o agente deve ser cauteloso e não tomar decisões precipitadas. É sempre melhor errar pelo lado da cautela e buscar mais informações antes de tomar uma decisão.\n\nAlém disso, é importante lembrar que a interpretação das regras tributárias pode variar dependendo do contexto e da situação específ",
+      "elapsed_ms": 3981,
+      "total_duration_ns": 3978734583,
+      "eval_count": 400
+    },
+    {
+      "modelo": "llama3.2:latest",
+      "pergunta_id": "P5",
+      "pergunta": "O QDI ja possui gateway LLM e adapters. Voce deve criar um novo adapter do zero ou auditar e evoluir o existente? Justifique.",
+      "resposta": "Olá! Vamos discutir sobre a criação de um novo adapter para o QDI (Questão de Desenvolvimento Individual) e se ele deve ser criado a partir do zero ou evoluído a partir do existente.\n\n**O que é QDI?**\n\nQDI é uma plataforma de desenvolvimento individual que visa ajudar os jovens a desenvolver habilidades técnicas e pessoais para alcançar seus objetivos. Ela oferece recursos, ferramentas e um ambiente de aprendizado interativo.\n\n**Gateway LLM e Adapters**\n\nO Gateway LLM (Large Language Model) é uma camada de processamento de linguagem natural que permite ao QDI lidar com grandes volumes de texto e entregar respostas personalizadas. Os adapters são módulos que se conectam ao gateway para fornecer funcionalidades específicas, como processamento de linguagem natural, análise de sentimentos ou extração de informações.\n\n**Criar um novo adapter do zero**\n\nCriar um novo adapter a partir do zero pode ser uma boa opção se:\n\n1. **Existir uma necessidade específica**: Se houver uma necessidade específica que não é atendida pelo existente, criar um novo adapter pode ser a melhor solução.\n2. **Tecnologia avançada**: Se a tecnologia para o novo adapter for avançada e inovadora, pode ser mais fácil de implementar do zero.\n3. **Flexibilidade**: Se o novo adapter precisar ter uma estrutura ou funcionalidade muito diferente da existente, criar a partir do zero pode ser mais flexível.\n\n**Evoluir um existente**\n\nEvoluir um existente pode ser uma boa opção se:\n\n1. **O existente já é bem estabelecido**: Se o existente já for bem estabelecido e tem uma base de usuários, evoluir a",
+      "elapsed_ms": 3871,
+      "total_duration_ns": 3869834916,
+      "eval_count": 400
+    },
+    {
+      "modelo": "qdi-assistant:latest",
+      "pergunta_id": "P1",
+      "pergunta": "Explique em 6 frases o que e o QualiDiagIQ, qual o escopo do MVP e o que fica fora do MVP.",
+      "erro": "HTTP 404",
+      "elapsed_ms": 1,
+      "resposta": ""
+    },
+    {
+      "modelo": "qdi-assistant:latest",
+      "pergunta_id": "P2",
+      "pergunta": "No QDI, onde devo implementar uma regra pura de calculo de score tributario e onde devo implementar o caso de uso que salva o resultado?",
+      "erro": "HTTP 404",
+      "elapsed_ms": 0,
+      "resposta": ""
+    },
+    {
+      "modelo": "qdi-assistant:latest",
+      "pergunta_id": "P3",
+      "pergunta": "Responda com cautela: uma resposta sobre CBS/IBS pode ser aceita sem citacao de fonte normativa? Explique a politica correta.",
+      "erro": "HTTP 404",
+      "elapsed_ms": 0,
+      "resposta": ""
+    },
+    {
+      "modelo": "qdi-assistant:latest",
+      "pergunta_id": "P4",
+      "pergunta": "Se a base local nao tiver fonte primaria suficiente sobre uma regra tributaria, como o agente deve responder?",
+      "erro": "HTTP 404",
+      "elapsed_ms": 0,
+      "resposta": ""
+    },
+    {
+      "modelo": "qdi-assistant:latest",
+      "pergunta_id": "P5",
+      "pergunta": "O QDI ja possui gateway LLM e adapters. Voce deve criar um novo adapter do zero ou auditar e evoluir o existente? Justifique.",
+      "erro": "HTTP 404",
+      "elapsed_ms": 0,
+      "resposta": ""
+    },
+    {
+      "modelo": "qwen2.5-coder:14b",
+      "pergunta_id": "P1",
+      "pergunta": "Explique em 6 frases o que e o QualiDiagIQ, qual o escopo do MVP e o que fica fora do MVP.",
+      "resposta": "O QualiDiagIQ é uma plataforma de inteligência artificial desenvolvida pela Alibaba Cloud para auxiliar no diagnóstico médico, utilizando algoritmos avançados para analisar dados médicos e fornecer insights valiosos para os profissionais da saúde.\n\nO escopo do MVP (Produto Mínimo Viável) inclui a implementação de um sistema básico que possa processar informações médicas, realizar análises iniciais e oferecer recomendações baseadas em esses dados. Este MVP também incluirá uma interface simples para os usuários interagirem com o sistema.\n\nO MVP não incluirá funcionalidades avançadas de personalização do diagnóstico, como considerar fatores genéticos ou ambientais específicos do paciente. Além disso, a integração completa com sistemas de saúde existentes e a capacidade de lidar com grandes volumes de dados em tempo real ainda estão fora do MVP.\n\nOutras funcionalidades que não serão incluídas no MVP são as análises de imagem médica avançadas, como o diagnóstico por meio de radiografias ou tomografias computadorizadas. Também não será implementada a capacidade de realizar consultas em tempo real com profissionais médicos através da plataforma.\n\nPor fim, o MVP não incluirá um sistema robusto de segurança e privacidade dos dados para garantir que as informações médicas dos pacientes sejam tratadas com a maior confidencialidade. Esses aspectos serão desenvolvidos em etapas posteriores para expandir a funcionalidade e a confiabilidade da plataforma.",
+      "elapsed_ms": 30989,
+      "total_duration_ns": 30978565334,
+      "eval_count": 346
+    },
+    {
+      "modelo": "qwen2.5-coder:14b",
+      "pergunta_id": "P2",
+      "pergunta": "No QDI, onde devo implementar uma regra pura de calculo de score tributario e onde devo implementar o caso de uso que salva o resultado?",
+      "resposta": "Para implementar uma regra pura de cálculo de score tributário e o caso de uso que salva o resultado, você pode seguir as seguintes diretrizes:\n\n### 1. **Regra Pura de Cálculo de Score Tributário**\n\nA regra pura de cálculo de score tributário deve ser implementada em um componente ou classe separado que seja responsável apenas por essa lógica específica. Isso promove a manutenção e a testabilidade do código.\n\n**Exemplo em Java:**\n```java\npublic class ScoreTributarioCalculator {\n    public int calcularScore(double renda, double despesas) {\n        // Lógica de cálculo de score tributário\n        return (int) ((renda - despesas) * 100);\n    }\n}\n```\n\n**Exemplo em Python:**\n```python\nclass ScoreTributarioCalculator:\n    def calcular_score(self, renda, despesas):\n        # Lógica de cálculo de score tributário\n        return int((renda - despesas) * 100)\n```\n\n### 2. **Caso de Uso que Salva o Resultado**\n\nO caso de uso que salva o resultado do score tributário deve ser implementado em um serviço ou controlador que coordena a interação entre a regra de cálculo e os outros componentes necessários para salvar o resultado, como um banco de dados.\n\n**Exemplo em Java:**\n```java\npublic class ScoreTributarioService {\n    private final ScoreTributarioCalculator calculator;\n    private final ScoreRepository scoreRepository;\n\n    public ScoreTributarioService(ScoreTributarioCalculator calculator, ScoreRepository scoreRepository) {\n        this.calculator = calculator;\n        this.scoreRepository = scoreRepository;\n    }\n\n    public void",
+      "elapsed_ms": 14032,
+      "total_duration_ns": 14029020625,
+      "eval_count": 400
+    },
+    {
+      "modelo": "qwen2.5-coder:14b",
+      "pergunta_id": "P3",
+      "pergunta": "Responda com cautela: uma resposta sobre CBS/IBS pode ser aceita sem citacao de fonte normativa? Explique a politica correta.",
+      "resposta": "Não, uma resposta sobre CBS (Condições Básicas da Saúde) ou IBS (Indicadores Básicos de Satisfação) não deve ser aceita sem citação de fontes normativas. A política correta exige referências a fontes confiáveis e autorizadas para garantir a precisão e a credibilidade das informações.\n\nCBS e IBS são conceitos importantes na área de saúde pública e bem-estar social, e sua definição e aplicação podem variar dependendo do contexto geográfico e cultural. Portanto, é crucial referenciar as fontes oficiais ou normativas que estabelecem esses indicadores para evitar mal-entendidos ou distorções.\n\nAlém disso, a citação de fontes também ajuda a dar crédito aos autores originais e contribui para a integridade acadêmica e científica. Isso é especialmente importante em discussões sobre tópicos sensíveis como saúde pública, onde as informações precisas podem ter implicações significativas.\n\nEm resumo, sempre deve-se citar fontes normativas quando se fala sobre CBS ou IBS para garantir a exatidão e a confiabilidade das informações.",
+      "elapsed_ms": 9930,
+      "total_duration_ns": 9928487666,
+      "eval_count": 264
+    },
+    {
+      "modelo": "qwen2.5-coder:14b",
+      "pergunta_id": "P4",
+      "pergunta": "Se a base local nao tiver fonte primaria suficiente sobre uma regra tributaria, como o agente deve responder?",
+      "resposta": "Em situações onde a base local não possui informações suficientes para determinar uma regra tributária específica, o agente pode seguir as seguintes etapas:\n\n1. **Consulte fontes externas**: O agente pode procurar por recursos online, como sites oficiais de autoridades fiscais, documentos publicados pela Receita Federal ou outros órgãos governamentais relevantes.\n\n2. **Contate a autoridade fiscal**: Se as informações ainda não estiverem disponíveis localmente, o agente deve entrar em contato com a autoridade fiscal responsável para obter esclarecimentos sobre a regra tributária específica.\n\n3. **Documente todas as consultas e respostas**: É importante manter um registro detalhado de todas as fontes consultadas e das respostas recebidas, tanto para referência futura quanto para justificar as decisões tomadas.\n\n4. **Aplicar a interpretação mais conservadora**: Em caso de dúvida, é geralmente recomendável aplicar a interpretação mais rigorosa ou conservadora da regra tributária, evitando possíveis infrações fiscais.\n\n5. **Atualize a base local**: Uma vez que as informações sejam obtidas e confirmadas, elas devem ser adicionadas à base de dados local para futuras consultas.\n\nEssas etapas ajudam a garantir que o agente esteja sempre atualizado com as regras tributárias corretas e possa fornecer orientações precisas aos clientes ou contribuintes.",
+      "elapsed_ms": 12898,
+      "total_duration_ns": 12896384166,
+      "eval_count": 333
+    },
+    {
+      "modelo": "qwen2.5-coder:14b",
+      "pergunta_id": "P5",
+      "pergunta": "O QDI ja possui gateway LLM e adapters. Voce deve criar um novo adapter do zero ou auditar e evoluir o existente? Justifique.",
+      "resposta": "A decisão de criar um novo adapter do zero ou auditar e evoluir o existente depende de vários fatores, incluindo os requisitos específicos da sua aplicação, a qualidade e a maturidade do adapter atual, os recursos disponíveis para desenvolvimento e manutenção, e as expectativas de desempenho e funcionalidade.\n\n### Criar um Novo Adapter\n\n**Vantagens:**\n1. **Personalização Total:** Você pode projetar o adapter exatamente como necessário, sem restrições do design ou arquitetura existente.\n2. **Inovação:** Pode incorporar as últimas tecnologias e melhores práticas que podem não estar presentes no adapter atual.\n3. **Flexibilidade:** Maior controle sobre a integração com outros componentes do sistema.\n\n**Desvantagens:**\n1. **Investimento de Tempo e Recursos:** Desenvolver um novo adapter do zero requer tempo, esforço e recursos significativos.\n2. **Risco de Erros:** Há maior probabilidade de erros ou bugs que precisam ser corrigidos durante o desenvolvimento.\n\n### Auditar e Evoluir o Existente\n\n**Vantagens:**\n1. **Menor Investimento Inicial:** Pode ser mais rápido e econômico começar com o adapter existente e fazer ajustes.\n2. **Stabilidade:** Baseado em um código que já está sendo usado, pode oferecer uma base mais estável para começar.\n3. **Menos Riscos de Introdução de Bugs:** Como você começa com um código que já está funcionando, os riscos de introduzir novos bugs são menores.\n\n**Desvantagens:**\n1. **Restrições Técnicas:** O design e a arquitetura do adapter existente podem limitar suas capacidades ou exigir contornos.\n2",
+      "elapsed_ms": 17929,
+      "total_duration_ns": 17926508208,
+      "eval_count": 400
+    }
+  ]
+}

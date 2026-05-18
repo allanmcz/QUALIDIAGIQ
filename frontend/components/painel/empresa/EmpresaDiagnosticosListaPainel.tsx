@@ -48,10 +48,10 @@ import { hrefPrivacidadePainel } from "@/lib/painel/privacidade_diagnostico_quer
 import { temSessaoPainelParaApiCliente } from "@/lib/api/config";
 import {
   buildEmpresaHrefCiclo,
-  buildWizardUrlNovaDiagnosticoEmpresa,
+  buildWizardUrlRefazerQuestionarioCiclo,
   QUERY_EXPAND_DIAGNOSTICO,
 } from "@/lib/dashboard/empresa_diagnostico_urls";
-import { navegarRefazerDiagnosticoPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
+import { navegarRefazerQuestionarioCicloPainel } from "@/lib/dashboard/refazer_diagnostico_painel";
 import {
   PAINEL_ESTADO_CICLO_VALORES,
   type PainelEstadoCicloApi,
@@ -375,11 +375,11 @@ export function EmpresaDiagnosticosListaPainel({
     });
   }, []);
 
-  const aoRefazerDiagnostico = useCallback(
-    (razaoSocial: string) => {
-      navegarRefazerDiagnosticoPainel(
+  const aoRefazerQuestionario = useCallback(
+    (diagnosticoId: string, razaoSocial: string) => {
+      navegarRefazerQuestionarioCicloPainel(
         router,
-        buildWizardUrlNovaDiagnosticoEmpresa(cnpjNormalizado, razaoSocial),
+        buildWizardUrlRefazerQuestionarioCiclo(cnpjNormalizado, razaoSocial, diagnosticoId),
       );
     },
     [router, cnpjNormalizado],
@@ -553,11 +553,11 @@ export function EmpresaDiagnosticosListaPainel({
                   className="w-full text-left px-3 py-2 hover:bg-muted/60 flex items-center gap-2"
                   onClick={() => {
                     fecharMenuAcoes();
-                    aoRefazerDiagnostico(diag.empresa_razao_social);
+                    aoRefazerQuestionario(diag.id, diag.empresa_razao_social);
                   }}
                 >
                   <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  Novo ciclo de diagnóstico
+                  Refazer questionário
                 </button>
               ) : null}
               <button

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { buildWizardUrlNovaDiagnosticoEmpresa } from "@/lib/dashboard/empresa_diagnostico_urls";
+import {
+  buildWizardUrlNovaDiagnosticoEmpresa,
+  buildWizardUrlRefazerQuestionarioCiclo,
+} from "@/lib/dashboard/empresa_diagnostico_urls";
 import {
   buildWizardUrlNovaEmpresa,
   parseWizardModoEmpresaFromSearchParams,
   WIZARD_MODO_NOVO_CICLO,
   WIZARD_MODO_NOVA_EMPRESA,
+  WIZARD_MODO_REFAZER_CICLO,
 } from "@/lib/wizard/wizard_modo_empresa";
 
 describe("wizard_modo_empresa", () => {
@@ -37,5 +41,14 @@ describe("wizard_modo_empresa", () => {
     expect(parseWizardModoEmpresaFromSearchParams(new URLSearchParams("modo=nova_empresa")).modo).toBe(
       WIZARD_MODO_NOVA_EMPRESA,
     );
+  });
+
+  it("buildWizardUrlRefazerQuestionarioCiclo inclui diagnostico_id", () => {
+    const did = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const url = buildWizardUrlRefazerQuestionarioCiclo("11222333000181", "Empresa X", did);
+    const sp = new URLSearchParams(url.split("?")[1]);
+    expect(sp.get("modo")).toBe(WIZARD_MODO_REFAZER_CICLO);
+    expect(sp.get("diagnostico_id")).toBe(did);
+    expect(parseWizardModoEmpresaFromSearchParams(sp).modo).toBe(WIZARD_MODO_REFAZER_CICLO);
   });
 });

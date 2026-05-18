@@ -88,6 +88,9 @@ get_gerar_export_portabilidade_diagnostico_use_case = (
 get_registrar_retificacao_diagnostico_use_case = (
     _deps_lgpd.get_registrar_retificacao_diagnostico_use_case
 )
+get_refazer_questionario_diagnostico_use_case = (
+    _deps_lgpd.get_refazer_questionario_diagnostico_use_case
+)
 get_listar_retificacoes_diagnostico_use_case = (
     _deps_lgpd.get_listar_retificacoes_diagnostico_use_case
 )

@@ -1,0 +1,7 @@
+# Binarios locais (corpus RAG) — versionar apenas catalogo e indice.
+# PDFs permanecem na maquina do desenvolvedor (~43 MB).
+*.pdf
+*.pptx
+*.xlsx
+*.docx
+.DS_Store

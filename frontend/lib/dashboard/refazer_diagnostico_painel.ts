@@ -25,3 +25,22 @@ export function navegarRefazerDiagnosticoPainel(
   }
   router.push(destino);
 }
+
+/**
+ * Refazer questionário no **mesmo** ciclo: limpa cache local; pré-preenchimento vem da API.
+ */
+export function navegarRefazerQuestionarioCicloPainel(
+  router: AppRouterInstance,
+  destino: string,
+): void {
+  clearWizardDraft();
+  clearPendingDiagnosticoFromStorage();
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.removeItem(WIZARD_FORCE_NOVO_CICLO_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  router.push(destino);
+}

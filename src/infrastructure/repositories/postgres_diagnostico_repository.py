@@ -21,6 +21,7 @@ from uuid import UUID
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
+from src.application.constants.refazer_questionario import MOTIVO_REFAZER_QUESTIONARIO_PAINEL
 from src.application.services.plano_painel_derivacao import derivar_plano_painel_materializado
 from src.domain.entities.diagnostico import (
     Diagnostico,
@@ -42,7 +43,9 @@ from src.domain.value_objects.resultado_eliminacao_empresa import ResultadoElimi
 from src.domain.value_objects.score import ScoreCompleto
 from src.infrastructure.repositories.postgres_diagnostico_resposta_sync import (
     inserir_respostas_questionario_em_cursor,
+    inserir_respostas_questionario_refazer_sync,
     listar_respostas_questionario_sync,
+    proximo_refazer_lote_respostas_sync,
 )
 from src.infrastructure.repositories.postgres_plano_painel_sync import (
     atualizar_subtarefa_sync,
@@ -95,15 +98,6 @@ def _painel_estado_ciclo_de_row(row: dict[str, Any]) -> str:
         if str(row.get("status") or "") == StatusDiagnostico.FINALIZADO.value
         else PainelEstadoCicloDiagnostico.EM_ANDAMENTO.value
     )
-
-
-_COLUNAS_LISTAGEM_PAINEL = """
-    id, tenant_id,
-    empresa_cnpj, empresa_razao_social,
-    status, plano, score_geral,
-    criado_em, finalizado_em, relatorio_pdf_url,
-    numero_interno_grupo, versao_otimista, painel_estado_ciclo
-"""
 
 
 def _row_dict_para_entity_listagem(row: dict[str, Any]) -> Diagnostico:
@@ -560,19 +554,45 @@ def _listar_sync(
     excluir_empresas_arquivadas: bool = False,
     apenas_colunas_resumo: bool = False,
 ) -> list[Diagnostico]:
+    motivo_refazer_sql = MOTIVO_REFAZER_QUESTIONARIO_PAINEL.replace("'", "''")
     filtro_arquivo = ""
     if excluir_empresas_arquivadas and not empresa_cnpj:
         filtro_arquivo = """
               AND (
-                COALESCE(empresa_cnpj, '') = ''
+                COALESCE(d.empresa_cnpj, '') = ''
                 OR NOT EXISTS (
                     SELECT 1 FROM empresa_painel_arquivo epa
-                    WHERE epa.tenant_id = diagnosticos.tenant_id
-                      AND epa.empresa_cnpj = diagnosticos.empresa_cnpj
+                    WHERE epa.tenant_id = d.tenant_id
+                      AND epa.empresa_cnpj = d.empresa_cnpj
                 )
               )
         """
-    colunas = _COLUNAS_LISTAGEM_PAINEL if apenas_colunas_resumo else "*"
+    if apenas_colunas_resumo:
+        colunas = f"""
+    d.id, d.tenant_id,
+    d.empresa_cnpj, d.empresa_razao_social,
+    d.status, d.plano,
+    COALESCE(
+        (
+            SELECT (r.payload_retificacao->>'score_geral')::double precision
+            FROM diagnostico_retificacao r
+            WHERE r.diagnostico_original_id = d.id
+              AND r.tenant_id = d.tenant_id
+              AND r.motivo_retificacao = '{motivo_refazer_sql}'
+            ORDER BY r.criado_em DESC
+            LIMIT 1
+        ),
+        d.score_geral
+    ) AS score_geral,
+    d.criado_em, d.finalizado_em, d.relatorio_pdf_url,
+    d.numero_interno_grupo, d.versao_otimista, d.painel_estado_ciclo
+"""
+        from_clause = "diagnosticos d"
+    else:
+        colunas = "*"
+        from_clause = "diagnosticos"
+        if filtro_arquivo:
+            filtro_arquivo = filtro_arquivo.replace("d.", "diagnosticos.")
     para_entity = _row_dict_para_entity_listagem if apenas_colunas_resumo else _row_dict_para_entity
 
     conn = psycopg2.connect(dsn)
@@ -581,19 +601,20 @@ def _listar_sync(
             if empresa_cnpj:
                 cur.execute(
                     f"""
-                    SELECT {colunas} FROM diagnosticos
-                    WHERE tenant_id = %s AND empresa_cnpj = %s
-                    ORDER BY criado_em DESC
+                    SELECT {colunas} FROM {from_clause}
+                    WHERE {"d." if apenas_colunas_resumo else ""}tenant_id = %s
+                      AND {"d." if apenas_colunas_resumo else ""}empresa_cnpj = %s
+                    ORDER BY {"d." if apenas_colunas_resumo else ""}criado_em DESC
                     LIMIT %s OFFSET %s
                     """,
                     (str(tenant_id), empresa_cnpj, limit, offset),
                 )
             else:
                 sql_com_arquivo = f"""
-                    SELECT {colunas} FROM diagnosticos
-                    WHERE tenant_id = %s
+                    SELECT {colunas} FROM {from_clause}
+                    WHERE {"d." if apenas_colunas_resumo else ""}tenant_id = %s
                     {filtro_arquivo}
-                    ORDER BY criado_em DESC
+                    ORDER BY {"d." if apenas_colunas_resumo else ""}criado_em DESC
                     LIMIT %s OFFSET %s
                 """
                 params = (str(tenant_id), limit, offset)
@@ -607,9 +628,9 @@ def _listar_sync(
                     if filtro_arquivo and erro_tabela_empresa_painel_arquivo_ausente(exc):
                         cur.execute(
                             f"""
-                            SELECT {colunas} FROM diagnosticos
-                            WHERE tenant_id = %s
-                            ORDER BY criado_em DESC
+                            SELECT {colunas} FROM {from_clause}
+                            WHERE {"d." if apenas_colunas_resumo else ""}tenant_id = %s
+                            ORDER BY {"d." if apenas_colunas_resumo else ""}criado_em DESC
                             LIMIT %s OFFSET %s
                             """,
                             params,
@@ -760,6 +781,32 @@ def _patch_m12_sync(
         conn.close()
 
 
+def _limpar_explicacao_score_llm_sync(
+    dsn: str,
+    diagnostico_id: UUID,
+    tenant_id: UUID,
+) -> None:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE diagnosticos
+                SET explicacao_score_llm = NULL
+                WHERE id = %s AND tenant_id = %s
+                """,
+                (str(diagnostico_id), str(tenant_id)),
+            )
+            if cur.rowcount == 0:
+                raise ValueError("Diagnóstico não encontrado para limpar explicação LLM")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def _patch_explicacao_score_llm_sync(
     dsn: str,
     diagnostico_id: UUID,
@@ -822,6 +869,47 @@ class PostgresDiagnosticoRepository(DiagnosticoRepository):
     ) -> list[dict[str, Any]]:
         return await asyncio.to_thread(
             listar_respostas_questionario_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
+        )
+
+    async def proximo_refazer_lote_respostas(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> int:
+        return await asyncio.to_thread(
+            proximo_refazer_lote_respostas_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
+        )
+
+    async def inserir_respostas_questionario_refazer(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        linhas: tuple[LinhaRespostaQuestionario, ...],
+        *,
+        refazer_lote: int,
+    ) -> None:
+        await asyncio.to_thread(
+            inserir_respostas_questionario_refazer_sync,
+            self._dsn,
+            diagnostico_id,
+            tenant_id,
+            linhas,
+            refazer_lote=refazer_lote,
+        )
+
+    async def limpar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> None:
+        await asyncio.to_thread(
+            _limpar_explicacao_score_llm_sync,
             self._dsn,
             diagnostico_id,
             tenant_id,

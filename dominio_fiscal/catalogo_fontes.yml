@@ -1,0 +1,230 @@
+# Catálogo de fontes — corpus piloto RAG local (IA_DIAG_V2 / Fase D)
+# Gerado: 2026-05-17 · Allan / agente Cursor
+# Política: _DEVELOPER/IA_DIAG_V2/FONTES_E_RAG_POLITICA.md
+# Classe A = norma/NT oficial · B = docs QDI aprovados · C = apoio (não sustenta conclusão sozinha)
+
+versao_catalogo: "1.0.0"
+atualizado_em: "2026-05-17"
+tenant_escopo: global
+notas:
+  - "Fontes em dominio_fiscal/ são brutas (PDF/DOCX/XLSX); exigem extração antes do embedding."
+  - "docs/refs/ já estão em Markdown — priorizar na Fase D piloto."
+  - "Pastas 06_APRESENTACOES, 07_COMPLIANCE e Guia Taxcel ficam fora do índice piloto normativo."
+
+fontes:
+
+  # --- Legislação base (classe A) ---
+  - id: FONTE-001
+    titulo: "Emenda Constitucional 132/2023"
+    tipo: legislacao
+    classe: A
+    caminho: "dominio_fiscal/01_LEGISLACAO_BASE/EMENDA CONSTITUICIONAL 132 2023.pdf"
+    origem: Planalto
+    base_legal: "EC 132/2023"
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-002
+    titulo: "Lei Complementar 214/2025 — texto Planalto"
+    tipo: legislacao
+    classe: A
+    caminho: "dominio_fiscal/01_LEGISLACAO_BASE/LC-214-2025_texto_Planalto.pdf"
+    origem: Planalto
+    base_legal: "LC 214/2025"
+    status: ativa
+    piloto: true
+    prioridade: 1
+    notas: ["Preferir este PDF; deduplicar com LCP 214 2025.pdf (mesma norma)."]
+
+  - id: FONTE-003
+    titulo: "Lei Complementar 225/2025"
+    tipo: legislacao
+    classe: A
+    caminho: "dominio_fiscal/01_LEGISLACAO_BASE/Lcp 225.pdf"
+    origem: Planalto
+    base_legal: "LC 225/2025"
+    status: ativa
+    piloto: true
+    prioridade: 2
+
+  - id: FONTE-004
+    titulo: "Lei Complementar 227/2026 — texto Planalto"
+    tipo: legislacao
+    classe: A
+    caminho: "dominio_fiscal/01_LEGISLACAO_BASE/LC-227-2026_texto_Planalto.pdf"
+    origem: Planalto
+    base_legal: "LC 227/2026"
+    status: ativa
+    piloto: true
+    prioridade: 2
+
+  # --- Notas técnicas e tabelas (classe A) ---
+  - id: FONTE-005
+    titulo: "NT 2025.002 v1.35 — RTC NF-e/NFC-e"
+    tipo: nota_tecnica
+    classe: A
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/NT_2025.002_v1.35_RTC_NFe_NFCe.pdf"
+    origem: "RFB / NF-e"
+    base_legal: "NT 2025.002 cláusula 4.3 (cClassTrib, cCredPres)"
+    status: ativa
+    piloto: true
+    prioridade: 1
+    notas: ["Versão preferida sobre v1.34 no mesmo diretório."]
+
+  - id: FONTE-006
+    titulo: "IT 2025.002 v1.21 — Tabelas de classificação IBS e CBS"
+    tipo: instrucao_normativa
+    classe: A
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/IT 2025.002 v.1.21 - Tabelas de Classificação do IBS e da CBS.pdf"
+    origem: RFB
+    base_legal: "IT 2025.002"
+    status: ativa
+    piloto: true
+    prioridade: 2
+
+  - id: FONTE-007
+    titulo: "IT 2024.001 — Código de Classificação Tributária (RTC)"
+    tipo: instrucao_normativa
+    classe: A
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/IT_2024.001 RT Código de Classificação Tributária.pdf"
+    origem: RFB
+    status: ativa
+    piloto: true
+    prioridade: 2
+
+  - id: FONTE-008
+    titulo: "Tabela cClassTrib (2025-12-12)"
+    tipo: tabela_oficial
+    classe: A
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/cClassTrib 2025-12-12.xlsx"
+    origem: RFB
+    base_legal: "NT 2025.002"
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-009
+    titulo: "Tabela cCredPres (2025-12-12)"
+    tipo: tabela_oficial
+    classe: A
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/cCredPres_2025-12-12Public.xlsx"
+    origem: RFB
+    base_legal: "NT 2025.002"
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-010
+    titulo: "Tabela NCM 2022 com Utrib — Comércio Exterior"
+    tipo: tabela_oficial
+    classe: A
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/Tabela NCM 2022 com Utrib_Comércio Exterior_vigência 01.02.26.xlsx"
+    origem: "RFB / Comex"
+    status: ativa
+    piloto: false
+    prioridade: 3
+    notas: ["Incluir na onda seguinte se o retriever precisar de NCM."]
+
+  # --- Manuais RTC (classe A/B) ---
+  - id: FONTE-011
+    titulo: "Manual de Serviços da RTC"
+    tipo: manual_oficial
+    classe: A
+    caminho: "dominio_fiscal/02_MANUAIS_E_RTC/Manual de Serviços da RTC.pdf"
+    origem: RFB
+    status: ativa
+    piloto: true
+    prioridade: 2
+
+  - id: FONTE-012
+    titulo: "Glossário da RTC — Versão II"
+    tipo: manual_oficial
+    classe: B
+    caminho: "dominio_fiscal/02_MANUAIS_E_RTC/20251105 Glossário da RTC - Versão II.pdf"
+    origem: RFB
+    status: ativa
+    piloto: true
+    prioridade: 2
+
+  # --- Documentos QDI (classe B — fora de dominio_fiscal) ---
+  - id: FONTE-020
+    titulo: "PRD-base QualiDiagIQ"
+    tipo: documento_produto
+    classe: B
+    caminho: "docs/refs/01_PRD_BASE.md"
+    origem: QDI
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-021
+    titulo: "MoSCoW — features QDI"
+    tipo: documento_produto
+    classe: B
+    caminho: "docs/refs/02_MOSCOW_FEATURES.md"
+    origem: QDI
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-022
+    titulo: "Metodologia e algoritmo de score"
+    tipo: documento_produto
+    classe: B
+    caminho: "docs/refs/04_METODOLOGIA.md"
+    origem: QDI
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-023
+    titulo: "Questionário v1 — banco de perguntas"
+    tipo: documento_produto
+    classe: B
+    caminho: "docs/refs/05_QUESTIONARIO_v1.md"
+    origem: QDI
+    status: ativa
+    piloto: true
+    prioridade: 1
+
+  - id: FONTE-024
+    titulo: "Gap Analysis QDI"
+    tipo: documento_produto
+    classe: B
+    caminho: "docs/refs/03_GAP_ANALYSIS.md"
+    origem: QDI
+    status: ativa
+    piloto: false
+    prioridade: 2
+
+  # --- Excluídas do piloto normativo (referência) ---
+  - id: FONTE-900
+    titulo: "Guia Taxcel — Códigos IBS e CBS"
+    tipo: guia_terceiros
+    classe: C
+    caminho: "dominio_fiscal/03_DOCUMENTOS_FISCAIS_E_TABELAS/Guia Completo de Códigos do IBS e CBS _ Taxcel.pdf"
+    origem: Taxcel
+    status: referencia
+    piloto: false
+    restricoes: ["Não sustenta conclusão tributária sem validação em NT/LC."]
+
+  - id: FONTE-901
+    titulo: "Apresentações (.pptx) — formação"
+    tipo: apresentacao
+    classe: C
+    caminho: "dominio_fiscal/06_APRESENTACOES/"
+    origem: interno
+    status: excluido_piloto
+    piloto: false
+    restricoes: ["Somente uso humano em treinamento."]
+
+  - id: FONTE-902
+    titulo: "Compliance e POPs por departamento"
+    tipo: operacional
+    classe: C
+    caminho: "dominio_fiscal/07_COMPLIANCE_E_FERRAMENTAS/"
+    origem: consultoria
+    status: excluido_piloto
+    piloto: false
+    restricoes: ["Material de cliente/processo; não indexar como norma."]

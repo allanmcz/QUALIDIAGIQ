@@ -37,9 +37,12 @@ from src.application.use_cases.executar_eliminacao_diagnostico_lgpd import (
 from src.application.use_cases.gerar_export_portabilidade_diagnostico import (
     GerarExportPortabilidadeDiagnostico,
 )
+from src.application.use_cases.calcular_score_use_case import CalcularScoreUseCase
 from src.application.use_cases.listar_retificacoes_diagnostico import (
     ListarRetificacoesDiagnostico,
 )
+from src.application.use_cases.refazer_questionario_diagnostico import RefazerQuestionarioDiagnostico
+from src.presentation.api.deps_infra_services import get_calcular_score_use_case
 from src.application.use_cases.listar_solicitacao_titular_lgpd import (
     ListarSolicitacaoTitularLgpd,
 )
@@ -164,6 +167,21 @@ def get_registrar_retificacao_diagnostico_use_case(
 ) -> RegistrarRetificacaoDiagnostico:
     """Regista retificação na cadeia WORM (sem alterar diagnóstico original)."""
     return RegistrarRetificacaoDiagnostico(diagnostico_repository=repo, retificacao=ret)
+
+
+def get_refazer_questionario_diagnostico_use_case(
+    repo: Annotated[DiagnosticoRepository, Depends(get_diagnostico_repository)],
+    score_use_case: Annotated[CalcularScoreUseCase, Depends(get_calcular_score_use_case)],
+    registrar_retificacao: Annotated[
+        RegistrarRetificacaoDiagnostico, Depends(get_registrar_retificacao_diagnostico_use_case)
+    ],
+) -> RefazerQuestionarioDiagnostico:
+    """Refazer questionário no mesmo ciclo (retificação + novo lote de respostas)."""
+    return RefazerQuestionarioDiagnostico(
+        diagnostico_repository=repo,
+        calcular_score_use_case=score_use_case,
+        registrar_retificacao=registrar_retificacao,
+    )
 
 
 def get_listar_retificacoes_diagnostico_use_case(

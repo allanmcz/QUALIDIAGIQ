@@ -20,6 +20,12 @@ import {
 } from "@/lib/api/config";
 import { postConsultarCnpjAutenticado, rotuloFonteConsultaCnpj } from "@/lib/api/consulta_cnpj";
 import { postDiagnostico } from "@/lib/api/diagnostico";
+import { fetchDiagnosticoDetalhe } from "@/lib/api/fetch_diagnostico_detalhe";
+import {
+  fetchQuestionarioRespostasPainel,
+  postRefazerQuestionarioCiclo,
+} from "@/lib/api/refazer_questionario";
+import { buildEmpresaDiagnosticosHref } from "@/lib/dashboard/empresa_diagnostico_urls";
 import { aplicarCanonicoNoFormularioEmpresa } from "@/lib/cnpj/canonical_merge";
 import {
   postRascunhoDiagnosticoSelfService,
@@ -63,6 +69,7 @@ import {
   parseWizardModoEmpresaFromSearchParams,
   WIZARD_MODO_NOVA_EMPRESA,
   WIZARD_MODO_NOVO_CICLO,
+  WIZARD_MODO_REFAZER_CICLO,
   WIZARD_QUERY_MODO,
   type WizardModoEmpresa,
 } from "@/lib/wizard/wizard_modo_empresa";
@@ -123,6 +130,12 @@ export function useWizardState() {
     if (typeof window === "undefined") return "";
     return parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search)).cnpj14;
   });
+  const [diagnosticoIdRefazer, setDiagnosticoIdRefazer] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return parseWizardModoEmpresaFromSearchParams(new URLSearchParams(window.location.search))
+      .diagnosticoId;
+  });
+  const refazerQuestionarioPrefillAppliedRef = useRef(false);
   const consultaCnpjAutoNovoCicloRef = useRef(false);
   const [ciclosEmpresaPainel, setCiclosEmpresaPainel] = useState<ResumoCiclosEmpresaPainel | null>(
     null,
@@ -520,11 +533,13 @@ export function useWizardState() {
       }
     }
     const isNovoCicloPainel = parsedModo.modo === WIZARD_MODO_NOVO_CICLO || forceNovoCiclo;
+    const isRefazerCicloPainel =
+      parsedModo.modo === WIZARD_MODO_REFAZER_CICLO && parsedModo.diagnosticoId.length > 0;
     /** Atalho do painel «Nova empresa» — só quando `modo=nova_empresa` está na URL (não o default de `/wizard`). */
     const isNovaEmpresaPainel =
       searchParams.get(WIZARD_QUERY_MODO) === WIZARD_MODO_NOVA_EMPRESA;
-    /** Painel — novo ciclo ou nova empresa: não perguntar «continuar rascunho»; limpar cache local. */
-    if (isNovoCicloPainel || isNovaEmpresaPainel) {
+    /** Painel — novo ciclo, refazer ou nova empresa: não perguntar «continuar rascunho»; limpar cache local. */
+    if (isNovoCicloPainel || isRefazerCicloPainel || isNovaEmpresaPainel) {
       clearWizardDraft();
       limparIdempotencyKeyPostDiagnostico();
       clearPendingDiagnosticoFromStorage();
@@ -532,14 +547,22 @@ export function useWizardState() {
       wizardQueryEmpresaPrefillAppliedRef.current = false;
       perfilUltimoCicloPrefillAppliedRef.current = false;
       consultaCnpjAutoNovoCicloRef.current = false;
+      refazerQuestionarioPrefillAppliedRef.current = false;
       if (isNovaEmpresaPainel) {
         setWizardModoEmpresa(WIZARD_MODO_NOVA_EMPRESA);
         setQueryRazaoEmpresaPainel("");
         setQueryCnpjEmpresaPainel("");
+        setDiagnosticoIdRefazer("");
+      } else if (isRefazerCicloPainel) {
+        setWizardModoEmpresa(WIZARD_MODO_REFAZER_CICLO);
+        setQueryRazaoEmpresaPainel(parsedModo.razaoSocial);
+        setQueryCnpjEmpresaPainel(parsedModo.cnpj14);
+        setDiagnosticoIdRefazer(parsedModo.diagnosticoId);
       } else {
         setWizardModoEmpresa(WIZARD_MODO_NOVO_CICLO);
         setQueryRazaoEmpresaPainel(parsedModo.razaoSocial);
         setQueryCnpjEmpresaPainel(parsedModo.cnpj14);
+        setDiagnosticoIdRefazer("");
       }
       setCacheResumePrompt(null);
       setDraftHydrated(true);
@@ -613,6 +636,7 @@ export function useWizardState() {
     setWizardModoEmpresa(parsed.modo);
     setQueryRazaoEmpresaPainel(parsed.razaoSocial);
     setQueryCnpjEmpresaPainel(parsed.cnpj14);
+    setDiagnosticoIdRefazer(parsed.diagnosticoId);
   }, [draftHydrated, cacheResumePrompt]);
 
   const cnpjEmpresaWatch = watch("empresa.cnpj");
@@ -681,6 +705,72 @@ export function useWizardState() {
     },
     [setValue],
   );
+
+  /** Refazer ciclo: pré-preenche empresa e respostas a partir da API (mesmo diagnostico_id). */
+  useEffect(() => {
+    if (!draftHydrated || cacheResumePrompt !== null) return;
+    if (wizardModoEmpresa !== WIZARD_MODO_REFAZER_CICLO) return;
+    if (!diagnosticoIdRefazer.trim() || !sessaoPainelAtiva) return;
+    if (refazerQuestionarioPrefillAppliedRef.current) return;
+    if (perguntas.length === 0) return;
+
+    let cancel = false;
+    void (async () => {
+      try {
+        const [detalhe, questionario] = await Promise.all([
+          fetchDiagnosticoDetalhe(diagnosticoIdRefazer),
+          fetchQuestionarioRespostasPainel(diagnosticoIdRefazer),
+        ]);
+        if (cancel) return;
+        if (detalhe.empresa_cnpj) {
+          setValue("empresa.cnpj", detalhe.empresa_cnpj.replace(/\D/g, ""), {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+        }
+        if (detalhe.empresa_razao_social) {
+          setValue("empresa.razao_social", detalhe.empresa_razao_social, {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+        }
+        aplicarPerfilEmpresaWizard({
+          porte: detalhe.empresa_porte ?? undefined,
+          regime: detalhe.empresa_regime ?? undefined,
+          setor_macro: detalhe.empresa_setor_macro ?? undefined,
+          uf: detalhe.empresa_uf ?? undefined,
+          cnae_principal: detalhe.empresa_cnae ?? undefined,
+        });
+        const porId = new Map(questionario.respostas.map((r) => [r.pergunta_id, r.valor_bruto]));
+        const respostasForm = perguntas.map((p) => ({
+          pergunta_id: p.id,
+          valor: porId.has(p.id) ? porId.get(p.id)! : valorInicialPorTipoPergunta(p.tipo),
+        }));
+        setValue("respostas", respostasForm, { shouldDirty: false, shouldValidate: false });
+        refazerQuestionarioPrefillAppliedRef.current = true;
+      } catch (e) {
+        if (!cancel) {
+          setApiError(
+            e instanceof Error
+              ? e.message
+              : "Não foi possível carregar as respostas deste ciclo para refazer.",
+          );
+        }
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [
+    draftHydrated,
+    cacheResumePrompt,
+    wizardModoEmpresa,
+    diagnosticoIdRefazer,
+    sessaoPainelAtiva,
+    perguntas,
+    setValue,
+    aplicarPerfilEmpresaWizard,
+  ]);
 
   /** Novo ciclo (painel): copia porte/regime/setor/UF/CNAE do último diagnóstico da PJ (passo 1 ou 2). */
   useEffect(() => {
@@ -1042,6 +1132,18 @@ export function useWizardState() {
     try {
       setIsSubmitting(true);
       setApiError(null);
+      if (wizardModoEmpresa === WIZARD_MODO_REFAZER_CICLO && diagnosticoIdRefazer.trim()) {
+        const resultado = await postRefazerQuestionarioCiclo(diagnosticoIdRefazer.trim(), payload);
+        clearWizardDraft();
+        const cnpj = (payload.empresa.cnpj ?? "").replace(/\D/g, "");
+        const razao = payload.empresa.razao_social ?? "";
+        router.push(
+          buildEmpresaDiagnosticosHref(cnpj, razao, {
+            expandDiagnosticoId: resultado.diagnostico_id,
+          }),
+        );
+        return;
+      }
       await postDiagnostico(payload);
       clearWizardDraft();
       router.push("/sucesso");
@@ -1067,8 +1169,10 @@ export function useWizardState() {
 
   const empresaJaNoPainel = (ciclosEmpresaPainel?.totalCiclos ?? 0) > 0;
   const modoNovoCicloExplicito = wizardModoEmpresa === WIZARD_MODO_NOVO_CICLO;
+  const modoRefazerCicloExplicito = wizardModoEmpresa === WIZARD_MODO_REFAZER_CICLO;
   const exibirContextoNovoCiclo =
-    hasToken && (modoNovoCicloExplicito || empresaJaNoPainel);
+    hasToken && (modoNovoCicloExplicito || empresaJaNoPainel) && !modoRefazerCicloExplicito;
+  const exibirContextoRefazerCiclo = hasToken && modoRefazerCicloExplicito;
   const razaoSocialWizard =
     String(razaoEmpresaWatch ?? "").trim() ||
     queryRazaoEmpresaPainel.trim() ||
@@ -1139,7 +1243,9 @@ export function useWizardState() {
     setForceRefreshConsultaCnpjUi,
     wizardModoEmpresa,
     exibirContextoNovoCiclo,
+    exibirContextoRefazerCiclo,
     modoNovoCicloExplicito,
+    modoRefazerCicloExplicito,
     empresaJaNoPainel,
     razaoSocialWizard,
     ciclosEmpresaPainel,

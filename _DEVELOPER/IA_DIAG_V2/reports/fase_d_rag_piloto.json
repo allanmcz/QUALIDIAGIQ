@@ -1,0 +1,102 @@
+[
+  {
+    "pergunta": "Qual o escopo do MVP do QualiDiagIQ e o que fica fora?",
+    "status": "com_fonte",
+    "melhor_score": 0.7464139565662241,
+    "top": [
+      {
+        "score": 0.7464139565662241,
+        "fonte_id": "FONTE-020",
+        "caminho": "docs/refs/01_PRD_BASE.md",
+        "trecho": "Recomendo abrir o **scaffold de desenvolvimento do QDI** em `05_PROPOSTA_018_QUALIDIAGIQ/018-QUALIDIAGIQ/` (próximo documento desta entrega — **F5**) e começar pelo Sprint 1 do MVP (M01 + M02 + M03). Em paralelo, redigir o **PRD oficial** usando este documento como input estrutur"
+      },
+      {
+        "score": 0.6776950626827044,
+        "fonte_id": "FONTE-020",
+        "caminho": "docs/refs/01_PRD_BASE.md",
+        "trecho": "O **QualiDiagIQ (QDI)** é o módulo de **diagnóstico tributário automatizado** do ecossistema Tributiq, construído como **lead magnet self-service** para a Reforma Tributária do Consumo. Em **5–15 minutos**, gera um relatório executivo + dashboard interativo com **score de prontid"
+      },
+      {
+        "score": 0.6714398267670254,
+        "fonte_id": "FONTE-020",
+        "caminho": "docs/refs/01_PRD_BASE.md",
+        "trecho": "> **Diagnósticos completados por mês** (proxy de adoção real do produto)  ### 7.2. Métricas de Produto (top 7)  | Métrica | Meta MVP | Meta GA | |---------|----------|---------| | Diagnósticos iniciados / mês | 50 | 1.000 | | Taxa de conclusão (start → finalizado) | 40% | 60% | |"
+      }
+    ]
+  },
+  {
+    "pergunta": "Como o score 0-100 e calculado no diagnostico?",
+    "status": "com_fonte",
+    "melhor_score": 0.7088491191869225,
+    "top": [
+      {
+        "score": 0.7088491191869225,
+        "fonte_id": "FONTE-023",
+        "caminho": "docs/refs/05_QUESTIONARIO_v1.md",
+        "trecho": "| Estágio PDCA | Calculado a partir de | |--------------|------------------------| | **Plan** | Q-ABNT-001 + Q-ABNT-002 | | **Do** | Q-ABNT-003 | | **Check** | Q-ABNT-002 + Q-ABNT-004 | | **Act** | Q-ABNT-005 |  Esse score PDCA aparece como **gráfico próprio no relatório** — dife"
+      },
+      {
+        "score": 0.7088321997215815,
+        "fonte_id": "FONTE-022",
+        "caminho": "docs/refs/04_METODOLOGIA.md",
+        "trecho": "**Características-chave:** - **Determinístico:** mesmo input → mesmo output (exceto LLM no Plus) - **Transparente:** todos os pesos publicados em `/metodologia` - **Auditável:** cada score pode ser \"explodido\" (mostrar quais perguntas contribuíram) - **Calibrável:** pesos podem s"
+      },
+      {
+        "score": 0.7080452526815112,
+        "fonte_id": "FONTE-022",
+        "caminho": "docs/refs/04_METODOLOGIA.md",
+        "trecho": "**Inputs:** scores por dimensão + respostas individuais  **Lógica:**  1. **Identificação de gaps críticos:** perguntas com `pontos_obtidos / peso < 0.4` (resposta indicou problema crítico) 2. **Classificação por criticidade:**    - **Alta:** gap em dimensão Fiscal, Tecnológica ou"
+      }
+    ]
+  },
+  {
+    "pergunta": "O que e cClassTrib na reforma tributaria?",
+    "status": "com_fonte",
+    "melhor_score": 0.7242193404367154,
+    "top": [
+      {
+        "score": 0.7242193404367154,
+        "fonte_id": "FONTE-020",
+        "caminho": "docs/refs/01_PRD_BASE.md",
+        "trecho": "| Persona | Cargo | Necessidade primária | Critério de decisão | |---------|-------|----------------------|---------------------| | **CFO Pragmática** | CFO de empresa média (R$ 50M–R$ 500M) | Quantificar exposição financeira da Reforma | Score relativo ao setor + simulação fluxo"
+      },
+      {
+        "score": 0.7167240416875885,
+        "fonte_id": "FONTE-023",
+        "caminho": "docs/refs/05_QUESTIONARIO_v1.md",
+        "trecho": "| Revisor | Foco | Critério | |---------|------|----------| | **Contador externo (PME)** | Clareza para empresas pequenas | Compreensão sem ajuda de tributarista | | **Contador externo (Lucro Real)** | Profundidade técnica | Diferenciação real entre tiers | | **Advogado tributari"
+      },
+      {
+        "score": 0.7160201547261894,
+        "fonte_id": "FONTE-020",
+        "caminho": "docs/refs/01_PRD_BASE.md",
+        "trecho": "**Para o cliente final (CFO / Contador / Dono de PME):** > *\"Descubra em 15 minutos onde sua empresa está vulnerável à Reforma Tributária e receba um plano de ação executável com simulação financeira real — sem precisar contratar consultoria primeiro.\"*  **Pillars de valor:** 1. "
+      }
+    ]
+  },
+  {
+    "pergunta": "Posso apurar CBS continuamente no QDI?",
+    "status": "com_fonte",
+    "melhor_score": 0.6920708647409987,
+    "top": [
+      {
+        "score": 0.6920708647409987,
+        "fonte_id": "FONTE-023",
+        "caminho": "docs/refs/05_QUESTIONARIO_v1.md",
+        "trecho": "- **37 perguntas no arquivo de catálogo** (motor adaptativo por perfil; volume efetivo de resposta 22–28 conforme empresa) - **22-28 perguntas respondidas por cliente** (depende de setor + regime e catálogo filtrado) - **12-15 minutos de execução** (target) - **7 dimensões avalia"
+      },
+      {
+        "score": 0.6869810273679074,
+        "fonte_id": "FONTE-023",
+        "caminho": "docs/refs/05_QUESTIONARIO_v1.md",
+        "trecho": "O questionário definitivo do **QDI Free v1.0** combina **21 perguntas núcleo** (respondidas por todos) + **9 perguntas setoriais condicionais** (varejo/indústria/serviços/agro) + **5 perguntas avançadas só para Lucro Real** + perguntas adicionais mantidas para maturidade e ABNT n"
+      },
+      {
+        "score": 0.686977745099155,
+        "fonte_id": "FONTE-020",
+        "caminho": "docs/refs/01_PRD_BASE.md",
+        "trecho": "O **QualiDiagIQ (QDI)** é o módulo de **diagnóstico tributário automatizado** do ecossistema Tributiq, construído como **lead magnet self-service** para a Reforma Tributária do Consumo. Em **5–15 minutos**, gera um relatório executivo + dashboard interativo com **score de prontid"
+      }
+    ]
+  }
+]

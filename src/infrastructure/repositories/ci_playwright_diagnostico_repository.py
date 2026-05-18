@@ -314,7 +314,65 @@ class CiPlaywrightDiagnosticoRepository(DiagnosticoRepository):
         diagnostico_id: UUID,
         tenant_id: UUID,
     ) -> list[dict[str, Any]]:
-        return list(self._respostas_questionario.get((diagnostico_id, tenant_id), []))
+        rows = self._respostas_questionario.get((diagnostico_id, tenant_id), [])
+        por_codigo: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            codigo = str(row["pergunta_codigo"])
+            lote = int(row.get("refazer_lote") or 1)
+            prev = por_codigo.get(codigo)
+            if prev is None or int(prev.get("refazer_lote") or 1) < lote:
+                por_codigo[codigo] = row
+        return sorted(por_codigo.values(), key=lambda x: int(x["ordem_exibicao"]))
+
+    async def proximo_refazer_lote_respostas(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> int:
+        rows = self._respostas_questionario.get((diagnostico_id, tenant_id), [])
+        if not rows:
+            return 2
+        return max(int(r.get("refazer_lote") or 1) for r in rows) + 1
+
+    async def inserir_respostas_questionario_refazer(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+        linhas: tuple[LinhaRespostaQuestionario, ...],
+        *,
+        refazer_lote: int,
+    ) -> None:
+        key = (diagnostico_id, tenant_id)
+        atual = list(self._respostas_questionario.get(key, []))
+        for ln in linhas:
+            atual.append(
+                {
+                    "ordem_exibicao": ln.ordem_exibicao,
+                    "pergunta_id": str(ln.pergunta_id),
+                    "pergunta_codigo": ln.pergunta_codigo,
+                    "dimensao": ln.dimensao,
+                    "tipo_pergunta": ln.tipo_pergunta,
+                    "texto_pergunta": ln.texto_pergunta,
+                    "peso": ln.peso,
+                    "base_legal": ln.base_legal,
+                    "pilar_abnt": ln.pilar_abnt,
+                    "valor_bruto": ln.valor_bruto,
+                    "valor_exibicao": ln.valor_exibicao,
+                    "pontuacao_item": ln.pontuacao_item,
+                    "excluida_calculo": ln.excluida_calculo,
+                    "criado_em": datetime.now(UTC).isoformat(),
+                    "refazer_lote": refazer_lote,
+                }
+            )
+        self._respostas_questionario[key] = atual
+
+    async def limpar_explicacao_score_llm(
+        self,
+        diagnostico_id: UUID,
+        tenant_id: UUID,
+    ) -> None:
+        _ = diagnostico_id
+        _ = tenant_id
 
     async def buscar_plano_painel_serializado(
         self, diagnostico_id: UUID, tenant_id: UUID

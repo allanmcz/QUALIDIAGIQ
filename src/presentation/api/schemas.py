@@ -1068,6 +1068,17 @@ class ComparacaoQuestionarioResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
 
+class RefazerQuestionarioDiagnosticoResponse(BaseModel):
+    """Resposta do refazer questionário no mesmo ciclo (plano avançado)."""
+
+    diagnostico_id: UUID
+    retificacao_id: UUID
+    score_geral: float = Field(ge=0, le=100)
+    refazer_lote: int = Field(ge=1, description="Lote de respostas gravado (≥2 após o primeiro refazer).")
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class DiagnosticoResumoSchema(BaseModel):
     """Item resumido para listagem do tenant (P7 — painel)."""
 
