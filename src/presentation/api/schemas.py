@@ -955,6 +955,17 @@ class DiagnosticoConclusaoSelfServicePublicoResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
 
+class FonteRagExplicacaoSchema(BaseModel):
+    """Trecho citável recuperado pelo RAG (Onda IA 1.1)."""
+
+    fonte: str = ""
+    dispositivo: str | None = None
+    score: float = 0.0
+    trecho: str = ""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
 class ExplicarScoreLlmHttpResponse(BaseModel):
     """Resposta HTTP da narrativa LLM sobre o score (espelha ``LlmGatewayResponse`` — ADR-022)."""
 
@@ -969,6 +980,11 @@ class ExplicarScoreLlmHttpResponse(BaseModel):
     blocked_by_guardrail: bool = False
     guardrail_reason: str | None = None
     guardrail_status: str = "ok"
+    rag_status: str = Field(
+        default="nao_aplicavel",
+        description="com_fonte | base_insuficiente | nao_recuperado | nao_aplicavel",
+    )
+    fontes_rag: list[FonteRagExplicacaoSchema] = Field(default_factory=list)
 
     model_config = ConfigDict(str_strip_whitespace=True)
 

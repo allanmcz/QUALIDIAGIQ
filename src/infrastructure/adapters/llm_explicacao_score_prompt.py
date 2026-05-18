@@ -64,6 +64,22 @@ def montar_prompt_explicacao_score(request: LlmGatewayRequest) -> str:
     ):
         if chave in data:
             linhas.append(f"{chave}: {data[chave]}")
+    rag_ctx = data.get("rag_contexto")
+    if isinstance(rag_ctx, str) and rag_ctx.strip():
+        linhas.extend(
+            [
+                "",
+                "--- Base de conhecimento recuperada (RAG — cite só o que constar abaixo) ---",
+                rag_ctx.strip(),
+            ]
+        )
+    rag_st = data.get("rag_status")
+    if isinstance(rag_st, str) and rag_st.strip() == "base_insuficiente":
+        linhas.append(
+            "",
+            "AVISO: a recuperação semântica não atingiu confiança mínima — "
+            "seja prudente e não invente artigos ou números de lei.",
+        )
     linhas.extend(
         [
             "",

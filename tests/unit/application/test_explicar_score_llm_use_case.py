@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 
+from src.application.ports.base_normativa_port import ChunkNormativo
 from src.application.use_cases.explicar_score_llm_use_case import (
     ComandoExplicarScoreLlm,
     ExplicarScoreLlmUseCase,
@@ -94,3 +95,40 @@ class TestExplicarScoreLlmUseCase:
         assert req.input_data["score_geral"] == 55.0
         assert req.input_data["score_por_dimensao"] == {"fiscal": 40.0}
         assert req.input_data["empresa_uf"] == "SP"
+
+    @pytest.mark.asyncio
+    async def test_rag_anexa_fontes_e_contexto_no_gateway(self) -> None:
+        gw = AsyncMock()
+        gw.complete = AsyncMock(
+            return_value=LlmGatewayResponse(
+                text="parecer ok",
+                provider="fake",
+                model="m",
+                policy_version="v",
+            )
+        )
+        port = AsyncMock()
+        port.buscar_contexto = AsyncMock(
+            return_value=[
+                ChunkNormativo(
+                    texto="MVP QualiDiagIQ reforma tributária.",
+                    score=0.88,
+                    fonte="PRD_BASE",
+                    artigo="docs/refs/01_PRD_BASE.md",
+                )
+            ]
+        )
+        uc = ExplicarScoreLlmUseCase(
+            gateway=gw,
+            base_normativa_port=port,
+            rag_similarity_threshold=0.5,
+        )
+        out = await uc.execute(
+            ComandoExplicarScoreLlm(tenant_id=uuid4(), trace_id="tr-rag", score_geral=70.0)
+        )
+        req = gw.complete.call_args[0][0]
+        assert "rag_contexto" in req.input_data
+        assert req.input_data["rag_status"] == "com_fonte"
+        assert len(req.evidencias) >= 1
+        assert out.rag_status == "com_fonte"
+        assert len(out.fontes_rag) == 1

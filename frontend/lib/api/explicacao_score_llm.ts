@@ -13,6 +13,14 @@ import {
   mensagemErroPostExplicacaoScore,
 } from "./http_errors";
 
+/** Trecho recuperado pelo RAG (Onda IA 1.1). */
+export type FonteRagExplicacao = {
+  fonte: string;
+  dispositivo?: string | null;
+  score?: number;
+  trecho: string;
+};
+
 /** Espelha `ExplicarScoreLlmHttpResponse` / `ExplicacaoScoreLlmPersistidaSchema` da API. */
 export type ExplicacaoScoreLlmHttp = {
   text: string;
@@ -26,6 +34,8 @@ export type ExplicacaoScoreLlmHttp = {
   blocked_by_guardrail: boolean;
   guardrail_reason: string | null;
   guardrail_status: string;
+  rag_status?: string;
+  fontes_rag?: FonteRagExplicacao[];
   gerado_em?: string | null;
   trace_id?: string | null;
 };

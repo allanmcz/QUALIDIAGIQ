@@ -162,6 +162,8 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
 
   const parecerOk = resposta ? explicacaoScoreTemParecerExibivel(resposta) : false;
   const textoExibido = resposta && parecerOk ? textoExibicaoExplicacao(resposta) : "";
+  const fontesRag = (resposta?.fontes_rag ?? []).filter((f) => (f.trecho || "").trim().length > 0);
+  const ragStatus = (resposta?.rag_status || "").trim();
 
   const rotuloGerado = formatarGeradoEmPtBr(resposta?.gerado_em);
 
@@ -236,6 +238,33 @@ export const ExplicacaoScoreLlmCard = forwardRef<ExplicacaoScoreLlmCardHandle, P
             >
               {textoExibido || "—"}
             </div>
+            {ragStatus === "base_insuficiente" ? (
+              <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                Base normativa recuperada com baixa confiança — o parecer pode omitir detalhes
+                legislativos; consulte as fontes abaixo quando disponíveis.
+              </p>
+            ) : null}
+            {fontesRag.length > 0 ? (
+              <details className="rounded-md border bg-background/60 px-3 py-2 text-sm">
+                <summary className="cursor-pointer font-medium text-muted-foreground select-none">
+                  Fontes consultadas ({fontesRag.length})
+                </summary>
+                <ul className="mt-2 space-y-2 border-t pt-2" aria-label="Trechos RAG citáveis">
+                  {fontesRag.map((fonte, idx) => (
+                    <li key={`${fonte.fonte}-${idx}`} className="text-xs leading-relaxed">
+                      <span className="font-medium text-foreground">
+                        {fonte.fonte}
+                        {fonte.dispositivo ? ` · ${fonte.dispositivo}` : ""}
+                        {typeof fonte.score === "number" && fonte.score > 0
+                          ? ` · relevância ${(fonte.score * 100).toFixed(0)}%`
+                          : ""}
+                      </span>
+                      <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{fonte.trecho}</p>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               {resposta.provider} · {resposta.model} · política {resposta.policy_version}
               {resposta.latency_ms > 0 ? ` · ${resposta.latency_ms} ms` : ""}

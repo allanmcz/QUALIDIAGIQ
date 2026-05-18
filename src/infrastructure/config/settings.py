@@ -248,6 +248,36 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("QDI_RAG_SIMILARITY_THRESHOLD"),
         description="Threshold cosine similarity pós-processamento Lexiq RAG.",
     )
+    qdi_rag_backend: Literal["auto", "pgvector", "ollama_local", "composite"] = Field(
+        default="auto",
+        validation_alias=AliasChoices("QDI_RAG_BACKEND"),
+        description=(
+            "Backend RAG: auto (pgvector se OPENAI+DB, senão Ollama local), "
+            "pgvector, ollama_local ou composite (ambos)."
+        ),
+    )
+    qdi_rag_top_k: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        validation_alias=AliasChoices("QDI_RAG_TOP_K"),
+        description="Chunks máximos recuperados na explicação do score (Onda IA 1.1).",
+    )
+    ollama_embedding_model: str = Field(
+        default="mxbai-embed-large:latest",
+        validation_alias=AliasChoices("OLLAMA_EMBEDDING_MODEL", "QDI_OLLAMA_EMBEDDING_MODEL"),
+        description="Modelo Ollama para /api/embed (RAG local — dimensão independente do pgvector).",
+    )
+    qdi_rag_incluir_adrs: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("QDI_RAG_INCLUIR_ADRS"),
+        description="Indexar ADRs (.github/adr) no RAG Ollama local (Fase G).",
+    )
+    qdi_rag_codigo_index_path: str = Field(
+        default=".cache/qdi_rag_codigo_chunks.json",
+        validation_alias=AliasChoices("QDI_RAG_CODIGO_INDEX_PATH"),
+        description="JSON gerado por scripts/ingestao_rag_indice_codigo.py (chunks src/).",
+    )
 
     llm_router_enabled: bool = Field(
         default=False,

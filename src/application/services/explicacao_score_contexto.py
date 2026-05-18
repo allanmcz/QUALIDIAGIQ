@@ -75,7 +75,7 @@ def snapshot_explicacao_score_llm_de_resposta(
         blocked = True
         reason = reason or "parecer_nao_substantivo"
         status = "blocked"
-    return {
+    snap: dict[str, Any] = {
         "text": out.text,
         "provider": out.provider,
         "model": out.model,
@@ -89,4 +89,7 @@ def snapshot_explicacao_score_llm_de_resposta(
         "guardrail_status": status,
         "gerado_em": gerado_em_iso,
         "trace_id": trace_id,
+        "rag_status": out.rag_status,
+        "fontes_rag": list(out.fontes_rag),
     }
+    return snap

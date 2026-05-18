@@ -43,6 +43,8 @@ from src.domain.repositories.normativa_score_macro_repository import (
 )
 from src.domain.value_objects.cnpj_brasil import cnpj_com_digitos_verificadores_validos
 from src.domain.value_objects.score import PesoMacroNormativoVigente
+from src.infrastructure.adapters.base_normativa_composite import CompositeBaseNormativaAdapter
+from src.infrastructure.adapters.base_normativa_ollama_local import OllamaLocalBaseNormativaAdapter
 from src.infrastructure.adapters.base_normativa_pgvector import PgvectorBaseNormativaAdapter
 from src.infrastructure.adapters.base_normativa_stub import StubBaseNormativaAdapter
 from src.infrastructure.adapters.cnpj_provedor_externo_http import CnpjProvedorExternoHttpAdapter
@@ -278,19 +280,58 @@ def get_email_service() -> SmtpEmailAdapter:
 
 def build_base_normativa_port() -> BaseNormativaPort:
     """
-    RAG-light: pgvector + embeddings OpenAI quando ``DATABASE_URL`` e ``OPENAI_API_KEY`` existem.
-    Caso contrário stub (guardrail usa regex no pós-processamento LLM).
+    RAG-light (Onda IA 1.1): pgvector, Ollama local, composite ou stub.
+
+    ``auto``: pgvector se ``DATABASE_URL`` + ``OPENAI_API_KEY``; acrescenta Ollama local em dev;
+    senão só Ollama local; sem nenhum → stub.
     """
     settings = get_settings()
     dsn = settings.sync_database_url
     key_oai = settings.openai_api_key.get_secret_value().strip() if settings.openai_api_key else ""
-    if dsn and key_oai:
+    backend = settings.qdi_rag_backend.strip().lower()
+    adapters: list[BaseNormativaPort] = []
+
+    def _pgvector() -> PgvectorBaseNormativaAdapter | None:
+        if not (dsn and key_oai):
+            return None
         return PgvectorBaseNormativaAdapter(
             dsn=dsn,
             openai_api_key=key_oai,
             embedding_model=settings.openai_embedding_model.strip(),
         )
-    return StubBaseNormativaAdapter()
+
+    def _ollama_local() -> OllamaLocalBaseNormativaAdapter:
+        cache_path = settings.qdi_rag_codigo_index_path.strip()
+        return OllamaLocalBaseNormativaAdapter(
+            settings.ollama_base_url,
+            embedding_model=settings.ollama_embedding_model,
+            incluir_adrs=settings.qdi_rag_incluir_adrs,
+            codigo_index_json=cache_path or None,
+            timeout_seconds=settings.ollama_timeout_seconds,
+        )
+
+    if backend == "pgvector":
+        pg = _pgvector()
+        return pg if pg is not None else StubBaseNormativaAdapter()
+    if backend == "ollama_local":
+        return _ollama_local()
+    if backend == "composite":
+        pg = _pgvector()
+        if pg is not None:
+            adapters.append(pg)
+        adapters.append(_ollama_local())
+        return CompositeBaseNormativaAdapter(*adapters)
+
+    # auto
+    pg = _pgvector()
+    if pg is not None:
+        adapters.append(pg)
+    adapters.append(_ollama_local())
+    if not adapters:
+        return StubBaseNormativaAdapter()
+    if len(adapters) == 1:
+        return adapters[0]
+    return CompositeBaseNormativaAdapter(*adapters)
 
 
 def get_base_normativa_port_dependency() -> BaseNormativaPort:
@@ -343,8 +384,14 @@ def get_llm_gateway(request: Request) -> LlmGateway:
 def get_explicar_score_llm_use_case(
     llm_gateway: Annotated[LlmGateway, Depends(get_llm_gateway_operacional)],
 ) -> ExplicarScoreLlmUseCase:
-    """Narrativa sobre score via gateway — não recalcula o motor determinístico."""
-    return ExplicarScoreLlmUseCase(gateway=llm_gateway)
+    """Narrativa sobre score via gateway + RAG Lexiq (Onda IA 1.1)."""
+    settings = get_settings()
+    return ExplicarScoreLlmUseCase(
+        gateway=llm_gateway,
+        base_normativa_port=build_base_normativa_port(),
+        rag_similarity_threshold=float(settings.qdi_rag_similarity_threshold),
+        rag_top_k=int(settings.qdi_rag_top_k),
+    )
 
 
 def _cnpj_consulta_service_optional() -> CnpjConsultaService | None:

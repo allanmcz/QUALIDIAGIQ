@@ -44,6 +44,10 @@ class LlmGatewayResponse:
     blocked_by_guardrail: bool = False
     guardrail_reason: str | None = None
     guardrail_status: str = "ok"
+    #: Trechos recuperados (Lexiq/RAG) para auditoria e UI — Onda IA 1.1.
+    fontes_rag: tuple[dict[str, object], ...] = ()
+    #: ``com_fonte`` | ``base_insuficiente`` | ``nao_recuperado`` | ``nao_aplicavel``.
+    rag_status: str = "nao_aplicavel"
 
 
 class LlmGateway(ABC):

@@ -97,6 +97,8 @@ class TestSnapshotExplicacaoScoreLlm:
         assert snap["blocked_by_guardrail"] is False
         assert snap["trace_id"] == "tr-1"
         assert snap["gerado_em"] == "2026-05-15T10:00:00+00:00"
+        assert snap["rag_status"] == "nao_aplicavel"
+        assert snap["fontes_rag"] == []
 
     def test_snapshot_marca_bloqueio_quando_fallback_adapter(self) -> None:
         out = LlmGatewayResponse(
